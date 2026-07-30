@@ -137,8 +137,14 @@ export async function getStore(): Promise<{ data: AppData; storage: StorageMode 
   const local = await readFilesystem();
   if (local) return { data: normalizeData(local), storage: "filesystem" };
 
+  // On Vercel the filesystem is read-only outside /tmp. Return seeded data
+  // even when we cannot persist the local JSON mirror.
   const seed = createSeedData();
-  await writeFilesystem(seed);
+  try {
+    await writeFilesystem(seed);
+  } catch (error) {
+    console.warn("Filesystem store seed skipped (read-only runtime)", error);
+  }
   return { data: seed, storage: "filesystem" };
 }
 
@@ -160,8 +166,18 @@ export async function saveStore(data: AppData): Promise<{ storage: StorageMode }
     }
   }
 
-  await writeFilesystem(next);
-  return { storage: "filesystem" };
+  try {
+    await writeFilesystem(next);
+    return { storage: "filesystem" };
+  } catch (error) {
+    // Serverless/read-only runtimes cannot persist local JSON. Prefer failing
+    // the mutation clearly rather than crashing with an opaque FS error.
+    throw new Error(
+      `Unable to persist store (filesystem unavailable). Configure Supabase for production. ${
+        error instanceof Error ? error.message : ""
+      }`.trim()
+    );
+  }
 }
 
 export async function updateStore(
