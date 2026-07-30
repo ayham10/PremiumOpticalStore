@@ -107,6 +107,22 @@ npm run start    # start production server
 npm run lint     # eslint
 ```
 
+## Vercel deployment
+
+`vercel.json` forces the **Next.js** framework preset. Do **not** set a custom Output Directory in the Vercel dashboard (leave it empty / default). Root Directory must be the repository root (where `package.json` and `app/` live).
+
+### If you see Vercel `NOT_FOUND` on every route
+
+That is Vercel’s **platform** 404 (`x-vercel-error: NOT_FOUND`), not the Next.js `not-found` page. Common causes:
+
+1. **Wrong hostname** — team projects serve at `https://premium-optical-store-<team>.vercel.app`. The shorter `https://premium-optical-store.vercel.app` returns platform `NOT_FOUND` unless that domain is assigned under **Project → Settings → Domains**.
+2. **Framework Preset = Other** — set to **Next.js**, then Redeploy.
+3. **Output Directory overridden** — clear it (Next.js manages `.next` itself).
+4. **Root Directory wrong** — must be `.` (repo root), not a missing subdirectory.
+5. **Deployment Protection** — unique deployment URLs may redirect to Vercel SSO before the app is visible.
+
+Probe: `GET /api/health` should return `{ ok: true }` when the Next.js runtime is serving.
+
 ## Design notes
 
 Light premium direction (Warby Parker / Apple–inspired): navy accent (`--accent`), Fraunces display typography, Manrope body, large spacing, restrained motion. Brand **LUMINA** is the hero signal on the landing page with a full-bleed looping video.
