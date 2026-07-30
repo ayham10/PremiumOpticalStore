@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" fill="none">
+  <rect width="800" height="1000" fill="#EEF2F5"/>
+  <rect x="180" y="320" width="440" height="280" rx="90" stroke="#1A4A6B" stroke-width="18" fill="#F7F8FA"/>
+  <circle cx="300" cy="460" r="78" stroke="#8D6844" stroke-width="10" fill="none"/>
+  <circle cx="500" cy="460" r="78" stroke="#8D6844" stroke-width="10" fill="none"/>
+  <path d="M378 460H422" stroke="#1A4A6B" stroke-width="12" stroke-linecap="round"/>
+  <path d="M180 460H140" stroke="#1A4A6B" stroke-width="12" stroke-linecap="round"/>
+  <path d="M620 460H660" stroke="#1A4A6B" stroke-width="12" stroke-linecap="round"/>
+  <text x="400" y="700" text-anchor="middle" fill="#5A6675" font-family="Georgia, serif" font-size="36">LUMINA</text>
+</svg>
