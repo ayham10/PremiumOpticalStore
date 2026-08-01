@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { addDays, format } from "date-fns";
 import Reveal from "@/components/Reveal";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatDate } from "@/lib/format";
 
 type AppointmentView = {
@@ -26,6 +27,7 @@ type AppointmentView = {
 function ManageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() || "";
+  const { t } = useLocale();
 
   const [appointment, setAppointment] = useState<AppointmentView | null>(null);
   const [loading, setLoading] = useState(Boolean(token));
@@ -39,29 +41,32 @@ function ManageContent() {
   const [busy, setBusy] = useState(false);
   const [tokenInput, setTokenInput] = useState(token);
 
-  const load = useCallback(async (tok: string) => {
-    if (!tok) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    setMessage("");
-    try {
-      const res = await fetch(`/api/appointments?token=${encodeURIComponent(tok)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Appointment not found");
-      setAppointment(data.appointment as AppointmentView);
-      setDate(data.appointment.date);
-      setStartTime(data.appointment.startTime);
-      setMode("view");
-    } catch (err) {
-      setAppointment(null);
-      setError(err instanceof Error ? err.message : "Unable to load appointment");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (tok: string) => {
+      if (!tok) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      setMessage("");
+      try {
+        const res = await fetch(`/api/appointments?token=${encodeURIComponent(tok)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || t("manage.notFound"));
+        setAppointment(data.appointment as AppointmentView);
+        setDate(data.appointment.date);
+        setStartTime(data.appointment.startTime);
+        setMode("view");
+      } catch (err) {
+        setAppointment(null);
+        setError(err instanceof Error ? err.message : t("manage.notFound"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t]
+  );
 
   useEffect(() => {
     if (!token) return;
@@ -103,7 +108,7 @@ function ManageContent() {
 
   async function cancelAppointment() {
     if (!appointment || !token) return;
-    if (!window.confirm("Cancel this appointment?")) return;
+    if (!window.confirm(t("manage.confirmCancel"))) return;
     setBusy(true);
     setError("");
     setMessage("");
@@ -114,12 +119,12 @@ function ManageContent() {
         body: JSON.stringify({ token, status: "cancelled" }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Cancel failed");
+      if (!res.ok) throw new Error(data.error || t("validation.generic"));
       setAppointment(data.appointment as AppointmentView);
-      setMessage("Appointment cancelled.");
+      setMessage(t("manage.cancel"));
       setMode("view");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cancel failed");
+      setError(err instanceof Error ? err.message : t("validation.generic"));
     } finally {
       setBusy(false);
     }
@@ -143,12 +148,12 @@ function ManageContent() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Reschedule failed");
+      if (!res.ok) throw new Error(data.error || t("validation.generic"));
       setAppointment(data.appointment as AppointmentView);
-      setMessage("Appointment rescheduled. Awaiting confirmation.");
+      setMessage(t("manage.reschedule"));
       setMode("view");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reschedule failed");
+      setError(err instanceof Error ? err.message : t("validation.generic"));
     } finally {
       setBusy(false);
     }
@@ -164,12 +169,9 @@ function ManageContent() {
     <div className="pb-20 pt-28">
       <div className="wrap max-w-2xl">
         <Reveal>
-          <span className="eyebrow">Appointments</span>
-          <h1 className="section-title">Manage booking</h1>
-          <p className="section-lead">
-            View, cancel, or reschedule using the secure link from your
-            confirmation.
-          </p>
+          <span className="eyebrow">{t("manage.eyebrow")}</span>
+          <h1 className="section-title">{t("manage.title")}</h1>
+          <p className="section-lead">{t("manage.lead")}</p>
         </Reveal>
 
         {!token && (
@@ -185,23 +187,23 @@ function ManageContent() {
             }}
           >
             <label>
-              <span className="label">Manage token</span>
+              <span className="label">{t("manage.token")}</span>
               <input
                 className="input"
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
-                placeholder="Paste your manage token"
+                placeholder={t("manage.token")}
                 required
               />
             </label>
             <button type="submit" className="btn btn-primary mt-4">
-              Look up appointment
+              {t("manage.find")}
             </button>
           </form>
         )}
 
         {loading && (
-          <p className="mt-10 text-[var(--slate)]">Loading appointment…</p>
+          <p className="mt-10 text-[var(--slate)]">{t("manage.loading")}</p>
         )}
 
         {error && (
@@ -224,25 +226,25 @@ function ManageContent() {
 
             <div className="space-y-3 px-6 py-6 text-[var(--ink-soft)] md:px-8">
               <p>
-                <strong className="text-[var(--ink)]">When:</strong>{" "}
+                <strong className="text-[var(--ink)]">{t("book.when")}:</strong>{" "}
                 {formatDate(appointment.date)} at {appointment.startTime}
                 {appointment.endTime ? `–${appointment.endTime}` : ""}
               </p>
               <p>
-                <strong className="text-[var(--ink)]">Specialist:</strong>{" "}
-                {appointment.staffName || "Assigned specialist"}
+                <strong className="text-[var(--ink)]">{t("book.specialist")}:</strong>{" "}
+                {appointment.staffName || t("book.specialist")}
               </p>
               <p>
-                <strong className="text-[var(--ink)]">Patient:</strong>{" "}
+                <strong className="text-[var(--ink)]">{t("common.name")}:</strong>{" "}
                 {appointment.customerName}
               </p>
               <p>
-                <strong className="text-[var(--ink)]">Contact:</strong>{" "}
+                <strong className="text-[var(--ink)]">{t("common.phone")}:</strong>{" "}
                 {appointment.customerPhone} · {appointment.customerEmail}
               </p>
               {appointment.notes && (
                 <p>
-                  <strong className="text-[var(--ink)]">Notes:</strong>{" "}
+                  <strong className="text-[var(--ink)]">{t("common.notes")}:</strong>{" "}
                   {appointment.notes}
                 </p>
               )}
@@ -256,7 +258,7 @@ function ManageContent() {
                   onClick={() => setMode("reschedule")}
                   disabled={busy}
                 >
-                  Reschedule
+                  {t("manage.reschedule")}
                 </button>
                 <button
                   type="button"
@@ -264,7 +266,7 @@ function ManageContent() {
                   onClick={cancelAppointment}
                   disabled={busy}
                 >
-                  Cancel appointment
+                  {t("manage.cancel")}
                 </button>
               </div>
             )}
@@ -275,10 +277,10 @@ function ManageContent() {
                 className="border-t border-[var(--line)] px-6 py-6 md:px-8"
               >
                 <h3 className="font-[family-name:var(--font-display)] text-2xl">
-                  Choose a new time
+                  {t("book.chooseTime")}
                 </h3>
                 <label className="mt-5 block">
-                  <span className="label">Date</span>
+                  <span className="label">{t("common.date")}</span>
                   <select
                     className="select"
                     value={date}
@@ -296,27 +298,25 @@ function ManageContent() {
                 </label>
 
                 <div className="mt-5">
-                  <span className="label">Available times</span>
+                  <span className="label">{t("book.chooseTime")}</span>
                   {slotsLoading ? (
-                    <p className="text-sm text-[var(--slate)]">Loading slots…</p>
+                    <p className="text-sm text-[var(--slate)]">{t("common.loading")}</p>
                   ) : slots.length === 0 ? (
-                    <p className="text-sm text-[var(--slate)]">
-                      No slots on this date.
-                    </p>
+                    <p className="text-sm text-[var(--slate)]">{t("book.noSlots")}</p>
                   ) : (
                     <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {slots.map((t) => (
+                      {slots.map((slot) => (
                         <button
-                          key={t}
+                          key={slot}
                           type="button"
-                          onClick={() => setStartTime(t)}
+                          onClick={() => setStartTime(slot)}
                           className={`rounded-full border py-2.5 text-sm font-semibold ${
-                            startTime === t
+                            startTime === slot
                               ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                               : "border-[var(--line-strong)]"
                           }`}
                         >
-                          {t}
+                          {slot}
                         </button>
                       ))}
                     </div>
@@ -329,14 +329,14 @@ function ManageContent() {
                     className="btn btn-ghost"
                     onClick={() => setMode("view")}
                   >
-                    Back
+                    {t("book.back")}
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary"
                     disabled={busy || !startTime}
                   >
-                    {busy ? "Saving…" : "Confirm reschedule"}
+                    {busy ? t("common.loading") : t("manage.save")}
                   </button>
                 </div>
               </form>
@@ -345,7 +345,7 @@ function ManageContent() {
             {cancelled && (
               <div className="border-t border-[var(--line)] px-6 py-5 md:px-8">
                 <Link href="/book" className="btn btn-primary">
-                  Book a new appointment
+                  {t("book.bookAnother")}
                 </Link>
               </div>
             )}
@@ -356,13 +356,16 @@ function ManageContent() {
   );
 }
 
+function ManageFallback() {
+  const { t } = useLocale();
+  return (
+    <div className="wrap pb-20 pt-28 text-[var(--slate)]">{t("common.loading")}</div>
+  );
+}
+
 export default function ManageAppointmentPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="wrap pb-20 pt-28 text-[var(--slate)]">Loading…</div>
-      }
-    >
+    <Suspense fallback={<ManageFallback />}>
       <ManageContent />
     </Suspense>
   );

@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
-import { dayLabel } from "@/lib/appointments";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { WorkingHours } from "@/lib/types";
 
 type PublicSettings = {
@@ -19,6 +19,7 @@ type PublicSettings = {
 };
 
 export default function ContactPage() {
+  const { t } = useLocale();
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,7 +64,7 @@ export default function ContactPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send message");
+      if (!res.ok) throw new Error(data.error || t("validation.generic"));
       setStatus("sent");
       setName("");
       setEmail("");
@@ -72,7 +73,7 @@ export default function ContactPage() {
       setMessage("");
     } catch (err) {
       setStatus("error");
-      setError(err instanceof Error ? err.message : "Failed to send message");
+      setError(err instanceof Error ? err.message : t("validation.generic"));
     }
   }
 
@@ -85,12 +86,9 @@ export default function ContactPage() {
     <div className="pb-20 pt-28">
       <div className="wrap">
         <Reveal>
-          <span className="eyebrow">Contact</span>
-          <h1 className="section-title">We&apos;d love to hear from you</h1>
-          <p className="section-lead">
-            Questions about exams, frames, or fittings — send a note or message
-            us on WhatsApp.
-          </p>
+          <span className="eyebrow">{t("contact.eyebrow")}</span>
+          <h1 className="section-title">{t("contact.title")}</h1>
+          <p className="section-lead">{t("contact.lead")}</p>
         </Reveal>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
@@ -98,7 +96,7 @@ export default function ContactPage() {
             <form onSubmit={onSubmit} className="surface p-6 md:p-8">
               <div className="grid gap-4 md:grid-cols-2">
                 <label>
-                  <span className="label">Name</span>
+                  <span className="label">{t("contact.name")}</span>
                   <input
                     className="input"
                     required
@@ -108,7 +106,7 @@ export default function ContactPage() {
                   />
                 </label>
                 <label>
-                  <span className="label">Email</span>
+                  <span className="label">{t("contact.email")}</span>
                   <input
                     className="input"
                     required
@@ -119,7 +117,7 @@ export default function ContactPage() {
                   />
                 </label>
                 <label>
-                  <span className="label">Phone (optional)</span>
+                  <span className="label">{t("contact.phone")}</span>
                   <input
                     className="input"
                     type="tel"
@@ -129,7 +127,7 @@ export default function ContactPage() {
                   />
                 </label>
                 <label>
-                  <span className="label">Subject</span>
+                  <span className="label">{t("contact.subject")}</span>
                   <input
                     className="input"
                     required
@@ -138,7 +136,7 @@ export default function ContactPage() {
                   />
                 </label>
                 <label className="md:col-span-2">
-                  <span className="label">Message</span>
+                  <span className="label">{t("contact.message")}</span>
                   <textarea
                     className="textarea"
                     required
@@ -151,7 +149,7 @@ export default function ContactPage() {
 
               {status === "sent" && (
                 <p className="mt-4 text-sm font-medium text-[var(--success)]">
-                  Message sent — we&apos;ll get back to you soon.
+                  {t("contact.sent")}
                 </p>
               )}
               {error && (
@@ -166,7 +164,7 @@ export default function ContactPage() {
                   className="btn btn-primary"
                   disabled={status === "sending"}
                 >
-                  {status === "sending" ? "Sending…" : "Send message"}
+                  {status === "sending" ? t("contact.sending") : t("contact.send")}
                 </button>
                 <a
                   href={waHref}
@@ -174,7 +172,7 @@ export default function ContactPage() {
                   rel="noopener noreferrer"
                   className="btn btn-ghost"
                 >
-                  WhatsApp
+                  {t("contact.whatsapp")}
                 </a>
               </div>
             </form>
@@ -184,7 +182,7 @@ export default function ContactPage() {
             <div className="space-y-8">
               <div>
                 <h2 className="font-[family-name:var(--font-display)] text-2xl">
-                  Visit {settings?.storeName || "LUMINA"}
+                  {settings?.storeName || "LUMINA"}
                 </h2>
                 <p className="mt-3 text-[var(--ink-soft)]">
                   {settings?.address || "128 King George Street"}
@@ -211,14 +209,16 @@ export default function ContactPage() {
 
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--slate)]">
-                  Hours
+                  {t("contact.hours")}
                 </h3>
                 <ul className="mt-3 space-y-1.5 text-sm text-[var(--ink-soft)]">
                   {(settings?.openingHours || []).map((h) => (
                     <li key={h.day} className="flex justify-between gap-4">
-                      <span>{dayLabel(h.day)}</span>
+                      <span>{t(`days.${h.day}`)}</span>
                       <span>
-                        {h.closed ? "Closed" : `${h.open} – ${h.close}`}
+                        {h.closed
+                          ? t("contact.closed")
+                          : `${h.open} – ${h.close}`}
                       </span>
                     </li>
                   ))}
@@ -247,11 +247,11 @@ export default function ContactPage() {
                     rel="noopener noreferrer"
                     className="btn btn-ghost"
                   >
-                    Open in Maps
+                    {t("contact.maps")}
                   </a>
                 )}
                 <Link href="/book" className="btn btn-accent">
-                  Book Eye Exam
+                  {t("contact.bookCta")}
                 </Link>
               </div>
             </div>

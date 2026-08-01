@@ -3,6 +3,8 @@ import Reveal from "@/components/Reveal";
 import GalleryGrid from "@/components/gallery/GalleryGrid";
 import { getStore } from "@/lib/db/store";
 import { GALLERY_IMAGES } from "@/lib/seed";
+import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
+import { t } from "@/lib/i18n/t";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default async function GalleryPage() {
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
   const { data } = await getStore();
   const fromStore = data.media.filter(
     (m) => m.folder === "gallery" && m.type === "image"
@@ -34,12 +38,9 @@ export default async function GalleryPage() {
     <div className="pb-20 pt-28">
       <div className="wrap">
         <Reveal>
-          <span className="eyebrow">Gallery</span>
-          <h1 className="section-title">Light, frames, atmosphere</h1>
-          <p className="section-lead">
-            A look inside the LUMINA atelier — fittings, silhouettes, and the
-            quiet of precise optical care.
-          </p>
+          <span className="eyebrow">{t(dict, "gallery.eyebrow")}</span>
+          <h1 className="section-title">{t(dict, "gallery.title")}</h1>
+          <p className="section-lead">{t(dict, "gallery.lead")}</p>
         </Reveal>
         <GalleryGrid items={items} />
       </div>

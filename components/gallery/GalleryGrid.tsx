@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import Reveal from "@/components/Reveal";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export type GalleryItem = {
   id: string;
@@ -12,6 +13,7 @@ export type GalleryItem = {
 };
 
 export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
+  const { t } = useLocale();
   const [active, setActive] = useState<number | null>(null);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
             <button
               type="button"
               onClick={() => setActive(i)}
-              className="group relative block w-full overflow-hidden rounded-[var(--radius-sm)] text-left"
+              className="group relative block w-full overflow-hidden rounded-[var(--radius-sm)] text-start"
             >
               <Image
                 src={item.url}
@@ -54,7 +56,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
               />
               <span className="pointer-events-none absolute inset-0 bg-[var(--ink)]/0 transition group-hover:bg-[var(--ink)]/25" />
               <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 p-4 text-sm font-semibold text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                View
+                {t("gallery.view")}
               </span>
             </button>
           </Reveal>
@@ -68,13 +70,13 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
           onClick={() => setActive(null)}
           role="dialog"
           aria-modal="true"
-          aria-label="Gallery lightbox"
+          aria-label={t("gallery.eyebrow")}
         >
           <button
             type="button"
-            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            className="absolute end-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
             onClick={() => setActive(null)}
-            aria-label="Close"
+            aria-label={t("gallery.close")}
           >
             <X size={20} />
           </button>
@@ -100,7 +102,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
                   )
                 }
               >
-                Previous
+                {t("gallery.previous")}
               </button>
               <span>
                 {active + 1} / {items.length}
@@ -112,7 +114,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
                   setActive((i) => (i === null ? i : (i + 1) % items.length))
                 }
               >
-                Next
+                {t("gallery.next")}
               </button>
             </div>
           </div>

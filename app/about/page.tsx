@@ -3,6 +3,8 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
 import { getStore } from "@/lib/db/store";
+import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
+import { t } from "@/lib/i18n/t";
 
 export const dynamic = "force-dynamic";
 
@@ -13,23 +15,25 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
   const { data } = await getStore();
   const team = data.staff.filter((s) => s.active).slice(0, 3);
+
+  const craftItems = [
+    t(dict, "about.craft1"),
+    t(dict, "about.craft2"),
+    t(dict, "about.craft3"),
+  ];
 
   return (
     <div className="pb-20 pt-28">
       {/* Intro */}
       <section className="wrap">
         <Reveal>
-          <span className="eyebrow">About</span>
-          <h1 className="section-title max-w-3xl">
-            An optical house built on clarity and restraint
-          </h1>
-          <p className="section-lead mt-4">
-            LUMINA began with a simple belief: vision care should feel as refined
-            as the frames you wear. We designed a store where clinical precision
-            and quiet luxury share the same room.
-          </p>
+          <span className="eyebrow">{t(dict, "about.eyebrow")}</span>
+          <h1 className="section-title max-w-3xl">{t(dict, "about.title")}</h1>
+          <p className="section-lead mt-4">{t(dict, "about.lead")}</p>
         </Reveal>
       </section>
 
@@ -49,18 +53,12 @@ export default async function AboutPage() {
             </div>
           </Reveal>
           <Reveal delay={100}>
-            <span className="eyebrow">Our story</span>
+            <span className="eyebrow">{t(dict, "about.eyebrow")}</span>
             <h2 className="section-title !text-[clamp(2rem,4vw,3rem)]">
-              Precision without noise
+              {t(dict, "about.storyTitle")}
             </h2>
             <p className="mt-4 text-[1.05rem] leading-relaxed">
-              From comprehensive eye examinations to progressive lens fittings,
-              every visit is paced for accuracy. Our optometrists take the time
-              your eyes deserve — no rush, no upselling theatre.
-            </p>
-            <p className="mt-4 text-[1.05rem] leading-relaxed">
-              Alongside the clinic, our atelier curates acetate, titanium, and
-              metal frames with an editor&apos;s eye. Fewer options. Better ones.
+              {t(dict, "about.story")}
             </p>
           </Reveal>
         </div>
@@ -70,34 +68,16 @@ export default async function AboutPage() {
       <section className="section !pt-0">
         <div className="wrap">
           <Reveal>
-            <span className="eyebrow">Craft</span>
-            <h2 className="section-title">Craftsmanship you can feel</h2>
-            <p className="section-lead">
-              Measurements, materials, and finishing — the invisible details that
-              make all-day wear effortless.
-            </p>
+            <span className="eyebrow">{t(dict, "about.eyebrow")}</span>
+            <h2 className="section-title">{t(dict, "about.craftTitle")}</h2>
           </Reveal>
           <div className="mt-12 grid gap-10 md:grid-cols-3">
-            {[
-              {
-                title: "Measured fittings",
-                text: "Pupillary distance, pantoscopic tilt, and wrap — dialed in so lenses sit exactly where they should.",
-              },
-              {
-                title: "Material honesty",
-                text: "Italian acetate, featherweight titanium, and brushed metals chosen for balance and longevity.",
-              },
-              {
-                title: "Lens science",
-                text: "Progressive, blue-light, polarized, and office lenses matched to how you actually see your day.",
-              },
-            ].map((item, i) => (
-              <Reveal key={item.title} delay={i * 90}>
+            {craftItems.map((item, i) => (
+              <Reveal key={item} delay={i * 90}>
                 <div className="border-t border-[var(--line-strong)] pt-6">
                   <h3 className="font-[family-name:var(--font-display)] text-2xl">
-                    {item.title}
+                    {item}
                   </h3>
-                  <p className="mt-3">{item.text}</p>
                 </div>
               </Reveal>
             ))}
@@ -109,11 +89,8 @@ export default async function AboutPage() {
       <section className="section bg-white/50">
         <div className="wrap">
           <Reveal>
-            <span className="eyebrow">Team</span>
-            <h2 className="section-title">The people behind the lenses</h2>
-            <p className="section-lead">
-              Optometrists and optical specialists dedicated to precise care.
-            </p>
+            <span className="eyebrow">{t(dict, "about.eyebrow")}</span>
+            <h2 className="section-title">{t(dict, "about.teamTitle")}</h2>
           </Reveal>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             {team.map((member, i) => (
@@ -141,10 +118,10 @@ export default async function AboutPage() {
           <Reveal delay={120}>
             <div className="mt-12 flex flex-wrap gap-3">
               <Link href="/book" className="btn btn-primary">
-                Book Eye Exam
+                {t(dict, "about.ctaBook")}
               </Link>
-              <Link href="/contact" className="btn btn-ghost">
-                Visit the store
+              <Link href="/shop" className="btn btn-ghost">
+                {t(dict, "about.ctaShop")}
               </Link>
             </div>
           </Reveal>

@@ -6,6 +6,8 @@ import Reveal from "@/components/Reveal";
 import ProductCard from "@/components/ProductCard";
 import { getStore } from "@/lib/db/store";
 import { formatPrice } from "@/lib/format";
+import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
+import { t } from "@/lib/i18n/t";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const locale = await getLocale();
+  const dict = await getDictionary(locale);
   const { data } = await getStore();
   const product = data.products.find((p) => p.slug === slug);
 
@@ -52,15 +56,26 @@ export default async function ProductDetailPage({ params }: PageProps) {
       ? product.images
       : ["/images/placeholder-frame.svg"];
 
+  const availabilityLabel =
+    product.status === "out_of_stock"
+      ? t(dict, "product.outOfStock")
+      : product.stockQuantity > 0
+        ? t(dict, "product.inStore")
+        : t(dict, "product.availability");
+
+  const categoryLabel =
+    dict.shop.categories[product.category as keyof typeof dict.shop.categories] ||
+    product.category;
+
   return (
     <div className="pb-20 pt-28">
       <div className="wrap">
         <div className="mb-8 text-sm text-[var(--slate)]">
           <Link href="/shop" className="hover:text-[var(--accent)]">
-            Shop
+            {t(dict, "product.shop")}
           </Link>
           <span className="mx-2">/</span>
-          <span>{product.category}</span>
+          <span>{categoryLabel}</span>
         </div>
 
         <div className="grid gap-12 lg:grid-cols-2">
@@ -103,14 +118,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {product.name}
             </h1>
             <p className="mt-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-              {product.category}
+              {categoryLabel}
             </p>
             <p className="mt-6 text-3xl font-semibold">
               {formatPrice(product.sellingPrice, data.settings)}
             </p>
             {product.status === "out_of_stock" && (
               <span className="pill mt-3 !bg-[#fdeaea] !text-[var(--danger)]">
-                Out of stock
+                {t(dict, "product.outOfStock")}
               </span>
             )}
             <p className="mt-6 max-w-lg text-[1.05rem] leading-relaxed">
@@ -121,7 +136,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {product.frameType && (
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-                    Frame
+                    {t(dict, "product.frame")}
                   </dt>
                   <dd className="mt-1 text-[var(--ink-soft)]">{product.frameType}</dd>
                 </div>
@@ -129,34 +144,28 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {product.lensType && (
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-                    Lens
+                    {t(dict, "product.lens")}
                   </dt>
                   <dd className="mt-1 text-[var(--ink-soft)]">{product.lensType}</dd>
                 </div>
               )}
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-                  SKU
+                  {t(dict, "product.sku")}
                 </dt>
                 <dd className="mt-1 text-[var(--ink-soft)]">{product.sku}</dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-                  Availability
+                  {t(dict, "product.availability")}
                 </dt>
-                <dd className="mt-1 text-[var(--ink-soft)]">
-                  {product.status === "out_of_stock"
-                    ? "Currently unavailable"
-                    : product.stockQuantity > 0
-                      ? "In store"
-                      : "Ask about availability"}
-                </dd>
+                <dd className="mt-1 text-[var(--ink-soft)]">{availabilityLabel}</dd>
               </div>
             </dl>
 
             <div className="mt-10 flex flex-wrap gap-3">
               <Link href="/book?service=Vision%20Consultation" className="btn btn-primary">
-                Book consultation
+                {t(dict, "product.bookConsultation")}
               </Link>
               <a
                 href={waHref}
@@ -164,7 +173,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 rel="noopener noreferrer"
                 className="btn btn-ghost"
               >
-                WhatsApp inquire
+                {t(dict, "product.whatsapp")}
               </a>
             </div>
           </Reveal>
@@ -173,9 +182,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
         {related.length > 0 && (
           <section className="mt-24">
             <Reveal>
-              <span className="eyebrow">More like this</span>
+              <span className="eyebrow">{t(dict, "product.related")}</span>
               <h2 className="section-title !text-[clamp(1.8rem,4vw,2.6rem)]">
-                Related pieces
+                {t(dict, "product.related")}
               </h2>
             </Reveal>
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
