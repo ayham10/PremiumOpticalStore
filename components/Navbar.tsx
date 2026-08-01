@@ -14,7 +14,10 @@ export default function Navbar() {
   const isHome = pathname === "/";
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
-  const isCatalogue = pathname === "/frames" || pathname === "/sunglasses";
+  const isCatalogue =
+    pathname === "/frames" ||
+    pathname === "/sunglasses" ||
+    pathname === "/contact-lenses";
   const isSolidDark = isProduct || isEyeExam || isCatalogue;
   const isDarkPage = isHome || isSolidDark;
   const [scrolled, setScrolled] = useState(false);

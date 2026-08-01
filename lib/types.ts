@@ -96,6 +96,9 @@ export type EyeExamAppointmentStatus =
   | "cancelled"
   | "no-show";
 
+/** Clinic slot booking types that share the eye-exam calendar system */
+export type ClinicAppointmentType = "eye_exam" | "contact_lens_fitting";
+
 export interface EyeExamTimeSlot {
   id: string;
   time: string; // HH:mm Asia/Jerusalem wall clock
@@ -107,6 +110,12 @@ export interface EyeExamAvailability {
   date: string; // YYYY-MM-DD (business calendar date, Asia/Jerusalem)
   isOpen: boolean;
   slots: EyeExamTimeSlot[];
+  /**
+   * Which services may book this day.
+   * Undefined / empty / both types = shared slots (any booking blocks the time).
+   * A single type = separate calendar day for that service only.
+   */
+  services?: ClinicAppointmentType[];
   createdAt: string;
   updatedAt: string;
 }
@@ -119,6 +128,7 @@ export interface EyeExamAppointment {
   phone: string;
   appointmentDate: string; // YYYY-MM-DD
   appointmentTime: string; // HH:mm
+  appointmentType: ClinicAppointmentType;
   status: EyeExamAppointmentStatus;
   language: "en" | "he" | "ar";
   smsStatus: "queued" | "sent" | "failed" | "simulated" | "pending";
@@ -135,6 +145,10 @@ export interface Product {
   brand: string;
   frameType?: string;
   lensType?: string;
+  /** e.g. Daily / Monthly — shown for contact lenses when provided */
+  replacementSchedule?: string;
+  /** Lenses per box — shown for contact lenses when provided */
+  packageQuantity?: number;
   barcode?: string;
   sku: string;
   description: string;

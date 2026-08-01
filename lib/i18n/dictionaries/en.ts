@@ -65,12 +65,17 @@ export type Dictionary = {
     whatsapp: string;
     related: string;
     relatedSunglasses: string;
+    relatedContactLenses: string;
     frameShape: string;
     lensType: string;
     polarized: string;
     uvProtection: string;
     material: string;
     colour: string;
+    replacementSchedule: string;
+    quantity: string;
+    lensesUnit: string;
+    bookContactLensFitting: string;
     previous: string;
     next: string;
     attrs: Record<string, string>;
@@ -158,6 +163,35 @@ export type Dictionary = {
       dateRequired: string;
       timeRequired: string;
     };
+  };
+  contactLenses: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    bookCta: string;
+    catalogueTitle: string;
+    safety: string;
+    info: {
+      aria: string;
+      fittingTitle: string;
+      fittingText: string;
+      optionsTitle: string;
+      optionsText: string;
+      supportTitle: string;
+      supportText: string;
+    };
+    booking: {
+      formTitle: string;
+      formSubtitle: string;
+      details: string;
+      date: string;
+      time: string;
+      selected: string;
+      confirm: string;
+      successTitle: string;
+      successLead: string;
+    };
+    appointmentType: string;
   };
   manage: Record<string, string>;
   contact: Record<string, string>;
@@ -354,9 +388,9 @@ const en: Dictionary = {
       secondaryCta: "Book consultation",
     },
     contacts: {
-      eyebrow: "Lenses",
+      eyebrow: "Contact Lens Care",
       title: "Contact Lenses",
-      lead: "Daily and monthly lenses fitted for comfort, clarity, and eye health.",
+      lead: "Find comfortable contact lenses suited to your vision, lifestyle and daily routine.",
       body: "Whether you prefer dailies or longer-wear options, we help you find lenses that feel natural — with guidance on care, fit, and when glasses remain the better choice.",
       highlights: [
         { title: "Comfort first", text: "Trial fittings and brand guidance tailored to your eyes." },
@@ -459,12 +493,17 @@ const en: Dictionary = {
     whatsapp: "WhatsApp inquire",
     related: "Related pieces",
     relatedSunglasses: "Related sunglasses",
+    relatedContactLenses: "Related Contact Lenses",
     frameShape: "Frame shape",
     lensType: "Lens type",
     polarized: "Polarized",
     uvProtection: "UV protection",
     material: "Material",
     colour: "Colour",
+    replacementSchedule: "Replacement schedule",
+    quantity: "Quantity",
+    lensesUnit: "lenses",
+    bookContactLensFitting: "Book Contact Lens Fitting",
     previous: "Previous products",
     next: "Next products",
     attrs: {
@@ -476,7 +515,9 @@ const en: Dictionary = {
       "Prescription Ready": "Prescription Ready",
       "Blue-light / Progressive": "Blue-light / Progressive",
       "Polarized UV400": "Polarized UV400",
-      "Daily Disposable": "Daily Disposable",
+      "Daily Disposable": "Daily lenses",
+      Daily: "Daily",
+      Monthly: "Monthly",
       Polarized: "Polarized",
       "UV400": "UV400",
       Acetate: "Acetate",
@@ -516,6 +557,10 @@ const en: Dictionary = {
         "Slim gold-tone rims with gradient lenses for coastal light and city glare.",
       "noir-mirror-square":
         "Bold square silhouette with mirror lenses and a quiet luxury finish.",
+      "acuvue-oasys-1-day":
+        "Daily disposable contact lenses from ACUVUE OASYS for comfortable everyday wear.",
+      "dailies-total1":
+        "Premium daily disposable contact lenses from DAILIES TOTAL1 for all-day comfort.",
     },
   },
   book: {
@@ -622,6 +667,37 @@ const en: Dictionary = {
       dateRequired: "Please select a date",
       timeRequired: "Please select a time",
     },
+  },
+  contactLenses: {
+    eyebrow: "Contact Lens Care",
+    title: "Contact Lenses",
+    description:
+      "Find comfortable contact lenses suited to your vision, lifestyle and daily routine.",
+    bookCta: "Book Contact Lens Fitting",
+    catalogueTitle: "Contact Lens Collection",
+    safety:
+      "Contact lenses should be fitted professionally. Do not wear lenses longer than recommended, and stop using them if you experience pain, redness or unusual discomfort.",
+    info: {
+      aria: "Contact lens care highlights",
+      fittingTitle: "Professional fitting",
+      fittingText: "Correct measurements and lens selection for your eyes.",
+      optionsTitle: "Daily or monthly options",
+      optionsText: "Choose the replacement schedule that suits your lifestyle.",
+      supportTitle: "Follow-up support",
+      supportText: "Receive guidance on comfort, care and safe use.",
+    },
+    booking: {
+      formTitle: "Book Contact Lens Fitting",
+      formSubtitle: "Choose a date and time for your fitting appointment.",
+      details: "Your details",
+      date: "Select date",
+      time: "Select time",
+      selected: "Selected appointment: {date} at {time}",
+      confirm: "Confirm booking",
+      successTitle: "Your contact lens fitting has been booked successfully.",
+      successLead: "We look forward to seeing you.",
+    },
+    appointmentType: "Contact Lens Fitting",
   },
   manage: {
     eyebrow: "Appointments",
@@ -733,7 +809,7 @@ const en: Dictionary = {
     sidebar: {
       dashboard: "Dashboard",
       appointments: "Appointments",
-      eyeExam: "Eye Exam Booking",
+      eyeExam: "Clinic Bookings",
       calendar: "Calendar",
       customers: "Customers",
       inventory: "Inventory",

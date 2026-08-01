@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
-import { formatEyeExamDateDisplay } from "@/lib/eye-exam";
+import {
+  formatEyeExamDateDisplay,
+  isClinicAppointmentType,
+  normalizeAppointmentType,
+} from "@/lib/eye-exam";
 import type { EyeExamAppointmentStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +24,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status")?.trim();
     const date = searchParams.get("date")?.trim();
+    const type = searchParams.get("type")?.trim();
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
 
     const { data } = await getStore();
@@ -31,6 +36,11 @@ export async function GET(request: Request) {
     if (date) {
       items = items.filter((a) => a.appointmentDate === date);
     }
+    if (type && isClinicAppointmentType(type)) {
+      items = items.filter(
+        (a) => normalizeAppointmentType(a.appointmentType) === type,
+      );
+    }
     if (q) {
       items = items.filter((a) =>
         [
@@ -40,6 +50,7 @@ export async function GET(request: Request) {
           a.email,
           a.phone,
           a.id,
+          a.appointmentType,
         ]
           .join(" ")
           .toLowerCase()
@@ -56,6 +67,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       appointments: items.map((a) => ({
         ...a,
+        appointmentType: normalizeAppointmentType(a.appointmentType),
         dateLabel: formatEyeExamDateDisplay(a.appointmentDate),
         fullName: `${a.firstName} ${a.lastName}`.trim(),
       })),

@@ -4,13 +4,33 @@ import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   buildDefaultSlots,
+  CLINIC_APPOINTMENT_TYPES,
   formatEyeExamDateDisplay,
   hasEyeExamSlotConflict,
+  isClinicAppointmentType,
   isValidIsoDate,
   parseTimeToMinutes,
   todayInJerusalem,
 } from "@/lib/eye-exam";
-import type { EyeExamAvailability, EyeExamTimeSlot } from "@/lib/types";
+import type {
+  ClinicAppointmentType,
+  EyeExamAvailability,
+  EyeExamTimeSlot,
+} from "@/lib/types";
+
+function normalizeServices(
+  input?: string[] | null,
+): ClinicAppointmentType[] | undefined {
+  if (!input) return undefined;
+  const services = input.filter(isClinicAppointmentType);
+  if (services.length === 0) return undefined;
+  if (
+    CLINIC_APPOINTMENT_TYPES.every((type) => services.includes(type))
+  ) {
+    return undefined; // shared
+  }
+  return Array.from(new Set(services));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +83,7 @@ export async function POST(request: Request) {
       times?: string[];
       copyFromDate?: string;
       enabledTimes?: string[];
+      services?: string[];
     };
 
     const date = body.date?.trim() || "";
@@ -108,11 +129,13 @@ export async function POST(request: Request) {
           }));
       }
 
+      const services = normalizeServices(body.services);
       created = {
         id: newId("exa"),
         date,
         isOpen: body.isOpen !== false,
         slots,
+        ...(services ? { services } : {}),
         createdAt: now,
         updatedAt: now,
       };
@@ -150,6 +173,7 @@ export async function PATCH(request: Request) {
       addTimes?: string[];
       removeTimes?: string[];
       toggleTime?: { time: string; isEnabled: boolean };
+      services?: string[] | null;
     };
 
     const id = body.id?.trim();
@@ -213,12 +237,21 @@ export async function PATCH(request: Request) {
 
       slots.sort((a, b) => a.time.localeCompare(b.time));
 
+      const nextServices =
+        body.services === null
+          ? undefined
+          : Array.isArray(body.services)
+            ? normalizeServices(body.services)
+            : current.services;
+
       updated = {
         ...current,
         isOpen: typeof body.isOpen === "boolean" ? body.isOpen : current.isOpen,
         slots,
+        services: nextServices,
         updatedAt: new Date().toISOString(),
       };
+      if (!updated.services) delete updated.services;
       store.eyeExamAvailability[index] = updated;
 
       pushActivity(store, {

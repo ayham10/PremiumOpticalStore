@@ -74,11 +74,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
     dict.product.descriptions[product.slug] || product.description;
 
   const isSunglasses = product.category === "Sunglasses";
+  const isContactLenses = product.category === "Contact Lenses";
   const frameLabel = product.frameType
     ? dict.product.attrs[product.frameType] || product.frameType
     : null;
   const lensLabel = product.lensType
     ? dict.product.attrs[product.lensType] || product.lensType
+    : null;
+  const replacementLabel = product.replacementSchedule
+    ? dict.product.attrs[product.replacementSchedule] ||
+      product.replacementSchedule
     : null;
   const polarized =
     product.lensType?.toLowerCase().includes("polarized") ?? false;
@@ -96,7 +101,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
         <div className="product-layout">
           <div className="product-gallery">
-            <div className="product-image-frame">
+            <div
+              className={`product-image-frame${
+                isContactLenses ? " product-image-frame--contain-pack" : ""
+              }`}
+            >
               <Image
                 src={images[0]}
                 alt={product.name}
@@ -139,7 +148,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <p className="product-description">{description}</p>
 
             <dl className="product-meta">
-              {frameLabel ? (
+              {frameLabel && !isContactLenses ? (
                 <div>
                   <dt>
                     {isSunglasses
@@ -152,11 +161,26 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {lensLabel ? (
                 <div>
                   <dt>
-                    {isSunglasses
+                    {isSunglasses || isContactLenses
                       ? t(dict, "product.lensType")
                       : t(dict, "product.lens")}
                   </dt>
                   <dd>{lensLabel}</dd>
+                </div>
+              ) : null}
+              {isContactLenses && replacementLabel ? (
+                <div>
+                  <dt>{t(dict, "product.replacementSchedule")}</dt>
+                  <dd>{replacementLabel}</dd>
+                </div>
+              ) : null}
+              {isContactLenses && product.packageQuantity ? (
+                <div>
+                  <dt>{t(dict, "product.quantity")}</dt>
+                  <dd>
+                    {product.packageQuantity}{" "}
+                    {t(dict, "product.lensesUnit")}
+                  </dd>
                 </div>
               ) : null}
               {isSunglasses && polarized ? (
@@ -182,12 +206,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </dl>
 
             <div className="product-actions">
-              <Link
-                href="/book?service=Vision%20Consultation"
-                className="btn btn-copper product-btn"
-              >
-                {t(dict, "product.bookConsultation")}
-              </Link>
+              {isContactLenses ? (
+                <Link
+                  href="/contact-lenses?book=1"
+                  className="btn btn-copper product-btn"
+                >
+                  {t(dict, "product.bookContactLensFitting")}
+                </Link>
+              ) : (
+                <Link
+                  href="/book?service=Vision%20Consultation"
+                  className="btn btn-copper product-btn"
+                >
+                  {t(dict, "product.bookConsultation")}
+                </Link>
+              )}
               <a
                 href={waHref}
                 target="_blank"
@@ -205,9 +238,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
             products={related}
             currencySymbol={data.settings.currencySymbol}
             relatedTitle={
-              isSunglasses
-                ? t(dict, "product.relatedSunglasses")
-                : t(dict, "product.related")
+              isContactLenses
+                ? t(dict, "product.relatedContactLenses")
+                : isSunglasses
+                  ? t(dict, "product.relatedSunglasses")
+                  : t(dict, "product.related")
             }
           />
         ) : null}

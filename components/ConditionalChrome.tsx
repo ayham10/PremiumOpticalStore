@@ -16,7 +16,8 @@ export default function ConditionalChrome({
   const isHome = pathname === "/";
   const isFrames = pathname === "/frames";
   const isSunglasses = pathname === "/sunglasses";
-  const isCatalogue = isFrames || isSunglasses;
+  const isContactLenses = pathname === "/contact-lenses";
+  const isCatalogue = isFrames || isSunglasses || isContactLenses;
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
 

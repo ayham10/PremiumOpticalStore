@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import type { ClinicAppointmentType } from "@/lib/types";
 
 type DateOption = { date: string; label: string };
 
@@ -16,12 +17,53 @@ type SuccessPayload = {
 export default function EyeExamBookingModal({
   open,
   onClose,
+  appointmentType = "eye_exam",
 }: {
   open: boolean;
   onClose: () => void;
+  appointmentType?: ClinicAppointmentType;
 }) {
   const { t, locale, rtl } = useLocale();
   const titleId = useId();
+  const isFitting = appointmentType === "contact_lens_fitting";
+  const copy = useMemo(
+    () => ({
+      formTitle: isFitting
+        ? t("contactLenses.booking.formTitle")
+        : t("eyeExam.formTitle"),
+      formSubtitle: isFitting
+        ? t("contactLenses.booking.formSubtitle")
+        : "",
+      date: isFitting
+        ? t("contactLenses.booking.date")
+        : t("eyeExam.fields.date"),
+      time: isFitting
+        ? t("contactLenses.booking.time")
+        : t("eyeExam.fields.time"),
+      selected: isFitting
+        ? t("contactLenses.booking.selected")
+        : t("eyeExam.selectedSummary"),
+      confirm: isFitting
+        ? t("contactLenses.booking.confirm")
+        : t("eyeExam.fields.confirm"),
+      successTitle: isFitting
+        ? t("contactLenses.booking.successTitle")
+        : t("eyeExam.successTitle"),
+      successLead: isFitting
+        ? t("contactLenses.booking.successLead")
+        : t("eyeExam.successLead"),
+      errorLoad: t("eyeExam.errorLoad"),
+      errorSubmit: t("eyeExam.errorSubmit"),
+      emptyDates: t("eyeExam.emptyDates"),
+      emptyTimes: t("eyeExam.emptyTimes"),
+      pickDateFirst: t("eyeExam.pickDateFirst"),
+      submitting: t("eyeExam.submitting"),
+      dateRequired: t("eyeExam.errors.dateRequired"),
+      timeRequired: t("eyeExam.errors.timeRequired"),
+    }),
+    [isFitting, t],
+  );
+
   const [dates, setDates] = useState<DateOption[]>([]);
   const [times, setTimes] = useState<string[]>([]);
   const [loadingDates, setLoadingDates] = useState(false);
@@ -57,19 +99,23 @@ export default function EyeExamBookingModal({
     setSuccess(null);
     setError("");
     setFieldErrors({});
+    setDate("");
+    setTime("");
     setLoadingDates(true);
-    fetch("/api/eye-exam/available-dates")
+    fetch(
+      `/api/eye-exam/available-dates?type=${encodeURIComponent(appointmentType)}`,
+    )
       .then(async (res) => {
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t("eyeExam.errorLoad"));
+        if (!res.ok) throw new Error(data.error || copy.errorLoad);
         setDates(data.dates || []);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : t("eyeExam.errorLoad"));
+        setError(err instanceof Error ? err.message : copy.errorLoad);
         setDates([]);
       })
       .finally(() => setLoadingDates(false));
-  }, [open, t]);
+  }, [open, t, appointmentType, copy.errorLoad]);
 
   useEffect(() => {
     if (!open || !date) {
@@ -80,18 +126,20 @@ export default function EyeExamBookingModal({
     setLoadingTimes(true);
     setTime("");
     setError("");
-    fetch(`/api/eye-exam/available-times?date=${encodeURIComponent(date)}`)
+    fetch(
+      `/api/eye-exam/available-times?date=${encodeURIComponent(date)}&type=${encodeURIComponent(appointmentType)}`,
+    )
       .then(async (res) => {
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t("eyeExam.errorLoad"));
+        if (!res.ok) throw new Error(data.error || copy.errorLoad);
         setTimes(data.times || []);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : t("eyeExam.errorLoad"));
+        setError(err instanceof Error ? err.message : copy.errorLoad);
         setTimes([]);
       })
       .finally(() => setLoadingTimes(false));
-  }, [date, open, t]);
+  }, [date, open, t, appointmentType, copy.errorLoad]);
 
   function validateClient(): boolean {
     const next: Record<string, string> = {};
@@ -103,8 +151,8 @@ export default function EyeExamBookingModal({
     }
     if (!phone.trim()) next.phone = t("validation.required");
     else if (!normalizePhoneHint(phone)) next.phone = t("validation.phone");
-    if (!date) next.appointmentDate = t("eyeExam.errors.dateRequired");
-    if (!time) next.appointmentTime = t("eyeExam.errors.timeRequired");
+    if (!date) next.appointmentDate = copy.dateRequired;
+    if (!time) next.appointmentTime = copy.timeRequired;
     setFieldErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -128,6 +176,7 @@ export default function EyeExamBookingModal({
           appointmentDate: date,
           appointmentTime: time,
           language: locale,
+          appointmentType,
         }),
       });
       const data = await res.json();
@@ -135,7 +184,7 @@ export default function EyeExamBookingModal({
         if (data.field) {
           setFieldErrors({ [data.field]: mapApiError(data.error, t) });
         }
-        throw new Error(data.error || t("eyeExam.errorSubmit"));
+        throw new Error(data.error || copy.errorSubmit);
       }
       setSuccess({
         firstName: data.appointment.firstName,
@@ -144,7 +193,7 @@ export default function EyeExamBookingModal({
         appointmentTime: data.appointment.appointmentTime,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("eyeExam.errorSubmit"));
+      setError(err instanceof Error ? err.message : copy.errorSubmit);
     } finally {
       setSubmitting(false);
     }
@@ -170,7 +219,12 @@ export default function EyeExamBookingModal({
         dir={rtl ? "rtl" : "ltr"}
       >
         <div className="eye-exam-modal-header">
-          <h2 id={titleId}>{t("eyeExam.formTitle")}</h2>
+          <div>
+            <h2 id={titleId}>{copy.formTitle}</h2>
+            {copy.formSubtitle ? (
+              <p className="eye-exam-modal-subtitle">{copy.formSubtitle}</p>
+            ) : null}
+          </div>
           <button
             type="button"
             className="eye-exam-modal-close"
@@ -184,8 +238,8 @@ export default function EyeExamBookingModal({
         <div className="eye-exam-modal-body">
           {success ? (
             <div className="eye-exam-success">
-              <p className="eye-exam-success-title">{t("eyeExam.successTitle")}</p>
-              <p className="eye-exam-success-lead">{t("eyeExam.successLead")}</p>
+              <p className="eye-exam-success-title">{copy.successTitle}</p>
+              <p className="eye-exam-success-lead">{copy.successLead}</p>
               <dl className="eye-exam-success-meta">
                 <div>
                   <dt>{t("common.name")}</dt>
@@ -208,6 +262,11 @@ export default function EyeExamBookingModal({
             </div>
           ) : (
             <form className="eye-exam-form" onSubmit={onSubmit} noValidate>
+              {isFitting ? (
+                <p className="eye-exam-select-label">
+                  {t("contactLenses.booking.details")}
+                </p>
+              ) : null}
               <div className="eye-exam-form-grid">
                 <label>
                   <span>{t("eyeExam.fields.firstName")}</span>
@@ -259,13 +318,13 @@ export default function EyeExamBookingModal({
               </div>
 
               <div className="eye-exam-select-block">
-                <p className="eye-exam-select-label">{t("eyeExam.fields.date")}</p>
+                <p className="eye-exam-select-label">{copy.date}</p>
                 {loadingDates ? (
                   <p className="eye-exam-muted">{t("common.loading")}</p>
                 ) : dates.length === 0 ? (
-                  <p className="eye-exam-muted">{t("eyeExam.emptyDates")}</p>
+                  <p className="eye-exam-muted">{copy.emptyDates}</p>
                 ) : (
-                  <div className="eye-exam-chip-row" role="listbox" aria-label={t("eyeExam.fields.date")}>
+                  <div className="eye-exam-chip-row" role="listbox" aria-label={copy.date}>
                     {dates.map((item) => (
                       <button
                         key={item.date}
@@ -286,15 +345,15 @@ export default function EyeExamBookingModal({
               </div>
 
               <div className="eye-exam-select-block">
-                <p className="eye-exam-select-label">{t("eyeExam.fields.time")}</p>
+                <p className="eye-exam-select-label">{copy.time}</p>
                 {!date ? (
-                  <p className="eye-exam-muted">{t("eyeExam.pickDateFirst")}</p>
+                  <p className="eye-exam-muted">{copy.pickDateFirst}</p>
                 ) : loadingTimes ? (
                   <p className="eye-exam-muted">{t("common.loading")}</p>
                 ) : times.length === 0 ? (
-                  <p className="eye-exam-muted">{t("eyeExam.emptyTimes")}</p>
+                  <p className="eye-exam-muted">{copy.emptyTimes}</p>
                 ) : (
-                  <div className="eye-exam-chip-row" role="listbox" aria-label={t("eyeExam.fields.time")}>
+                  <div className="eye-exam-chip-row" role="listbox" aria-label={copy.time}>
                     {times.map((slot) => (
                       <button
                         key={slot}
@@ -316,7 +375,7 @@ export default function EyeExamBookingModal({
 
               {date && time ? (
                 <p className="eye-exam-selection-summary">
-                  {t("eyeExam.selectedSummary")
+                  {copy.selected
                     .replace("{date}", selectedLabel)
                     .replace("{time}", time)}
                 </p>
@@ -329,7 +388,7 @@ export default function EyeExamBookingModal({
                 className="btn btn-copper eye-exam-btn"
                 disabled={submitting || loadingDates}
               >
-                {submitting ? t("eyeExam.submitting") : t("eyeExam.fields.confirm")}
+                {submitting ? copy.submitting : copy.confirm}
               </button>
             </form>
           )}

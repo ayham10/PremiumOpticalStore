@@ -12,8 +12,10 @@ import {
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
   hasEyeExamSlotConflict,
+  isClinicAppointmentType,
   isValidEmail,
   isValidIsoDate,
+  normalizeAppointmentType,
   normalizeIsraeliPhone,
   parseTimeToMinutes,
   sanitizeName,
@@ -22,7 +24,7 @@ import {
 } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms/provider";
-import type { EyeExamAppointment } from "@/lib/types";
+import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
     const limited = rateLimit(
       clientKeyFromRequest(request, "eye-exam-book"),
       8,
-      60_000
+      60_000,
     );
     if (!limited.ok) {
       return jsonError("Too many booking attempts. Please try again shortly.", 429, {
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
       appointmentDate?: string;
       appointmentTime?: string;
       language?: string;
+      appointmentType?: string;
     };
 
     const firstName = sanitizeName(body.firstName || "");
@@ -61,6 +64,11 @@ export async function POST(request: Request) {
     const language = (LOCALES.has(body.language as Locale)
       ? body.language
       : "en") as Locale;
+    const appointmentType: ClinicAppointmentType = isClinicAppointmentType(
+      body.appointmentType,
+    )
+      ? body.appointmentType
+      : normalizeAppointmentType(body.appointmentType);
 
     if (!firstName) return jsonError("First name is required", 400, { field: "firstName" });
     if (!lastName) return jsonError("Last name is required", 400, { field: "lastName" });
@@ -92,12 +100,13 @@ export async function POST(request: Request) {
       await updateStore(async (store) => {
         const day = getOpenAvailabilityForDate(
           store.eyeExamAvailability,
-          appointmentDate
+          appointmentDate,
+          appointmentType,
         );
         if (!day) throw new Error("DATE_UNAVAILABLE");
 
         const slot = day.slots.find(
-          (s) => s.time === appointmentTime && s.isEnabled
+          (s) => s.time === appointmentTime && s.isEnabled,
         );
         if (!slot) throw new Error("TIME_UNAVAILABLE");
 
@@ -105,7 +114,9 @@ export async function POST(request: Request) {
           hasEyeExamSlotConflict(
             store.eyeExamAppointments,
             appointmentDate,
-            appointmentTime
+            appointmentTime,
+            undefined,
+            { appointmentType, day },
           )
         ) {
           throw new Error("CONFLICT");
@@ -120,6 +131,7 @@ export async function POST(request: Request) {
           phone,
           appointmentDate,
           appointmentTime,
+          appointmentType,
           status: "confirmed",
           language,
           smsStatus: "pending",
@@ -130,7 +142,12 @@ export async function POST(request: Request) {
         store.eyeExamAppointments.unshift(created);
 
         const dateDisplay = formatEyeExamDateDisplay(appointmentDate);
-        const smsBody = eyeExamSmsBody(language, dateDisplay, appointmentTime);
+        const smsBody = eyeExamSmsBody(
+          language,
+          dateDisplay,
+          appointmentTime,
+          appointmentType,
+        );
         const smsResult = await sendSms({
           to: phone,
           body: smsBody,
@@ -155,9 +172,12 @@ export async function POST(request: Request) {
         pushActivity(store, {
           actor: email,
           action: "public_booking",
-          entity: "eye_exam_appointment",
+          entity:
+            appointmentType === "contact_lens_fitting"
+              ? "contact_lens_fitting"
+              : "eye_exam_appointment",
           entityId: created.id,
-          detail: `${firstName} ${lastName} — ${appointmentDate} ${appointmentTime}`,
+          detail: `${appointmentType} — ${firstName} ${lastName} — ${appointmentDate} ${appointmentTime}`,
         });
 
         return store;
@@ -172,11 +192,12 @@ export async function POST(request: Request) {
           lastName: created!.lastName,
           appointmentDate: created!.appointmentDate,
           appointmentTime: created!.appointmentTime,
+          appointmentType: created!.appointmentType,
           dateLabel: formatEyeExamDateDisplay(created!.appointmentDate),
           status: created!.status,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     if (error instanceof Error) {

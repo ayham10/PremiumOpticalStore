@@ -2,15 +2,24 @@ import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/helpers";
 import { getStore } from "@/lib/db/store";
 import {
+  daySupportsService,
   formatEyeExamDateDisplay,
+  isClinicAppointmentType,
   listBookableTimes,
+  normalizeAppointmentType,
   todayInJerusalem,
 } from "@/lib/eye-exam";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const typeParam = searchParams.get("type");
+    const appointmentType = isClinicAppointmentType(typeParam)
+      ? typeParam
+      : normalizeAppointmentType(typeParam);
+
     const { data } = await getStore();
     const today = todayInJerusalem();
     const leadDays = data.settings.bookingLeadDays || 45;
@@ -22,9 +31,12 @@ export async function GET() {
 
     const dates = data.eyeExamAvailability
       .filter((day) => day.isOpen && day.date >= today && day.date <= maxDate)
+      .filter((day) => daySupportsService(day, appointmentType))
       .filter(
         (day) =>
-          listBookableTimes(day, data.eyeExamAppointments).length > 0
+          listBookableTimes(day, data.eyeExamAppointments, {
+            appointmentType,
+          }).length > 0,
       )
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((day) => ({
@@ -32,7 +44,7 @@ export async function GET() {
         label: formatEyeExamDateDisplay(day.date),
       }));
 
-    return NextResponse.json({ dates });
+    return NextResponse.json({ dates, appointmentType });
   } catch (error) {
     return handleRouteError(error);
   }

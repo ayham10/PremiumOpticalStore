@@ -4,7 +4,10 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, Plus, RefreshCw, Search } from "lucide-react";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import type { EyeExamAppointmentStatus } from "@/lib/types";
+import type {
+  ClinicAppointmentType,
+  EyeExamAppointmentStatus,
+} from "@/lib/types";
 
 type SlotRow = {
   id: string;
@@ -19,6 +22,7 @@ type DayRow = {
   label: string;
   isOpen: boolean;
   slots: SlotRow[];
+  services?: ClinicAppointmentType[];
 };
 
 type AppointmentRow = {
@@ -30,6 +34,7 @@ type AppointmentRow = {
   phone: string;
   appointmentDate: string;
   appointmentTime: string;
+  appointmentType: ClinicAppointmentType;
   dateLabel: string;
   status: EyeExamAppointmentStatus;
   smsStatus: string;
@@ -61,7 +66,12 @@ export default function AdminEyeExamPage() {
   const [copyFrom, setCopyFrom] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [newServices, setNewServices] = useState<ClinicAppointmentType[]>([
+    "eye_exam",
+    "contact_lens_fitting",
+  ]);
 
   const selected = useMemo(
     () => days.find((d) => d.id === selectedId) || null,
@@ -84,13 +94,14 @@ export default function AdminEyeExamPage() {
   const loadAppointments = useCallback(async () => {
     const params = new URLSearchParams();
     if (statusFilter !== "all") params.set("status", statusFilter);
+    if (typeFilter !== "all") params.set("type", typeFilter);
     if (dateFilter) params.set("date", dateFilter);
     if (query.trim()) params.set("q", query.trim());
     const data = await apiFetch<{ appointments: AppointmentRow[] }>(
       `/api/admin/eye-exam/appointments?${params.toString()}`
     );
     setAppointments(data.appointments || []);
-  }, [dateFilter, query, statusFilter]);
+  }, [dateFilter, query, statusFilter, typeFilter]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -121,6 +132,7 @@ export default function AdminEyeExamPage() {
           date: newDate,
           isOpen: true,
           copyFromDate: copyFrom || undefined,
+          services: newServices,
         }),
       });
       setNewDate("");
@@ -207,7 +219,7 @@ export default function AdminEyeExamPage() {
             {t("admin.sidebar.eyeExam")}
           </h1>
           <p className="mt-1 text-sm text-[var(--slate)]">
-            Manage Eye Exam dates (08:30–21:00), slots, and bookings. Dates display as DD/MM/YY.
+            Manage Eye Exam and Contact Lens Fitting dates (08:30–21:00), slots, and bookings. Dates display as DD/MM/YY. Leave both services checked to share the same slots.
           </p>
         </div>
         <button
@@ -291,10 +303,45 @@ export default function AdminEyeExamPage() {
                   ))}
                 </select>
               </label>
+              <fieldset className="space-y-1 text-xs">
+                <legend className="font-semibold uppercase tracking-wide text-[var(--slate)]">
+                  Services for this date
+                </legend>
+                <label className="flex items-center gap-2 text-sm normal-case tracking-normal">
+                  <input
+                    type="checkbox"
+                    checked={newServices.includes("eye_exam")}
+                    onChange={(e) =>
+                      setNewServices((prev) =>
+                        e.target.checked
+                          ? Array.from(new Set([...prev, "eye_exam"]))
+                          : prev.filter((s) => s !== "eye_exam"),
+                      )
+                    }
+                  />
+                  Eye Exam
+                </label>
+                <label className="flex items-center gap-2 text-sm normal-case tracking-normal">
+                  <input
+                    type="checkbox"
+                    checked={newServices.includes("contact_lens_fitting")}
+                    onChange={(e) =>
+                      setNewServices((prev) =>
+                        e.target.checked
+                          ? Array.from(
+                              new Set([...prev, "contact_lens_fitting"]),
+                            )
+                          : prev.filter((s) => s !== "contact_lens_fitting"),
+                      )
+                    }
+                  />
+                  {t("contactLenses.appointmentType")}
+                </label>
+              </fieldset>
               <button
                 type="submit"
                 className="btn btn-primary inline-flex w-full items-center justify-center gap-2"
-                disabled={busy}
+                disabled={busy || newServices.length === 0}
               >
                 <Plus size={16} />
                 Add date
@@ -316,6 +363,15 @@ export default function AdminEyeExamPage() {
                     <span>
                       <strong className="block">{day.label}</strong>
                       <span className="text-xs opacity-70">{day.date}</span>
+                      <span className="mt-0.5 block text-[0.65rem] opacity-70">
+                        {!day.services || day.services.length === 0
+                          ? "Shared"
+                          : day.services
+                              .map((s) =>
+                                s === "contact_lens_fitting" ? "CL Fitting" : "Eye Exam",
+                              )
+                              .join(" · ")}
+                      </span>
                     </span>
                     <span className="text-xs font-semibold uppercase">
                       {day.isOpen ? "Open" : "Closed"}
@@ -367,6 +423,44 @@ export default function AdminEyeExamPage() {
                     </button>
                   </div>
                 </div>
+
+                <fieldset className="mt-4 flex flex-wrap gap-4 text-sm">
+                  <legend className="mb-1 w-full text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
+                    Services (both = shared slots)
+                  </legend>
+                  {(["eye_exam", "contact_lens_fitting"] as ClinicAppointmentType[]).map(
+                    (service) => {
+                      const active =
+                        !selected.services ||
+                        selected.services.length === 0 ||
+                        selected.services.includes(service);
+                      return (
+                        <label key={service} className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            disabled={busy}
+                            onChange={(e) => {
+                              const current =
+                                !selected.services || selected.services.length === 0
+                                  ? (["eye_exam", "contact_lens_fitting"] as ClinicAppointmentType[])
+                                  : selected.services;
+                              const next = e.target.checked
+                                ? Array.from(new Set([...current, service]))
+                                : current.filter((s) => s !== service);
+                              void patchDay({
+                                services: next.length ? next : null,
+                              });
+                            }}
+                          />
+                          {service === "contact_lens_fitting"
+                            ? t("contactLenses.appointmentType")
+                            : "Eye Exam"}
+                        </label>
+                      );
+                    },
+                  )}
+                </fieldset>
 
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
@@ -481,6 +575,20 @@ export default function AdminEyeExamPage() {
                 ))}
               </select>
             </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
+              Type
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="mt-1 block rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+              >
+                <option value="all">All types</option>
+                <option value="eye_exam">Eye Exam</option>
+                <option value="contact_lens_fitting">
+                  {t("contactLenses.appointmentType")}
+                </option>
+              </select>
+            </label>
             <button
               type="button"
               className="btn btn-primary"
@@ -495,6 +603,7 @@ export default function AdminEyeExamPage() {
               <thead>
                 <tr className="border-b border-[var(--line)] text-start text-xs uppercase tracking-wide text-[var(--slate)]">
                   <th className="px-2 py-3">Customer</th>
+                  <th className="px-2 py-3">Type</th>
                   <th className="px-2 py-3">Phone</th>
                   <th className="px-2 py-3">Email</th>
                   <th className="px-2 py-3">Date</th>
@@ -502,13 +611,13 @@ export default function AdminEyeExamPage() {
                   <th className="px-2 py-3">Status</th>
                   <th className="px-2 py-3">SMS</th>
                   <th className="px-2 py-3">Created</th>
-                  <th className="px-2 py-3">Actions</th>
+                  <th className="px-2 py-3">Lang</th>
                 </tr>
               </thead>
               <tbody>
                 {appointments.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-2 py-8 text-center text-[var(--slate)]">
+                    <td colSpan={10} className="px-2 py-8 text-center text-[var(--slate)]">
                       {t("admin.common.noResults")}
                     </td>
                   </tr>
@@ -516,6 +625,11 @@ export default function AdminEyeExamPage() {
                   appointments.map((row) => (
                     <tr key={row.id} className="border-b border-[var(--line)] align-top">
                       <td className="px-2 py-3 font-medium">{row.fullName}</td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {row.appointmentType === "contact_lens_fitting"
+                          ? t("contactLenses.appointmentType")
+                          : "Eye Exam"}
+                      </td>
                       <td className="px-2 py-3 whitespace-nowrap">{row.phone}</td>
                       <td className="px-2 py-3">{row.email}</td>
                       <td className="px-2 py-3 whitespace-nowrap">{row.dateLabel}</td>

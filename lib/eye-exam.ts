@@ -1,9 +1,52 @@
 import { newId } from "@/lib/auth";
 import type {
+  ClinicAppointmentType,
   EyeExamAppointment,
   EyeExamAvailability,
   EyeExamTimeSlot,
 } from "@/lib/types";
+
+export const CLINIC_APPOINTMENT_TYPES: ClinicAppointmentType[] = [
+  "eye_exam",
+  "contact_lens_fitting",
+];
+
+export function isClinicAppointmentType(
+  value: unknown,
+): value is ClinicAppointmentType {
+  return value === "eye_exam" || value === "contact_lens_fitting";
+}
+
+export function normalizeAppointmentType(
+  value?: string | null,
+): ClinicAppointmentType {
+  return isClinicAppointmentType(value) ? value : "eye_exam";
+}
+
+/** Empty/undefined/both = shared day; otherwise service-specific. */
+export function daySupportsService(
+  day: EyeExamAvailability,
+  type: ClinicAppointmentType,
+): boolean {
+  const services = day.services?.filter(isClinicAppointmentType) || [];
+  if (services.length === 0) return true;
+  if (
+    services.includes("eye_exam") &&
+    services.includes("contact_lens_fitting")
+  ) {
+    return true;
+  }
+  return services.includes(type);
+}
+
+export function isSharedAvailabilityDay(day: EyeExamAvailability): boolean {
+  const services = day.services?.filter(isClinicAppointmentType) || [];
+  return (
+    services.length === 0 ||
+    (services.includes("eye_exam") &&
+      services.includes("contact_lens_fitting"))
+  );
+}
 
 export const EYE_EXAM_TZ = "Asia/Jerusalem";
 export const EYE_EXAM_START_MINUTES = 8 * 60 + 30; // 08:30
@@ -135,35 +178,59 @@ export function hasEyeExamSlotConflict(
   appointments: EyeExamAppointment[],
   date: string,
   time: string,
-  excludeId?: string
+  excludeId?: string,
+  opts?: {
+    appointmentType?: ClinicAppointmentType;
+    day?: EyeExamAvailability;
+  },
 ): boolean {
-  return appointments.some(
-    (a) =>
-      a.id !== excludeId &&
-      a.appointmentDate === date &&
-      a.appointmentTime === time &&
-      isActiveEyeExamBooking(a.status)
-  );
+  const type = normalizeAppointmentType(opts?.appointmentType);
+  const shared = opts?.day ? isSharedAvailabilityDay(opts.day) : true;
+
+  return appointments.some((a) => {
+    if (a.id === excludeId) return false;
+    if (a.appointmentDate !== date || a.appointmentTime !== time) return false;
+    if (!isActiveEyeExamBooking(a.status)) return false;
+    if (shared) return true;
+    return normalizeAppointmentType(a.appointmentType) === type;
+  });
 }
 
 export function getOpenAvailabilityForDate(
   days: EyeExamAvailability[],
-  date: string
+  date: string,
+  appointmentType: ClinicAppointmentType = "eye_exam",
 ): EyeExamAvailability | undefined {
-  return days.find((day) => day.date === date && day.isOpen);
+  return days.find(
+    (day) =>
+      day.date === date &&
+      day.isOpen &&
+      daySupportsService(day, appointmentType),
+  );
 }
 
 export function listBookableTimes(
   day: EyeExamAvailability,
   appointments: EyeExamAppointment[],
-  opts?: { includePastToday?: boolean; now?: Date }
+  opts?: {
+    includePastToday?: boolean;
+    now?: Date;
+    appointmentType?: ClinicAppointmentType;
+  },
 ): string[] {
   const today = todayInJerusalem(opts?.now);
   const currentTime = nowTimeInJerusalem(opts?.now);
+  const appointmentType = normalizeAppointmentType(opts?.appointmentType);
 
   return day.slots
     .filter((slot) => slot.isEnabled)
-    .filter((slot) => !hasEyeExamSlotConflict(appointments, day.date, slot.time))
+    .filter(
+      (slot) =>
+        !hasEyeExamSlotConflict(appointments, day.date, slot.time, undefined, {
+          appointmentType,
+          day,
+        }),
+    )
     .filter((slot) => {
       if (opts?.includePastToday) return true;
       if (day.date > today) return true;
@@ -177,8 +244,19 @@ export function listBookableTimes(
 export function eyeExamSmsBody(
   language: "en" | "he" | "ar",
   dateDisplay: string,
-  time: string
+  time: string,
+  appointmentType: ClinicAppointmentType = "eye_exam",
 ): string {
+  if (appointmentType === "contact_lens_fitting") {
+    if (language === "ar") {
+      return `تم تأكيد موعد ملاءمة العدسات اللاصقة بتاريخ ${dateDisplay} الساعة ${time}. لومينا للبصريات.`;
+    }
+    if (language === "he") {
+      return `התאמת עדשות המגע שלך אושרה לתאריך ${dateDisplay} בשעה ${time}. לומינה אופטיקה.`;
+    }
+    return `Your contact lens fitting is confirmed for ${dateDisplay} at ${time}. Lumina Optical.`;
+  }
+
   if (language === "ar") {
     return `تم تأكيد موعد فحص النظر بتاريخ ${dateDisplay} الساعة ${time}. لومينا للبصريات.`;
   }

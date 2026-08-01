@@ -104,6 +104,13 @@ function mergeMissingSeedProducts(existing: AppData["products"]) {
 
 function normalizeData(data: AppData): AppData {
   const products = mergeMissingSeedProducts(data.products ?? []);
+  const eyeExamAppointments = (data.eyeExamAppointments ?? []).map((a) => ({
+    ...a,
+    appointmentType:
+      a.appointmentType === "contact_lens_fitting"
+        ? ("contact_lens_fitting" as const)
+        : ("eye_exam" as const),
+  }));
   return {
     ...createSeedData(),
     ...data,
@@ -125,7 +132,7 @@ function normalizeData(data: AppData): AppData {
     eyeExamAvailability: data.eyeExamAvailability?.length
       ? data.eyeExamAvailability
       : createSeedData().eyeExamAvailability,
-    eyeExamAppointments: data.eyeExamAppointments ?? [],
+    eyeExamAppointments,
     settings: { ...createSeedData().settings, ...(data.settings || {}) },
     version: data.version || 1,
     updatedAt: data.updatedAt || new Date().toISOString(),

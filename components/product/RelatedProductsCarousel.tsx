@@ -28,7 +28,9 @@ export default function RelatedProductsCarousel({
     relatedTitle ||
     (products[0]?.category === "Sunglasses"
       ? t("product.relatedSunglasses")
-      : t("product.related"));
+      : products[0]?.category === "Contact Lenses"
+        ? t("product.relatedContactLenses")
+        : t("product.related"));
 
   const scrollByCard = useCallback(
     (direction: 1 | -1) => {
