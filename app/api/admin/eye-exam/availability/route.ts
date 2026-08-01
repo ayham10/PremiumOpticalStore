@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { newId, requireSession } from "@/lib/auth";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
+import { loadClinicAppointments } from "@/lib/db/clinic-appointments";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   buildDefaultSlots,
@@ -52,8 +53,9 @@ export async function GET() {
   try {
     await requireSession("appointments");
     const { data } = await getStore();
+    const clinicAppointments = await loadClinicAppointments();
     const booked = new Set(
-      data.eyeExamAppointments
+      clinicAppointments
         .filter((a) => a.status !== "cancelled")
         .map((a) => `${a.appointmentDate}|${a.appointmentTime}`)
     );
@@ -68,6 +70,7 @@ export async function GET() {
       defaultSlotTimes: buildDefaultSlots(
         data.settings.appointmentSlotMinutes || 30
       ).map((s) => s.time),
+      source: "public.appointments",
     });
   } catch (error) {
     return handleRouteError(error);
@@ -207,11 +210,12 @@ export async function PATCH(request: Request) {
       }
 
       if (Array.isArray(body.removeTimes)) {
+        const clinicAppointments = await loadClinicAppointments();
         const remove = new Set(body.removeTimes);
         slots = slots.filter((s) => {
           if (!remove.has(s.time)) return true;
           return hasEyeExamSlotConflict(
-            store.eyeExamAppointments,
+            clinicAppointments,
             current.date,
             s.time
           );
@@ -289,11 +293,12 @@ export async function DELETE(request: Request) {
     }
     if (!id) return jsonError("Availability id is required", 400);
 
+    const clinicAppointments = await loadClinicAppointments();
     await updateStore(async (store) => {
       const index = store.eyeExamAvailability.findIndex((d) => d.id === id);
       if (index < 0) throw new Error("NOT_FOUND");
       const day = store.eyeExamAvailability[index];
-      const hasBookings = store.eyeExamAppointments.some(
+      const hasBookings = clinicAppointments.some(
         (a) => a.appointmentDate === day.date && a.status !== "cancelled"
       );
       if (hasBookings) throw new Error("HAS_BOOKINGS");

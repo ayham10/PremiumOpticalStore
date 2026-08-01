@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/helpers";
+import { loadClinicAppointments } from "@/lib/db/clinic-appointments";
 import { getStore } from "@/lib/db/store";
 import {
   daySupportsService,
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
       : normalizeAppointmentType(typeParam);
 
     const { data } = await getStore();
+    const appointments = await loadClinicAppointments();
     const today = todayInJerusalem();
     const leadDays = data.settings.bookingLeadDays || 45;
     const maxDate = (() => {
@@ -34,7 +36,7 @@ export async function GET(request: Request) {
       .filter((day) => daySupportsService(day, appointmentType))
       .filter(
         (day) =>
-          listBookableTimes(day, data.eyeExamAppointments, {
+          listBookableTimes(day, appointments, {
             appointmentType,
           }).length > 0,
       )

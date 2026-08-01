@@ -6,7 +6,12 @@ import {
   pushActivity,
   pushSmsLog,
 } from "@/lib/api/helpers";
-import { updateStore } from "@/lib/db/store";
+import {
+  createClinicAppointment,
+  loadClinicAppointments,
+} from "@/lib/db/clinic-appointments";
+import { relationalAppointmentsEnabled } from "@/lib/db/relational-appointments";
+import { getStore, updateStore } from "@/lib/db/store";
 import {
   eyeExamSmsBody,
   formatEyeExamDateDisplay,
@@ -97,90 +102,89 @@ export async function POST(request: Request) {
     let created: EyeExamAppointment | null = null;
 
     await withEyeExamLock(async () => {
-      await updateStore(async (store) => {
-        const day = getOpenAvailabilityForDate(
-          store.eyeExamAvailability,
-          appointmentDate,
-          appointmentType,
-        );
-        if (!day) throw new Error("DATE_UNAVAILABLE");
+      const { data: store } = await getStore();
+      const existing = await loadClinicAppointments();
 
-        const slot = day.slots.find(
-          (s) => s.time === appointmentTime && s.isEnabled,
-        );
-        if (!slot) throw new Error("TIME_UNAVAILABLE");
+      const day = getOpenAvailabilityForDate(
+        store.eyeExamAvailability,
+        appointmentDate,
+        appointmentType,
+      );
+      if (!day) throw new Error("DATE_UNAVAILABLE");
 
-        if (
-          hasEyeExamSlotConflict(
-            store.eyeExamAppointments,
-            appointmentDate,
-            appointmentTime,
-            undefined,
-            { appointmentType, day },
-          )
-        ) {
-          throw new Error("CONFLICT");
-        }
+      const slot = day.slots.find(
+        (s) => s.time === appointmentTime && s.isEnabled,
+      );
+      if (!slot) throw new Error("TIME_UNAVAILABLE");
 
-        const now = new Date().toISOString();
-        created = {
-          id: newId("eea"),
-          firstName,
-          lastName,
-          email,
-          phone,
+      if (
+        hasEyeExamSlotConflict(
+          existing,
           appointmentDate,
           appointmentTime,
-          appointmentType,
-          status: "confirmed",
-          language,
-          smsStatus: "pending",
-          createdAt: now,
-          updatedAt: now,
-        };
+          undefined,
+          { appointmentType, day },
+        )
+      ) {
+        throw new Error("CONFLICT");
+      }
 
-        store.eyeExamAppointments.unshift(created);
+      const now = new Date().toISOString();
+      const draft: EyeExamAppointment = {
+        id: newId("eea"),
+        firstName,
+        lastName,
+        email,
+        phone,
+        appointmentDate,
+        appointmentTime,
+        appointmentType,
+        status: "confirmed",
+        language,
+        smsStatus: "pending",
+        createdAt: now,
+        updatedAt: now,
+      };
 
-        const dateDisplay = formatEyeExamDateDisplay(appointmentDate);
-        const smsBody = eyeExamSmsBody(
-          language,
-          dateDisplay,
-          appointmentTime,
-          appointmentType,
-        );
-        const smsResult = await sendSms({
-          to: phone,
-          body: smsBody,
-          type: "appointment_confirmation",
-          appointmentId: created.id,
-        });
+      created = await createClinicAppointment(draft);
 
-        created.smsStatus = smsResult.status;
-        if (!smsResult.ok) {
-          created.smsError = smsResult.error || "SMS failed";
-        }
-        store.eyeExamAppointments[0] = created;
+      const dateDisplay = formatEyeExamDateDisplay(appointmentDate);
+      const smsBody = eyeExamSmsBody(
+        language,
+        dateDisplay,
+        appointmentTime,
+        appointmentType,
+      );
+      const smsResult = await sendSms({
+        to: phone,
+        body: smsBody,
+        type: "appointment_confirmation",
+        appointmentId: created.id,
+      });
 
-        pushSmsLog(store, {
+      created = await patchSmsStatus(
+        created,
+        smsResult.status,
+        smsResult.ok ? undefined : smsResult.error || "SMS failed",
+      );
+
+      // Activity + SMS logs remain in document store (non-appointment content)
+      await updateStore(async (next) => {
+        pushSmsLog(next, {
           to: phone,
           body: smsBody,
           type: "appointment_confirmation",
           result: smsResult,
-          appointmentId: created.id,
+          appointmentId: created!.id,
         });
-
-        pushActivity(store, {
+        pushActivity(next, {
           actor: email,
           action: "public_booking",
-          entity:
-            appointmentType === "contact_lens_fitting"
-              ? "contact_lens_fitting"
-              : "eye_exam_appointment",
-          entityId: created.id,
+          entity: "appointment",
+          entityId: created!.id,
           detail: `${appointmentType} — ${firstName} ${lastName} — ${appointmentDate} ${appointmentTime}`,
         });
-
-        return store;
+        return next;
       });
     });
 
@@ -195,6 +199,9 @@ export async function POST(request: Request) {
           appointmentType: created!.appointmentType,
           dateLabel: formatEyeExamDateDisplay(created!.appointmentDate),
           status: created!.status,
+          storage: relationalAppointmentsEnabled()
+            ? "public.appointments"
+            : "document_store",
         },
       },
       { status: 201 },
@@ -216,7 +223,32 @@ export async function POST(request: Request) {
           field: "appointmentTime",
         });
       }
+      if (
+        error.message.includes("409") ||
+        error.message.toLowerCase().includes("duplicate") ||
+        error.message.toLowerCase().includes("unique")
+      ) {
+        return jsonError("This time slot is no longer available", 409, {
+          field: "appointmentTime",
+        });
+      }
     }
     return handleRouteError(error);
+  }
+}
+
+async function patchSmsStatus(
+  appointment: EyeExamAppointment,
+  smsStatus: EyeExamAppointment["smsStatus"],
+  smsError?: string,
+): Promise<EyeExamAppointment> {
+  const { patchClinicAppointment } = await import("@/lib/db/clinic-appointments");
+  try {
+    return await patchClinicAppointment(appointment.id, {
+      smsStatus,
+      smsError,
+    });
+  } catch {
+    return { ...appointment, smsStatus, smsError, updatedAt: new Date().toISOString() };
   }
 }

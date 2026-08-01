@@ -49,11 +49,21 @@ Copy `.env.example` to `.env.local`:
 1. Create a Supabase project.
 2. Run SQL in the Supabase SQL Editor:
    - `supabase/schema.sql` — relational schema + `lumina_store` document table
+   - `supabase/migrations/20260801_clinic_appointments_source_of_truth.sql` — required on existing projects so `public.appointments` can store clinic bookings
    - `supabase/storage.sql` — media bucket policies
 3. Add project URL and **service role / secret** key to `.env.local`.
 4. Restart `npm run dev`. On first read, the API seeds `lumina_store` if empty.
 
-The Next.js API primarily uses the **document store** row (`lumina_store.payload`). The broader relational schema is available for future migration or reporting.
+### Appointment storage
+
+- **Source of truth for bookings:** `public.appointments`
+- **Availability calendars** remain in `lumina_store.payload.eyeExamAvailability`
+- Products, media, settings, and promotions may still use `lumina_store.payload`
+- Legacy `public.eye_exam_appointments` is obsolete for the app and is not written
+
+On boot / first clinic read, JSON `eyeExamAppointments` are migrated idempotently into `public.appointments` (IDs preserved; payload is not deleted). You can also trigger:
+
+`POST /api/admin/migrate-appointments` (admin session required).
 
 ## Admin login
 

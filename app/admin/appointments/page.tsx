@@ -21,6 +21,7 @@ const STATUSES: AppointmentStatus[] = [
   "cancelled",
   "completed",
   "rescheduled",
+  "no-show",
 ];
 
 function unwrapList<T>(data: unknown): T[] {

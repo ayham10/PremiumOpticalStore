@@ -5,7 +5,8 @@ export type AppointmentStatus =
   | "confirmed"
   | "cancelled"
   | "completed"
-  | "rescheduled";
+  | "rescheduled"
+  | "no-show";
 
 export type ProductCategory =
   | "Prescription Glasses"
@@ -72,24 +73,6 @@ export interface StaffAvailability {
   unavailableDates: string[];
 }
 
-export interface Appointment {
-  id: string;
-  service: ServiceType;
-  staffId: string;
-  customerId: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  status: AppointmentStatus;
-  notes?: string;
-  manageToken: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export type EyeExamAppointmentStatus =
   | "confirmed"
   | "completed"
@@ -102,6 +85,28 @@ export type ClinicAppointmentType =
   | "contact_lens_fitting"
   | "frame_consultation"
   | "sunglasses_consultation";
+
+export interface Appointment {
+  id: string;
+  /** Clinic type key (eye_exam, …) or legacy ServiceType label */
+  service: ServiceType | ClinicAppointmentType | string;
+  staffId: string;
+  customerId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  status: AppointmentStatus;
+  notes?: string;
+  manageToken: string;
+  language?: string;
+  smsStatus?: string;
+  smsError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface EyeExamTimeSlot {
   id: string;

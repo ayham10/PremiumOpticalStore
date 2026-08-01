@@ -9,6 +9,15 @@ import {
   newId,
   requireSession,
 } from "@/lib/auth";
+import {
+  listAppointmentsForAdminDashboard,
+  loadClinicAppointments,
+} from "@/lib/db/clinic-appointments";
+import {
+  relationalAppointmentsEnabled,
+  rowToAppointment,
+  updateRelationalAppointment,
+} from "@/lib/db/relational-appointments";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   appointmentSmsBody,
@@ -46,6 +55,7 @@ const STATUSES = new Set<AppointmentStatus>([
   "cancelled",
   "completed",
   "rescheduled",
+  "no-show",
 ]);
 
 function isServiceType(value: string): value is ServiceType {
@@ -80,7 +90,44 @@ export async function GET(request: Request) {
 
     await requireSession("appointments");
 
-    let appointments = [...data.appointments];
+    let appointments: Appointment[] = [];
+
+    if (relationalAppointmentsEnabled()) {
+      try {
+        const rows = await listAppointmentsForAdminDashboard();
+        appointments = rows.map(rowToAppointment);
+      } catch (error) {
+        console.error("Relational appointments list failed", error);
+      }
+    }
+
+    if (!appointments.length) {
+      const clinic = await loadClinicAppointments();
+      appointments = clinic.map((a) => ({
+        id: a.id,
+        service: a.appointmentType,
+        staffId: "",
+        customerId: "",
+        customerName: `${a.firstName} ${a.lastName}`.trim(),
+        customerEmail: a.email,
+        customerPhone: a.phone,
+        date: a.appointmentDate,
+        startTime: a.appointmentTime,
+        endTime: a.appointmentTime,
+        status: a.status as AppointmentStatus,
+        manageToken: "",
+        language: a.language,
+        smsStatus: a.smsStatus,
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+      }));
+    }
+
+    // Merge any legacy staff JSON appointments not already present
+    const seen = new Set(appointments.map((a) => a.id));
+    for (const legacy of data.appointments || []) {
+      if (!seen.has(legacy.id)) appointments.push(legacy);
+    }
 
     if (status && STATUSES.has(status as AppointmentStatus)) {
       appointments = appointments.filter((a) => a.status === status);
@@ -117,6 +164,9 @@ export async function GET(request: Request) {
       appointments: appointments.map((a) =>
         enrichAppointment(a, staffMap.get(a.staffId))
       ),
+      source: relationalAppointmentsEnabled()
+        ? "public.appointments"
+        : "document_store",
     });
   } catch (error) {
     return handleRouteError(error);
@@ -362,6 +412,46 @@ export async function PATCH(request: Request) {
 
     let updated: Appointment | null = null;
     let smsType: SmsType | null = null;
+
+    // Clinic / relational appointments (public.appointments)
+    if (isAdmin && body.id && relationalAppointmentsEnabled()) {
+      try {
+        const patch: Record<string, string | null> = {};
+        if (body.status) patch.status = body.status;
+        if (body.date?.trim()) patch.appointment_date = body.date.trim();
+        if (body.startTime?.trim()) {
+          patch.start_time = body.startTime.trim();
+          const { data } = await getStore();
+          const mins = data.settings.appointmentSlotMinutes || 30;
+          patch.end_time = endTimeFromStart(body.startTime.trim(), mins);
+        }
+        if (body.notes !== undefined) patch.notes = body.notes.trim() || null;
+        if (Object.keys(patch).length) {
+          const row = await updateRelationalAppointment(body.id, patch);
+          updated = rowToAppointment(row);
+          await updateStore(async (store) => {
+            pushActivity(store, {
+              actor: session!.email,
+              action: "update",
+              entity: "appointment",
+              entityId: updated!.id,
+              detail: `status=${updated!.status}`,
+            });
+            return store;
+          });
+          return NextResponse.json({
+            appointment: enrichAppointment(updated),
+            source: "public.appointments",
+          });
+        }
+      } catch (error) {
+        // Fall through to legacy JSON path if not found relationally
+        const message = error instanceof Error ? error.message : "";
+        if (!message.includes("not found") && !message.includes("404")) {
+          throw error;
+        }
+      }
+    }
 
     await updateStore(async (store) => {
       const index = store.appointments.findIndex((a) =>

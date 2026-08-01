@@ -112,9 +112,9 @@ create table if not exists public.staff_unavailable (
 );
 
 create table if not exists public.appointments (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   service text not null,
-  staff_id uuid not null references public.staff(id),
+  staff_id uuid references public.staff(id),
   customer_id uuid references public.customers(id) on delete set null,
   customer_name text not null,
   customer_email text not null,
@@ -123,17 +123,25 @@ create table if not exists public.appointments (
   start_time time not null,
   end_time time not null,
   status text not null default 'pending'
-    check (status in ('pending','confirmed','cancelled','completed','rescheduled')),
+    check (status in ('pending','confirmed','cancelled','completed','rescheduled','no-show')),
   notes text,
   manage_token text unique not null,
+  language text not null default 'en',
+  sms_status text,
+  sms_error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
--- Prevent double booking for the same staff member
-create unique index if not exists appointments_no_overlap_idx
-  on public.appointments (staff_id, appointment_date, start_time)
+-- Unique active slot per service + date + time
+create unique index if not exists appointments_active_service_slot_idx
+  on public.appointments (service, appointment_date, start_time)
   where status <> 'cancelled';
+
+-- Shared clinic calendar: one active booking per date+time when staff_id is null
+create unique index if not exists appointments_active_clinic_slot_idx
+  on public.appointments (appointment_date, start_time)
+  where status <> 'cancelled' and staff_id is null;
 
 create table if not exists public.promotions (
   id uuid primary key default gen_random_uuid(),
@@ -188,7 +196,7 @@ create table if not exists public.sms_logs (
   sms_type text not null,
   status text not null,
   provider text not null,
-  appointment_id uuid references public.appointments(id) on delete set null,
+  appointment_id text references public.appointments(id) on delete set null,
   error text,
   created_at timestamptz not null default now()
 );
@@ -225,10 +233,9 @@ create table if not exists public.lumina_store (
   updated_at timestamptz not null default now()
 );
 
--- Eye Exam availability + appointments live inside lumina_store.payload:
---   eyeExamAvailability[], eyeExamAppointments[]
--- Runtime enforces a unique active booking per (appointmentDate, appointmentTime).
--- Optional relational mirror (not required when using the JSON document store):
+-- Availability calendars still live in lumina_store.payload.eyeExamAvailability[].
+-- Appointment bookings use public.appointments (source of truth).
+-- Legacy eye_exam_* tables are obsolete for the app runtime — keep until verified.
 create table if not exists public.eye_exam_availability (
   id text primary key,
   appointment_date date not null unique,
@@ -257,6 +264,12 @@ create table if not exists public.eye_exam_appointments (
 create unique index if not exists eye_exam_appointments_unique_slot_idx
   on public.eye_exam_appointments (appointment_date, appointment_time)
   where status <> 'cancelled';
+
+comment on table public.eye_exam_appointments is
+  'OBSOLETE for app runtime. Clinic bookings use public.appointments.';
+
+comment on table public.appointments is
+  'Source of truth for clinic bookings (eye_exam, contact_lens_fitting, frame_consultation, sunglasses_consultation) and staff appointments.';
 
 insert into public.lumina_store (id, payload)
 values ('default', '{}'::jsonb)
