@@ -13,6 +13,7 @@ export default function ConditionalChrome({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
+  const isHome = pathname === "/";
 
   if (isAdmin) {
     return <>{children}</>;
@@ -22,8 +23,8 @@ export default function ConditionalChrome({
     <>
       <IntroLoader />
       <Navbar />
-      <main>{children}</main>
-      <Footer />
+      <main className={isHome ? "home-main" : undefined}>{children}</main>
+      {isHome ? null : <Footer />}
       <WhatsAppButton />
     </>
   );

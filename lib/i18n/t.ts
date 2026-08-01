@@ -1,4 +1,4 @@
-type Nested = string | { [key: string]: Nested };
+type Nested = string | Nested[] | { [key: string]: Nested };
 
 export function t(
   dict: Nested,
@@ -9,6 +9,12 @@ export function t(
   let cur: Nested | undefined = dict;
   for (const part of parts) {
     if (!cur || typeof cur === "string") return path;
+    if (Array.isArray(cur)) {
+      const index = Number(part);
+      if (!Number.isInteger(index) || index < 0 || index >= cur.length) return path;
+      cur = cur[index];
+      continue;
+    }
     cur = cur[part];
   }
   if (typeof cur !== "string") return path;

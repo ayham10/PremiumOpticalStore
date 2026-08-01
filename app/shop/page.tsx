@@ -83,7 +83,6 @@ function ShopContent() {
         title={t("shop.title")}
         lead={t("shop.lead")}
         image="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1800&q=80"
-        video="/videos/hero.mp4"
       />
       <section className="wrap relative z-10">
         <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

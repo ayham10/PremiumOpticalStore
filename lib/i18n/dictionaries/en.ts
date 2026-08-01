@@ -3,6 +3,7 @@ export type Dictionary = {
   hero: Record<string, string>;
   intro: Record<string, string>;
   home: {
+    hubEyebrow: string;
     categoriesEyebrow: string;
     categoriesTitle: string;
     categoriesLead: string;
@@ -21,6 +22,18 @@ export type Dictionary = {
     visitHours: string;
     gateway: Record<string, { title: string; subtitle: string; cta: string }>;
   };
+  destinations: Record<
+    string,
+    {
+      eyebrow: string;
+      title: string;
+      lead: string;
+      body: string;
+      highlights: Array<{ title: string; text: string }>;
+      primaryCta: string;
+      secondaryCta: string;
+    }
+  >;
   servicesPage: {
     eyebrow: string;
     title: string;
@@ -119,6 +132,7 @@ const en: Dictionary = {
     tagline: "SEE LIFE IN FOCUS",
   },
   home: {
+    hubEyebrow: "Premium Navigation",
     categoriesEyebrow: "Explore",
     categoriesTitle: "Everything your vision needs",
     categoriesLead:
@@ -199,10 +213,87 @@ const en: Dictionary = {
         cta: "Start Booking",
       },
       contact: {
-        title: "Visit Us",
-        subtitle: "Contact",
+        title: "Contact",
+        subtitle: "Visit & Reach Us",
         cta: "Get Directions",
       },
+      about: {
+        title: "About",
+        subtitle: "Our Atelier",
+        cta: "Our Story",
+      },
+      shop: {
+        title: "Shop",
+        subtitle: "Full Collection",
+        cta: "Browse Shop",
+      },
+    },
+  },
+  destinations: {
+    frames: {
+      eyebrow: "Eyewear",
+      title: "Premium Frames",
+      lead: "Curated silhouettes in acetate, titanium, and metal — fitted with quiet precision.",
+      body: "Explore frames selected for balance, comfort, and lasting craft. Every piece can be paired with prescription lenses shaped to your vision and daily rhythm.",
+      highlights: [
+        { title: "Personal fitting", text: "Face shape, bridge fit, and everyday comfort — measured with care." },
+        { title: "Prescription ready", text: "Single vision, progressive, and blue-filter options available in-store." },
+        { title: "Quiet luxury", text: "An edited collection — never overcrowded, always considered." },
+      ],
+      primaryCta: "Shop frames",
+      secondaryCta: "Book a fitting",
+    },
+    exams: {
+      eyebrow: "Clinical Care",
+      title: "Eye Exams",
+      lead: "Unhurried examinations with modern diagnostics and clear recommendations.",
+      body: "Book a comprehensive eye exam with our specialists. We assess vision clarity, eye health, and the lenses that will serve you best — without rushing the appointment.",
+      highlights: [
+        { title: "Full diagnostics", text: "Precise refraction and eye-health screening in a calm clinical setting." },
+        { title: "Specialist guidance", text: "Leave with a clear plan for glasses, contacts, or follow-up care." },
+        { title: "Easy booking", text: "Choose your doctor, date, and time online in minutes." },
+      ],
+      primaryCta: "Book eye exam",
+      secondaryCta: "View all services",
+    },
+    sunglasses: {
+      eyebrow: "Sun Collection",
+      title: "Sunglasses",
+      lead: "Polarized protection and refined design for bright days and travel.",
+      body: "Discover sunglasses that protect and elevate — polarized lenses, UV coverage, and frames that feel as considered as your everyday eyewear.",
+      highlights: [
+        { title: "Polarized clarity", text: "Reduce glare for driving, coastline light, and city brightness." },
+        { title: "Prescription options", text: "Many styles can be prepared with your prescription." },
+        { title: "Travel ready", text: "Lightweight builds and durable finishes for daily wear." },
+      ],
+      primaryCta: "Shop sunglasses",
+      secondaryCta: "Book consultation",
+    },
+    contacts: {
+      eyebrow: "Lenses",
+      title: "Contact Lenses",
+      lead: "Daily and monthly lenses fitted for comfort, clarity, and eye health.",
+      body: "Whether you prefer dailies or longer-wear options, we help you find lenses that feel natural — with guidance on care, fit, and when glasses remain the better choice.",
+      highlights: [
+        { title: "Comfort first", text: "Trial fittings and brand guidance tailored to your eyes." },
+        { title: "Daily or monthly", text: "Flexible options for lifestyle, travel, and sensitivity." },
+        { title: "Clinical support", text: "Follow-ups available if comfort or clarity needs adjusting." },
+      ],
+      primaryCta: "Explore lenses",
+      secondaryCta: "Book contact fitting",
+    },
+    promotions: {
+      eyebrow: "Offers",
+      title: "Promotions",
+      lead: "Limited seasonal offers on exams, frames, and complete pairs.",
+      body: "Explore current LUMINA promotions. Offers change with the season — book early or visit the boutique for the latest pairs and exam packages.",
+      highlights: [
+        { title: "Seasonal value", text: "Thoughtful packages without compromising clinical quality." },
+        { title: "Complete pairs", text: "Look for frame + lens offers when available." },
+        { title: "Easy next step", text: "Book online or message us to reserve your visit." },
+      ],
+      primaryCta: "Book now",
+      secondaryCta: "Contact us",
     },
   },
   servicesPage: {
