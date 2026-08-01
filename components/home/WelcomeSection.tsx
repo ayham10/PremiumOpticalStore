@@ -1,10 +1,56 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function WelcomeSection() {
   const { t } = useLocale();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    // Lazy start after paint for faster first contentful paint
+    let cancelled = false;
+    const start = () => {
+      if (cancelled) return;
+      if (!video.getAttribute("src")) {
+        video.src = "/videos/welcome.mp4";
+        video.load();
+      }
+      void video.play().catch(() => {
+        /* autoplay may be blocked */
+      });
+    };
+
+    const ric = (
+      window as Window & {
+        requestIdleCallback?: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number;
+        cancelIdleCallback?: (id: number) => void;
+      }
+    ).requestIdleCallback;
+
+    let idleId: number | undefined;
+    let timerId: number | undefined;
+    if (typeof ric === "function") {
+      idleId = ric(start, { timeout: 900 });
+    } else {
+      timerId = window.setTimeout(start, 250);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId != null) {
+        (
+          window as Window & { cancelIdleCallback?: (id: number) => void }
+        ).cancelIdleCallback?.(idleId);
+      }
+      if (timerId != null) window.clearTimeout(timerId);
+    };
+  }, []);
 
   function scrollToHome() {
     document.getElementById("home-hub")?.scrollIntoView({
@@ -16,14 +62,13 @@ export default function WelcomeSection() {
   return (
     <section className="home-welcome" aria-label="Welcome">
       <video
+        ref={videoRef}
         className="home-welcome-video"
-        src="/videos/welcome.mp4"
         poster="/videos/welcome-poster.jpg"
-        autoPlay
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
       />
       <div className="home-welcome-overlay" aria-hidden />
 
