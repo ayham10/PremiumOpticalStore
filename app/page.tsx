@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import NavigationHub from "@/components/home/NavigationHub";
 import HomeFooter from "@/components/home/HomeFooter";
+import HomeAtmosphere from "@/components/home/HomeAtmosphere";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,11 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="home-page">
-      <NavigationHub />
-      <HomeFooter />
+      <HomeAtmosphere />
+      <div className="home-page-content">
+        <NavigationHub />
+        <HomeFooter />
+      </div>
     </div>
   );
 }

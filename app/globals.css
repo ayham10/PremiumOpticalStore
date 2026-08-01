@@ -603,11 +603,50 @@ p {
 
 /* Homepage: navbar + 6-card hub + footer (reference style) */
 .home-page {
+  position: relative;
+  min-height: 100svh;
+  background: #0a0a0a;
+  color: white;
+  overflow: hidden;
+}
+
+.home-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.home-atmosphere-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+  /* Soften motion so it reads as atmosphere, not a hero */
+  filter: blur(3px) saturate(0.85) brightness(0.72);
+  transform: scale(1.06);
+}
+
+.home-atmosphere-overlay {
+  position: absolute;
+  inset: 0;
+  /* ~78% dark veil — cards stay the focus */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 8, 10, 0.78) 0%,
+      rgba(8, 8, 10, 0.74) 45%,
+      rgba(8, 8, 10, 0.82) 100%
+    );
+}
+
+.home-page-content {
+  position: relative;
+  z-index: 1;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  background: #0a0a0a;
-  color: white;
 }
 
 .home-hub {
@@ -775,7 +814,7 @@ html[dir="rtl"] .home-card-arrow {
 
 .home-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: #0a0a0a;
+  background: transparent;
   padding:
     1.25rem 0
     calc(1.25rem + env(safe-area-inset-bottom, 0px));
