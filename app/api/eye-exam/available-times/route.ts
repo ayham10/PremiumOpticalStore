@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, jsonError } from "@/lib/api/helpers";
+import { loadClinicAppointments } from "@/lib/db/clinic-appointments";
 import { getStore } from "@/lib/db/store";
 import {
   formatEyeExamDateDisplay,
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
     }
 
     const { data } = await getStore();
+    const appointments = await loadClinicAppointments();
     const day = getOpenAvailabilityForDate(
       data.eyeExamAvailability,
       date,
@@ -51,7 +53,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const times = listBookableTimes(day, data.eyeExamAppointments, {
+    const times = listBookableTimes(day, appointments, {
       appointmentType,
     });
     return NextResponse.json({
