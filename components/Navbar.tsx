@@ -12,6 +12,7 @@ export default function Navbar() {
   const { t } = useLocale();
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const isDarkPage = isHome || pathname === "/frames";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -50,14 +51,14 @@ export default function Navbar() {
   }, [open]);
 
   const elevated = scrolled || open;
-  const whiteText = isHome || !elevated;
+  const whiteText = isDarkPage || !elevated;
 
   return (
     <>
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
           elevated
-            ? isHome || open
+            ? isDarkPage || open
               ? "border-b border-white/10 bg-[rgba(10,14,20,0.72)] backdrop-blur-2xl"
               : "border-b border-[var(--line)] bg-[rgba(247,248,250,0.94)] backdrop-blur-xl"
             : "border-b border-transparent bg-transparent"

@@ -67,15 +67,17 @@ export default function NavigationHub() {
               }}
             >
               <Link href={tile.href} className="home-card group">
-                <Image
-                  src={tile.image}
-                  alt={t(`home.gateway.${tile.key}.title`)}
-                  fill
-                  sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
-                  className={`object-cover transition duration-[800ms] ease-out group-hover:scale-[1.05] ${tile.position}`}
-                  priority={index < 3}
-                />
-                <span className="home-card-shade" aria-hidden />
+                <span className="home-card-media">
+                  <Image
+                    src={tile.image}
+                    alt={t(`home.gateway.${tile.key}.title`)}
+                    fill
+                    sizes="(max-width: 639px) 50vw, (max-width: 1023px) 50vw, 33vw"
+                    className={`object-cover transition duration-[800ms] ease-out group-hover:scale-[1.05] ${tile.position}`}
+                    priority={index < 3}
+                  />
+                  <span className="home-card-shade" aria-hidden />
+                </span>
                 <span className="home-card-content">
                   <span className="home-card-text">
                     <span className="home-card-title">

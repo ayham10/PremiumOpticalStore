@@ -14,16 +14,19 @@ export default function ConditionalChrome({
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
   const isHome = pathname === "/";
+  const isFrames = pathname === "/frames";
 
   if (isAdmin) {
     return <>{children}</>;
   }
 
+  const mainClass = isHome ? "home-main" : isFrames ? "frames-main" : undefined;
+
   return (
     <>
-      <IntroLoader />
+      {isHome ? <IntroLoader /> : null}
       <Navbar />
-      <main className={isHome ? "home-main" : undefined}>{children}</main>
+      <main className={mainClass}>{children}</main>
       {isHome ? null : <Footer />}
       {isHome ? null : <WhatsAppButton />}
     </>
