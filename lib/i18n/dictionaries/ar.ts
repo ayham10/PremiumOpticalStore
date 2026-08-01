@@ -2,14 +2,16 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
 const ar: Dictionary = {
   nav: {
+    home: "الرئيسية",
     services: "الخدمات",
+    exam: "فحص النظر",
     shop: "المتجر",
     book: "حجز فحص",
     gallery: "المعرض",
     about: "من نحن",
     contact: "تواصل معنا",
     admin: "الإدارة",
-    bookCta: "احجز فحص النظر",
+    bookCta: "احجز فحصًا",
     menu: "القائمة",
     close: "إغلاق",
     language: "اللغة",
@@ -30,6 +32,7 @@ const ar: Dictionary = {
   },
   home: {
     hubEyebrow: "تنقل فاخر",
+    scrollHint: "مرّر",
     categoriesEyebrow: "اكتشف",
     categoriesTitle: "كل ما تحتاجه لرؤيتك",
     categoriesLead:
@@ -79,12 +82,12 @@ const ar: Dictionary = {
     visitTitle: "اعثر على LUMINA",
     visitHours: "ساعات العمل",
     gateway: {
-      frames: { title: "إطارات فاخرة", subtitle: "نظارات راقية", cta: "تسوق الإطارات" },
-      exams: { title: "فحوصات النظر", subtitle: "دقة سريرية", cta: "احجز موعدًا" },
-      sunglasses: { title: "نظارات شمسية", subtitle: "حماية مستقطبة", cta: "عرض المجموعة" },
-      contacts: { title: "عدسات لاصقة", subtitle: "راحة ووضوح", cta: "استكشف العدسات" },
-      promotions: { title: "العروض", subtitle: "لفترة محدودة", cta: "شاهد العروض" },
-      booking: { title: "احجز موعدًا", subtitle: "زيارتك", cta: "ابدأ الحجز" },
+      frames: { title: "إطارات فاخرة", subtitle: "استكشف مجموعتنا", cta: "تسوق الآن" },
+      exams: { title: "فحوصات النظر", subtitle: "رعاية احترافية", cta: "احجز الآن" },
+      sunglasses: { title: "نظارات شمسية", subtitle: "أناقة خالدة", cta: "تسوق الآن" },
+      contacts: { title: "عدسات لاصقة", subtitle: "راحة ووضوح", cta: "اعرف المزيد" },
+      promotions: { title: "العروض", subtitle: "عروض خاصة", cta: "شاهد العروض" },
+      booking: { title: "احجز موعدًا", subtitle: "حدّد زيارتك", cta: "احجز الآن" },
       contact: { title: "تواصل", subtitle: "الزيارة والتواصل", cta: "الاتجاهات" },
       about: { title: "من نحن", subtitle: "مشغلنا", cta: "قصتنا" },
       shop: { title: "المتجر", subtitle: "المجموعة الكاملة", cta: "تسوق الآن" },

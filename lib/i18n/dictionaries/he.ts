@@ -2,14 +2,16 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
 const he: Dictionary = {
   nav: {
+    home: "בית",
     services: "שירותים",
+    exam: "בדיקת ראייה",
     shop: "חנות",
     book: "קביעת תור",
     gallery: "גלריה",
     about: "אודות",
     contact: "צור קשר",
     admin: "ניהול",
-    bookCta: "קביעת בדיקת ראייה",
+    bookCta: "קביעת תור",
     menu: "תפריט",
     close: "סגור",
     language: "שפה",
@@ -30,6 +32,7 @@ const he: Dictionary = {
   },
   home: {
     hubEyebrow: "ניווט פרימיום",
+    scrollHint: "גלול",
     categoriesEyebrow: "גלו",
     categoriesTitle: "הכול לראייה שלכם",
     categoriesLead:
@@ -79,12 +82,12 @@ const he: Dictionary = {
     visitTitle: "מצאו את LUMINA",
     visitHours: "שעות פעילות",
     gateway: {
-      frames: { title: "מסגרות פרימיום", subtitle: "משקפיים יוקרתיים", cta: "לקניית מסגרות" },
-      exams: { title: "בדיקות ראייה", subtitle: "דיוק קליני", cta: "קביעת תור" },
-      sunglasses: { title: "משקפי שמש", subtitle: "הגנה מקטבת", cta: "לצפייה בקולקציה" },
-      contacts: { title: "עדשות מגע", subtitle: "נוחות וחדות", cta: "לעדשות" },
-      promotions: { title: "מבצעים", subtitle: "הצעות לזמן מוגבל", cta: "למבצעים" },
-      booking: { title: "קביעת תור", subtitle: "הביקור שלכם", cta: "להתחלת הזמנה" },
+      frames: { title: "מסגרות פרימיום", subtitle: "גלו את הקולקציה", cta: "לקנייה" },
+      exams: { title: "בדיקות ראייה", subtitle: "טיפול מקצועי", cta: "לקביעת תור" },
+      sunglasses: { title: "משקפי שמש", subtitle: "סטייל נצחי", cta: "לקנייה" },
+      contacts: { title: "עדשות מגע", subtitle: "נוחות וחדות", cta: "למידע נוסף" },
+      promotions: { title: "מבצעים", subtitle: "הצעות מיוחדות", cta: "למבצעים" },
+      booking: { title: "קביעת תור", subtitle: "תאמו את הביקור", cta: "לקביעת תור" },
       contact: { title: "צור קשר", subtitle: "ביקור ויצירת קשר", cta: "להוראות הגעה" },
       about: { title: "אודות", subtitle: "האטלייה שלנו", cta: "הסיפור שלנו" },
       shop: { title: "חנות", subtitle: "הקולקציה המלאה", cta: "לקנייה" },

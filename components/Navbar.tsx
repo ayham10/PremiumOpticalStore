@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function Navbar() {
-  const { t } = useLocale();
+  const { t, rtl } = useLocale();
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
   const links = [
+    { href: "/", label: t("nav.home") },
     { href: "/services", label: t("nav.services") },
+    { href: "/eye-exams", label: t("nav.exam") },
     { href: "/shop", label: t("nav.shop") },
-    { href: "/book", label: t("nav.book") },
-    { href: "/gallery", label: t("nav.gallery") },
     { href: "/about", label: t("nav.about") },
     { href: "/contact", label: t("nav.contact") },
   ];
@@ -26,6 +30,10 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     document.body.classList.toggle("has-mobile-nav-open", open);
@@ -41,111 +49,160 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const elevated = scrolled || open;
+  const whiteText = isHome || !elevated;
+  const offscreenX = rtl ? "-100%" : "100%";
+
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-        scrolled || open
-          ? "border-b border-[var(--line)] bg-[rgba(247,248,250,0.94)] backdrop-blur-xl"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-4">
-        <Link
-          href="/"
-          className={`font-[family-name:var(--font-display)] text-[1.4rem] tracking-[0.08em] sm:text-[1.55rem] ${
-            scrolled || open ? "text-[var(--ink)]" : "text-white"
-          }`}
-          onClick={() => setOpen(false)}
-        >
-          LUM<span style={{ color: scrolled || open ? "var(--accent)" : "#9ec9e6" }}>I</span>NA
-        </Link>
-
-        <nav
-          className={`hidden items-center gap-6 text-[0.92rem] font-medium lg:flex ${
-            scrolled ? "text-[var(--slate)]" : "text-white/85"
-          }`}
-        >
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="transition-colors hover:text-[var(--accent-soft)]"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="hidden items-center gap-3 lg:flex">
-          <div className={scrolled || open ? "" : "[&_select]:border-white/35 [&_select]:bg-white/15 [&_select]:text-white"}>
-            <LanguageSwitcher compact />
-          </div>
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+          elevated
+            ? isHome
+              ? "border-b border-white/10 bg-[rgba(10,14,20,0.9)] backdrop-blur-xl"
+              : "border-b border-[var(--line)] bg-[rgba(247,248,250,0.94)] backdrop-blur-xl"
+            : "border-b border-transparent bg-transparent"
+        }`}
+      >
+        <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-4">
           <Link
-            href="/admin"
-            className={`text-sm ${scrolled ? "text-[var(--slate)]" : "text-white/75"}`}
+            href="/"
+            className={`font-[family-name:var(--font-display)] text-[1.35rem] tracking-[0.1em] sm:text-[1.5rem] ${
+              whiteText ? "text-white" : "text-[var(--ink)]"
+            }`}
+            onClick={() => setOpen(false)}
           >
-            {t("nav.admin")}
+            LUM
+            <span style={{ color: whiteText ? "#d4b483" : "var(--accent)" }}>I</span>
+            NA
+            <span
+              className={`ms-1 hidden text-[0.62em] tracking-[0.18em] sm:inline ${
+                whiteText ? "text-white/70" : "text-[var(--slate)]"
+              }`}
+            >
+              OPTICAL
+            </span>
           </Link>
-          <Link href="/book" className="btn btn-primary !min-h-11 !px-5 !text-sm">
-            {t("nav.bookCta")}
-          </Link>
-        </div>
 
-        <button
-          className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
-            scrolled || open
-              ? "border-[var(--line-strong)] text-[var(--ink)]"
-              : "border-white/40 text-white"
-          }`}
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? t("nav.close") : t("nav.menu")}
-          aria-expanded={open}
-        >
-          {open ? <X size={18} /> : <Menu size={18} />}
-        </button>
-      </div>
+          <nav
+            className={`hidden items-center gap-5 text-[0.86rem] font-semibold uppercase tracking-[0.12em] xl:flex ${
+              whiteText ? "text-white/80" : "text-[var(--slate)]"
+            }`}
+          >
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="transition-colors hover:text-[var(--copper-soft)]"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
 
-      {open ? (
-        <div className="fixed inset-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-40 lg:hidden">
+          <div className="hidden items-center gap-3 lg:flex">
+            <LanguageSwitcher compact tone={whiteText ? "dark" : "light"} />
+            <Link
+              href="/book"
+              className={`btn !min-h-11 !px-5 !text-sm ${
+                whiteText ? "btn-copper" : "btn-primary"
+              }`}
+            >
+              {t("nav.bookCta")}
+            </Link>
+          </div>
+
           <button
             type="button"
-            className="absolute inset-0 bg-[rgba(8,12,18,0.45)] backdrop-blur-[2px]"
-            aria-label={t("nav.close")}
-            onClick={() => setOpen(false)}
-          />
-          <div className="relative mx-auto flex h-[min(100%,calc(100svh-3.5rem))] w-full max-w-lg flex-col border-t border-[var(--line)] bg-[rgba(247,248,250,0.98)] shadow-2xl">
-            <div className="wrap flex flex-1 flex-col gap-1 overflow-y-auto py-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-              {links.map((l) => (
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
+              whiteText
+                ? "border-white/35 text-white"
+                : "border-[var(--line-strong)] text-[var(--ink)]"
+            }`}
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? t("nav.close") : t("nav.menu")}
+            aria-expanded={open}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
+      </header>
+
+      <AnimatePresence>
+        {open ? (
+          <motion.div
+            className="fixed inset-0 z-[60] lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-[rgba(6,9,14,0.62)] backdrop-blur-md"
+              aria-label={t("nav.close")}
+              onClick={() => setOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: offscreenX }}
+              animate={{ x: 0 }}
+              exit={{ x: offscreenX }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-y-0 end-0 flex w-[min(100%,360px)] flex-col border-s border-white/10 bg-[#0d131b] shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                <p className="font-[family-name:var(--font-display)] text-xl tracking-[0.12em] text-white">
+                  LUM<span style={{ color: "#d4b483" }}>I</span>NA
+                </p>
+                <button
+                  type="button"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white"
+                  onClick={() => setOpen(false)}
+                  aria-label={t("nav.close")}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+                {links.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className="rounded-2xl px-4 py-3.5 text-[1.05rem] font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+                <div className="mt-3 px-4 py-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    {t("nav.language")}
+                  </p>
+                  <LanguageSwitcher tone="dark" />
+                </div>
                 <Link
-                  key={l.href}
-                  href={l.href}
-                  className="rounded-2xl px-4 py-3.5 text-[1.05rem] font-medium text-[var(--ink)] transition hover:bg-white"
+                  href="/admin"
+                  className="rounded-2xl px-4 py-3 text-sm font-medium text-white/55"
                   onClick={() => setOpen(false)}
                 >
-                  {l.label}
+                  {t("nav.admin")}
                 </Link>
-              ))}
-              <div className="mt-2 px-4 py-3">
-                <LanguageSwitcher />
+              </nav>
+
+              <div className="border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+                <Link
+                  href="/book"
+                  className="btn btn-copper w-full"
+                  onClick={() => setOpen(false)}
+                >
+                  {t("nav.bookCta")}
+                </Link>
               </div>
-              <Link
-                href="/admin"
-                className="rounded-2xl px-4 py-3 text-sm font-medium text-[var(--slate)]"
-                onClick={() => setOpen(false)}
-              >
-                {t("nav.admin")}
-              </Link>
-              <Link
-                href="/book"
-                className="btn btn-primary mt-3 w-full"
-                onClick={() => setOpen(false)}
-              >
-                {t("nav.bookCta")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </header>
+            </motion.aside>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </>
   );
 }

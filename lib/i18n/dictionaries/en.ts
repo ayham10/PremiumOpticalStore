@@ -4,6 +4,7 @@ export type Dictionary = {
   intro: Record<string, string>;
   home: {
     hubEyebrow: string;
+    scrollHint: string;
     categoriesEyebrow: string;
     categoriesTitle: string;
     categoriesLead: string;
@@ -105,14 +106,16 @@ export type Dictionary = {
 
 const en: Dictionary = {
   nav: {
+    home: "Home",
     services: "Services",
+    exam: "Eye Exam",
     shop: "Shop",
     book: "Book Exam",
     gallery: "Gallery",
     about: "About",
     contact: "Contact",
     admin: "Admin",
-    bookCta: "Book Eye Exam",
+    bookCta: "Book Exam",
     menu: "Menu",
     close: "Close",
     language: "Language",
@@ -133,6 +136,7 @@ const en: Dictionary = {
   },
   home: {
     hubEyebrow: "Premium Navigation",
+    scrollHint: "Scroll",
     categoriesEyebrow: "Explore",
     categoriesTitle: "Everything your vision needs",
     categoriesLead:
@@ -184,33 +188,33 @@ const en: Dictionary = {
     gateway: {
       frames: {
         title: "Premium Frames",
-        subtitle: "Luxury Eyewear",
-        cta: "Shop Frames",
+        subtitle: "Explore our collection",
+        cta: "Shop Now",
       },
       exams: {
         title: "Eye Exams",
-        subtitle: "Clinical Precision",
-        cta: "Book Appointment",
+        subtitle: "Professional care",
+        cta: "Book Now",
       },
       sunglasses: {
         title: "Sunglasses",
-        subtitle: "Polarized Protection",
-        cta: "View Collection",
+        subtitle: "Timeless style",
+        cta: "Shop Now",
       },
       contacts: {
         title: "Contact Lenses",
-        subtitle: "Comfort & Clarity",
-        cta: "Explore Lenses",
+        subtitle: "Comfort & clarity",
+        cta: "Learn More",
       },
       promotions: {
         title: "Promotions",
-        subtitle: "Limited Offers",
-        cta: "See Offers",
+        subtitle: "Special offers",
+        cta: "View Offers",
       },
       booking: {
         title: "Book Appointment",
-        subtitle: "Your Visit",
-        cta: "Start Booking",
+        subtitle: "Schedule your visit",
+        cta: "Book Now",
       },
       contact: {
         title: "Contact",
