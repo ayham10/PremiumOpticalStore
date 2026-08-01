@@ -73,12 +73,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const description =
     dict.product.descriptions[product.slug] || product.description;
 
+  const isSunglasses = product.category === "Sunglasses";
   const frameLabel = product.frameType
     ? dict.product.attrs[product.frameType] || product.frameType
     : null;
   const lensLabel = product.lensType
     ? dict.product.attrs[product.lensType] || product.lensType
     : null;
+  const polarized =
+    product.lensType?.toLowerCase().includes("polarized") ?? false;
+  const uvProtection =
+    product.lensType?.toLowerCase().includes("uv") ?? false;
 
   return (
     <div className="product-page">
@@ -136,14 +141,34 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <dl className="product-meta">
               {frameLabel ? (
                 <div>
-                  <dt>{t(dict, "product.frame")}</dt>
+                  <dt>
+                    {isSunglasses
+                      ? t(dict, "product.frameShape")
+                      : t(dict, "product.frame")}
+                  </dt>
                   <dd>{frameLabel}</dd>
                 </div>
               ) : null}
               {lensLabel ? (
                 <div>
-                  <dt>{t(dict, "product.lens")}</dt>
+                  <dt>
+                    {isSunglasses
+                      ? t(dict, "product.lensType")
+                      : t(dict, "product.lens")}
+                  </dt>
                   <dd>{lensLabel}</dd>
+                </div>
+              ) : null}
+              {isSunglasses && polarized ? (
+                <div>
+                  <dt>{t(dict, "product.polarized")}</dt>
+                  <dd>{dict.product.attrs.Polarized || "Polarized"}</dd>
+                </div>
+              ) : null}
+              {isSunglasses && uvProtection ? (
+                <div>
+                  <dt>{t(dict, "product.uvProtection")}</dt>
+                  <dd>{dict.product.attrs.UV400 || "UV400"}</dd>
                 </div>
               ) : null}
               <div>
@@ -179,6 +204,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <RelatedProductsCarousel
             products={related}
             currencySymbol={data.settings.currencySymbol}
+            relatedTitle={
+              isSunglasses
+                ? t(dict, "product.relatedSunglasses")
+                : t(dict, "product.related")
+            }
           />
         ) : null}
       </div>

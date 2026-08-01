@@ -16,12 +16,19 @@ type RelatedItem = Pick<
 export default function RelatedProductsCarousel({
   products,
   currencySymbol,
+  relatedTitle,
 }: {
   products: RelatedItem[];
   currencySymbol?: string;
+  relatedTitle?: string;
 }) {
   const { t, dict, rtl } = useLocale();
   const trackRef = useRef<HTMLDivElement>(null);
+  const heading =
+    relatedTitle ||
+    (products[0]?.category === "Sunglasses"
+      ? t("product.relatedSunglasses")
+      : t("product.related"));
 
   const scrollByCard = useCallback(
     (direction: 1 | -1) => {
@@ -58,9 +65,9 @@ export default function RelatedProductsCarousel({
     <section className="product-related" aria-labelledby="related-heading">
       <div className="product-related-header">
         <div>
-          <span className="product-related-eyebrow">{t("product.related")}</span>
+          <span className="product-related-eyebrow">{heading}</span>
           <h2 id="related-heading" className="product-related-title">
-            {t("product.related")}
+            {heading}
           </h2>
         </div>
         <div className="product-related-controls">
@@ -88,7 +95,7 @@ export default function RelatedProductsCarousel({
         className="product-related-track"
         tabIndex={0}
         role="region"
-        aria-label={t("product.related")}
+        aria-label={heading}
       >
         {products.map((product) => {
           const image = product.images[0] || "/images/placeholder-frame.svg";

@@ -910,6 +910,16 @@ p {
   object-position: 28% 50%;
 }
 
+.home-card-img--sunglasses {
+  object-fit: cover;
+  object-position: center 22%;
+}
+
+.home-card-img--booking {
+  object-fit: cover;
+  object-position: center 35%;
+}
+
 @media (min-width: 640px) {
   .home-card-img--exams {
     object-position: center 42%;
@@ -917,6 +927,14 @@ p {
 
   .home-card-img--contacts {
     object-position: 36% 50%;
+  }
+
+  .home-card-img--sunglasses {
+    object-position: center 20%;
+  }
+
+  .home-card-img--booking {
+    object-position: center 32%;
   }
 }
 
@@ -927,6 +945,14 @@ p {
 
   .home-card-img--contacts {
     object-position: 42% 50%;
+  }
+
+  .home-card-img--sunglasses {
+    object-position: center 18%;
+  }
+
+  .home-card-img--booking {
+    object-position: center 30%;
   }
 }
 

@@ -64,6 +64,13 @@ export type Dictionary = {
     bookConsultation: string;
     whatsapp: string;
     related: string;
+    relatedSunglasses: string;
+    frameShape: string;
+    lensType: string;
+    polarized: string;
+    uvProtection: string;
+    material: string;
+    colour: string;
     previous: string;
     next: string;
     attrs: Record<string, string>;
@@ -261,32 +268,32 @@ const en: Dictionary = {
     gateway: {
       frames: {
         title: "Premium Frames",
-        subtitle: "Explore our collection",
+        subtitle: "Luxury prescription frames",
         cta: "Shop Now",
       },
       exams: {
-        title: "Eye Exams",
-        subtitle: "Professional Eye Care & Vision Testing",
+        title: "Eye Exam",
+        subtitle: "Professional eye examination",
         cta: "Book Now",
       },
       sunglasses: {
         title: "Sunglasses",
-        subtitle: "Timeless style",
+        subtitle: "Luxury sunglasses for every day",
         cta: "Shop Now",
       },
       contacts: {
         title: "Contact Lenses",
-        subtitle: "Comfort • Daily & Monthly Lenses • Crystal Clear Vision",
+        subtitle: "Comfort and crystal-clear vision",
         cta: "Learn More",
       },
       promotions: {
-        title: "Promotions",
-        subtitle: "Special offers",
+        title: "Special Offers",
+        subtitle: "Latest offers and discounts",
         cta: "View Offers",
       },
       booking: {
-        title: "Book Appointment",
-        subtitle: "Schedule your visit",
+        title: "Book Consultation",
+        subtitle: "Meet with our optical specialists",
         cta: "Book Now",
       },
       contact: {
@@ -336,8 +343,8 @@ const en: Dictionary = {
     sunglasses: {
       eyebrow: "Sun Collection",
       title: "Sunglasses",
-      lead: "Polarized protection and refined design for bright days and travel.",
-      body: "Discover sunglasses that protect and elevate — polarized lenses, UV coverage, and frames that feel as considered as your everyday eyewear.",
+      lead: "Discover premium sunglasses designed for protection, comfort and effortless style.",
+      body: "Discover premium sunglasses designed for protection, comfort and effortless style.",
       highlights: [
         { title: "Polarized clarity", text: "Reduce glare for driving, coastline light, and city brightness." },
         { title: "Prescription options", text: "Many styles can be prepared with your prescription." },
@@ -448,9 +455,16 @@ const en: Dictionary = {
     lens: "Lens",
     sku: "SKU",
     availability: "Availability",
-    bookConsultation: "Book consultation",
+    bookConsultation: "Book Consultation",
     whatsapp: "WhatsApp inquire",
     related: "Related pieces",
+    relatedSunglasses: "Related sunglasses",
+    frameShape: "Frame shape",
+    lensType: "Lens type",
+    polarized: "Polarized",
+    uvProtection: "UV protection",
+    material: "Material",
+    colour: "Colour",
     previous: "Previous products",
     next: "Next products",
     attrs: {
@@ -463,6 +477,15 @@ const en: Dictionary = {
       "Blue-light / Progressive": "Blue-light / Progressive",
       "Polarized UV400": "Polarized UV400",
       "Daily Disposable": "Daily Disposable",
+      Polarized: "Polarized",
+      "UV400": "UV400",
+      Acetate: "Acetate",
+      Metal: "Metal",
+      Titanium: "Titanium",
+      Black: "Black",
+      Gold: "Gold",
+      Tortoise: "Tortoise",
+      Champagne: "Champagne",
     },
     descriptions: {
       "aurelia-acetate-frame":
@@ -485,6 +508,14 @@ const en: Dictionary = {
         "Microfiber cloth, anti-fog spray, and travel case — the daily ritual essentials.",
       "velvet-case-accessory":
         "Soft-touch hard case with magnetic closure and microfiber lining.",
+      "eclipse-black-aviator":
+        "Matte black aviators with polarized lenses for sharp contrast in bright light.",
+      "dune-acetate-wayfarer":
+        "Warm tortoise acetate with soft square lines and all-day UV protection.",
+      "marina-gold-rim":
+        "Slim gold-tone rims with gradient lenses for coastal light and city glare.",
+      "noir-mirror-square":
+        "Bold square silhouette with mirror lenses and a quiet luxury finish.",
     },
   },
   book: {

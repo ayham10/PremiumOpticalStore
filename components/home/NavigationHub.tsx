@@ -20,17 +20,22 @@ const TILES = [
     position: "home-card-img--exams",
   },
   {
-    key: "sunglasses",
-    href: "/sunglasses",
-    image:
-      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_25%]",
-  },
-  {
     key: "contacts",
     href: "/contact-lenses",
     image: "/images/card-contact-lenses.jpg",
     position: "home-card-img--contacts",
+  },
+  {
+    key: "sunglasses",
+    href: "/sunglasses",
+    image: "/images/sunglasses-category.jpg",
+    position: "home-card-img--sunglasses",
+  },
+  {
+    key: "booking",
+    href: "/book",
+    image: "/images/book-consultation.jpg",
+    position: "home-card-img--booking",
   },
   {
     key: "promotions",
@@ -38,13 +43,6 @@ const TILES = [
     image:
       "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1600&q=85",
     position: "object-[center_50%]",
-  },
-  {
-    key: "booking",
-    href: "/book",
-    image:
-      "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_40%]",
   },
 ] as const;
 

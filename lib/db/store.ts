@@ -92,11 +92,22 @@ async function writeSupabase(data: AppData): Promise<void> {
   }
 }
 
+function mergeMissingSeedProducts(existing: AppData["products"]) {
+  const seedProducts = createSeedData().products;
+  const byId = new Set(existing.map((p) => p.id));
+  const bySlug = new Set(existing.map((p) => p.slug));
+  const missing = seedProducts.filter(
+    (p) => !byId.has(p.id) && !bySlug.has(p.slug),
+  );
+  return missing.length ? [...existing, ...missing] : existing;
+}
+
 function normalizeData(data: AppData): AppData {
+  const products = mergeMissingSeedProducts(data.products ?? []);
   return {
     ...createSeedData(),
     ...data,
-    products: data.products ?? [],
+    products,
     appointments: data.appointments ?? [],
     customers: data.customers ?? [],
     staff: data.staff?.length ? data.staff : createSeedData().staff,

@@ -83,20 +83,36 @@ const he: Dictionary = {
     visitTitle: "מצאו את LUMINA",
     visitHours: "שעות פעילות",
     gateway: {
-      frames: { title: "מסגרות פרימיום", subtitle: "גלו את הקולקציה", cta: "לקנייה" },
+      frames: {
+        title: "מסגרות פרימיום",
+        subtitle: "מסגרות רפואיות יוקרתיות",
+        cta: "לקנייה",
+      },
       exams: {
-        title: "בדיקות ראייה",
-        subtitle: "טיפול עיניים מקצועי ובדיקות ראייה",
+        title: "בדיקת עיניים",
+        subtitle: "בדיקת עיניים מקצועית",
         cta: "לקביעת תור",
       },
-      sunglasses: { title: "משקפי שמש", subtitle: "סטייל נצחי", cta: "לקנייה" },
+      sunglasses: {
+        title: "משקפי שמש",
+        subtitle: "משקפי שמש יוקרתיים לכל יום",
+        cta: "לקנייה",
+      },
       contacts: {
         title: "עדשות מגע",
-        subtitle: "נוחות • יומיות וחודשיות • ראייה חדה כבדולח",
+        subtitle: "נוחות וראייה חדה",
         cta: "למידע נוסף",
       },
-      promotions: { title: "מבצעים", subtitle: "הצעות מיוחדות", cta: "למבצעים" },
-      booking: { title: "קביעת תור", subtitle: "תאמו את הביקור", cta: "לקביעת תור" },
+      promotions: {
+        title: "מבצעים מיוחדים",
+        subtitle: "ההנחות וההטבות העדכניות",
+        cta: "למבצעים",
+      },
+      booking: {
+        title: "קביעת ייעוץ",
+        subtitle: "פגשו את המומחים שלנו",
+        cta: "לקביעת תור",
+      },
       contact: { title: "צור קשר", subtitle: "ביקור ויצירת קשר", cta: "להוראות הגעה" },
       about: { title: "אודות", subtitle: "האטלייה שלנו", cta: "הסיפור שלנו" },
       shop: { title: "חנות", subtitle: "הקולקציה המלאה", cta: "לקנייה" },
@@ -132,8 +148,8 @@ const he: Dictionary = {
     sunglasses: {
       eyebrow: "קולקציית שמש",
       title: "משקפי שמש",
-      lead: "הגנה מקטבת ועיצוב מעודן לימים בהירים ולנסיעות.",
-      body: "גלו משקפי שמש שמגנים ומשדרגים — עדשות מקטבות, הגנת UV ומסגרות מדויקות כמו משקפי היומיום שלכם.",
+      lead: "גלו משקפי שמש פרימיום שמיועדים להגנה, נוחות וסטייל טבעי.",
+      body: "גלו משקפי שמש פרימיום שמיועדים להגנה, נוחות וסטייל טבעי.",
       highlights: [
         { title: "חדות מקטבת", text: "הפחתת סינוור לנהיגה, חוף ואור עירוני." },
         { title: "אפשרויות מרשם", text: "דגמים רבים ניתנים להכנה עם המרשם שלכם." },
@@ -239,6 +255,13 @@ const he: Dictionary = {
     bookConsultation: "קביעת ייעוץ",
     whatsapp: "פנייה ב‑WhatsApp",
     related: "מוצרים דומים",
+    relatedSunglasses: "משקפי שמש דומים",
+    frameShape: "צורת מסגרת",
+    lensType: "סוג עדשה",
+    polarized: "מקטב",
+    uvProtection: "הגנת UV",
+    material: "חומר",
+    colour: "צבע",
     previous: "מוצרים קודמים",
     next: "מוצרים הבאים",
     attrs: {
@@ -251,6 +274,15 @@ const he: Dictionary = {
       "Blue-light / Progressive": "סינון אור כחול / מולטיפוקל",
       "Polarized UV400": "מקטב UV400",
       "Daily Disposable": "יומיות חד־פעמיות",
+      Polarized: "מקטב",
+      UV400: "UV400",
+      Acetate: "אצטט",
+      Metal: "מתכת",
+      Titanium: "טיטניום",
+      Black: "שחור",
+      Gold: "זהב",
+      Tortoise: "צב",
+      Champagne: "שמפניה",
     },
     descriptions: {
       "aurelia-acetate-frame":
@@ -273,6 +305,14 @@ const he: Dictionary = {
         "מטלית מיקרופייבר, ספריי נגד אדים ונרתיק נסיעות — שגרת הטיפול היומית.",
       "velvet-case-accessory":
         "נרתיק קשיח רך למגע עם סגירה מגנטית וריפוד מיקרופייבר.",
+      "eclipse-black-aviator":
+        "טייסים שחורים מט עם עדשות מקטבות לניגודיות חדה באור חזק.",
+      "dune-acetate-wayfarer":
+        "אצטט צב חם עם קווים מרובעים רכים והגנת UV מלאה.",
+      "marina-gold-rim":
+        "מסגרת זהב דקה עם עדשות מדורגות לאור חוף וסינוור עירוני.",
+      "noir-mirror-square":
+        "צללית מרובעת נועזת עם עדשות מראה וגימור יוקרתי שקט.",
     },
   },
   book: {
