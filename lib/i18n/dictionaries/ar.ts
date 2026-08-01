@@ -92,7 +92,7 @@ const ar: Dictionary = {
       sunglasses: { title: "نظارات شمسية", subtitle: "أناقة خالدة", cta: "تسوق الآن" },
       contacts: {
         title: "عدسات لاصقة",
-        subtitle: "راحة • رؤية واضحة • يومية وشهرية",
+        subtitle: "راحة • يومية وشهرية • رؤية صافية كالكريستال",
         cta: "اعرف المزيد",
       },
       promotions: { title: "العروض", subtitle: "عروض خاصة", cta: "شاهد العروض" },

@@ -92,7 +92,7 @@ const he: Dictionary = {
       sunglasses: { title: "משקפי שמש", subtitle: "סטייל נצחי", cta: "לקנייה" },
       contacts: {
         title: "עדשות מגע",
-        subtitle: "נוחות • ראייה חדה • יומיות וחודשיות",
+        subtitle: "נוחות • יומיות וחודשיות • ראייה חדה כבדולח",
         cta: "למידע נוסף",
       },
       promotions: { title: "מבצעים", subtitle: "הצעות מיוחדות", cta: "למבצעים" },

@@ -205,7 +205,7 @@ const en: Dictionary = {
       },
       contacts: {
         title: "Contact Lenses",
-        subtitle: "Comfort • Clear Vision • Daily & Monthly Lenses",
+        subtitle: "Comfort • Daily & Monthly Lenses • Crystal Clear Vision",
         cta: "Learn More",
       },
       promotions: {

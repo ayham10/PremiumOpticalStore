@@ -878,31 +878,32 @@ p {
 /* Keep exam / contact subjects framed across breakpoints */
 .home-card-img--exams {
   object-fit: cover;
-  object-position: center 40%;
+  object-position: center 45%;
 }
 
 .home-card-img--contacts {
   object-fit: cover;
-  object-position: 50% 45%;
+  /* Bias left so the fingertip contact lens stays in frame on narrow cards */
+  object-position: 28% 50%;
 }
 
 @media (min-width: 640px) {
   .home-card-img--exams {
-    object-position: center 38%;
+    object-position: center 42%;
   }
 
   .home-card-img--contacts {
-    object-position: 50% 48%;
+    object-position: 36% 50%;
   }
 }
 
 @media (min-width: 1024px) {
   .home-card-img--exams {
-    object-position: center 40%;
+    object-position: center 45%;
   }
 
   .home-card-img--contacts {
-    object-position: 50% 50%;
+    object-position: 42% 50%;
   }
 }
 
