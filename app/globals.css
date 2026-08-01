@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@300;400;500;600;700&family=Noto+Sans+Hebrew:wght@300;400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -49,6 +49,32 @@ html,
 body {
   max-width: 100%;
   overflow-x: hidden;
+}
+
+html[lang="he"] body,
+html[dir="rtl"][lang="he"] body {
+  font-family: "Noto Sans Hebrew", "Manrope", sans-serif;
+}
+
+html[lang="ar"] body,
+html[dir="rtl"][lang="ar"] body {
+  font-family: "Noto Naskh Arabic", "Manrope", sans-serif;
+}
+
+html[lang="he"] h1,
+html[lang="he"] h2,
+html[lang="he"] h3,
+html[lang="he"] h4,
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3,
+html[lang="ar"] h4 {
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+html[dir="rtl"] .eyebrow {
+  letter-spacing: 0.12em;
 }
 
 body {
