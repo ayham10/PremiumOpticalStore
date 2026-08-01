@@ -86,14 +86,14 @@ function ShopContent() {
         video="/videos/hero.mp4"
       />
       <section className="wrap relative z-10">
-        <div className="mt-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-2">
+        <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:overflow-visible">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setCategory(cat)}
-                className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
                   category === cat
                     ? "border-[var(--ink)] bg-[var(--ink)] text-white shadow-[var(--shadow-soft)]"
                     : "border-[var(--line-strong)] bg-white/80 text-[var(--slate)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
@@ -103,7 +103,7 @@ function ShopContent() {
               </button>
             ))}
           </div>
-          <label className="relative block w-full max-w-sm">
+          <label className="relative block w-full max-w-none lg:max-w-sm">
             <span className="sr-only">{t("shop.search")}</span>
             <input
               className="input"

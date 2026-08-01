@@ -37,8 +37,9 @@ function toYmd(d: Date) {
 }
 
 export default function AdminCalendarPage() {
-  const [view, setView] = useState<ViewMode>("week");
+  const [view, setView] = useState<ViewMode>("day");
   const [cursor, setCursor] = useState(() => new Date());
+  const [isNarrow, setIsNarrow] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -91,6 +92,19 @@ export default function AdminCalendarPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => {
+      setIsNarrow(mq.matches);
+      if (mq.matches) {
+        setView((v) => (v === "week" ? "day" : v));
+      }
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const staffMap = useMemo(
     () => Object.fromEntries(staff.map((s) => [s.id, s])),
@@ -183,51 +197,53 @@ export default function AdminCalendarPage() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="eyebrow">Planning</p>
           <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
+            className="mt-1 text-[clamp(1.6rem,5vw,1.9rem)] text-[var(--ink)] md:text-3xl"
             style={{ fontFamily: "Fraunces, serif" }}
           >
             Calendar
           </h1>
           <p className="mt-1 text-sm text-[var(--slate)]">
             Working hours & holidays respected · slot length {slotMinutes} min.
-            Select an appointment, then click a day/slot to reschedule.
+            Select an appointment, then tap a day/slot to reschedule.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {(["day", "week", "month"] as ViewMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={cn(
-                "btn !min-h-10 !px-4 !text-sm capitalize",
-                view === mode ? "btn-accent" : "btn-ghost"
-              )}
-              onClick={() => setView(mode)}
-            >
-              {mode}
-            </button>
-          ))}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {(["day", "week", "month"] as ViewMode[])
+            .filter((mode) => !(isNarrow && mode === "week"))
+            .map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={cn(
+                  "btn !min-h-11 flex-1 !px-4 !text-sm capitalize sm:flex-none",
+                  view === mode ? "btn-accent" : "btn-ghost"
+                )}
+                onClick={() => setView(mode)}
+              >
+                {mode}
+              </button>
+            ))}
         </div>
       </header>
 
-      <div className="admin-card flex flex-wrap items-center gap-3 p-4">
-        <button type="button" className="btn btn-ghost !min-h-10 !px-3" onClick={() => shift(-1)}>
+      <div className="admin-card flex flex-wrap items-center gap-2 p-3 sm:gap-3 sm:p-4">
+        <button type="button" className="btn btn-ghost !min-h-11 !px-3" onClick={() => shift(-1)}>
           <ChevronLeft size={16} />
         </button>
         <button
           type="button"
-          className="btn btn-ghost !min-h-10 !px-3"
+          className="btn btn-ghost !min-h-11 !px-3"
           onClick={() => setCursor(new Date())}
         >
           Today
         </button>
-        <button type="button" className="btn btn-ghost !min-h-10 !px-3" onClick={() => shift(1)}>
+        <button type="button" className="btn btn-ghost !min-h-11 !px-3" onClick={() => shift(1)}>
           <ChevronRight size={16} />
         </button>
-        <p className="min-w-[180px] font-semibold text-[var(--ink)]">
+        <p className="w-full font-semibold text-[var(--ink)] sm:w-auto sm:min-w-[180px]">
           {view === "month"
             ? format(cursor, "MMMM yyyy")
             : view === "week"
@@ -235,7 +251,7 @@ export default function AdminCalendarPage() {
               : format(cursor, "EEEE, MMM d, yyyy")}
         </p>
         <select
-          className="select ml-auto max-w-[220px]"
+          className="select w-full sm:ms-auto sm:max-w-[220px]"
           value={staffFilter}
           onChange={(e) => setStaffFilter(e.target.value)}
         >
@@ -271,15 +287,16 @@ export default function AdminCalendarPage() {
       {loading ? (
         <p className="text-[var(--slate)]">Loading calendar…</p>
       ) : view === "month" ? (
-        <div className="admin-card overflow-hidden p-3">
-          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wider text-[var(--slate)]">
+        <div className="admin-card overflow-hidden p-2 sm:p-3">
+          <div className="mb-2 grid grid-cols-7 gap-0.5 text-center text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--slate)] sm:gap-1 sm:text-xs">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} className="py-2">
-                {d}
+              <div key={d} className="py-1.5 sm:py-2">
+                <span className="sm:hidden">{d.slice(0, 1)}</span>
+                <span className="hidden sm:inline">{d}</span>
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
             {days.map((day) => {
               const key = toYmd(day);
               const list = byDate.get(key) || [];
@@ -290,10 +307,13 @@ export default function AdminCalendarPage() {
                   type="button"
                   onClick={() => {
                     if (selected) void rescheduleTo(key);
-                    else setCursor(day);
+                    else {
+                      setCursor(day);
+                      if (isNarrow) setView("day");
+                    }
                   }}
                   className={cn(
-                    "min-h-[96px] rounded-xl border p-2 text-left transition-colors",
+                    "min-h-[64px] rounded-lg border p-1 text-left transition-colors sm:min-h-[96px] sm:rounded-xl sm:p-2",
                     isSameMonth(day, cursor)
                       ? "border-[var(--line)] bg-white"
                       : "border-transparent bg-[var(--mist)]/60 text-[var(--slate)]",
@@ -301,11 +321,11 @@ export default function AdminCalendarPage() {
                     isHoliday && "bg-[#fff4df]"
                   )}
                 >
-                  <div className="mb-1 flex items-center justify-between text-xs font-semibold">
+                  <div className="mb-1 flex items-center justify-between text-[0.7rem] font-semibold sm:text-xs">
                     <span>{format(day, "d")}</span>
                     {isHoliday ? <span className="text-[var(--warning)]">H</span> : null}
                   </div>
-                  <div className="space-y-1">
+                  <div className="hidden space-y-1 sm:block">
                     {list.slice(0, 3).map((a) => {
                       const color = staffMap[a.staffId]?.color || "#1a4a6b";
                       return (
@@ -329,10 +349,103 @@ export default function AdminCalendarPage() {
                       <p className="text-[10px] text-[var(--slate)]">+{list.length - 3} more</p>
                     ) : null}
                   </div>
+                  {list.length > 0 ? (
+                    <div className="mt-1 flex justify-center gap-0.5 sm:hidden">
+                      {list.slice(0, 3).map((a) => (
+                        <span
+                          key={a.id}
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ background: staffMap[a.staffId]?.color || "#1a4a6b" }}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </button>
               );
             })}
           </div>
+        </div>
+      ) : isNarrow || view === "day" ? (
+        <div className="space-y-3">
+          {(isNarrow && view !== "day" ? [cursor] : days).map((day) => {
+            const key = toYmd(day);
+            const list = byDate.get(key) || [];
+            const isHoliday = holidaySet.has(key);
+            return (
+              <div key={key} className="admin-card overflow-hidden">
+                <div
+                  className={cn(
+                    "flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3",
+                    isHoliday && "bg-[#fff4df]"
+                  )}
+                >
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--slate)]">
+                      {format(day, "EEEE")}
+                    </p>
+                    <p className="font-semibold text-[var(--ink)]">{format(day, "MMM d, yyyy")}</p>
+                  </div>
+                  {isHoliday ? (
+                    <span className="text-xs font-semibold text-[var(--warning)]">Holiday</span>
+                  ) : null}
+                </div>
+                <div className="divide-y divide-[var(--line)]">
+                  {daySlots.map((slot) => {
+                    const slotAppts = list.filter((a) => a.startTime === slot);
+                    return (
+                      <button
+                        key={`${key}-${slot}`}
+                        type="button"
+                        className="flex min-h-14 w-full items-start gap-3 px-4 py-3 text-left hover:bg-[var(--accent-wash)]"
+                        onClick={() => {
+                          if (selected) void rescheduleTo(key, slot);
+                        }}
+                      >
+                        <span className="w-14 shrink-0 pt-0.5 text-xs font-semibold text-[var(--slate)]">
+                          {slot}
+                        </span>
+                        <span className="min-w-0 flex-1 space-y-1.5">
+                          {slotAppts.length === 0 ? (
+                            <span className="block text-xs text-[var(--slate)]/70">
+                              {selected ? "Tap to move here" : "Open"}
+                            </span>
+                          ) : (
+                            slotAppts.map((a) => {
+                              const color = staffMap[a.staffId]?.color || "#1a4a6b";
+                              return (
+                                <span
+                                  key={a.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedId(a.id);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") setSelectedId(a.id);
+                                  }}
+                                  className={cn(
+                                    "block rounded-xl px-3 py-2 text-sm font-semibold text-white",
+                                    selectedId === a.id && "ring-2 ring-[var(--ink)] ring-offset-1"
+                                  )}
+                                  style={{ background: color }}
+                                >
+                                  <span className="block truncate">{a.customerName}</span>
+                                  <span className="block truncate text-xs font-medium opacity-90">
+                                    {a.service}
+                                  </span>
+                                </span>
+                              );
+                            })
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="admin-card overflow-x-auto">
@@ -352,7 +465,7 @@ export default function AdminCalendarPage() {
                 <div
                   key={key}
                   className={cn(
-                    "border-b border-l border-[var(--line)] p-3 text-center",
+                    "border-b border-s border-[var(--line)] p-3 text-center",
                     isHoliday && "bg-[#fff4df]"
                   )}
                 >
@@ -379,7 +492,7 @@ export default function AdminCalendarPage() {
                     <button
                       key={`${key}-${slot}`}
                       type="button"
-                      className="min-h-[52px] border-b border-l border-[var(--line)] p-1 text-left hover:bg-[var(--accent-wash)]"
+                      className="min-h-[52px] border-b border-s border-[var(--line)] p-1 text-left hover:bg-[var(--accent-wash)]"
                       onClick={() => {
                         if (selected) void rescheduleTo(key, slot);
                       }}

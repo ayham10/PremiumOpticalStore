@@ -203,8 +203,8 @@ export default function AdminCustomersPage() {
       ) : null}
 
       <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table">
+        <div className="md:overflow-x-auto">
+          <table className="table table-mobile-cards">
             <thead>
               <tr>
                 <th>Name</th>
@@ -232,27 +232,27 @@ export default function AdminCustomersPage() {
                   const count = counts.get(c.id) || counts.get(c.email) || 0;
                   return (
                     <tr key={c.id}>
-                      <td className="font-medium text-[var(--ink)]">{c.name}</td>
-                      <td>
+                      <td data-label="Name" className="font-medium text-[var(--ink)]">{c.name}</td>
+                      <td data-label="Contact">
                         <div className="text-sm">{c.email}</div>
                         <div className="text-xs text-[var(--slate)]">{c.phone}</div>
                       </td>
-                      <td className="max-w-[200px] truncate text-sm text-[var(--slate)]">
+                      <td data-label="Notes" className="max-w-none truncate text-sm text-[var(--slate)] md:max-w-[200px]">
                         {c.notes || "—"}
                       </td>
-                      <td>
+                      <td data-label="History">
                         <Link
                           href={`/admin/appointments?customer=${encodeURIComponent(c.id)}`}
-                          className="font-semibold text-[var(--accent)]"
+                          className="inline-flex min-h-11 items-center font-semibold text-[var(--accent)]"
                         >
                           {count} appointment{count === 1 ? "" : "s"}
                         </Link>
                       </td>
-                      <td>
-                        <div className="flex gap-1.5">
+                      <td data-label="Actions" className="actions-cell">
+                        <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
-                            className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                            className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                             onClick={() => openEdit(c)}
                           >
                             <Pencil size={14} /> Edit
@@ -260,7 +260,7 @@ export default function AdminCustomersPage() {
                           {hasPermission(role, "delete") ? (
                             <button
                               type="button"
-                              className="btn btn-ghost !min-h-9 !px-3 !text-xs text-[var(--danger)]"
+                              className="btn btn-ghost !min-h-11 !px-3 !text-xs text-[var(--danger)]"
                               onClick={() => void onDelete(c)}
                             >
                               <Trash2 size={14} />

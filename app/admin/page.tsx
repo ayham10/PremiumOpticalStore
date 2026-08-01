@@ -177,8 +177,8 @@ export default function AdminDashboardPage() {
             {t("admin.sidebar.appointments")}
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="table">
+        <div className="md:overflow-x-auto">
+          <table className="table table-mobile-cards">
             <thead>
               <tr>
                 <th>{t("common.name")}</th>
@@ -191,16 +191,16 @@ export default function AdminDashboardPage() {
             <tbody>
               {(stats.recentBookings || []).map((a) => (
                 <tr key={a.id}>
-                  <td>
+                  <td data-label={t("common.name")}>
                     <div className="font-medium text-[var(--ink)]">{a.customerName}</div>
                     <div className="text-xs text-[var(--slate)]">{a.customerEmail}</div>
                   </td>
-                  <td>{a.service}</td>
-                  <td>{formatDate(a.date)}</td>
-                  <td>
+                  <td data-label={t("book.steps.service")}>{a.service}</td>
+                  <td data-label={t("common.date")}>{formatDate(a.date)}</td>
+                  <td data-label={t("common.time")}>
                     {a.startTime}–{a.endTime}
                   </td>
-                  <td>
+                  <td data-label={t("common.status")}>
                     <span className={`status status-${a.status}`}>{a.status}</span>
                   </td>
                 </tr>

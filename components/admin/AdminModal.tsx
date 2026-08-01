@@ -29,13 +29,13 @@ export default function AdminModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
       style={{ background: "rgba(16, 21, 28, 0.45)" }}
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="admin-card max-h-[90vh] w-full overflow-y-auto p-6"
+        className="admin-card max-h-[92svh] w-full overflow-y-auto rounded-b-none p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:rounded-[16px] sm:p-6 sm:pb-6"
         style={{ maxWidth: wide ? 720 : 480 }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -51,7 +51,7 @@ export default function AdminModal({
           </h2>
           <button
             type="button"
-            className="grid h-9 w-9 place-items-center rounded-full border border-[var(--line)] text-[var(--slate)] hover:text-[var(--ink)]"
+            className="grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[var(--slate)] hover:text-[var(--ink)]"
             onClick={onClose}
             aria-label="Close"
           >

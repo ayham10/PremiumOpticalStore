@@ -168,7 +168,7 @@ export default function AdminAppointmentsPage() {
       </header>
 
       <div className="admin-card flex flex-wrap gap-3 p-4 print:hidden">
-        <div className="relative min-w-[220px] flex-1">
+        <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[220px]">
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]"
@@ -212,8 +212,8 @@ export default function AdminAppointmentsPage() {
             Printed {new Date().toLocaleString()}
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="table">
+        <div className="md:overflow-x-auto">
+          <table className="table table-mobile-cards">
             <thead>
               <tr>
                 <th>Customer</th>
@@ -240,21 +240,21 @@ export default function AdminAppointmentsPage() {
               ) : (
                 filtered.map((a) => (
                   <tr key={a.id}>
-                    <td>
+                    <td data-label="Customer">
                       <div className="font-medium text-[var(--ink)]">{a.customerName}</div>
                       <div className="text-xs text-[var(--slate)]">{a.customerPhone}</div>
                       <div className="text-xs text-[var(--slate)]">{a.customerEmail}</div>
                     </td>
-                    <td>{a.service}</td>
-                    <td>
+                    <td data-label="Service">{a.service}</td>
+                    <td data-label="Date / Time">
                       <div>{formatDate(a.date)}</div>
                       <div className="text-xs text-[var(--slate)]">
                         {a.startTime}–{a.endTime}
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <select
-                        className="select max-w-[150px] min-h-[40px] py-1 print:hidden"
+                        className="select max-w-full min-h-[44px] py-1 print:hidden sm:max-w-[150px]"
                         value={a.status}
                         disabled={busyId === a.id}
                         onChange={(e) =>
@@ -271,14 +271,14 @@ export default function AdminAppointmentsPage() {
                         {a.status}
                       </span>
                     </td>
-                    <td className="max-w-[180px] truncate text-sm text-[var(--slate)]">
+                    <td data-label="Notes" className="max-w-none truncate text-sm text-[var(--slate)] md:max-w-[180px]">
                       {a.notes || "—"}
                     </td>
-                    <td className="print:hidden">
+                    <td data-label="Actions" className="actions-cell print:hidden">
                       <div className="flex flex-wrap gap-1.5">
                         <button
                           type="button"
-                          className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                          className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                           disabled={busyId === a.id}
                           onClick={() => {
                             setRescheduleTarget(a);
@@ -290,7 +290,7 @@ export default function AdminAppointmentsPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                          className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                           disabled={busyId === a.id}
                           onClick={() => {
                             setNotesTarget(a);
@@ -301,7 +301,7 @@ export default function AdminAppointmentsPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                          className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                           disabled={busyId === a.id}
                           onClick={() => void sendSms(a)}
                         >

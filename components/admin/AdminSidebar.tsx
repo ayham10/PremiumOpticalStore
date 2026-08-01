@@ -16,7 +16,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { UserRole } from "@/lib/types";
 import { hasPermission } from "@/lib/admin-permissions";
 import { apiFetch } from "@/lib/admin-api";
@@ -55,6 +55,15 @@ export default function AdminSidebar({
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle("has-mobile-nav-open", open);
+    return () => document.body.classList.remove("has-mobile-nav-open");
+  }, [open]);
+
   async function logout() {
     setLoggingOut(true);
     try {
@@ -68,7 +77,7 @@ export default function AdminSidebar({
   const links = NAV.filter((item) => hasPermission(role, item.permission));
 
   const nav = (
-    <aside className="flex h-full min-h-screen flex-col border-r border-[var(--line)] bg-white">
+    <aside className="flex h-full min-h-full flex-col border-e border-[var(--line)] bg-white">
       <div className="border-b border-[var(--line)] px-5 py-6">
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
           Optical
@@ -84,7 +93,7 @@ export default function AdminSidebar({
         ) : null}
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 p-3">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
         {links.map((item) => {
           const active = item.exact
             ? pathname === item.href
@@ -96,7 +105,7 @@ export default function AdminSidebar({
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 active
                   ? "bg-[var(--accent-wash)] text-[var(--accent)]"
                   : "text-[var(--ink-soft)] hover:bg-[var(--mist)]"
@@ -117,7 +126,7 @@ export default function AdminSidebar({
           type="button"
           onClick={logout}
           disabled={loggingOut}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[#fdeaea]"
+          className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[#fdeaea]"
         >
           <LogOut size={18} />
           {t("admin.logout")}
@@ -127,10 +136,8 @@ export default function AdminSidebar({
   );
 
   return (
-    <>
-      <div className="hidden md:block">{nav}</div>
-
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--line)] bg-white px-4 py-3 md:hidden">
+    <div className="relative z-40 md:contents">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-white/95 px-4 py-3 backdrop-blur md:hidden">
         <span
           className="text-lg text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
@@ -139,26 +146,34 @@ export default function AdminSidebar({
         </span>
         <button
           type="button"
-          className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)]"
+          className="grid h-11 w-11 place-items-center rounded-full border border-[var(--line)]"
           onClick={() => setOpen(true)}
           aria-label={t("nav.menu")}
+          aria-expanded={open}
         >
           <Menu size={18} />
         </button>
       </div>
 
+      <div className="hidden h-full md:block">{nav}</div>
+
       {open ? (
         <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-[rgba(16,21,28,0.4)]"
+            className="absolute inset-0 bg-[rgba(16,21,28,0.45)] backdrop-blur-[2px]"
             aria-label={t("nav.close")}
             onClick={() => setOpen(false)}
           />
-          <div className="relative h-full w-[min(280px,85vw)] shadow-xl">
+          <div
+            className={cn(
+              "relative h-full w-[min(300px,86vw)] shadow-2xl transition-transform duration-300",
+              "animate-[fadeIn_0.2s_ease]"
+            )}
+          >
             <button
               type="button"
-              className="absolute right-3 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white border border-[var(--line)]"
+              className="absolute end-3 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-white"
               onClick={() => setOpen(false)}
               aria-label={t("common.close")}
             >
@@ -168,6 +183,6 @@ export default function AdminSidebar({
           </div>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }

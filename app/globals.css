@@ -84,10 +84,32 @@ body {
     radial-gradient(90% 60% at 10% -10%, rgba(26, 74, 107, 0.08), transparent 55%),
     radial-gradient(80% 50% at 100% 0%, rgba(141, 104, 68, 0.07), transparent 50%),
     linear-gradient(180deg, #fbfcfd 0%, var(--paper) 45%, #f3f6f8 100%);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   line-height: 1.6;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+@media (min-width: 1024px) {
+  body {
+    background-attachment: fixed;
+  }
+}
+
+body.has-mobile-nav-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Public pages leave room so WhatsApp FAB never covers CTAs */
+main {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  main {
+    padding-bottom: 2rem;
+  }
 }
 
 img,
@@ -118,8 +140,20 @@ p {
 }
 
 .wrap {
-  width: min(1200px, calc(100% - 2.5rem));
+  width: min(1200px, calc(100% - 1.25rem));
   margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .wrap {
+    width: min(1200px, calc(100% - 2rem));
+  }
+}
+
+@media (min-width: 1024px) {
+  .wrap {
+    width: min(1200px, calc(100% - 2.5rem));
+  }
 }
 
 .eyebrow {
@@ -132,17 +166,18 @@ p {
 }
 
 .section {
-  padding: clamp(4.5rem, 9vw, 7.5rem) 0;
+  padding: clamp(3rem, 7vw, 7.5rem) 0;
 }
 
 .section-title {
-  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-size: clamp(1.85rem, 5vw, 3.6rem);
   margin: 0.7rem 0 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .section-lead {
   max-width: 36rem;
-  font-size: 1.05rem;
+  font-size: clamp(0.98rem, 2.4vw, 1.05rem);
 }
 
 .btn {
@@ -151,7 +186,8 @@ p {
   justify-content: center;
   gap: 0.55rem;
   min-height: 48px;
-  padding: 0.85rem 1.45rem;
+  min-width: 44px;
+  padding: 0.85rem 1.25rem;
   border-radius: 999px;
   font-family: "Manrope", sans-serif;
   font-size: 0.92rem;
@@ -159,12 +195,19 @@ p {
   letter-spacing: 0.01em;
   border: 1px solid transparent;
   cursor: pointer;
+  touch-action: manipulation;
   transition:
     transform 0.25s ease,
     background 0.25s ease,
     color 0.25s ease,
     border-color 0.25s ease,
     box-shadow 0.25s ease;
+}
+
+@media (min-width: 640px) {
+  .btn {
+    padding: 0.85rem 1.45rem;
+  }
 }
 
 .btn:hover {
@@ -291,23 +334,63 @@ p {
   animation: marquee 36s linear infinite;
 }
 
-.hero-video {
+.hero-video,
+.media-cover {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Prefer upper subject (faces/glasses) on tall phone frames */
+  object-position: center 28%;
+}
+
+@media (min-width: 768px) {
+  .hero-video,
+  .media-cover {
+    object-position: center center;
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-video,
+  .media-cover {
+    object-position: center 40%;
+  }
 }
 
 .admin-shell {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 260px 1fr;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   background: #f2f5f8;
+  overflow-x: hidden;
 }
 
 .admin-main {
-  padding: 1.5rem;
+  padding: 1rem;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .admin-shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+  }
+
+  .admin-main {
+    padding: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-shell {
+    grid-template-columns: 280px 1fr;
+  }
 }
 
 .admin-card {
@@ -361,7 +444,7 @@ p {
 .table td {
   padding: 0.85rem 0.75rem;
   border-bottom: 1px solid var(--line);
-  text-align: left;
+  text-align: start;
   font-size: 0.92rem;
 }
 
@@ -370,6 +453,63 @@ p {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--slate);
+}
+
+/* Stack admin/data tables into tap-friendly cards on phones */
+@media (max-width: 767px) {
+  .table-mobile-cards {
+    display: block;
+  }
+
+  .table-mobile-cards thead {
+    display: none;
+  }
+
+  .table-mobile-cards tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .table-mobile-cards tr {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: white;
+    padding: 0.85rem 1rem;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .table-mobile-cards td {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 36%) 1fr;
+    gap: 0.65rem;
+    align-items: start;
+    border: none;
+    padding: 0.45rem 0;
+    font-size: 0.9rem;
+  }
+
+  .table-mobile-cards td:last-child {
+    padding-bottom: 0;
+  }
+
+  .table-mobile-cards td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--slate);
+    padding-top: 0.15rem;
+  }
+
+  .table-mobile-cards td.actions-cell {
+    grid-template-columns: 1fr;
+  }
+
+  .table-mobile-cards td.actions-cell::before {
+    margin-bottom: 0.25rem;
+  }
 }
 
 .status {
@@ -405,11 +545,11 @@ p {
 
 .whatsapp-fab {
   position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
+  inset-inline-end: max(0.85rem, env(safe-area-inset-right));
+  bottom: max(0.85rem, env(safe-area-inset-bottom));
   z-index: 60;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -419,19 +559,50 @@ p {
   transition: transform 0.2s ease;
 }
 
+@media (min-width: 768px) {
+  .whatsapp-fab {
+    width: 56px;
+    height: 56px;
+    inset-inline-end: 1.25rem;
+    bottom: 1.25rem;
+  }
+}
+
 .whatsapp-fab:hover {
   transform: scale(1.05);
 }
 
-@media (max-width: 960px) {
-  .admin-shell {
-    grid-template-columns: 1fr;
+.btn-stack-mobile {
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .btn-stack-mobile {
+    width: auto;
   }
 }
 
-@media (max-width: 640px) {
-  .wrap {
-    width: min(100% - 1.5rem, 1200px);
+.gateway-panel {
+  min-height: 62svh;
+}
+
+@media (min-width: 768px) {
+  .gateway-panel {
+    min-height: 78svh;
+  }
+}
+
+.input,
+.select,
+.textarea {
+  font-size: 16px; /* prevents iOS zoom on focus */
+}
+
+@media (min-width: 768px) {
+  .input,
+  .select,
+  .textarea {
+    font-size: inherit;
   }
 }
 

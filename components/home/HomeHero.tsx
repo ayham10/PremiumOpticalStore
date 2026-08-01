@@ -27,13 +27,13 @@ export default function HomeHero() {
         }}
       />
 
-      <div className="relative z-10 flex min-h-[100svh] flex-col justify-end pb-16 pt-28 md:justify-center md:pb-24">
-        <div className="wrap max-w-3xl">
+      <div className="relative z-10 flex min-h-[100svh] items-center justify-center pb-20 pt-28 text-center sm:pb-24">
+        <div className="wrap flex w-full max-w-3xl flex-col items-center">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="font-[family-name:var(--font-display)] text-[clamp(2.8rem,9vw,5.5rem)] leading-[0.95] tracking-[0.04em]"
+            className="font-[family-name:var(--font-display)] text-[clamp(2.6rem,11vw,5.5rem)] leading-[0.95] tracking-[0.04em]"
           >
             LUM<span style={{ color: "#9ec9e6" }}>I</span>NA
           </motion.div>
@@ -42,7 +42,7 @@ export default function HomeHero() {
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-5 font-[family-name:var(--font-display)] text-[clamp(2rem,5.5vw,3.6rem)] font-normal text-white"
+            className="mt-5 max-w-[18ch] font-[family-name:var(--font-display)] text-[clamp(1.65rem,5.2vw,3.4rem)] font-normal text-white"
           >
             {t("hero.title")}
           </motion.h1>
@@ -51,24 +51,24 @@ export default function HomeHero() {
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-5 space-y-1 text-[clamp(1.05rem,2.2vw,1.35rem)] text-white/85"
+            className="mt-5 max-w-xl space-y-1 text-[clamp(0.98rem,2.6vw,1.3rem)] text-white/85"
           >
             <p>{t("hero.line1")}</p>
             <p>{t("hero.line2")}</p>
-            <p>{t("hero.line3")}</p>
-            <p>{t("hero.line4")}</p>
+            <p className="hidden sm:block">{t("hero.line3")}</p>
+            <p className="hidden sm:block">{t("hero.line4")}</p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-9 flex flex-wrap gap-3"
+            className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3 sm:mt-9 sm:max-w-none sm:flex-row sm:items-center sm:justify-center"
           >
-            <Link href="/book" className="btn btn-primary">
+            <Link href="/book" className="btn btn-primary btn-stack-mobile">
               {t("hero.ctaBook")}
             </Link>
-            <Link href="/shop" className="btn btn-glass">
+            <Link href="/shop" className="btn btn-glass btn-stack-mobile">
               {t("hero.ctaShop")}
             </Link>
           </motion.div>

@@ -248,7 +248,7 @@ export default function AdminSettingsPage() {
             {form.openingHours.map((h) => (
               <div
                 key={h.day}
-                className="grid items-center gap-3 sm:grid-cols-[140px_1fr_1fr_auto]"
+                className="grid items-center gap-2 rounded-xl border border-[var(--line)] p-3 sm:grid-cols-[140px_1fr_1fr_auto] sm:border-0 sm:p-0"
               >
                 <p className="text-sm font-semibold text-[var(--ink)]">
                   {DAY_NAMES[h.day]}
@@ -267,7 +267,7 @@ export default function AdminSettingsPage() {
                   disabled={h.closed}
                   onChange={(e) => updateHours(h.day, { close: e.target.value })}
                 />
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex min-h-11 items-center gap-2 text-sm">
                   <input
                     type="checkbox"
                     checked={!!h.closed}

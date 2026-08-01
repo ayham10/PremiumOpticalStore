@@ -286,7 +286,7 @@ export default function BookingWizard({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="relative overflow-hidden bg-[var(--ink)] px-8 py-10 text-white md:px-12">
+        <div className="relative overflow-hidden bg-[var(--ink)] px-5 py-8 text-white sm:px-8 sm:py-10 md:px-12">
           <div
             className="pointer-events-none absolute inset-0 opacity-40"
             style={{
@@ -296,13 +296,13 @@ export default function BookingWizard({
           />
           <div className="relative">
             <span className="eyebrow !text-[#9ec9e6]">{t("book.eyebrow")}</span>
-            <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-white md:text-5xl">
+            <h2 className="mt-3 font-[family-name:var(--font-display)] text-[clamp(1.85rem,6vw,3rem)] text-white md:text-5xl">
               {t("book.successTitle")}
             </h2>
             <p className="mt-3 max-w-lg text-white/70">{t("book.successLead")}</p>
           </div>
         </div>
-        <div className="grid gap-6 px-8 py-8 md:grid-cols-2 md:px-12">
+        <div className="grid gap-6 px-5 py-7 sm:px-8 sm:py-8 md:grid-cols-2 md:px-12">
           <div className="space-y-4 text-[var(--ink-soft)]">
             <p>
               <strong className="text-[var(--ink)]">
@@ -323,21 +323,21 @@ export default function BookingWizard({
               {result.customerName}
             </p>
           </div>
-          <div className="rounded-[1.1rem] border border-[var(--line)] bg-[var(--mist)] p-6">
+          <div className="rounded-[1.1rem] border border-[var(--line)] bg-[var(--mist)] p-5 sm:p-6">
             <p className="text-sm text-[var(--slate)]">{t("book.manageBooking")}</p>
             <Link
               href={`/appointments/manage?token=${encodeURIComponent(result.manageToken)}`}
-              className="mt-3 inline-block font-semibold text-[var(--accent)] underline underline-offset-4"
+              className="mt-3 inline-block min-h-11 font-semibold text-[var(--accent)] underline underline-offset-4"
             >
               {t("book.manageBooking")}
             </Link>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3 border-t border-[var(--line)] px-8 py-6 md:px-12">
-          <button type="button" className="btn btn-primary" onClick={resetWizard}>
+        <div className="flex flex-col gap-3 border-t border-[var(--line)] px-5 py-5 sm:flex-row sm:flex-wrap sm:px-8 sm:py-6 md:px-12">
+          <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={resetWizard}>
             {t("book.bookAnother")}
           </button>
-          <Link href="/" className="btn btn-ghost">
+          <Link href="/" className="btn btn-ghost w-full sm:w-auto">
             {t("common.backHome")}
           </Link>
         </div>
@@ -354,14 +354,14 @@ export default function BookingWizard({
     : service;
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white shadow-[var(--shadow-soft)]">
-      <div className="border-b border-[var(--line)] px-5 py-6 md:px-10">
-        <ol className="flex items-start justify-between gap-1 overflow-x-auto pb-1">
+    <div className="overflow-hidden rounded-[1.25rem] border border-[var(--line)] bg-white shadow-[var(--shadow-soft)] sm:rounded-[1.5rem]">
+      <div className="border-b border-[var(--line)] px-3 py-4 sm:px-5 sm:py-6 md:px-10">
+        <ol className="flex items-start justify-between gap-0.5 sm:gap-1">
           {STEP_KEYS.map((key, i) => {
             const active = i === step;
             const done = i < step;
             return (
-              <li key={key} className="relative flex min-w-[4.5rem] flex-1 flex-col items-center">
+              <li key={key} className="relative flex min-w-0 flex-1 flex-col items-center">
                 {i < STEP_KEYS.length - 1 && (
                   <span
                     className={`absolute start-1/2 top-4 h-px w-full ${
@@ -374,7 +374,7 @@ export default function BookingWizard({
                   type="button"
                   disabled={i > step}
                   onClick={() => i < step && setStep(i)}
-                  className="relative z-[1] flex flex-col items-center gap-2"
+                  className="relative z-[1] flex min-h-11 flex-col items-center gap-1.5 sm:gap-2"
                 >
                   <span
                     className={`grid h-8 w-8 place-items-center rounded-full text-xs font-bold transition ${
@@ -388,7 +388,7 @@ export default function BookingWizard({
                     {i + 1}
                   </span>
                   <span
-                    className={`text-center text-[0.68rem] font-semibold uppercase tracking-[0.12em] ${
+                    className={`max-w-full truncate px-0.5 text-center text-[0.58rem] font-semibold uppercase tracking-[0.06em] sm:text-[0.68rem] sm:tracking-[0.12em] ${
                       active
                         ? "text-[var(--ink)]"
                         : done
@@ -405,11 +405,11 @@ export default function BookingWizard({
         </ol>
       </div>
 
-      <div className="px-5 py-8 md:px-10 md:py-10">
+      <div className="px-4 py-6 sm:px-5 sm:py-8 md:px-10 md:py-10">
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div key="service" {...stepMotion}>
-              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+              <h2 className="font-[family-name:var(--font-display)] text-[clamp(1.65rem,5vw,2.5rem)] md:text-4xl">
                 {t("book.chooseService")}
               </h2>
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -482,25 +482,25 @@ export default function BookingWizard({
                           setDate("");
                           setStartTime("");
                         }}
-                        className={`flex items-start gap-5 rounded-[1.25rem] border p-5 text-left transition duration-300 md:p-6 ${
+                        className={`flex items-start gap-3 rounded-[1.25rem] border p-4 text-left transition duration-300 sm:gap-5 sm:p-5 md:p-6 ${
                           active
                             ? "border-[var(--accent)] bg-[var(--accent-wash)] shadow-[var(--shadow-soft)]"
                             : "border-[var(--line)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-soft)]"
                         }`}
                       >
                         {s.image ? (
-                          <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[var(--mist)]">
+                          <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--mist)] sm:h-16 sm:w-16">
                             <Image
                               src={s.image}
                               alt=""
                               fill
-                              className="object-cover"
+                              className="object-cover object-[center_20%]"
                               sizes="64px"
                             />
                           </span>
                         ) : (
                           <span
-                            className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-lg font-semibold text-white"
+                            className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-lg font-semibold text-white sm:h-16 sm:w-16"
                             style={{ background: s.color }}
                           >
                             {s.name
@@ -568,7 +568,7 @@ export default function BookingWizard({
               ) : slots.length === 0 ? (
                 <p className="mt-8 text-[var(--slate)]">{t("book.noSlots")}</p>
               ) : (
-                <div className="mt-8 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5">
+                <div className="mt-8 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
                   {slots.map((slot) => {
                     const active = startTime === slot;
                     return (
@@ -576,7 +576,7 @@ export default function BookingWizard({
                         key={slot}
                         type="button"
                         onClick={() => setStartTime(slot)}
-                        className={`rounded-xl border py-3.5 text-sm font-semibold transition ${
+                        className={`min-h-12 rounded-xl border py-3.5 text-sm font-semibold transition ${
                           active
                             ? "border-[var(--accent)] bg-[var(--accent)] text-white shadow-[var(--shadow-soft)]"
                             : "border-[var(--line-strong)] hover:border-[var(--accent)]"
@@ -650,13 +650,13 @@ export default function BookingWizard({
                 </p>
               )}
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button type="button" className="btn btn-ghost" onClick={back}>
+              <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap">
+                <button type="button" className="btn btn-ghost w-full sm:w-auto" onClick={back}>
                   {t("book.back")}
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-primary w-full sm:w-auto"
                   disabled={submitting}
                 >
                   {submitting ? t("book.submitting") : t("book.confirm")}
@@ -667,19 +667,21 @@ export default function BookingWizard({
         </AnimatePresence>
 
         {step < 4 && (
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--line)] pt-6">
+          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--line)] pt-5 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:pt-6">
             <button
               type="button"
-              className="btn btn-ghost"
+              className="btn btn-ghost w-full sm:w-auto"
               onClick={back}
               disabled={step === 0}
             >
               {t("book.back")}
             </button>
             {error && (
-              <p className="text-sm font-medium text-[var(--danger)]">{error}</p>
+              <p className="order-first w-full text-sm font-medium text-[var(--danger)] sm:order-none sm:w-auto">
+                {error}
+              </p>
             )}
-            <button type="button" className="btn btn-primary" onClick={next}>
+            <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={next}>
               {t("book.continue")}
             </button>
           </div>

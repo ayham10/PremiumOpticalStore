@@ -204,8 +204,8 @@ export default function AdminPromotionsPage() {
       ) : null}
 
       <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table">
+        <div className="md:overflow-x-auto">
+          <table className="table table-mobile-cards">
             <thead>
               <tr>
                 <th>Title</th>
@@ -237,29 +237,29 @@ export default function AdminPromotionsPage() {
                   .sort((a, b) => a.priority - b.priority)
                   .map((p) => (
                     <tr key={p.id}>
-                      <td>
+                      <td data-label="Title">
                         <div className="font-medium text-[var(--ink)]">{p.title}</div>
-                        <div className="max-w-[220px] truncate text-xs text-[var(--slate)]">
+                        <div className="max-w-none truncate text-xs text-[var(--slate)] md:max-w-[220px]">
                           {p.description}
                         </div>
                       </td>
-                      <td>{p.discount}</td>
-                      <td className="text-sm">
+                      <td data-label="Discount">{p.discount}</td>
+                      <td data-label="Schedule" className="text-sm">
                         {p.startDate} → {p.endDate}
                       </td>
-                      <td>{p.couponCode || "—"}</td>
-                      <td>{p.homepageVisible ? "Yes" : "No"}</td>
-                      <td>{p.priority}</td>
-                      <td>
+                      <td data-label="Coupon">{p.couponCode || "—"}</td>
+                      <td data-label="Homepage">{p.homepageVisible ? "Yes" : "No"}</td>
+                      <td data-label="Priority">{p.priority}</td>
+                      <td data-label="Active">
                         <span className={`pill ${p.active ? "" : "opacity-60"}`}>
                           {p.active ? "Active" : "Off"}
                         </span>
                       </td>
-                      <td>
-                        <div className="flex gap-1.5">
+                      <td data-label="Actions" className="actions-cell">
+                        <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
-                            className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                            className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                             onClick={() => openEdit(p)}
                           >
                             <Pencil size={14} />
@@ -267,7 +267,7 @@ export default function AdminPromotionsPage() {
                           {hasPermission(role, "delete") ? (
                             <button
                               type="button"
-                              className="btn btn-ghost !min-h-9 !px-3 !text-xs text-[var(--danger)]"
+                              className="btn btn-ghost !min-h-11 !px-3 !text-xs text-[var(--danger)]"
                               onClick={() => void onDelete(p)}
                             >
                               <Trash2 size={14} />

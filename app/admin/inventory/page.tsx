@@ -297,7 +297,7 @@ export default function AdminInventoryPage() {
       </header>
 
       <div className="admin-card flex flex-wrap gap-3 p-4">
-        <div className="relative min-w-[220px] flex-1">
+        <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[220px]">
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]"
@@ -335,8 +335,8 @@ export default function AdminInventoryPage() {
       ) : null}
 
       <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table">
+        <div className="md:overflow-x-auto">
+          <table className="table table-mobile-cards">
             <thead>
               <tr>
                 <th>Product</th>
@@ -369,14 +369,14 @@ export default function AdminInventoryPage() {
                       key={p.id}
                       className={low ? "bg-[#fff8ee]" : undefined}
                     >
-                      <td>
+                      <td data-label="Product">
                         <div className="font-medium text-[var(--ink)]">{p.name}</div>
                         <div className="text-xs text-[var(--slate)]">{p.brand}</div>
                       </td>
-                      <td>{p.category}</td>
-                      <td className="text-sm">{p.sku}</td>
-                      <td>{formatPrice(p.sellingPrice)}</td>
-                      <td>
+                      <td data-label="Category">{p.category}</td>
+                      <td data-label="SKU" className="text-sm">{p.sku}</td>
+                      <td data-label="Price">{formatPrice(p.sellingPrice)}</td>
+                      <td data-label="Stock">
                         <span
                           className={
                             low
@@ -391,21 +391,21 @@ export default function AdminInventoryPage() {
                           / min {p.minimumStock}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Status">
                         <span className="pill">{p.status}</span>
                       </td>
-                      <td>
+                      <td data-label="Actions" className="actions-cell">
                         <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
-                            className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                            className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                             onClick={() => openEdit(p)}
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             type="button"
-                            className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                            className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                             onClick={() => void onDuplicate(p)}
                           >
                             <Copy size={14} />
@@ -413,7 +413,7 @@ export default function AdminInventoryPage() {
                           {hasPermission(role, "delete") ? (
                             <button
                               type="button"
-                              className="btn btn-ghost !min-h-9 !px-3 !text-xs text-[var(--danger)]"
+                              className="btn btn-ghost !min-h-11 !px-3 !text-xs text-[var(--danger)]"
                               onClick={() => void onDelete(p)}
                             >
                               <Trash2 size={14} />
