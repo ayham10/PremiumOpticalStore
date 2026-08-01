@@ -1995,115 +1995,326 @@ body:has(main.eye-exam-main) footer {
   background: var(--ee-bg);
   color: var(--ee-text);
   padding-top: calc(5.25rem + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .eye-exam-inner {
-  width: min(920px, calc(100% - 2rem));
+  width: min(720px, calc(100% - 2rem));
   margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+@media (min-width: 768px) {
+  .eye-exam-inner {
+    width: min(760px, calc(100% - 2.5rem));
+    gap: 1.35rem;
+  }
 }
 
 .eye-exam-hero {
-  margin-bottom: clamp(1.5rem, 4vw, 2.5rem);
+  margin: 0;
 }
 
 .eye-exam-video-frame {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
-  max-height: min(52vh, 480px);
+  max-height: min(48vh, 420px);
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 22px;
   border: 1px solid var(--ee-line);
-  background: var(--ee-card);
+  background: #101317;
 }
 
 @media (max-width: 639px) {
   .eye-exam-video-frame {
     aspect-ratio: 4 / 3;
-    max-height: 360px;
-    border-radius: 14px;
+    max-height: 340px;
+    border-radius: 20px;
   }
 }
 
-.eye-exam-video {
+.eye-exam-video,
+.eye-exam-video-layer {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
+.eye-exam-video-layer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 420ms ease;
+  background: #101317;
+}
+
+.eye-exam-video-layer.is-visible {
+  opacity: 1;
+  z-index: 1;
+}
+
+.eye-exam-video-layer.is-fading-out {
+  opacity: 0;
+  z-index: 2;
+}
+
+.eye-exam-video-layer.is-hidden {
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .eye-exam-video-veil {
   position: absolute;
   inset: 0;
+  z-index: 3;
   background: linear-gradient(
     to top,
-    rgba(11, 13, 16, 0.55),
-    rgba(11, 13, 16, 0.12) 45%,
-    rgba(11, 13, 16, 0.28)
+    rgba(11, 13, 16, 0.5),
+    rgba(11, 13, 16, 0.1) 48%,
+    rgba(11, 13, 16, 0.22)
   );
   pointer-events: none;
 }
 
 .eye-exam-content {
   text-align: start;
-  max-width: 40rem;
 }
 
 .eye-exam-eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 650;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ee-gold);
 }
 
 .eye-exam-title {
-  margin-top: 0.55rem;
+  margin-top: 0.35rem;
   font-family: "Fraunces", serif;
-  font-size: clamp(2rem, 7vw, 3.4rem);
+  font-size: clamp(2.15rem, 8vw, 3.2rem);
   font-weight: 500;
-  line-height: 1.12;
+  line-height: 1.1;
   color: var(--ee-text);
 }
 
 .eye-exam-description {
-  margin-top: 0.9rem;
-  font-size: clamp(0.98rem, 2.8vw, 1.12rem);
-  line-height: 1.65;
+  margin-top: 0.7rem;
+  max-width: 34rem;
+  font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+  line-height: 1.6;
   color: var(--ee-muted);
 }
 
 .eye-exam-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin-top: 1.6rem;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
 }
 
-@media (min-width: 420px) {
+@media (min-width: 340px) {
   .eye-exam-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .eye-exam-btn {
-  min-height: 48px !important;
+  min-height: 50px !important;
   width: 100%;
   justify-content: center;
   text-align: center;
+  border-radius: 999px !important;
+  font-weight: 650;
 }
 
 .eye-exam-btn-secondary {
   background: transparent !important;
   color: var(--ee-text) !important;
-  border-color: var(--ee-line) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 .eye-exam-btn-secondary:hover,
 .eye-exam-btn-secondary:focus-visible {
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
   color: #fff !important;
+}
+
+.eye-exam-trust {
+  border-radius: 20px;
+  border: 1px solid var(--ee-line);
+  background: var(--ee-card);
+  padding: 1rem 0.65rem;
+}
+
+.eye-exam-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.eye-exam-trust-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  text-align: center;
+  padding: 0.35rem 0.3rem;
+}
+
+.eye-exam-trust-icon {
+  color: var(--ee-gold);
+}
+
+.eye-exam-trust-item p {
+  font-size: clamp(0.72rem, 2.8vw, 0.84rem);
+  line-height: 1.35;
+  color: var(--ee-text);
+  font-weight: 550;
+}
+
+.eye-exam-blurb {
+  margin: 0.15rem auto 0;
+  max-width: 34rem;
+  text-align: center;
+  font-size: clamp(0.92rem, 2.7vw, 1.02rem);
+  line-height: 1.65;
+  color: rgba(245, 245, 245, 0.88);
+}
+
+.eye-exam-next-card {
+  border-radius: 22px;
+  border: 1px solid var(--ee-line);
+  background: linear-gradient(180deg, #1a1e25 0%, #14171c 100%);
+  padding: 1.15rem 1.1rem 1.05rem;
+}
+
+.eye-exam-next-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.eye-exam-next-icon {
+  color: var(--ee-gold);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.eye-exam-next-label {
+  font-size: 0.92rem;
+  color: var(--ee-muted);
+}
+
+.eye-exam-next-value {
+  margin-top: 0.35rem;
+  font-size: clamp(1.25rem, 4.5vw, 1.55rem);
+  font-weight: 650;
+  color: var(--ee-gold);
+  line-height: 1.25;
+}
+
+.eye-exam-next-empty {
+  margin-top: 0.35rem;
+  color: var(--ee-muted);
+  font-size: 0.95rem;
+}
+
+.eye-exam-next-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 180, 131, 0.65);
+  background: transparent;
+  color: var(--ee-gold);
+  font-weight: 650;
+  font-size: 0.95rem;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.eye-exam-next-btn:hover,
+.eye-exam-next-btn:focus-visible {
+  background: rgba(212, 180, 131, 0.1);
+  border-color: var(--ee-gold);
+  outline: none;
+}
+
+.eye-exam-next-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(212, 180, 131, 0.28);
+}
+
+.eye-exam-info-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-radius: 20px;
+  border: 1px solid var(--ee-line);
+  background: var(--ee-card);
+  overflow: hidden;
+}
+
+.eye-exam-info-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.28rem;
+  padding: 1rem 0.55rem;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.eye-exam-info-col + .eye-exam-info-col {
+  border-inline-start: 1px solid var(--ee-line);
+}
+
+.eye-exam-info-icon {
+  color: var(--ee-gold);
+  margin-bottom: 0.15rem;
+}
+
+.eye-exam-info-label {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--ee-text);
+}
+
+.eye-exam-info-value {
+  font-size: clamp(0.72rem, 2.6vw, 0.82rem);
+  color: var(--ee-muted);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.eye-exam-info-sub {
+  font-size: clamp(0.7rem, 2.5vw, 0.8rem);
+  color: var(--ee-muted);
+  line-height: 1.3;
+}
+
+.eye-exam-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.15rem 0 0.5rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ee-muted);
+  text-align: center;
+}
+
+.eye-exam-privacy svg {
+  color: var(--ee-gold);
+  flex-shrink: 0;
 }
 
 /* Booking modal */

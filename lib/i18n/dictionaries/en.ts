@@ -103,6 +103,31 @@ export type Dictionary = {
     bookCta: string;
     servicesCta: string;
     videoAlt: string;
+    blurb: string;
+    trust: {
+      aria: string;
+      professional: string;
+      equipment: string;
+      booking: string;
+    };
+    next: {
+      label: string;
+      cta: string;
+      empty: string;
+    };
+    info: {
+      aria: string;
+      whatsapp: string;
+      whatsappValue: string;
+      hours: string;
+      hoursValue: string;
+      hoursNote: string;
+      location: string;
+      locationCity: string;
+      locationStreet: string;
+    };
+    privacy: string;
+    weekdays: Record<string, string>;
     formTitle: string;
     fields: {
       firstName: string;
@@ -509,6 +534,40 @@ const en: Dictionary = {
     bookCta: "Book Eye Exam",
     servicesCta: "View All Services",
     videoAlt: "Patient receiving a professional eye examination",
+    blurb:
+      "A complete vision and eye-health assessment followed by a personalized recommendation for glasses or contact lenses.",
+    trust: {
+      aria: "Why choose LUMINA",
+      professional: "Professional Eye Exam",
+      equipment: "Modern Diagnostic Equipment",
+      booking: "Fast & Easy Booking",
+    },
+    next: {
+      label: "Next available appointment",
+      cta: "View available appointments",
+      empty: "No open slots right now",
+    },
+    info: {
+      aria: "Visit details",
+      whatsapp: "WhatsApp",
+      whatsappValue: "052-1234567",
+      hours: "Opening Hours",
+      hoursValue: "08:30 – 21:00",
+      hoursNote: "Every day",
+      location: "Location",
+      locationCity: "Deir Hanna",
+      locationStreet: "Main Street",
+    },
+    privacy: "Your privacy matters. Your information is secure.",
+    weekdays: {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+    },
     formTitle: "Book Eye Exam",
     fields: {
       firstName: "First name",

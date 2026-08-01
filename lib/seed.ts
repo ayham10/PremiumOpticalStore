@@ -20,14 +20,14 @@ const now = () => new Date().toISOString();
 export const DEFAULT_SETTINGS: StoreSettings = {
   storeName: "LUMINA",
   tagline: "Precision vision. Quiet luxury.",
-  address: "128 King George Street",
-  city: "Tel Aviv",
-  phone: "+972-3-555-0180",
+  address: "Main Street",
+  city: "Deir Hanna",
+  phone: "+972-52-123-4567",
   email: "hello@lumina.optics",
-  whatsapp: "9725550180",
+  whatsapp: "972521234567",
   googleMapsEmbedUrl:
-    "https://maps.google.com/maps?q=Tel%20Aviv&t=&z=14&ie=UTF8&iwloc=&output=embed",
-  googleMapsLink: "https://maps.google.com/?q=Tel+Aviv",
+    "https://maps.google.com/maps?q=Deir%20Hanna&t=&z=14&ie=UTF8&iwloc=&output=embed",
+  googleMapsLink: "https://maps.google.com/?q=Deir+Hanna",
   openingHours: [
     { day: 0, open: "10:00", close: "16:00" },
     { day: 1, open: "09:00", close: "19:00" },
