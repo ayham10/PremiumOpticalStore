@@ -6,7 +6,8 @@ Premium optical store & eye examination platform — public storefront, multi-st
 
 ## Features
 
-- Public landing, shop, product detail, gallery, about, and contact pages
+- Public landing with cinematic optical hero + category cards, services, shop, product detail, gallery, about, and contact pages
+- Multilingual UI: English, Hebrew, Arabic with full RTL
 - Multi-step appointment booking with availability slots
 - Customer manage link (view / cancel / reschedule via token)
 - Admin dashboard: appointments, calendar, inventory, customers, promotions, media, staff, settings
@@ -70,7 +71,8 @@ Change passwords via env vars before any production deploy. Set a strong `AUTH_S
 
 | Path | Description |
 | --- | --- |
-| `/` | Landing — hero video, services, featured products, promotions, reviews |
+| `/` | Landing — optical hero, category cards, featured products, promotions, reviews |
+| `/services` | Premium services catalogue |
 | `/shop` | Product catalog with category filters & search |
 | `/product/[slug]` | Product detail |
 | `/book` | Booking wizard (`?service=` preselect supported) |

@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/components/i18n/LocaleProvider";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   MessageSquare,
@@ -33,6 +35,7 @@ function unwrapList<T>(data: unknown): T[] {
 }
 
 export default function AdminAppointmentsPage() {
+  const { t } = useLocale();
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -204,7 +207,7 @@ export default function AdminAppointmentsPage() {
 
       <div className="admin-card overflow-hidden printable-appointments">
         <div className="hidden print:block px-5 py-4 border-b border-[var(--line)]">
-          <h2 style={{ fontFamily: "Fraunces, serif" }}>LUMINA Appointments</h2>
+          <h2 style={{ fontFamily: "Fraunces, serif" }}>{t("admin.sidebar.appointments")}</h2>
           <p className="text-sm text-[var(--slate)]">
             Printed {new Date().toLocaleString()}
           </p>
