@@ -24,7 +24,7 @@ export default function HomeAtmosphere() {
 
     const start = () => {
       if (cancelled || video.getAttribute("src")) return;
-      video.src = "/videos/hero.mp4";
+      video.src = "/videos/welcome.mp4";
       video.load();
       void video.play().catch(() => {
         /* autoplay may be blocked; static poster still provides atmosphere */
@@ -67,7 +67,7 @@ export default function HomeAtmosphere() {
         loop
         playsInline
         preload="none"
-        poster="https://images.unsplash.com/photo-1577803645773-f96470509666?auto=format&fit=crop&w=1600&q=70"
+        poster="/videos/welcome-poster.jpg"
       />
       <div className="home-atmosphere-overlay" />
     </div>

@@ -33,6 +33,7 @@ const ar: Dictionary = {
   home: {
     hubEyebrow: "تنقل فاخر",
     scrollHint: "مرّر",
+    welcomeLine: "نظارات فاخرة • فحوصات النظر • نظارات شمسية",
     categoriesEyebrow: "اكتشف",
     categoriesTitle: "كل ما تحتاجه لرؤيتك",
     categoriesLead:

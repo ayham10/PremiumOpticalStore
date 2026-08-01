@@ -54,7 +54,7 @@ export default function NavigationHub() {
   const { t } = useLocale();
 
   return (
-    <section className="home-hub" aria-label="Services">
+    <section className="home-hub" aria-label={t("home.hubEyebrow")}>
       <div className="home-hub-shell">
         <div className="home-hub-grid">
           {TILES.map((tile, index) => (

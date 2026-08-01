@@ -5,6 +5,7 @@ export type Dictionary = {
   home: {
     hubEyebrow: string;
     scrollHint: string;
+    welcomeLine: string;
     categoriesEyebrow: string;
     categoriesTitle: string;
     categoriesLead: string;
@@ -137,6 +138,7 @@ const en: Dictionary = {
   home: {
     hubEyebrow: "Premium Navigation",
     scrollHint: "Scroll",
+    welcomeLine: "Premium Eyewear • Eye Examinations • Sunglasses",
     categoriesEyebrow: "Explore",
     categoriesTitle: "Everything your vision needs",
     categoriesLead:

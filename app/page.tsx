@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import WelcomeSection from "@/components/home/WelcomeSection";
 import NavigationHub from "@/components/home/NavigationHub";
 import HomeFooter from "@/components/home/HomeFooter";
 import HomeAtmosphere from "@/components/home/HomeAtmosphere";
@@ -14,10 +15,13 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="home-page">
-      <HomeAtmosphere />
-      <div className="home-page-content">
-        <NavigationHub />
-        <HomeFooter />
+      <WelcomeSection />
+      <div id="home-hub" className="home-hub-wrap">
+        <HomeAtmosphere />
+        <div className="home-page-content">
+          <NavigationHub />
+          <HomeFooter />
+        </div>
       </div>
     </div>
   );

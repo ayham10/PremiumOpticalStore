@@ -33,6 +33,7 @@ const he: Dictionary = {
   home: {
     hubEyebrow: "ניווט פרימיום",
     scrollHint: "גלול",
+    welcomeLine: "משקפיים פרימיום • בדיקות ראייה • משקפי שמש",
     categoriesEyebrow: "גלו",
     categoriesTitle: "הכול לראייה שלכם",
     categoriesLead:
