@@ -84,9 +84,17 @@ const ar: Dictionary = {
     visitHours: "ساعات العمل",
     gateway: {
       frames: { title: "إطارات فاخرة", subtitle: "استكشف مجموعتنا", cta: "تسوق الآن" },
-      exams: { title: "فحوصات النظر", subtitle: "رعاية احترافية", cta: "احجز الآن" },
+      exams: {
+        title: "فحوصات النظر",
+        subtitle: "رعاية عيون احترافية وفحص الرؤية",
+        cta: "احجز الآن",
+      },
       sunglasses: { title: "نظارات شمسية", subtitle: "أناقة خالدة", cta: "تسوق الآن" },
-      contacts: { title: "عدسات لاصقة", subtitle: "راحة ووضوح", cta: "اعرف المزيد" },
+      contacts: {
+        title: "عدسات لاصقة",
+        subtitle: "راحة • رؤية واضحة • يومية وشهرية",
+        cta: "اعرف المزيد",
+      },
       promotions: { title: "العروض", subtitle: "عروض خاصة", cta: "شاهد العروض" },
       booking: { title: "احجز موعدًا", subtitle: "حدّد زيارتك", cta: "احجز الآن" },
       contact: { title: "تواصل", subtitle: "الزيارة والتواصل", cta: "الاتجاهات" },

@@ -84,9 +84,17 @@ const he: Dictionary = {
     visitHours: "שעות פעילות",
     gateway: {
       frames: { title: "מסגרות פרימיום", subtitle: "גלו את הקולקציה", cta: "לקנייה" },
-      exams: { title: "בדיקות ראייה", subtitle: "טיפול מקצועי", cta: "לקביעת תור" },
+      exams: {
+        title: "בדיקות ראייה",
+        subtitle: "טיפול עיניים מקצועי ובדיקות ראייה",
+        cta: "לקביעת תור",
+      },
       sunglasses: { title: "משקפי שמש", subtitle: "סטייל נצחי", cta: "לקנייה" },
-      contacts: { title: "עדשות מגע", subtitle: "נוחות וחדות", cta: "למידע נוסף" },
+      contacts: {
+        title: "עדשות מגע",
+        subtitle: "נוחות • ראייה חדה • יומיות וחודשיות",
+        cta: "למידע נוסף",
+      },
       promotions: { title: "מבצעים", subtitle: "הצעות מיוחדות", cta: "למבצעים" },
       booking: { title: "קביעת תור", subtitle: "תאמו את הביקור", cta: "לקביעת תור" },
       contact: { title: "צור קשר", subtitle: "ביקור ויצירת קשר", cta: "להוראות הגעה" },

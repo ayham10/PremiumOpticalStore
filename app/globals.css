@@ -875,6 +875,37 @@ p {
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
 }
 
+/* Keep exam / contact subjects framed across breakpoints */
+.home-card-img--exams {
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+.home-card-img--contacts {
+  object-fit: cover;
+  object-position: 50% 45%;
+}
+
+@media (min-width: 640px) {
+  .home-card-img--exams {
+    object-position: center 38%;
+  }
+
+  .home-card-img--contacts {
+    object-position: 50% 48%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-card-img--exams {
+    object-position: center 40%;
+  }
+
+  .home-card-img--contacts {
+    object-position: 50% 50%;
+  }
+}
+
 .home-card-shade {
   position: absolute;
   inset: 0;

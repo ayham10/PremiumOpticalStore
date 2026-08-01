@@ -16,9 +16,8 @@ const TILES = [
   {
     key: "exams",
     href: "/eye-exams",
-    image:
-      "https://images.unsplash.com/photo-1551884170-09fb70a3a2ed?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_35%]",
+    image: "/images/card-eye-exams.jpg",
+    position: "home-card-img--exams",
   },
   {
     key: "sunglasses",
@@ -30,9 +29,8 @@ const TILES = [
   {
     key: "contacts",
     href: "/contact-lenses",
-    image:
-      "https://images.unsplash.com/photo-1584036553516-bf27d479fd3d?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_40%]",
+    image: "/images/card-contact-lenses.jpg",
+    position: "home-card-img--contacts",
   },
   {
     key: "promotions",

@@ -195,7 +195,7 @@ const en: Dictionary = {
       },
       exams: {
         title: "Eye Exams",
-        subtitle: "Professional care",
+        subtitle: "Professional Eye Care & Vision Testing",
         cta: "Book Now",
       },
       sunglasses: {
@@ -205,7 +205,7 @@ const en: Dictionary = {
       },
       contacts: {
         title: "Contact Lenses",
-        subtitle: "Comfort & clarity",
+        subtitle: "Comfort • Clear Vision • Daily & Monthly Lenses",
         cta: "Learn More",
       },
       promotions: {
