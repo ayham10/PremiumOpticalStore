@@ -15,12 +15,19 @@ export default function ConditionalChrome({
   const isAdmin = pathname?.startsWith("/admin");
   const isHome = pathname === "/";
   const isFrames = pathname === "/frames";
+  const isProduct = pathname?.startsWith("/product/") ?? false;
 
   if (isAdmin) {
     return <>{children}</>;
   }
 
-  const mainClass = isHome ? "home-main" : isFrames ? "frames-main" : undefined;
+  const mainClass = isHome
+    ? "home-main"
+    : isFrames
+      ? "frames-main"
+      : isProduct
+        ? "product-main"
+        : undefined;
 
   return (
     <>

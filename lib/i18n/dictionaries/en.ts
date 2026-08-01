@@ -53,7 +53,22 @@ export type Dictionary = {
     all: string;
     categories: Record<string, string>;
   };
-  product: Record<string, string>;
+  product: {
+    shop: string;
+    outOfStock: string;
+    inStore: string;
+    frame: string;
+    lens: string;
+    sku: string;
+    availability: string;
+    bookConsultation: string;
+    whatsapp: string;
+    related: string;
+    previous: string;
+    next: string;
+    attrs: Record<string, string>;
+    descriptions: Record<string, string>;
+  };
   book: {
     eyebrow: string;
     title: string;
@@ -380,6 +395,41 @@ const en: Dictionary = {
     bookConsultation: "Book consultation",
     whatsapp: "WhatsApp inquire",
     related: "Related pieces",
+    previous: "Previous products",
+    next: "Next products",
+    attrs: {
+      Rectangle: "Rectangle",
+      Round: "Round",
+      Square: "Square",
+      Oval: "Oval",
+      Aviator: "Aviator",
+      "Prescription Ready": "Prescription Ready",
+      "Blue-light / Progressive": "Blue-light / Progressive",
+      "Polarized UV400": "Polarized UV400",
+      "Daily Disposable": "Daily Disposable",
+    },
+    descriptions: {
+      "aurelia-acetate-frame":
+        "Hand-polished Italian acetate with sculpted temples and a quiet champagne finish.",
+      "nordic-titanium-rim":
+        "Featherweight titanium for all-day clarity. Engineered for progressive lenses.",
+      "solstice-polarized":
+        "Mirror-grade polarized lenses with a brushed metal silhouette for bright days.",
+      "clarity-daily-lenses":
+        "Breathable daily lenses with hydration support for effortless all-day wear.",
+      "atelier-slim-metal":
+        "Minimal metal architecture with soft bevel edges and adjustable pads.",
+      "noir-acetate-square":
+        "Deep black acetate with softened corners and a matte temple finish.",
+      "coastal-clear-rim":
+        "Translucent crystal acetate with subtle coastal-blue accents.",
+      "lineage-gold-wire":
+        "Fine gold-tone wire with adjustable nose pads and classic round lenses.",
+      "optic-care-kit":
+        "Microfiber cloth, anti-fog spray, and travel case — the daily ritual essentials.",
+      "velvet-case-accessory":
+        "Soft-touch hard case with magnetic closure and microfiber lining.",
+    },
   },
   book: {
     eyebrow: "Appointments",

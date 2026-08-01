@@ -231,14 +231,49 @@ const he: Dictionary = {
   product: {
     shop: "חנות",
     outOfStock: "אזל מהמלאי",
-    inStore: "במלאי",
-    frame: "מסגרת",
+    inStore: "זמין בחנות",
+    frame: "צורת מסגרת",
     lens: "עדשה",
     sku: "מק״ט",
     availability: "זמינות",
     bookConsultation: "קביעת ייעוץ",
     whatsapp: "פנייה ב‑WhatsApp",
-    related: "פריטים קשורים",
+    related: "מוצרים דומים",
+    previous: "מוצרים קודמים",
+    next: "מוצרים הבאים",
+    attrs: {
+      Rectangle: "מלבן",
+      Round: "עגול",
+      Square: "ריבוע",
+      Oval: "סגלגל",
+      Aviator: "טייסים",
+      "Prescription Ready": "מוכן לעדשות מרשם",
+      "Blue-light / Progressive": "סינון אור כחול / מולטיפוקל",
+      "Polarized UV400": "מקטב UV400",
+      "Daily Disposable": "יומיות חד־פעמיות",
+    },
+    descriptions: {
+      "aurelia-acetate-frame":
+        "אצטט איטלקי מלוטש ביד עם ידיות מעוצבות וגימור שמפניה שקט.",
+      "nordic-titanium-rim":
+        "טיטניום קל במיוחד לחדות לאורך כל היום, מותאם לעדשות מולטיפוקל.",
+      "solstice-polarized":
+        "עדשות מקטבות בגימור מראה עם צללית מתכת מוברשת לימים בהירים.",
+      "clarity-daily-lenses":
+        "עדשות יומיות נושמות עם תמיכת לחות ללבישה נוחה לאורך היום.",
+      "atelier-slim-metal":
+        "מבנה מתכת מינימלי עם קצוות רכים וכרית אף מתכווננת.",
+      "noir-acetate-square":
+        "אצטט שחור עמוק עם פינות רכות וגימור מט על הידיות.",
+      "coastal-clear-rim":
+        "אצטט שקוף קריסטלי עם נגיעות כחול־חופי עדינות.",
+      "lineage-gold-wire":
+        "חוט זהוב דק עם כריות אף מתכווננות ועדשות עגולות קלאסיות.",
+      "optic-care-kit":
+        "מטלית מיקרופייבר, ספריי נגד אדים ונרתיק נסיעות — שגרת הטיפול היומית.",
+      "velvet-case-accessory":
+        "נרתיק קשיח רך למגע עם סגירה מגנטית וריפוד מיקרופייבר.",
+    },
   },
   book: {
     eyebrow: "תורים",

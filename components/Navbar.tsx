@@ -12,7 +12,8 @@ export default function Navbar() {
   const { t } = useLocale();
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const isDarkPage = isHome || pathname === "/frames";
+  const isProduct = pathname?.startsWith("/product/") ?? false;
+  const isDarkPage = isHome || pathname === "/frames" || isProduct;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -50,18 +51,20 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const elevated = scrolled || open;
+  const elevated = scrolled || open || isProduct;
   const whiteText = isDarkPage || !elevated;
 
   return (
     <>
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          elevated
-            ? isDarkPage || open
-              ? "border-b border-white/10 bg-[rgba(10,14,20,0.72)] backdrop-blur-2xl"
-              : "border-b border-[var(--line)] bg-[rgba(247,248,250,0.94)] backdrop-blur-xl"
-            : "border-b border-transparent bg-transparent"
+          isProduct
+            ? "border-b border-white/10 bg-[rgba(11,13,16,0.92)] backdrop-blur-xl"
+            : elevated
+              ? isDarkPage || open
+                ? "border-b border-white/10 bg-[rgba(10,14,20,0.72)] backdrop-blur-2xl"
+                : "border-b border-[var(--line)] bg-[rgba(247,248,250,0.94)] backdrop-blur-xl"
+              : "border-b border-transparent bg-transparent"
         }`}
       >
         <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-4">
