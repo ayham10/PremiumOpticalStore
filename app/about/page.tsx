@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
+import PageAtmosphere from "@/components/PageAtmosphere";
 import { getStore } from "@/lib/db/store";
 import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
 import { t } from "@/lib/i18n/t";
@@ -27,15 +28,13 @@ export default async function AboutPage() {
   ];
 
   return (
-    <div className="pb-20 pt-28">
-      {/* Intro */}
-      <section className="wrap">
-        <Reveal>
-          <span className="eyebrow">{t(dict, "about.eyebrow")}</span>
-          <h1 className="section-title max-w-3xl">{t(dict, "about.title")}</h1>
-          <p className="section-lead mt-4">{t(dict, "about.lead")}</p>
-        </Reveal>
-      </section>
+    <div className="pb-20">
+      <PageAtmosphere
+        eyebrow={t(dict, "about.eyebrow")}
+        title={t(dict, "about.title")}
+        lead={t(dict, "about.lead")}
+        image="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1800&q=80"
+      />
 
       {/* Brand story */}
       <section className="section">

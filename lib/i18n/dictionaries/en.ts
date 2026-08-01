@@ -1,6 +1,7 @@
 export type Dictionary = {
   nav: Record<string, string>;
   hero: Record<string, string>;
+  intro: Record<string, string>;
   home: {
     categoriesEyebrow: string;
     categoriesTitle: string;
@@ -18,6 +19,7 @@ export type Dictionary = {
     visitEyebrow: string;
     visitTitle: string;
     visitHours: string;
+    gateway: Record<string, { title: string; subtitle: string; cta: string }>;
   };
   servicesPage: {
     eyebrow: string;
@@ -112,6 +114,10 @@ const en: Dictionary = {
     ctaBook: "Book Eye Exam",
     ctaShop: "Shop Collection",
   },
+  intro: {
+    optical: "OPTICAL",
+    tagline: "SEE LIFE IN FOCUS",
+  },
   home: {
     categoriesEyebrow: "Explore",
     categoriesTitle: "Everything your vision needs",
@@ -161,6 +167,43 @@ const en: Dictionary = {
     visitEyebrow: "Visit",
     visitTitle: "Find LUMINA",
     visitHours: "Hours",
+    gateway: {
+      frames: {
+        title: "Premium Frames",
+        subtitle: "Luxury Eyewear",
+        cta: "Shop Frames",
+      },
+      exams: {
+        title: "Eye Exams",
+        subtitle: "Clinical Precision",
+        cta: "Book Appointment",
+      },
+      sunglasses: {
+        title: "Sunglasses",
+        subtitle: "Polarized Protection",
+        cta: "View Collection",
+      },
+      contacts: {
+        title: "Contact Lenses",
+        subtitle: "Comfort & Clarity",
+        cta: "Explore Lenses",
+      },
+      promotions: {
+        title: "Promotions",
+        subtitle: "Limited Offers",
+        cta: "See Offers",
+      },
+      booking: {
+        title: "Book Appointment",
+        subtitle: "Your Visit",
+        cta: "Start Booking",
+      },
+      contact: {
+        title: "Visit Us",
+        subtitle: "Contact",
+        cta: "Get Directions",
+      },
+    },
   },
   servicesPage: {
     eyebrow: "Services",

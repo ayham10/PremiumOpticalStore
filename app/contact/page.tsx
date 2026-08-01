@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
+import PageAtmosphere from "@/components/PageAtmosphere";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { WorkingHours } from "@/lib/types";
 
@@ -83,14 +84,14 @@ export default function ContactPage() {
   )}`;
 
   return (
-    <div className="pb-20 pt-28">
-      <div className="wrap">
-        <Reveal>
-          <span className="eyebrow">{t("contact.eyebrow")}</span>
-          <h1 className="section-title">{t("contact.title")}</h1>
-          <p className="section-lead">{t("contact.lead")}</p>
-        </Reveal>
-
+    <div className="pb-20">
+      <PageAtmosphere
+        eyebrow={t("contact.eyebrow")}
+        title={t("contact.title")}
+        lead={t("contact.lead")}
+        image="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1800&q=80"
+      />
+      <div className="wrap relative z-10">
         <div className="mt-12 grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
           <Reveal>
             <form onSubmit={onSubmit} className="surface p-6 md:p-8">

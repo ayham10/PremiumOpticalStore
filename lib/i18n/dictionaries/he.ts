@@ -24,6 +24,10 @@ const he: Dictionary = {
     ctaBook: "קביעת בדיקת ראייה",
     ctaShop: "לקולקציה",
   },
+  intro: {
+    optical: "אופטיקה",
+    tagline: "רואים את החיים בפוקוס",
+  },
   home: {
     categoriesEyebrow: "גלו",
     categoriesTitle: "הכול לראייה שלכם",
@@ -73,6 +77,15 @@ const he: Dictionary = {
     visitEyebrow: "ביקור",
     visitTitle: "מצאו את LUMINA",
     visitHours: "שעות פעילות",
+    gateway: {
+      frames: { title: "מסגרות פרימיום", subtitle: "משקפיים יוקרתיים", cta: "לקניית מסגרות" },
+      exams: { title: "בדיקות ראייה", subtitle: "דיוק קליני", cta: "קביעת תור" },
+      sunglasses: { title: "משקפי שמש", subtitle: "הגנה מקטבת", cta: "לצפייה בקולקציה" },
+      contacts: { title: "עדשות מגע", subtitle: "נוחות וחדות", cta: "לעדשות" },
+      promotions: { title: "מבצעים", subtitle: "הצעות לזמן מוגבל", cta: "למבצעים" },
+      booking: { title: "קביעת תור", subtitle: "הביקור שלכם", cta: "להתחלת הזמנה" },
+      contact: { title: "בקרו אותנו", subtitle: "צור קשר", cta: "להוראות הגעה" },
+    },
   },
   servicesPage: {
     eyebrow: "שירותים",

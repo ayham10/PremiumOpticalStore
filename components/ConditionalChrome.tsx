@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import IntroLoader from "@/components/home/IntroLoader";
 
 export default function ConditionalChrome({
   children,
@@ -19,6 +20,7 @@ export default function ConditionalChrome({
 
   return (
     <>
+      <IntroLoader />
       <Navbar />
       <main>{children}</main>
       <Footer />

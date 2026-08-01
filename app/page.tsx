@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import HomeHero from "@/components/home/HomeHero";
-import CategoryGrid from "@/components/home/CategoryGrid";
+import GatewaySections from "@/components/home/GatewaySections";
 import ProductCard from "@/components/ProductCard";
 import Reveal from "@/components/Reveal";
 import { getStore } from "@/lib/db/store";
@@ -54,7 +54,7 @@ export default async function HomePage() {
     <>
       <link rel="preload" href="/videos/hero.mp4" as="video" type="video/mp4" />
       <HomeHero />
-      <CategoryGrid />
+      <GatewaySections />
 
       {featured.length > 0 && (
         <section className="section bg-white/50">
@@ -83,7 +83,7 @@ export default async function HomePage() {
       )}
 
       {activePromos.length > 0 && (
-        <section className="section">
+        <section id="offers" className="section scroll-mt-24">
           <div className="wrap">
             <Reveal>
               <span className="eyebrow">{t(dict, "home.offersEyebrow")}</span>
@@ -112,7 +112,10 @@ export default async function HomePage() {
                       <p className="mt-2 text-sm text-[var(--slate)]">
                         {promo.description}
                       </p>
-                      <Link href="/book" className="btn btn-accent mt-5 !min-h-11 !px-5 !text-sm">
+                      <Link
+                        href="/book"
+                        className="btn btn-accent mt-5 !min-h-11 !px-5 !text-sm"
+                      >
                         {t(dict, "home.offersCta")}
                       </Link>
                     </div>

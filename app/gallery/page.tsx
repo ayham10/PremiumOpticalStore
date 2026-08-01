@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Reveal from "@/components/Reveal";
+import PageAtmosphere from "@/components/PageAtmosphere";
 import GalleryGrid from "@/components/gallery/GalleryGrid";
 import { getStore } from "@/lib/db/store";
 import { GALLERY_IMAGES } from "@/lib/seed";
@@ -35,13 +35,14 @@ export default async function GalleryPage() {
         }));
 
   return (
-    <div className="pb-20 pt-28">
-      <div className="wrap">
-        <Reveal>
-          <span className="eyebrow">{t(dict, "gallery.eyebrow")}</span>
-          <h1 className="section-title">{t(dict, "gallery.title")}</h1>
-          <p className="section-lead">{t(dict, "gallery.lead")}</p>
-        </Reveal>
+    <div className="pb-20">
+      <PageAtmosphere
+        eyebrow={t(dict, "gallery.eyebrow")}
+        title={t(dict, "gallery.title")}
+        lead={t(dict, "gallery.lead")}
+        image="https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=1800&q=80"
+      />
+      <div className="wrap relative z-10 mt-10">
         <GalleryGrid items={items} />
       </div>
     </div>

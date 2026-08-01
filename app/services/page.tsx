@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import Reveal from "@/components/Reveal";
+import PageAtmosphere from "@/components/PageAtmosphere";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 const SERVICE_KEYS = [
@@ -69,14 +69,14 @@ export default function ServicesPage() {
   const { t } = useLocale();
 
   return (
-    <div className="pb-20 pt-28">
-      <section className="wrap">
-        <Reveal>
-          <span className="eyebrow">{t("servicesPage.eyebrow")}</span>
-          <h1 className="section-title">{t("servicesPage.title")}</h1>
-          <p className="section-lead">{t("servicesPage.lead")}</p>
-        </Reveal>
-
+    <div className="pb-20">
+      <PageAtmosphere
+        eyebrow={t("servicesPage.eyebrow")}
+        title={t("servicesPage.title")}
+        lead={t("servicesPage.lead")}
+        image="https://images.unsplash.com/photo-1551884170-09fb70a3a2ed?auto=format&fit=crop&w=1800&q=80"
+      />
+      <section className="wrap relative z-10">
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           {SERVICE_KEYS.map((key, index) => {
             const meta = SERVICE_META[key];

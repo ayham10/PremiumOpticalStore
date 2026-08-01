@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
+import PageAtmosphere from "@/components/PageAtmosphere";
 import Reveal from "@/components/Reveal";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Product, ProductCategory } from "@/lib/types";
@@ -76,14 +77,15 @@ function ShopContent() {
   }
 
   return (
-    <div className="pb-20 pt-28">
-      <section className="wrap">
-        <Reveal>
-          <span className="eyebrow">{t("shop.eyebrow")}</span>
-          <h1 className="section-title">{t("shop.title")}</h1>
-          <p className="section-lead">{t("shop.lead")}</p>
-        </Reveal>
-
+    <div className="pb-20">
+      <PageAtmosphere
+        eyebrow={t("shop.eyebrow")}
+        title={t("shop.title")}
+        lead={t("shop.lead")}
+        image="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1800&q=80"
+        video="/videos/hero.mp4"
+      />
+      <section className="wrap relative z-10">
         <div className="mt-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (

@@ -24,6 +24,10 @@ const ar: Dictionary = {
     ctaBook: "احجز فحص النظر",
     ctaShop: "تسوق المجموعة",
   },
+  intro: {
+    optical: "بصريات",
+    tagline: "عِش الحياة بوضوح",
+  },
   home: {
     categoriesEyebrow: "اكتشف",
     categoriesTitle: "كل ما تحتاجه لرؤيتك",
@@ -73,6 +77,15 @@ const ar: Dictionary = {
     visitEyebrow: "الزيارة",
     visitTitle: "اعثر على LUMINA",
     visitHours: "ساعات العمل",
+    gateway: {
+      frames: { title: "إطارات فاخرة", subtitle: "نظارات راقية", cta: "تسوق الإطارات" },
+      exams: { title: "فحوصات النظر", subtitle: "دقة سريرية", cta: "احجز موعدًا" },
+      sunglasses: { title: "نظارات شمسية", subtitle: "حماية مستقطبة", cta: "عرض المجموعة" },
+      contacts: { title: "عدسات لاصقة", subtitle: "راحة ووضوح", cta: "استكشف العدسات" },
+      promotions: { title: "العروض", subtitle: "لفترة محدودة", cta: "شاهد العروض" },
+      booking: { title: "احجز موعدًا", subtitle: "زيارتك", cta: "ابدأ الحجز" },
+      contact: { title: "زورونا", subtitle: "تواصل", cta: "الاتجاهات" },
+    },
   },
   servicesPage: {
     eyebrow: "الخدمات",
