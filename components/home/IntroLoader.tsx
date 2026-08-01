@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 const SESSION_KEY = "lumina-intro-shown";
-const TOTAL_MS = 2800;
+const TOTAL_MS = 3400;
 
 function markIntroSeen() {
   try {

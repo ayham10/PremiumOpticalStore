@@ -25,7 +25,7 @@ export default function ConditionalChrome({
       <Navbar />
       <main className={isHome ? "home-main" : undefined}>{children}</main>
       {isHome ? null : <Footer />}
-      <WhatsAppButton />
+      {isHome ? null : <WhatsAppButton />}
     </>
   );
 }
