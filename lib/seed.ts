@@ -1,5 +1,13 @@
+import {
+  addDaysIso,
+  buildDefaultSlots,
+  todayInJerusalem,
+  weekdayUtc,
+} from "@/lib/eye-exam";
+import { newId } from "@/lib/auth";
 import type {
   AppData,
+  EyeExamAvailability,
   Product,
   Promotion,
   Review,
@@ -402,10 +410,41 @@ export const GALLERY_IMAGES = [
   IMG.modern,
 ];
 
+function createSeedEyeExamAvailability(): EyeExamAvailability[] {
+  const timestamp = now();
+  const today = todayInJerusalem();
+  const days: EyeExamAvailability[] = [];
+  let offset = 1;
+  while (days.length < 8 && offset < 28) {
+    const date = addDaysIso(today, offset);
+    offset += 1;
+    const weekday = weekdayUtc(date);
+    if (weekday === 6) continue; // Saturday closed by default
+    const slots = buildDefaultSlots(DEFAULT_SETTINGS.appointmentSlotMinutes).map(
+      (slot) => {
+        const minutes =
+          Number(slot.time.slice(0, 2)) * 60 + Number(slot.time.slice(3));
+        // Seed a practical clinic window; admin can expand later.
+        const enabled = minutes >= 9 * 60 && minutes <= 18 * 60;
+        return { ...slot, isEnabled: enabled };
+      }
+    );
+    days.push({
+      id: newId("exa"),
+      date,
+      isOpen: true,
+      slots,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  }
+  return days;
+}
+
 export function createSeedData(): AppData {
   const timestamp = now();
   return {
-    version: 1,
+    version: 2,
     products: SEED_PRODUCTS,
     appointments: [],
     customers: [],
@@ -442,6 +481,8 @@ export function createSeedData(): AppData {
       workingHours: DEFAULT_SETTINGS.openingHours,
       unavailableDates: [],
     })),
+    eyeExamAvailability: createSeedEyeExamAvailability(),
+    eyeExamAppointments: [],
     settings: DEFAULT_SETTINGS,
     updatedAt: timestamp,
   };

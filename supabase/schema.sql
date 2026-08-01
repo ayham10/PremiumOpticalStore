@@ -225,6 +225,39 @@ create table if not exists public.lumina_store (
   updated_at timestamptz not null default now()
 );
 
+-- Eye Exam availability + appointments live inside lumina_store.payload:
+--   eyeExamAvailability[], eyeExamAppointments[]
+-- Runtime enforces a unique active booking per (appointmentDate, appointmentTime).
+-- Optional relational mirror (not required when using the JSON document store):
+create table if not exists public.eye_exam_availability (
+  id text primary key,
+  appointment_date date not null unique,
+  is_open boolean not null default true,
+  slots jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.eye_exam_appointments (
+  id text primary key,
+  first_name text not null,
+  last_name text not null,
+  email text not null,
+  phone text not null,
+  appointment_date date not null,
+  appointment_time text not null,
+  status text not null check (status in ('confirmed', 'completed', 'cancelled', 'no-show')),
+  language text not null default 'en',
+  sms_status text,
+  sms_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists eye_exam_appointments_unique_slot_idx
+  on public.eye_exam_appointments (appointment_date, appointment_time)
+  where status <> 'cancelled';
+
 insert into public.lumina_store (id, payload)
 values ('default', '{}'::jsonb)
 on conflict (id) do nothing;

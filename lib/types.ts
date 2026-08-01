@@ -90,6 +90,43 @@ export interface Appointment {
   updatedAt: string;
 }
 
+export type EyeExamAppointmentStatus =
+  | "confirmed"
+  | "completed"
+  | "cancelled"
+  | "no-show";
+
+export interface EyeExamTimeSlot {
+  id: string;
+  time: string; // HH:mm Asia/Jerusalem wall clock
+  isEnabled: boolean;
+}
+
+export interface EyeExamAvailability {
+  id: string;
+  date: string; // YYYY-MM-DD (business calendar date, Asia/Jerusalem)
+  isOpen: boolean;
+  slots: EyeExamTimeSlot[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EyeExamAppointment {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  appointmentDate: string; // YYYY-MM-DD
+  appointmentTime: string; // HH:mm
+  status: EyeExamAppointmentStatus;
+  language: "en" | "he" | "ar";
+  smsStatus: "queued" | "sent" | "failed" | "simulated" | "pending";
+  smsError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -256,6 +293,8 @@ export interface AppData {
   activityLogs: ActivityLog[];
   holidays: Holiday[];
   availability: StaffAvailability[];
+  eyeExamAvailability: EyeExamAvailability[];
+  eyeExamAppointments: EyeExamAppointment[];
   settings: StoreSettings;
   updatedAt: string;
 }

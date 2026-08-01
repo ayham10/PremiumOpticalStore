@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  Eye,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { UserRole } from "@/lib/types";
@@ -33,6 +34,7 @@ const NAV: Array<{
 }> = [
   { href: "/admin", labelKey: "admin.sidebar.dashboard", permission: "dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/appointments", labelKey: "admin.sidebar.appointments", permission: "appointments", icon: CalendarDays },
+  { href: "/admin/eye-exam", labelKey: "admin.sidebar.eyeExam", permission: "appointments", icon: Eye },
   { href: "/admin/calendar", labelKey: "admin.sidebar.calendar", permission: "calendar", icon: CalendarRange },
   { href: "/admin/customers", labelKey: "admin.sidebar.customers", permission: "customers", icon: Users },
   { href: "/admin/inventory", labelKey: "admin.sidebar.inventory", permission: "inventory", icon: Package },

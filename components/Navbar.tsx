@@ -13,7 +13,9 @@ export default function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isProduct = pathname?.startsWith("/product/") ?? false;
-  const isDarkPage = isHome || pathname === "/frames" || isProduct;
+  const isEyeExam = pathname === "/eye-exams";
+  const isSolidDark = isProduct || isEyeExam;
+  const isDarkPage = isHome || pathname === "/frames" || isSolidDark;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -51,14 +53,14 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const elevated = scrolled || open || isProduct;
+  const elevated = scrolled || open || isSolidDark;
   const whiteText = isDarkPage || !elevated;
 
   return (
     <>
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          isProduct
+          isSolidDark
             ? "border-b border-white/10 bg-[rgba(11,13,16,0.92)] backdrop-blur-xl"
             : elevated
               ? isDarkPage || open

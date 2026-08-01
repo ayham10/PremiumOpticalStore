@@ -111,6 +111,10 @@ function normalizeData(data: AppData): AppData {
     availability: data.availability?.length
       ? data.availability
       : createSeedData().availability,
+    eyeExamAvailability: data.eyeExamAvailability?.length
+      ? data.eyeExamAvailability
+      : createSeedData().eyeExamAvailability,
+    eyeExamAppointments: data.eyeExamAppointments ?? [],
     settings: { ...createSeedData().settings, ...(data.settings || {}) },
     version: data.version || 1,
     updatedAt: data.updatedAt || new Date().toISOString(),

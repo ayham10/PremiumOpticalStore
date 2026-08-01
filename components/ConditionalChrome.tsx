@@ -16,6 +16,7 @@ export default function ConditionalChrome({
   const isHome = pathname === "/";
   const isFrames = pathname === "/frames";
   const isProduct = pathname?.startsWith("/product/") ?? false;
+  const isEyeExam = pathname === "/eye-exams";
 
   if (isAdmin) {
     return <>{children}</>;
@@ -27,7 +28,9 @@ export default function ConditionalChrome({
       ? "frames-main"
       : isProduct
         ? "product-main"
-        : undefined;
+        : isEyeExam
+          ? "eye-exam-main"
+          : undefined;
 
   return (
     <>

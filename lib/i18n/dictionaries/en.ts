@@ -96,6 +96,37 @@ export type Dictionary = {
     errorSubmit: string;
     required: string;
   };
+  eyeExam: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    bookCta: string;
+    servicesCta: string;
+    videoAlt: string;
+    formTitle: string;
+    fields: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      date: string;
+      time: string;
+      confirm: string;
+    };
+    emptyDates: string;
+    emptyTimes: string;
+    pickDateFirst: string;
+    selectedSummary: string;
+    submitting: string;
+    successTitle: string;
+    successLead: string;
+    errorLoad: string;
+    errorSubmit: string;
+    errors: {
+      dateRequired: string;
+      timeRequired: string;
+    };
+  };
   manage: Record<string, string>;
   contact: Record<string, string>;
   about: Record<string, string>;
@@ -266,16 +297,16 @@ const en: Dictionary = {
     },
     exams: {
       eyebrow: "Clinical Care",
-      title: "Eye Exams",
-      lead: "Unhurried examinations with modern diagnostics and clear recommendations.",
-      body: "Book a comprehensive eye exam with our specialists. We assess vision clarity, eye health, and the lenses that will serve you best — without rushing the appointment.",
+      title: "Eye Exam",
+      lead: "Book a professional eye examination with our specialists.",
+      body: "Book a professional eye examination with our specialists. Choose an available date and time that suits you.",
       highlights: [
-        { title: "Full diagnostics", text: "Precise refraction and eye-health screening in a calm clinical setting." },
-        { title: "Specialist guidance", text: "Leave with a clear plan for glasses, contacts, or follow-up care." },
-        { title: "Easy booking", text: "Choose your doctor, date, and time online in minutes." },
+        { title: "Professional care", text: "Examinations with clear recommendations." },
+        { title: "Flexible scheduling", text: "Choose an available date and time that suits you." },
+        { title: "Easy booking", text: "Confirm your visit online in minutes." },
       ],
-      primaryCta: "Book eye exam",
-      secondaryCta: "View all services",
+      primaryCta: "Book Eye Exam",
+      secondaryCta: "View All Services",
     },
     sunglasses: {
       eyebrow: "Sun Collection",
@@ -470,6 +501,38 @@ const en: Dictionary = {
     errorSubmit: "Unable to complete booking",
     required: "Please complete all required fields",
   },
+  eyeExam: {
+    eyebrow: "Clinical Care",
+    title: "Eye Exam",
+    description:
+      "Book a professional eye examination with our specialists. Choose an available date and time that suits you.",
+    bookCta: "Book Eye Exam",
+    servicesCta: "View All Services",
+    videoAlt: "Patient receiving a professional eye examination",
+    formTitle: "Book Eye Exam",
+    fields: {
+      firstName: "First name",
+      lastName: "Last name",
+      email: "Email",
+      phone: "Phone number",
+      date: "Select date",
+      time: "Select time",
+      confirm: "Confirm booking",
+    },
+    emptyDates: "No available dates at the moment. Please check back soon.",
+    emptyTimes: "No available times for this date.",
+    pickDateFirst: "Select a date to see available times.",
+    selectedSummary: "Selected: {date} at {time}",
+    submitting: "Confirming…",
+    successTitle: "Your eye exam has been booked successfully.",
+    successLead: "We look forward to seeing you.",
+    errorLoad: "Unable to load availability. Please try again.",
+    errorSubmit: "Unable to complete booking. Please try again.",
+    errors: {
+      dateRequired: "Please select a date",
+      timeRequired: "Please select a time",
+    },
+  },
   manage: {
     eyebrow: "Appointments",
     title: "Manage your booking",
@@ -580,6 +643,7 @@ const en: Dictionary = {
     sidebar: {
       dashboard: "Dashboard",
       appointments: "Appointments",
+      eyeExam: "Eye Exam Booking",
       calendar: "Calendar",
       customers: "Customers",
       inventory: "Inventory",
