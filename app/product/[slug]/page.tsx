@@ -20,11 +20,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const dict = await getDictionary(locale);
   const { data } = await getStore();
   const product = data.products.find((p) => p.slug === slug);
-  if (!product) return { title: "Product — LUMINA" };
+  if (!product) return { title: "Product — Oyon" };
   const description =
     dict.product.descriptions[product.slug] || product.description;
   return {
-    title: `${product.name} — LUMINA`,
+    title: `${product.name} — Oyon`,
     description,
   };
 }
@@ -51,7 +51,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const whatsapp = data.settings.whatsapp || "9725550180";
   const waHref = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-    `Hello LUMINA, I'm interested in ${product.name} (${product.sku}).`,
+    `Hello Oyon, I'm interested in ${product.name} (${product.sku}).`,
   )}`;
 
   const images =
@@ -208,14 +208,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <div className="product-actions">
               {isContactLenses ? (
                 <Link
-                  href="/contact-lenses?book=1"
+                  href="/book?type=contact_lens_fitting"
                   className="btn btn-copper product-btn"
                 >
                   {t(dict, "product.bookContactLensFitting")}
                 </Link>
+              ) : isSunglasses ? (
+                <Link
+                  href="/book?type=sunglasses_consultation"
+                  className="btn btn-copper product-btn"
+                >
+                  {t(dict, "product.bookConsultation")}
+                </Link>
               ) : (
                 <Link
-                  href="/book?service=Vision%20Consultation"
+                  href="/book?type=frame_consultation"
                   className="btn btn-copper product-btn"
                 >
                   {t(dict, "product.bookConsultation")}

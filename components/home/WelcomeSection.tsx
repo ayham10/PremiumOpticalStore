@@ -1,19 +1,34 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import type { StoreSettings } from "@/lib/types";
 
 export default function WelcomeSection() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [content, setContent] = useState<StoreSettings["content"]>();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data: { settings?: StoreSettings }) => {
+        if (!cancelled) setContent(data.settings?.content);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    // Lazy start after paint for faster first contentful paint
     let cancelled = false;
     const start = () => {
       if (cancelled) return;
@@ -28,7 +43,10 @@ export default function WelcomeSection() {
 
     const ric = (
       window as Window & {
-        requestIdleCallback?: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number;
+        requestIdleCallback?: (
+          cb: IdleRequestCallback,
+          opts?: IdleRequestOptions,
+        ) => number;
         cancelIdleCallback?: (id: number) => void;
       }
     ).requestIdleCallback;
@@ -59,6 +77,12 @@ export default function WelcomeSection() {
     });
   }
 
+  const brandSuffix =
+    content?.brandSuffix?.[locale]?.trim() || t("hero.brandSuffix");
+  const heroTitle = content?.heroTitle?.[locale]?.trim() || t("hero.title");
+  const welcomeLine =
+    content?.heroLine?.[locale]?.trim() || t("home.welcomeLine");
+
   return (
     <section className="home-welcome" aria-label="Welcome">
       <video
@@ -79,8 +103,8 @@ export default function WelcomeSection() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="home-welcome-brand"
         >
-          LUM<span style={{ color: "#d4b483" }}>I</span>NA{" "}
-          <span className="home-welcome-brand-soft">OPTICAL</span>
+          {t("hero.brand")}{" "}
+          <span className="home-welcome-brand-soft">{brandSuffix}</span>
         </motion.p>
 
         <motion.h1
@@ -89,7 +113,7 @@ export default function WelcomeSection() {
           transition={{ duration: 0.75, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
           className="home-welcome-title"
         >
-          {t("hero.title")}
+          {heroTitle}
         </motion.h1>
 
         <motion.p
@@ -98,8 +122,19 @@ export default function WelcomeSection() {
           transition={{ duration: 0.75, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
           className="home-welcome-line"
         >
-          {t("home.welcomeLine")}
+          {welcomeLine}
         </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          className="home-welcome-cta-wrap"
+        >
+          <Link href="/book" className="btn btn-copper home-welcome-cta">
+            {t("home.bookAppointment")}
+          </Link>
+        </motion.div>
       </div>
 
       <button

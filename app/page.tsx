@@ -7,7 +7,7 @@ import HomeAtmosphere from "@/components/home/HomeAtmosphere";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "LUMINA Optical — See Life in Focus",
+  title: "Oyon Optical — See Life in Focus",
   description:
     "Premium optical navigation. Explore frames, eye exams, sunglasses, contact lenses, promotions, and booking.",
 };

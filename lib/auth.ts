@@ -73,26 +73,26 @@ function decodeSession(token: string): (AdminSession & { exp: number }) | null {
 }
 
 function getAdminUsers(): Array<AdminSession & { password: string }> {
-  const pass = process.env.ADMIN_PASSWORD || "lumina2024";
+  const pass = process.env.ADMIN_PASSWORD || "oyon2024";
   return [
     {
       id: "staff-maya",
       name: "Dr. Maya Cohen",
-      email: process.env.ADMIN_EMAIL || "admin@lumina.optics",
+      email: process.env.ADMIN_EMAIL || "admin@oyon.optics",
       role: "admin",
       password: pass,
     },
     {
       id: "staff-noah",
       name: "Noah Levi",
-      email: "employee@lumina.optics",
+      email: "employee@oyon.optics",
       role: "employee",
       password: process.env.EMPLOYEE_PASSWORD || "employee2024",
     },
     {
       id: "staff-lina",
       name: "Lina Haddad",
-      email: "receptionist@lumina.optics",
+      email: "receptionist@oyon.optics",
       role: "receptionist",
       password: process.env.RECEPTIONIST_PASSWORD || "reception2024",
     },

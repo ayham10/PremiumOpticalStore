@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
-const SESSION_KEY = "lumina-intro-shown";
+const SESSION_KEY = "oyon-intro-shown";
 const TOTAL_MS = 3400;
 
 function markIntroSeen() {
@@ -101,7 +101,7 @@ export default function IntroLoader() {
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="font-[family-name:var(--font-display)] text-[clamp(2.4rem,8vw,4.2rem)] tracking-[0.18em]">
-              LUM<span style={{ color: "#d4b483" }}>I</span>NA
+              {t("hero.brand")}
             </div>
             <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.42em] text-[#d4b483]">
               {opticalLabel}

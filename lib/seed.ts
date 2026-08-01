@@ -18,12 +18,12 @@ import type {
 const now = () => new Date().toISOString();
 
 export const DEFAULT_SETTINGS: StoreSettings = {
-  storeName: "LUMINA",
+  storeName: "Oyon",
   tagline: "Precision vision. Quiet luxury.",
   address: "Main Street",
   city: "Deir Hanna",
   phone: "+972-52-123-4567",
-  email: "hello@lumina.optics",
+  email: "hello@oyon.optics",
   whatsapp: "972521234567",
   googleMapsEmbedUrl:
     "https://maps.google.com/maps?q=Deir%20Hanna&t=&z=14&ie=UTF8&iwloc=&output=embed",
@@ -42,11 +42,28 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     facebook: "https://facebook.com",
   },
   seo: {
-    title: "LUMINA — Premium Optical Store & Eye Examinations",
+    title: "Oyon — Premium Optical Store & Eye Examinations",
     description:
       "Book eye exams, discover prescription glasses, sunglasses, and contact lenses. Premium optical care with precise fittings.",
     keywords:
       "optical store, eye exam, prescription glasses, sunglasses, contact lenses, optometrist",
+  },
+  content: {
+    heroTitle: {
+      en: "SEE LIFE IN FOCUS",
+      ar: "عِش الحياة بوضوح",
+      he: "לראות את החיים בפוקוס",
+    },
+    heroLine: {
+      en: "Premium Eyewear • Eye Examinations • Sunglasses",
+      ar: "نظارات فاخرة • فحوصات النظر • نظارات شمسية",
+      he: "משקפי יוקרה • בדיקות עיניים • משקפי שמש",
+    },
+    brandSuffix: {
+      en: "OPTICAL",
+      ar: "للبصريات",
+      he: "אופטיקה",
+    },
   },
   smtp: {},
   sms: {
@@ -63,7 +80,7 @@ export const SEED_STAFF: StaffMember[] = [
   {
     id: "staff-maya",
     name: "Dr. Maya Cohen",
-    email: "maya@lumina.optics",
+    email: "maya@oyon.optics",
     phone: "+972-50-111-2200",
     role: "admin",
     title: "Lead Optometrist",
@@ -77,7 +94,7 @@ export const SEED_STAFF: StaffMember[] = [
   {
     id: "staff-noah",
     name: "Noah Levi",
-    email: "noah@lumina.optics",
+    email: "noah@oyon.optics",
     phone: "+972-50-111-2201",
     role: "employee",
     title: "Optical Specialist",
@@ -95,7 +112,7 @@ export const SEED_STAFF: StaffMember[] = [
   {
     id: "staff-lina",
     name: "Lina Haddad",
-    email: "lina@lumina.optics",
+    email: "lina@oyon.optics",
     phone: "+972-50-111-2202",
     role: "receptionist",
     title: "Patient Concierge",
@@ -133,7 +150,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "aurelia-acetate-frame",
     name: "Aurelia Acetate",
     category: "Frames",
-    brand: "LUMINA Atelier",
+    brand: "Oyon Atelier",
     frameType: "Rectangle",
     lensType: "Prescription Ready",
     sku: "LUM-FR-001",
@@ -221,7 +238,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "dune-acetate-wayfarer",
     name: "Dune Acetate Wayfarer",
     category: "Sunglasses",
-    brand: "LUMINA Atelier",
+    brand: "Oyon Atelier",
     frameType: "Square",
     lensType: "Polarized UV400",
     sku: "LUM-SG-032",
@@ -265,7 +282,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "noir-mirror-square",
     name: "Noir Mirror Square",
     category: "Sunglasses",
-    brand: "LUMINA Atelier",
+    brand: "Oyon Atelier",
     frameType: "Square",
     lensType: "Polarized UV400",
     sku: "LUM-SG-034",
@@ -355,7 +372,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "atelier-slim-metal",
     name: "Atelier Slim Metal",
     category: "Frames",
-    brand: "LUMINA Atelier",
+    brand: "Oyon Atelier",
     frameType: "Square",
     lensType: "Prescription Ready",
     sku: "LUM-FR-008",
@@ -376,7 +393,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "noir-acetate-square",
     name: "Noir Acetate Square",
     category: "Frames",
-    brand: "LUMINA Atelier",
+    brand: "Oyon Atelier",
     frameType: "Square",
     lensType: "Prescription Ready",
     sku: "LUM-FR-012",
@@ -439,7 +456,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "optic-care-kit",
     name: "Optic Care Kit",
     category: "Cleaning Products",
-    brand: "LUMINA",
+    brand: "Oyon",
     sku: "LUM-AC-003",
     barcode: "8901001001006",
     description:
@@ -459,7 +476,7 @@ export const SEED_PRODUCTS: Product[] = [
     slug: "velvet-case-accessory",
     name: "Velvet Hard Case",
     category: "Accessories",
-    brand: "LUMINA",
+    brand: "Oyon",
     sku: "LUM-AC-011",
     description: "Soft-touch hard case with magnetic closure and microfiber lining.",
     images: [IMG.clean],
@@ -602,7 +619,7 @@ export function createSeedData(): AppData {
       id: `media-${i + 1}`,
       url,
       type: "image" as const,
-      alt: `LUMINA gallery ${i + 1}`,
+      alt: `Oyon gallery ${i + 1}`,
       folder: "gallery" as const,
       createdAt: timestamp,
     })),

@@ -5,9 +5,9 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Locale } from "@/lib/i18n/config";
 
 const WHATSAPP_MESSAGES: Record<Locale, string> = {
-  en: "Hello LUMINA, I would like assistance with an eye exam / glasses.",
-  he: "שלום LUMINA, אשמח לעזרה בנוגע לבדיקת עיניים / משקפיים.",
-  ar: "مرحباً LUMINA، أود المساعدة بخصوص فحص النظر / النظارات.",
+  en: "Hello Oyon, I would like assistance with an eye exam / glasses.",
+  he: "שלום Oyon, אשמח לעזרה בנוגע לבדיקת עיניים / משקפיים.",
+  ar: "مرحباً عيون، أود المساعدة بخصوص فحص النظر / النظارات.",
 };
 
 export default function WhatsAppButton({ phone = "9725550180" }: { phone?: string }) {

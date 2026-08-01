@@ -4,10 +4,20 @@ import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   formatEyeExamDateDisplay,
+  getOpenAvailabilityForDate,
+  hasEyeExamSlotConflict,
   isClinicAppointmentType,
+  isValidEmail,
+  isValidIsoDate,
   normalizeAppointmentType,
+  normalizeIsraeliPhone,
+  parseTimeToMinutes,
+  sanitizeName,
 } from "@/lib/eye-exam";
-import type { EyeExamAppointmentStatus } from "@/lib/types";
+import type {
+  ClinicAppointmentType,
+  EyeExamAppointmentStatus,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +64,7 @@ export async function GET(request: Request) {
         ]
           .join(" ")
           .toLowerCase()
-          .includes(q)
+          .includes(q),
       );
     }
 
@@ -83,13 +93,17 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       id?: string;
       status?: EyeExamAppointmentStatus;
+      appointmentDate?: string;
+      appointmentTime?: string;
+      appointmentType?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
     };
 
     const id = body.id?.trim();
     if (!id) return jsonError("Appointment id is required", 400);
-    if (!body.status || !STATUSES.has(body.status)) {
-      return jsonError("Invalid status", 400);
-    }
 
     let updated = null as Awaited<
       ReturnType<typeof getStore>
@@ -98,9 +112,82 @@ export async function PATCH(request: Request) {
     await updateStore(async (store) => {
       const index = store.eyeExamAppointments.findIndex((a) => a.id === id);
       if (index < 0) throw new Error("NOT_FOUND");
+
+      const current = store.eyeExamAppointments[index];
+      const nextStatus =
+        body.status && STATUSES.has(body.status) ? body.status : current.status;
+
+      const nextType: ClinicAppointmentType = isClinicAppointmentType(
+        body.appointmentType,
+      )
+        ? body.appointmentType
+        : normalizeAppointmentType(current.appointmentType);
+
+      const nextDate = (body.appointmentDate || current.appointmentDate).trim();
+      const nextTime = (body.appointmentTime || current.appointmentTime).trim();
+
+      if (!isValidIsoDate(nextDate)) throw new Error("INVALID_DATE");
+      if (parseTimeToMinutes(nextTime) == null) throw new Error("INVALID_TIME");
+
+      const firstName =
+        body.firstName !== undefined
+          ? sanitizeName(body.firstName)
+          : current.firstName;
+      const lastName =
+        body.lastName !== undefined
+          ? sanitizeName(body.lastName)
+          : current.lastName;
+      const email =
+        body.email !== undefined
+          ? body.email.trim().toLowerCase()
+          : current.email;
+      let phone = current.phone;
+      if (body.phone !== undefined) {
+        const normalized = normalizeIsraeliPhone(body.phone.trim());
+        if (!normalized) throw new Error("INVALID_PHONE");
+        phone = normalized;
+      }
+
+      if (!firstName || !lastName) throw new Error("INVALID_NAME");
+      if (!email || !isValidEmail(email)) throw new Error("INVALID_EMAIL");
+
+      const scheduleChanged =
+        nextDate !== current.appointmentDate ||
+        nextTime !== current.appointmentTime ||
+        nextType !== normalizeAppointmentType(current.appointmentType);
+
+      if (scheduleChanged && nextStatus !== "cancelled") {
+        const day = getOpenAvailabilityForDate(
+          store.eyeExamAvailability,
+          nextDate,
+          nextType,
+        );
+        if (!day) throw new Error("DATE_UNAVAILABLE");
+        const slot = day.slots.find((s) => s.time === nextTime && s.isEnabled);
+        if (!slot) throw new Error("TIME_UNAVAILABLE");
+        if (
+          hasEyeExamSlotConflict(
+            store.eyeExamAppointments,
+            nextDate,
+            nextTime,
+            id,
+            { appointmentType: nextType, day },
+          )
+        ) {
+          throw new Error("SLOT_TAKEN");
+        }
+      }
+
       updated = {
-        ...store.eyeExamAppointments[index],
-        status: body.status!,
+        ...current,
+        firstName,
+        lastName,
+        email,
+        phone,
+        appointmentDate: nextDate,
+        appointmentTime: nextTime,
+        appointmentType: nextType,
+        status: nextStatus,
         updatedAt: new Date().toISOString(),
       };
       store.eyeExamAppointments[index] = updated;
@@ -109,7 +196,9 @@ export async function PATCH(request: Request) {
         action: "update",
         entity: "eye_exam_appointment",
         entityId: id,
-        detail: `status=${body.status}`,
+        detail: scheduleChanged
+          ? `reschedule ${nextDate} ${nextTime} type=${nextType} status=${nextStatus}`
+          : `status=${nextStatus}`,
       });
       return store;
     });
@@ -117,13 +206,40 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       appointment: {
         ...updated!,
+        appointmentType: normalizeAppointmentType(updated!.appointmentType),
         dateLabel: formatEyeExamDateDisplay(updated!.appointmentDate),
         fullName: `${updated!.firstName} ${updated!.lastName}`.trim(),
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "NOT_FOUND") {
-      return jsonError("Appointment not found", 404);
+    if (error instanceof Error) {
+      if (error.message === "NOT_FOUND") {
+        return jsonError("Appointment not found", 404);
+      }
+      if (error.message === "INVALID_DATE") {
+        return jsonError("Invalid appointment date", 400);
+      }
+      if (error.message === "INVALID_TIME") {
+        return jsonError("Invalid appointment time", 400);
+      }
+      if (error.message === "INVALID_PHONE") {
+        return jsonError("Invalid phone number", 400);
+      }
+      if (error.message === "INVALID_NAME") {
+        return jsonError("First and last name are required", 400);
+      }
+      if (error.message === "INVALID_EMAIL") {
+        return jsonError("Invalid email address", 400);
+      }
+      if (error.message === "DATE_UNAVAILABLE") {
+        return jsonError("Selected date is not available for this service", 409);
+      }
+      if (error.message === "TIME_UNAVAILABLE") {
+        return jsonError("Selected time is not available", 409);
+      }
+      if (error.message === "SLOT_TAKEN") {
+        return jsonError("That time slot is already booked", 409);
+      }
     }
     return handleRouteError(error);
   }

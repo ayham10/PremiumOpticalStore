@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CalendarCheck2,
@@ -11,7 +10,6 @@ import {
   HeartHandshake,
   Ruler,
 } from "lucide-react";
-import EyeExamBookingModal from "@/components/eye-exam/EyeExamBookingModal";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
@@ -59,15 +57,9 @@ function ContactLensCard({ product }: { product: Product }) {
 
 export default function ContactLensesPage() {
   const { t, rtl } = useLocale();
-  const searchParams = useSearchParams();
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("book") === "1") setBookingOpen(true);
-  }, [searchParams]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -169,14 +161,13 @@ export default function ContactLensesPage() {
         </aside>
 
         <div className="cl-booking-row">
-          <button
-            type="button"
+          <Link
+            href="/book?type=contact_lens_fitting"
             className="btn btn-copper cl-book-btn"
-            onClick={() => setBookingOpen(true)}
           >
             <CalendarCheck2 size={18} aria-hidden />
             {t("contactLenses.bookCta")}
-          </button>
+          </Link>
         </div>
 
         <div className="cl-catalogue-block">
@@ -199,11 +190,6 @@ export default function ContactLensesPage() {
         </div>
       </section>
 
-      <EyeExamBookingModal
-        open={bookingOpen}
-        onClose={() => setBookingOpen(false)}
-        appointmentType="contact_lens_fitting"
-      />
     </div>
   );
 }

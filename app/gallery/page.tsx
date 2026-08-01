@@ -9,8 +9,8 @@ import { t } from "@/lib/i18n/t";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Gallery — LUMINA",
-  description: "Inside the LUMINA optical atelier in Tel Aviv.",
+  title: "Gallery — Oyon",
+  description: "Inside the Oyon optical atelier in Tel Aviv.",
 };
 
 export default async function GalleryPage() {
@@ -26,12 +26,12 @@ export default async function GalleryPage() {
       ? fromStore.map((m) => ({
           id: m.id,
           url: m.url,
-          alt: m.alt || "LUMINA gallery",
+          alt: m.alt || "Oyon gallery",
         }))
       : GALLERY_IMAGES.map((url, i) => ({
           id: `seed-${i}`,
           url,
-          alt: `LUMINA gallery ${i + 1}`,
+          alt: `Oyon gallery ${i + 1}`,
         }));
 
   return (

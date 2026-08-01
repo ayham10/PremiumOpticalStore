@@ -59,9 +59,9 @@ The Next.js API primarily uses the **document store** row (`lumina_store.payload
 
 | Role | Email | Default password |
 | --- | --- | --- |
-| Admin | `admin@lumina.optics` | `lumina2024` |
-| Employee | `employee@lumina.optics` | `employee2024` |
-| Receptionist | `receptionist@lumina.optics` | `reception2024` |
+| Admin | `admin@oyon.optics` | `oyon2024` |
+| Employee | `employee@oyon.optics` | `employee2024` |
+| Receptionist | `receptionist@oyon.optics` | `reception2024` |
 
 Dashboard: [http://localhost:3000/admin](http://localhost:3000/admin)
 

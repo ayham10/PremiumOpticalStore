@@ -10,8 +10,8 @@ import { t } from "@/lib/i18n/t";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Promotions — LUMINA Optical",
-  description: "Current LUMINA offers on exams, frames, and complete pairs.",
+  title: "Promotions — Oyon Optical",
+  description: "Current Oyon offers on exams, frames, and complete pairs.",
 };
 
 export default async function PromotionsPage() {

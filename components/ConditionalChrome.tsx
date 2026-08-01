@@ -20,6 +20,7 @@ export default function ConditionalChrome({
   const isCatalogue = isFrames || isSunglasses || isContactLenses;
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
+  const isBook = pathname === "/book";
 
   if (isAdmin) {
     return <>{children}</>;
@@ -27,7 +28,7 @@ export default function ConditionalChrome({
 
   const mainClass = isHome
     ? "home-main"
-    : isCatalogue
+    : isCatalogue || isBook
       ? "frames-main"
       : isProduct
         ? "product-main"

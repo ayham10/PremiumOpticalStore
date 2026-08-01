@@ -135,7 +135,7 @@ export default function AdminAppointmentsPage() {
           to: a.customerPhone,
           appointmentId: a.id,
           type: "custom",
-          message: `LUMINA reminder: ${a.service} on ${a.date} at ${a.startTime}.`,
+          message: `Oyon reminder: ${a.service} on ${a.date} at ${a.startTime}.`,
         }),
       });
       setMessage(`SMS queued for ${a.customerName}`);

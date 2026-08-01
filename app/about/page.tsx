@@ -10,9 +10,9 @@ import { t } from "@/lib/i18n/t";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "About — LUMINA",
+  title: "About — Oyon",
   description:
-    "The LUMINA story — premium optical care, craftsmanship, and quiet luxury in Tel Aviv.",
+    "The Oyon story — premium optical care, craftsmanship, and quiet luxury in Tel Aviv.",
 };
 
 export default async function AboutPage() {
@@ -43,7 +43,7 @@ export default async function AboutPage() {
             <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--radius)]">
               <Image
                 src="https://images.unsplash.com/photo-1551884170-09fb70a3a2ed?auto=format&fit=crop&w=1200&q=80"
-                alt="Eye examination at LUMINA"
+                alt="Eye examination at Oyon"
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"

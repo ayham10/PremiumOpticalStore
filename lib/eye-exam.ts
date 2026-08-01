@@ -9,12 +9,19 @@ import type {
 export const CLINIC_APPOINTMENT_TYPES: ClinicAppointmentType[] = [
   "eye_exam",
   "contact_lens_fitting",
+  "frame_consultation",
+  "sunglasses_consultation",
 ];
 
 export function isClinicAppointmentType(
   value: unknown,
 ): value is ClinicAppointmentType {
-  return value === "eye_exam" || value === "contact_lens_fitting";
+  return (
+    value === "eye_exam" ||
+    value === "contact_lens_fitting" ||
+    value === "frame_consultation" ||
+    value === "sunglasses_consultation"
+  );
 }
 
 export function normalizeAppointmentType(
@@ -23,29 +30,20 @@ export function normalizeAppointmentType(
   return isClinicAppointmentType(value) ? value : "eye_exam";
 }
 
-/** Empty/undefined/both = shared day; otherwise service-specific. */
+/** Empty/undefined = shared day for all services; otherwise listed services only. */
 export function daySupportsService(
   day: EyeExamAvailability,
   type: ClinicAppointmentType,
 ): boolean {
   const services = day.services?.filter(isClinicAppointmentType) || [];
   if (services.length === 0) return true;
-  if (
-    services.includes("eye_exam") &&
-    services.includes("contact_lens_fitting")
-  ) {
-    return true;
-  }
   return services.includes(type);
 }
 
 export function isSharedAvailabilityDay(day: EyeExamAvailability): boolean {
   const services = day.services?.filter(isClinicAppointmentType) || [];
-  return (
-    services.length === 0 ||
-    (services.includes("eye_exam") &&
-      services.includes("contact_lens_fitting"))
-  );
+  if (services.length === 0) return true;
+  return CLINIC_APPOINTMENT_TYPES.every((type) => services.includes(type));
 }
 
 export const EYE_EXAM_TZ = "Asia/Jerusalem";
@@ -247,23 +245,35 @@ export function eyeExamSmsBody(
   time: string,
   appointmentType: ClinicAppointmentType = "eye_exam",
 ): string {
-  if (appointmentType === "contact_lens_fitting") {
-    if (language === "ar") {
-      return `تم تأكيد موعد ملاءمة العدسات اللاصقة بتاريخ ${dateDisplay} الساعة ${time}. لومينا للبصريات.`;
-    }
-    if (language === "he") {
-      return `התאמת עדשות המגע שלך אושרה לתאריך ${dateDisplay} בשעה ${time}. לומינה אופטיקה.`;
-    }
-    return `Your contact lens fitting is confirmed for ${dateDisplay} at ${time}. Lumina Optical.`;
-  }
+  const brand =
+    language === "ar" ? "عيون للبصريات" : language === "he" ? "עיון אופטיקה" : "Oyon Optical";
+
+  const serviceEn: Record<ClinicAppointmentType, string> = {
+    eye_exam: "eye exam",
+    contact_lens_fitting: "contact lens fitting",
+    frame_consultation: "frame consultation",
+    sunglasses_consultation: "sunglasses consultation",
+  };
+  const serviceAr: Record<ClinicAppointmentType, string> = {
+    eye_exam: "فحص النظر",
+    contact_lens_fitting: "ملاءمة العدسات اللاصقة",
+    frame_consultation: "استشارة الإطارات",
+    sunglasses_consultation: "استشارة النظارات الشمسية",
+  };
+  const serviceHe: Record<ClinicAppointmentType, string> = {
+    eye_exam: "בדיקת העיניים",
+    contact_lens_fitting: "התאמת עדשות המגע",
+    frame_consultation: "ייעוץ מסגרות",
+    sunglasses_consultation: "ייעוץ משקפי שמש",
+  };
 
   if (language === "ar") {
-    return `تم تأكيد موعد فحص النظر بتاريخ ${dateDisplay} الساعة ${time}. لومينا للبصريات.`;
+    return `تم تأكيد موعد ${serviceAr[appointmentType]} بتاريخ ${dateDisplay} الساعة ${time}. ${brand}.`;
   }
   if (language === "he") {
-    return `בדיקת העיניים שלך אושרה לתאריך ${dateDisplay} בשעה ${time}. לומינה אופטיקה.`;
+    return `${serviceHe[appointmentType]} שלך אושר/ה לתאריך ${dateDisplay} בשעה ${time}. ${brand}.`;
   }
-  return `Your eye exam is confirmed for ${dateDisplay} at ${time}. Lumina Optical.`;
+  return `Your ${serviceEn[appointmentType]} is confirmed for ${dateDisplay} at ${time}. ${brand}.`;
 }
 
 /** Simple in-process queue to reduce double-book races on a single instance */

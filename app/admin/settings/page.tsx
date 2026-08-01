@@ -8,7 +8,7 @@ import type { StoreSettings, WorkingHours } from "@/lib/types";
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const EMPTY_SETTINGS: StoreSettings = {
-  storeName: "LUMINA",
+  storeName: "Oyon",
   tagline: "",
   address: "",
   city: "",
@@ -25,6 +25,11 @@ const EMPTY_SETTINGS: StoreSettings = {
   })),
   social: {},
   seo: { title: "", description: "", keywords: "" },
+  content: {
+    heroTitle: { en: "", ar: "", he: "" },
+    heroLine: { en: "", ar: "", he: "" },
+    brandSuffix: { en: "", ar: "", he: "" },
+  },
   smtp: {},
   sms: { provider: "console", enabled: true },
   appointmentSlotMinutes: 30,
@@ -305,6 +310,49 @@ export default function AdminSettingsPage() {
               )
             )}
           </div>
+        </section>
+
+        <section className="admin-card space-y-4 p-5">
+          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+            Homepage content (EN / AR / HE)
+          </h2>
+          <p className="text-sm text-[var(--slate)]">
+            Leave a field blank to keep the built-in translation for that language.
+          </p>
+          {(
+            [
+              ["heroTitle", "Hero title"],
+              ["heroLine", "Hero supporting line"],
+              ["brandSuffix", "Brand suffix"],
+            ] as const
+          ).map(([key, label]) => (
+            <div key={key} className="space-y-2 rounded-xl border border-[var(--line)] p-3">
+              <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(["en", "ar", "he"] as const).map((lang) => (
+                  <div key={lang}>
+                    <label className="label uppercase">{lang}</label>
+                    <input
+                      className="input"
+                      value={form.content?.[key]?.[lang] || ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          content: {
+                            ...f.content,
+                            [key]: {
+                              ...f.content?.[key],
+                              [lang]: e.target.value,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
 
         <section className="admin-card space-y-4 p-5">

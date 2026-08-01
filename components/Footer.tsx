@@ -11,7 +11,7 @@ export default function Footer() {
       <div className="wrap grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <div className="font-[family-name:var(--font-display)] text-3xl tracking-[0.08em]">
-            LUM<span style={{ color: "#7eb6d8" }}>I</span>NA
+            {t("hero.brand")}
           </div>
           <p className="mt-4 max-w-sm text-[0.95rem] text-white/65">
             {t("footer.tagline")}
@@ -23,12 +23,12 @@ export default function Footer() {
             {t("footer.visit")}
           </div>
           <p className="mt-4 text-white/75">
-            128 King George Street
+            Main Street
             <br />
-            Tel Aviv
+            Deir Hanna
           </p>
-          <p className="mt-3 text-white/75">+972-3-555-0180</p>
-          <p className="text-white/75">hello@lumina.optics</p>
+          <p className="mt-3 text-white/75">+972-52-123-4567</p>
+          <p className="text-white/75">hello@oyon.optics</p>
         </div>
 
         <div>

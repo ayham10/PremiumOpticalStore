@@ -50,6 +50,8 @@ export type CategoryCatalogueProps = {
   lead: string;
   videoSrc: string;
   posterSrc: string;
+  bookHref?: string;
+  bookLabel?: string;
 };
 
 export default function CategoryCatalogue({
@@ -58,6 +60,8 @@ export default function CategoryCatalogue({
   lead,
   videoSrc,
   posterSrc,
+  bookHref,
+  bookLabel,
 }: CategoryCatalogueProps) {
   const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
@@ -131,6 +135,11 @@ export default function CategoryCatalogue({
         <header className="frames-catalogue-head">
           <h1 className="frames-catalogue-title">{title}</h1>
           <p className="frames-catalogue-lead">{lead}</p>
+          {bookHref && bookLabel ? (
+            <Link href={bookHref} className="btn btn-copper frames-book-cta">
+              {bookLabel}
+            </Link>
+          ) : null}
         </header>
 
         {loading ? (

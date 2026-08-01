@@ -80,7 +80,7 @@ export default function ContactPage() {
 
   const whatsapp = settings?.whatsapp || "9725550180";
   const waHref = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-    "Hello LUMINA, I would like assistance."
+    "Hello Oyon, I would like assistance."
   )}`;
 
   return (
@@ -183,7 +183,7 @@ export default function ContactPage() {
             <div className="space-y-8">
               <div>
                 <h2 className="font-[family-name:var(--font-display)] text-2xl">
-                  {settings?.storeName || "LUMINA"}
+                  {settings?.storeName || "Oyon"}
                 </h2>
                 <p className="mt-3 text-[var(--ink-soft)]">
                   {settings?.address || "128 King George Street"}
@@ -200,10 +200,10 @@ export default function ContactPage() {
                 </p>
                 <p>
                   <a
-                    href={`mailto:${settings?.email || "hello@lumina.optics"}`}
+                    href={`mailto:${settings?.email || "hello@oyon.optics"}`}
                     className="hover:text-[var(--accent)]"
                   >
-                    {settings?.email || "hello@lumina.optics"}
+                    {settings?.email || "hello@oyon.optics"}
                   </a>
                 </p>
               </div>
@@ -228,7 +228,7 @@ export default function ContactPage() {
 
               <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--mist)]">
                 <iframe
-                  title="LUMINA map"
+                  title="Oyon map"
                   src={
                     settings?.googleMapsEmbedUrl ||
                     "https://maps.google.com/maps?q=Tel%20Aviv&t=&z=14&ie=UTF8&iwloc=&output=embed"

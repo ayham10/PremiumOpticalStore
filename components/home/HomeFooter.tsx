@@ -11,8 +11,8 @@ export default function HomeFooter() {
     <footer className="home-footer">
       <div className="home-footer-inner">
         <Link href="/" className="home-footer-brand">
-          LUM<span style={{ color: "#d4b483" }}>I</span>NA{" "}
-          <span className="home-footer-brand-soft">OPTICAL</span>
+          {t("hero.brand")}{" "}
+          <span className="home-footer-brand-soft">{t("hero.brandSuffix")}</span>
         </Link>
 
         <div className="home-footer-social" aria-label="Social">

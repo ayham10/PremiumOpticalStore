@@ -5,6 +5,7 @@ export type Dictionary = {
   home: {
     hubEyebrow: string;
     scrollHint: string;
+    bookAppointment: string;
     welcomeLine: string;
     categoriesEyebrow: string;
     categoriesTitle: string;
@@ -193,6 +194,38 @@ export type Dictionary = {
     };
     appointmentType: string;
   };
+  clinicBooking: {
+    title: string;
+    lead: string;
+    progress: string;
+    askService: string;
+    selectDate: string;
+    selectTime: string;
+    yourDetails: string;
+    changeService: string;
+    changeDate: string;
+    changeTime: string;
+    continueReview: string;
+    reviewTitle: string;
+    reviewService: string;
+    reviewDate: string;
+    reviewTime: string;
+    reviewCustomer: string;
+    confirm: string;
+    submitting: string;
+    successTitle: string;
+    successLead: string;
+    backHome: string;
+    emptyDates: string;
+    emptyTimes: string;
+    errorLoad: string;
+    errorSubmit: string;
+    prevMonth: string;
+    nextMonth: string;
+    periods: { morning: string; afternoon: string; evening: string };
+    services: Record<string, string>;
+    serviceHints: Record<string, string>;
+  };
   manage: Record<string, string>;
   contact: Record<string, string>;
   about: Record<string, string>;
@@ -223,24 +256,25 @@ const en: Dictionary = {
     services: "Services",
     exam: "Eye Exam",
     shop: "Shop",
-    book: "Book Exam",
+    book: "Book",
     gallery: "Gallery",
     about: "About",
     contact: "Contact",
     admin: "Admin",
-    bookCta: "Book Exam",
+    bookCta: "Book an Appointment",
     menu: "Menu",
     close: "Close",
     language: "Language",
   },
   hero: {
-    brand: "LUMINA",
+    brand: "Oyon",
+    brandSuffix: "OPTICAL",
     title: "SEE LIFE IN FOCUS",
     line1: "Premium Eyewear.",
     line2: "Advanced Eye Care.",
     line3: "Perfect Vision.",
     line4: "Everyday.",
-    ctaBook: "Book Eye Exam",
+    ctaBook: "Book an Appointment",
     ctaShop: "Shop Collection",
   },
   intro: {
@@ -250,6 +284,7 @@ const en: Dictionary = {
   home: {
     hubEyebrow: "Premium Navigation",
     scrollHint: "Scroll",
+    bookAppointment: "Book an Appointment",
     welcomeLine: "Premium Eyewear • Eye Examinations • Sunglasses",
     categoriesEyebrow: "Explore",
     categoriesTitle: "Everything your vision needs",
@@ -297,7 +332,7 @@ const en: Dictionary = {
     testimonialsEyebrow: "Reviews",
     testimonialsTitle: "Trusted by our patients",
     visitEyebrow: "Visit",
-    visitTitle: "Find LUMINA",
+    visitTitle: "Find Oyon",
     visitHours: "Hours",
     gateway: {
       frames: {
@@ -326,7 +361,7 @@ const en: Dictionary = {
         cta: "View Offers",
       },
       booking: {
-        title: "Book Consultation",
+        title: "Book an Appointment",
         subtitle: "Meet with our optical specialists",
         cta: "Book Now",
       },
@@ -404,7 +439,7 @@ const en: Dictionary = {
       eyebrow: "Offers",
       title: "Promotions",
       lead: "Limited seasonal offers on exams, frames, and complete pairs.",
-      body: "Explore current LUMINA promotions. Offers change with the season — book early or visit the boutique for the latest pairs and exam packages.",
+      body: "Explore current Oyon promotions. Offers change with the season — book early or visit the boutique for the latest pairs and exam packages.",
       highlights: [
         { title: "Seasonal value", text: "Thoughtful packages without compromising clinical quality." },
         { title: "Complete pairs", text: "Look for frame + lens offers when available." },
@@ -467,7 +502,7 @@ const en: Dictionary = {
     eyebrow: "Shop",
     title: "Glasses & optical care",
     lead:
-      "Explore prescription frames, sunglasses, contact lenses, and daily essentials from the LUMINA edit.",
+      "Explore prescription frames, sunglasses, contact lenses, and daily essentials from the Oyon edit.",
     search: "Search frames, brands, SKU…",
     empty: "No products match your filters.",
     view: "View",
@@ -613,7 +648,7 @@ const en: Dictionary = {
     blurb:
       "A complete vision and eye-health assessment followed by a personalized recommendation for glasses or contact lenses.",
     trust: {
-      aria: "Why choose LUMINA",
+      aria: "Why choose Oyon",
       professional: "Professional Eye Exam",
       equipment: "Modern Diagnostic Equipment",
       booking: "Fast & Easy Booking",
@@ -699,6 +734,52 @@ const en: Dictionary = {
     },
     appointmentType: "Contact Lens Fitting",
   },
+  clinicBooking: {
+    title: "Book an Appointment",
+    lead: "Choose your service, pick a date and time, then confirm your visit.",
+    progress: "Booking progress",
+    askService: "What would you like to book?",
+    selectDate: "Select a date",
+    selectTime: "Select a time",
+    yourDetails: "Your details",
+    changeService: "Change service",
+    changeDate: "Change date",
+    changeTime: "Change time",
+    continueReview: "Continue to review",
+    reviewTitle: "Review your appointment",
+    reviewService: "Service",
+    reviewDate: "Date",
+    reviewTime: "Time",
+    reviewCustomer: "Customer details",
+    confirm: "Confirm booking",
+    submitting: "Confirming…",
+    successTitle: "Your appointment is confirmed.",
+    successLead: "We look forward to seeing you at Oyon.",
+    backHome: "Back to home",
+    emptyDates: "No available dates at the moment. Please check back soon.",
+    emptyTimes: "No available times for this date.",
+    errorLoad: "Unable to load availability. Please try again.",
+    errorSubmit: "Unable to complete booking. Please try again.",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    periods: {
+      morning: "Morning",
+      afternoon: "Afternoon",
+      evening: "Evening",
+    },
+    services: {
+      eye_exam: "Eye Exam",
+      contact_lens_fitting: "Contact Lens Fitting",
+      frame_consultation: "Frame Consultation",
+      sunglasses_consultation: "Sunglasses Consultation",
+    },
+    serviceHints: {
+      eye_exam: "Professional vision examination",
+      contact_lens_fitting: "Fitting and guidance for contacts",
+      frame_consultation: "Help choosing the right frames",
+      sunglasses_consultation: "Style and sun protection advice",
+    },
+  },
   manage: {
     eyebrow: "Appointments",
     title: "Manage your booking",
@@ -735,7 +816,7 @@ const en: Dictionary = {
     eyebrow: "About",
     title: "Precision vision. Quiet luxury.",
     lead:
-      "LUMINA is an optical atelier devoted to clinical accuracy and beautiful eyewear — never rushed, never ordinary.",
+      "Oyon is an optical atelier devoted to clinical accuracy and beautiful eyewear — never rushed, never ordinary.",
     storyTitle: "Our approach",
     story:
       "Every visit balances thorough examination with considered styling. We measure carefully, explain clearly, and help you choose frames and lenses that feel inevitable.",
@@ -761,12 +842,13 @@ const en: Dictionary = {
       "Premium optical care — precise examinations, curated frames, and effortless appointments.",
     visit: "Visit",
     explore: "Explore",
-    copyright: "© {year} LUMINA Optical.",
+    copyright: "© {year} Oyon Optical.",
     short: "Precision vision. Quiet luxury.",
   },
   common: {
     loading: "Loading…",
     retry: "Retry",
+    back: "Back",
     backHome: "Back home",
     save: "Save",
     cancel: "Cancel",
@@ -797,7 +879,7 @@ const en: Dictionary = {
     generic: "Something went wrong. Please try again.",
   },
   admin: {
-    brand: "LUMINA Admin",
+    brand: "Oyon Admin",
     logout: "Logout",
     loginTitle: "Staff sign in",
     loginLead: "Secure access to appointments, inventory, and store settings.",
@@ -805,7 +887,7 @@ const en: Dictionary = {
     password: "Password",
     signIn: "Sign in",
     signingIn: "Signing in…",
-    demoHint: "Demo: admin@lumina.optics / lumina2024",
+    demoHint: "Demo: admin@oyon.optics / oyon2024",
     sidebar: {
       dashboard: "Dashboard",
       appointments: "Appointments",

@@ -18,7 +18,8 @@ export default function Navbar() {
     pathname === "/frames" ||
     pathname === "/sunglasses" ||
     pathname === "/contact-lenses";
-  const isSolidDark = isProduct || isEyeExam || isCatalogue;
+  const isBook = pathname === "/book";
+  const isSolidDark = isProduct || isEyeExam || isCatalogue || isBook;
   const isDarkPage = isHome || isSolidDark;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -81,15 +82,13 @@ export default function Navbar() {
             }`}
             onClick={() => setOpen(false)}
           >
-            LUM
-            <span style={{ color: whiteText || open ? "#d4b483" : "var(--accent)" }}>I</span>
-            NA
+            {t("hero.brand")}
             <span
               className={`ms-1 hidden text-[0.62em] tracking-[0.18em] sm:inline ${
                 whiteText || open ? "text-white/70" : "text-[var(--slate)]"
               }`}
             >
-              OPTICAL
+              {t("hero.brandSuffix")}
             </span>
           </Link>
 

@@ -49,7 +49,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
             >
               <Image
                 src={item.url}
-                alt={item.alt || "LUMINA gallery"}
+                alt={item.alt || "Oyon gallery"}
                 width={800}
                 height={1000}
                 className="h-auto w-full object-cover transition duration-700 group-hover:scale-[1.03]"
@@ -86,7 +86,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
           >
             <Image
               src={items[active].url}
-              alt={items[active].alt || "LUMINA gallery"}
+              alt={items[active].alt || "Oyon gallery"}
               width={1400}
               height={1000}
               className="max-h-[85vh] w-auto rounded-[var(--radius-sm)] object-contain"

@@ -10,7 +10,7 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 export default function AdminLoginPage() {
   const router = useRouter();
   const { t } = useLocale();
-  const [email, setEmail] = useState("admin@lumina.optics");
+  const [email, setEmail] = useState("admin@oyon.optics");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

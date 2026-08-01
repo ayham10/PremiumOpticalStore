@@ -6,13 +6,13 @@ import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
 import { isRtl } from "@/lib/i18n/config";
 
 export const metadata: Metadata = {
-  title: "LUMINA — Premium Optical Store & Eye Examinations",
+  title: "Oyon — Premium Optical Store & Eye Examinations",
   description:
     "Book eye exams, discover prescription glasses, sunglasses, and contact lenses. Premium optical care with precise fittings.",
   keywords:
-    "optical store, eye exam, prescription glasses, sunglasses, contact lenses, optometrist, LUMINA",
+    "optical store, eye exam, prescription glasses, sunglasses, contact lenses, optometrist, Oyon",
   openGraph: {
-    title: "LUMINA — Premium Optical",
+    title: "Oyon — Premium Optical",
     description: "Precision vision. Quiet luxury.",
     type: "website",
   },

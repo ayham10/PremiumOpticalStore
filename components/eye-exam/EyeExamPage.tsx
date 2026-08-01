@@ -13,7 +13,6 @@ import {
   Zap,
 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import EyeExamBookingModal from "@/components/eye-exam/EyeExamBookingModal";
 import EyeExamHeroVideo from "@/components/eye-exam/EyeExamHeroVideo";
 
 type NextSlot = {
@@ -47,7 +46,6 @@ function formatWhatsAppDisplay(raw?: string): string {
 
 export default function EyeExamPage() {
   const { t, rtl } = useLocale();
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [nextSlot, setNextSlot] = useState<NextSlot | null>(null);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
 
@@ -102,13 +100,12 @@ export default function EyeExamPage() {
           <p className="eye-exam-description">{t("eyeExam.description")}</p>
 
           <div className="eye-exam-actions">
-            <button
-              type="button"
+            <Link
+              href="/book?type=eye_exam"
               className="btn btn-copper eye-exam-btn"
-              onClick={() => setBookingOpen(true)}
             >
               {t("eyeExam.bookCta")}
-            </button>
+            </Link>
             <Link href="/services" className="btn eye-exam-btn eye-exam-btn-secondary">
               {t("eyeExam.servicesCta")}
             </Link>
@@ -154,13 +151,9 @@ export default function EyeExamPage() {
               )}
             </div>
           </div>
-          <button
-            type="button"
-            className="eye-exam-next-btn"
-            onClick={() => setBookingOpen(true)}
-          >
+          <Link href="/book?type=eye_exam" className="eye-exam-next-btn">
             {t("eyeExam.next.cta")}
-          </button>
+          </Link>
         </section>
 
         <section className="eye-exam-info-card" aria-label={t("eyeExam.info.aria")}>
@@ -196,7 +189,6 @@ export default function EyeExamPage() {
         </p>
       </div>
 
-      <EyeExamBookingModal open={bookingOpen} onClose={() => setBookingOpen(false)} />
     </div>
   );
 }

@@ -17,7 +17,8 @@ const he: Dictionary = {
     language: "שפה",
   },
   hero: {
-    brand: "LUMINA",
+    brand: "עיון",
+    brandSuffix: "אופטיקה",
     title: "רואים את החיים בפוקוס",
     line1: "משקפיים פרימיום.",
     line2: "טיפול עיניים מתקדם.",
@@ -33,6 +34,7 @@ const he: Dictionary = {
   home: {
     hubEyebrow: "ניווט פרימיום",
     scrollHint: "גלול",
+    bookAppointment: "קביעת תור",
     welcomeLine: "משקפיים פרימיום • בדיקות ראייה • משקפי שמש",
     categoriesEyebrow: "גלו",
     categoriesTitle: "הכול לראייה שלכם",
@@ -80,7 +82,7 @@ const he: Dictionary = {
     testimonialsEyebrow: "המלצות",
     testimonialsTitle: "הלקוחות שלנו סומכים עלינו",
     visitEyebrow: "ביקור",
-    visitTitle: "מצאו את LUMINA",
+    visitTitle: "מצאו את עיון",
     visitHours: "שעות פעילות",
     gateway: {
       frames: {
@@ -175,7 +177,7 @@ const he: Dictionary = {
       eyebrow: "מבצעים",
       title: "מבצעים",
       lead: "הצעות עונתיות מוגבלות לבדיקות, מסגרות וזוגות מלאים.",
-      body: "גלו את מבצעי LUMINA הפעילים. ההצעות משתנות עם העונה — הזמינו מוקדם או בקרו בחנות לעדכונים האחרונים.",
+      body: "גלו את מבצעי עיון הפעילים. ההצעות משתנות עם העונה — הזמינו מוקדם או בקרו בחנות לעדכונים האחרונים.",
       highlights: [
         { title: "ערך עונתי", text: "חבילות מדויקות בלי להתפשר על איכות קלינית." },
         { title: "זוגות מלאים", text: "חפשו מבצעי מסגרת + עדשות כשהם זמינים." },
@@ -230,7 +232,7 @@ const he: Dictionary = {
   shop: {
     eyebrow: "חנות",
     title: "משקפיים וטיפול אופטי",
-    lead: "משקפי ראייה, שמש, עדשות מגע ומוצרים יומיומיים מהקולקציה של LUMINA.",
+    lead: "משקפי ראייה, שמש, עדשות מגע ומוצרים יומיומיים מהקולקציה של עיון.",
     search: "חיפוש מסגרות, מותגים, מק״ט…",
     empty: "לא נמצאו מוצרים התואמים לסינון.",
     view: "צפייה",
@@ -375,7 +377,7 @@ const he: Dictionary = {
     blurb:
       "בדיקה מקיפה של חדות הראייה ובריאות העין, עם המלצה מותאמת למשקפיים או עדשות מגע.",
     trust: {
-      aria: "למה LUMINA",
+      aria: "למה עיון",
       professional: "בדיקת עיניים מקצועית",
       equipment: "ציוד אבחון מתקדם",
       booking: "הזמנה מהירה וקלה",
@@ -461,6 +463,53 @@ const he: Dictionary = {
     },
     appointmentType: "התאמת עדשות מגע",
   },
+  clinicBooking: {
+    title: "קביעת תור",
+    lead: "בחרו שירות, תאריך ושעה ואשרו את הביקור.",
+    progress: "התקדמות ההזמנה",
+    askService: "מה תרצו לקבוע?",
+    selectDate: "בחירת תאריך",
+    selectTime: "בחירת שעה",
+    yourDetails: "הפרטים שלכם",
+    changeService: "שינוי שירות",
+    changeDate: "שינוי תאריך",
+    changeTime: "שינוי שעה",
+    continueReview: "המשך לסיכום",
+    reviewTitle: "סיכום התור",
+    reviewService: "שירות",
+    reviewDate: "תאריך",
+    reviewTime: "שעה",
+    reviewCustomer: "פרטי לקוח",
+    confirm: "אישור הזמנה",
+    submitting: "מאשרים…",
+    successTitle: "התור אושר.",
+    successLead: "נשמח לראות אתכם בְּעִיּוּן.",
+    backHome: "חזרה לדף הבית",
+    emptyDates: "אין תאריכים פנויים כרגע. נסו שוב מאוחר יותר.",
+    emptyTimes: "אין שעות פנויות לתאריך זה.",
+    errorLoad: "לא ניתן לטעון זמינות. נסו שוב.",
+    errorSubmit: "לא ניתן להשלים את ההזמנה. נסו שוב.",
+    prevMonth: "חודש קודם",
+    nextMonth: "חודש הבא",
+    periods: {
+      morning: "בוקר",
+      afternoon: "צהריים",
+      evening: "ערב",
+    },
+    services: {
+      eye_exam: "בדיקת עיניים",
+      contact_lens_fitting: "התאמת עדשות מגע",
+      frame_consultation: "ייעוץ מסגרות",
+      sunglasses_consultation: "ייעוץ משקפי שמש",
+    },
+    serviceHints: {
+      eye_exam: "בדיקת ראייה מקצועית",
+      contact_lens_fitting: "התאמה והכוונה לעדשות מגע",
+      frame_consultation: "עזרה בבחירת המסגרת הנכונה",
+      sunglasses_consultation: "ייעוץ לסטייל והגנה מהשמש",
+    },
+  },
+
   manage: {
     eyebrow: "תורים",
     title: "ניהול התור",
@@ -497,7 +546,7 @@ const he: Dictionary = {
     eyebrow: "אודות",
     title: "ראייה מדויקת. יוקרה שקטה.",
     lead:
-      "LUMINA הוא אטליה אופטי המוקדש לדיוק קליני ולמשקפיים יפים — בלי קיצורי דרך.",
+      "עיון הוא אטליה אופטי המוקדש לדיוק קליני ולמשקפיים יפים — בלי קיצורי דרך.",
     storyTitle: "הגישה שלנו",
     story:
       "כל ביקור משלב בדיקה יסודית עם בחירת סגנון מושכלת. אנחנו מודדים בקפידה, מסבירים בבהירות ועוזרים לבחור מסגרות ועדשות שמרגישות מדויקות.",
@@ -522,12 +571,13 @@ const he: Dictionary = {
     tagline: "טיפול אופטי פרימיום — בדיקות מדויקות, מסגרות נבחרות ותורים פשוטים.",
     visit: "ביקור",
     explore: "ניווט",
-    copyright: "© {year} LUMINA Optical.",
+    copyright: "© {year} עיון אופטיקה.",
     short: "ראייה מדויקת. יוקרה שקטה.",
   },
   common: {
     loading: "טוען…",
     retry: "ניסיון נוסף",
+    back: "חזרה",
     backHome: "חזרה לדף הבית",
     save: "שמירה",
     cancel: "ביטול",
@@ -558,7 +608,7 @@ const he: Dictionary = {
     generic: "משהו השתבש. נסו שוב.",
   },
   admin: {
-    brand: "ניהול LUMINA",
+    brand: "ניהול עיון",
     logout: "התנתקות",
     loginTitle: "כניסת צוות",
     loginLead: "גישה מאובטחת לתורים, מלאי והגדרות החנות.",
@@ -566,7 +616,7 @@ const he: Dictionary = {
     password: "סיסמה",
     signIn: "התחברות",
     signingIn: "מתחבר…",
-    demoHint: "דמו: admin@lumina.optics / lumina2024",
+    demoHint: "דמו: admin@oyon.optics / oyon2024",
     sidebar: {
       dashboard: "לוח בקרה",
       appointments: "תורים",

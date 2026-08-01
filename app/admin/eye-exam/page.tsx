@@ -71,12 +71,34 @@ export default function AdminEyeExamPage() {
   const [newServices, setNewServices] = useState<ClinicAppointmentType[]>([
     "eye_exam",
     "contact_lens_fitting",
+    "frame_consultation",
+    "sunglasses_consultation",
   ]);
+  const [editing, setEditing] = useState<AppointmentRow | null>(null);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    appointmentDate: "",
+    appointmentTime: "",
+    appointmentType: "eye_exam" as ClinicAppointmentType,
+    status: "confirmed" as EyeExamAppointmentStatus,
+  });
 
   const selected = useMemo(
     () => days.find((d) => d.id === selectedId) || null,
     [days, selectedId]
   );
+
+  const editDaySlots = useMemo(() => {
+    if (!editForm.appointmentDate) return [] as string[];
+    const day = days.find((d) => d.date === editForm.appointmentDate);
+    if (!day) return [] as string[];
+    return day.slots
+      .filter((s) => s.isEnabled || s.time === editForm.appointmentTime)
+      .map((s) => s.time);
+  }, [days, editForm.appointmentDate, editForm.appointmentTime]);
 
   const loadAvailability = useCallback(async () => {
     const data = await apiFetch<{
@@ -205,6 +227,42 @@ export default function AdminEyeExamPage() {
     }
   }
 
+  function openEdit(row: AppointmentRow) {
+    setEditing(row);
+    setEditForm({
+      firstName: row.firstName,
+      lastName: row.lastName,
+      email: row.email,
+      phone: row.phone,
+      appointmentDate: row.appointmentDate,
+      appointmentTime: row.appointmentTime,
+      appointmentType: row.appointmentType || "eye_exam",
+      status: row.status,
+    });
+  }
+
+  async function saveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editing || busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await apiFetch("/api/admin/eye-exam/appointments", {
+        method: "PATCH",
+        body: JSON.stringify({ id: editing.id, ...editForm }),
+      });
+      setMessage("Appointment saved");
+      setEditing(null);
+      await loadAppointments();
+      await loadAvailability();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -219,7 +277,7 @@ export default function AdminEyeExamPage() {
             {t("admin.sidebar.eyeExam")}
           </h1>
           <p className="mt-1 text-sm text-[var(--slate)]">
-            Manage Eye Exam and Contact Lens Fitting dates (08:30–21:00), slots, and bookings. Dates display as DD/MM/YY. Leave both services checked to share the same slots.
+            Manage clinic booking dates (08:30–21:00), slots, and appointments for all services. Dates display as DD/MM/YY. Leave all services checked to share the same slots.
           </p>
         </div>
         <button
@@ -307,36 +365,32 @@ export default function AdminEyeExamPage() {
                 <legend className="font-semibold uppercase tracking-wide text-[var(--slate)]">
                   Services for this date
                 </legend>
-                <label className="flex items-center gap-2 text-sm normal-case tracking-normal">
-                  <input
-                    type="checkbox"
-                    checked={newServices.includes("eye_exam")}
-                    onChange={(e) =>
-                      setNewServices((prev) =>
-                        e.target.checked
-                          ? Array.from(new Set([...prev, "eye_exam"]))
-                          : prev.filter((s) => s !== "eye_exam"),
-                      )
-                    }
-                  />
-                  Eye Exam
-                </label>
-                <label className="flex items-center gap-2 text-sm normal-case tracking-normal">
-                  <input
-                    type="checkbox"
-                    checked={newServices.includes("contact_lens_fitting")}
-                    onChange={(e) =>
-                      setNewServices((prev) =>
-                        e.target.checked
-                          ? Array.from(
-                              new Set([...prev, "contact_lens_fitting"]),
-                            )
-                          : prev.filter((s) => s !== "contact_lens_fitting"),
-                      )
-                    }
-                  />
-                  {t("contactLenses.appointmentType")}
-                </label>
+                {(
+                  [
+                    "eye_exam",
+                    "contact_lens_fitting",
+                    "frame_consultation",
+                    "sunglasses_consultation",
+                  ] as ClinicAppointmentType[]
+                ).map((service) => (
+                  <label
+                    key={service}
+                    className="flex items-center gap-2 text-sm normal-case tracking-normal"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={newServices.includes(service)}
+                      onChange={(e) =>
+                        setNewServices((prev) =>
+                          e.target.checked
+                            ? Array.from(new Set([...prev, service]))
+                            : prev.filter((s) => s !== service),
+                        )
+                      }
+                    />
+                    {t(`clinicBooking.services.${service}`)}
+                  </label>
+                ))}
               </fieldset>
               <button
                 type="submit"
@@ -367,9 +421,7 @@ export default function AdminEyeExamPage() {
                         {!day.services || day.services.length === 0
                           ? "Shared"
                           : day.services
-                              .map((s) =>
-                                s === "contact_lens_fitting" ? "CL Fitting" : "Eye Exam",
-                              )
+                              .map((s) => t(`clinicBooking.services.${s}`))
                               .join(" · ")}
                       </span>
                     </span>
@@ -426,10 +478,22 @@ export default function AdminEyeExamPage() {
 
                 <fieldset className="mt-4 flex flex-wrap gap-4 text-sm">
                   <legend className="mb-1 w-full text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                    Services (both = shared slots)
+                    Services (all checked = shared slots)
                   </legend>
-                  {(["eye_exam", "contact_lens_fitting"] as ClinicAppointmentType[]).map(
-                    (service) => {
+                  {(
+                    [
+                      "eye_exam",
+                      "contact_lens_fitting",
+                      "frame_consultation",
+                      "sunglasses_consultation",
+                    ] as ClinicAppointmentType[]
+                  ).map((service) => {
+                      const allTypes: ClinicAppointmentType[] = [
+                        "eye_exam",
+                        "contact_lens_fitting",
+                        "frame_consultation",
+                        "sunglasses_consultation",
+                      ];
                       const active =
                         !selected.services ||
                         selected.services.length === 0 ||
@@ -443,7 +507,7 @@ export default function AdminEyeExamPage() {
                             onChange={(e) => {
                               const current =
                                 !selected.services || selected.services.length === 0
-                                  ? (["eye_exam", "contact_lens_fitting"] as ClinicAppointmentType[])
+                                  ? allTypes
                                   : selected.services;
                               const next = e.target.checked
                                 ? Array.from(new Set([...current, service]))
@@ -453,13 +517,10 @@ export default function AdminEyeExamPage() {
                               });
                             }}
                           />
-                          {service === "contact_lens_fitting"
-                            ? t("contactLenses.appointmentType")
-                            : "Eye Exam"}
+                          {t(`clinicBooking.services.${service}`)}
                         </label>
                       );
-                    },
-                  )}
+                    })}
                 </fieldset>
 
                 <div className="mt-5 flex flex-wrap gap-2">
@@ -583,9 +644,15 @@ export default function AdminEyeExamPage() {
                 className="mt-1 block rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
               >
                 <option value="all">All types</option>
-                <option value="eye_exam">Eye Exam</option>
+                <option value="eye_exam">{t("clinicBooking.services.eye_exam")}</option>
                 <option value="contact_lens_fitting">
-                  {t("contactLenses.appointmentType")}
+                  {t("clinicBooking.services.contact_lens_fitting")}
+                </option>
+                <option value="frame_consultation">
+                  {t("clinicBooking.services.frame_consultation")}
+                </option>
+                <option value="sunglasses_consultation">
+                  {t("clinicBooking.services.sunglasses_consultation")}
                 </option>
               </select>
             </label>
@@ -612,12 +679,13 @@ export default function AdminEyeExamPage() {
                   <th className="px-2 py-3">SMS</th>
                   <th className="px-2 py-3">Created</th>
                   <th className="px-2 py-3">Lang</th>
+                  <th className="px-2 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {appointments.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-2 py-8 text-center text-[var(--slate)]">
+                    <td colSpan={11} className="px-2 py-8 text-center text-[var(--slate)]">
                       {t("admin.common.noResults")}
                     </td>
                   </tr>
@@ -626,9 +694,7 @@ export default function AdminEyeExamPage() {
                     <tr key={row.id} className="border-b border-[var(--line)] align-top">
                       <td className="px-2 py-3 font-medium">{row.fullName}</td>
                       <td className="px-2 py-3 whitespace-nowrap">
-                        {row.appointmentType === "contact_lens_fitting"
-                          ? t("contactLenses.appointmentType")
-                          : "Eye Exam"}
+                        {t(`clinicBooking.services.${row.appointmentType || "eye_exam"}`)}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap">{row.phone}</td>
                       <td className="px-2 py-3">{row.email}</td>
@@ -667,6 +733,29 @@ export default function AdminEyeExamPage() {
                       <td className="px-2 py-3 text-xs text-[var(--slate)]">
                         {row.language.toUpperCase()}
                       </td>
+                      <td className="px-2 py-3">
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            className="text-start text-xs font-semibold text-[var(--accent)]"
+                            onClick={() => openEdit(row)}
+                          >
+                            Edit / Reschedule
+                          </button>
+                          {row.status !== "cancelled" ? (
+                            <button
+                              type="button"
+                              className="text-start text-xs font-semibold text-[var(--danger)]"
+                              disabled={busy}
+                              onClick={() =>
+                                void updateAppointmentStatus(row.id, "cancelled")
+                              }
+                            >
+                              Cancel
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -675,6 +764,171 @@ export default function AdminEyeExamPage() {
           </div>
         </section>
       )}
+
+      {editing ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <form
+            onSubmit={saveEdit}
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+          >
+            <h3
+              className="text-xl text-[var(--ink)]"
+              style={{ fontFamily: "Fraunces, serif" }}
+            >
+              Edit appointment
+            </h3>
+            <p className="mt-1 text-sm text-[var(--slate)]">{editing.fullName}</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
+                First name
+                <input
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.firstName}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, firstName: e.target.value }))
+                  }
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
+                Last name
+                <input
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.lastName}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, lastName: e.target.value }))
+                  }
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
+                Email
+                <input
+                  type="email"
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.email}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
+                Phone
+                <input
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.phone}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, phone: e.target.value }))
+                  }
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
+                Service
+                <select
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.appointmentType}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      appointmentType: e.target.value as ClinicAppointmentType,
+                    }))
+                  }
+                >
+                  {(
+                    [
+                      "eye_exam",
+                      "contact_lens_fitting",
+                      "frame_consultation",
+                      "sunglasses_consultation",
+                    ] as ClinicAppointmentType[]
+                  ).map((type) => (
+                    <option key={type} value={type}>
+                      {t(`clinicBooking.services.${type}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
+                Date
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.appointmentDate}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      appointmentDate: e.target.value,
+                      appointmentTime: "",
+                    }))
+                  }
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
+                Time
+                <select
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.appointmentTime}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      appointmentTime: e.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Select time</option>
+                  {editDaySlots.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                  {editForm.appointmentTime &&
+                  !editDaySlots.includes(editForm.appointmentTime) ? (
+                    <option value={editForm.appointmentTime}>
+                      {editForm.appointmentTime}
+                    </option>
+                  ) : null}
+                </select>
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
+                Status
+                <select
+                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                  value={editForm.status}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      status: e.target.value as EyeExamAppointmentStatus,
+                    }))
+                  }
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setEditing(null)}
+                disabled={busy}
+              >
+                Close
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={busy}>
+                {busy ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }

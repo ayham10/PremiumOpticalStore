@@ -32,6 +32,7 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
     openingHours: settings.openingHours,
     social: settings.social,
     seo: settings.seo,
+    content: settings.content,
     sms: {
       enabled: Boolean(settings.sms?.enabled),
       provider: settings.sms?.provider,
@@ -91,6 +92,22 @@ export async function PUT(request: Request) {
         sms: {
           ...store.settings.sms,
           ...(patch.sms || {}),
+        },
+        content: {
+          ...store.settings.content,
+          ...(patch.content || {}),
+          heroTitle: {
+            ...store.settings.content?.heroTitle,
+            ...(patch.content?.heroTitle || {}),
+          },
+          heroLine: {
+            ...store.settings.content?.heroLine,
+            ...(patch.content?.heroLine || {}),
+          },
+          brandSuffix: {
+            ...store.settings.content?.brandSuffix,
+            ...(patch.content?.brandSuffix || {}),
+          },
         },
         openingHours: Array.isArray(patch.openingHours)
           ? patch.openingHours
