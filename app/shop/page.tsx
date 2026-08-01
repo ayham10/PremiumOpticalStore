@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import Reveal from "@/components/Reveal";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Product, ProductCategory } from "@/lib/types";
 
 const CATEGORIES: Array<ProductCategory | "All"> = [
@@ -15,11 +17,27 @@ const CATEGORIES: Array<ProductCategory | "All"> = [
   "Cleaning Products",
 ];
 
-export default function ShopPage() {
+function ShopContent() {
+  const { t, dict } = useLocale();
+  const searchParams = useSearchParams();
+
+  const initialCategory = useMemo(() => {
+    const raw = searchParams.get("category");
+    if (!raw) return "All" as const;
+    const decoded = decodeURIComponent(raw);
+    return CATEGORIES.includes(decoded as ProductCategory | "All")
+      ? (decoded as ProductCategory | "All")
+      : ("All" as const);
+  }, [searchParams]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState<ProductCategory | "All">("All");
+  const [category, setCategory] = useState<ProductCategory | "All">(initialCategory);
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    setCategory(initialCategory);
+  }, [initialCategory]);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,16 +68,20 @@ export default function ShopPage() {
     });
   }, [products, category, query]);
 
+  function categoryLabel(cat: ProductCategory | "All") {
+    if (cat === "All") return t("shop.all");
+    return (
+      dict.shop.categories[cat as keyof typeof dict.shop.categories] || cat
+    );
+  }
+
   return (
     <div className="pb-20 pt-28">
       <section className="wrap">
         <Reveal>
-          <span className="eyebrow">Shop</span>
-          <h1 className="section-title">Glasses & optical care</h1>
-          <p className="section-lead">
-            Explore prescription frames, sunglasses, contact lenses, and daily
-            essentials from the LUMINA edit.
-          </p>
+          <span className="eyebrow">{t("shop.eyebrow")}</span>
+          <h1 className="section-title">{t("shop.title")}</h1>
+          <p className="section-lead">{t("shop.lead")}</p>
         </Reveal>
 
         <div className="mt-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -69,21 +91,21 @@ export default function ShopPage() {
                 key={cat}
                 type="button"
                 onClick={() => setCategory(cat)}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
                   category === cat
-                    ? "border-[var(--ink)] bg-[var(--ink)] text-white"
-                    : "border-[var(--line-strong)] bg-white/70 text-[var(--slate)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                    ? "border-[var(--ink)] bg-[var(--ink)] text-white shadow-[var(--shadow-soft)]"
+                    : "border-[var(--line-strong)] bg-white/80 text-[var(--slate)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
                 }`}
               >
-                {cat}
+                {categoryLabel(cat)}
               </button>
             ))}
           </div>
           <label className="relative block w-full max-w-sm">
-            <span className="sr-only">Search products</span>
+            <span className="sr-only">{t("shop.search")}</span>
             <input
               className="input"
-              placeholder="Search frames, brands…"
+              placeholder={t("shop.search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -100,9 +122,7 @@ export default function ShopPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <p className="mt-16 text-[var(--slate)]">
-            No products match your filters. Try another category or search term.
-          </p>
+          <p className="mt-16 text-[var(--slate)]">{t("shop.empty")}</p>
         ) : (
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((product, i) => (
@@ -114,5 +134,20 @@ export default function ShopPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function ShopFallback() {
+  const { t } = useLocale();
+  return (
+    <div className="wrap pb-20 pt-28 text-[var(--slate)]">{t("common.loading")}</div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={<ShopFallback />}>
+      <ShopContent />
+    </Suspense>
   );
 }

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Eye, Lock, Mail } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/admin-api";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [email, setEmail] = useState("admin@lumina.optics");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,22 +46,20 @@ export default function AdminLoginPage() {
             "linear-gradient(145deg, rgba(26,74,107,0.1) 0%, rgba(255,255,255,0) 55%)",
         }}
       >
-        <p className="eyebrow">Staff access</p>
+        <p className="eyebrow">{t("admin.loginTitle")}</p>
         <h1
           className="mt-2 text-3xl text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
-          LUMINA Admin
+          {t("admin.brand")}
         </h1>
-        <p className="mt-2 text-sm text-[var(--slate)]">
-          Sign in to manage appointments, inventory, and store settings.
-        </p>
+        <p className="mt-2 text-sm text-[var(--slate)]">{t("admin.loginLead")}</p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4 px-8 pb-8">
         <div>
           <label className="label" htmlFor="email">
-            Email
+            {t("admin.email")}
           </label>
           <div className="relative">
             <Mail
@@ -80,7 +80,7 @@ export default function AdminLoginPage() {
 
         <div>
           <label className="label" htmlFor="password">
-            Password
+            {t("admin.password")}
           </label>
           <div className="relative">
             <Lock
@@ -110,17 +110,12 @@ export default function AdminLoginPage() {
           className="btn btn-accent w-full"
           disabled={loading}
         >
-          {loading ? "Signing in…" : "Sign in"}
+          {loading ? t("admin.signingIn") : t("admin.signIn")}
         </button>
 
         <div className="rounded-xl border border-dashed border-[var(--line-strong)] bg-[var(--mist)] px-3 py-3 text-xs text-[var(--slate)]">
           <p className="mb-1 flex items-center gap-1.5 font-semibold text-[var(--ink-soft)]">
-            <Eye size={12} /> Demo credentials
-          </p>
-          <p>
-            <span className="font-medium text-[var(--ink)]">admin@lumina.optics</span>
-            {" / "}
-            <span className="font-medium text-[var(--ink)]">lumina2024</span>
+            <Eye size={12} /> {t("admin.demoHint")}
           </p>
         </div>
       </form>

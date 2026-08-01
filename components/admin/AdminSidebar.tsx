@@ -21,23 +21,25 @@ import type { UserRole } from "@/lib/types";
 import { hasPermission } from "@/lib/admin-permissions";
 import { apiFetch } from "@/lib/admin-api";
 import { cn } from "@/lib/format";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
 const NAV: Array<{
   href: string;
-  label: string;
+  labelKey: string;
   permission: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
 }> = [
-  { href: "/admin", label: "Dashboard", permission: "dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/appointments", label: "Appointments", permission: "appointments", icon: CalendarDays },
-  { href: "/admin/calendar", label: "Calendar", permission: "calendar", icon: CalendarRange },
-  { href: "/admin/customers", label: "Customers", permission: "customers", icon: Users },
-  { href: "/admin/inventory", label: "Inventory", permission: "inventory", icon: Package },
-  { href: "/admin/promotions", label: "Promotions", permission: "promotions", icon: Tag },
-  { href: "/admin/media", label: "Media", permission: "media", icon: ImageIcon },
-  { href: "/admin/staff", label: "Staff", permission: "staff", icon: UserCog },
-  { href: "/admin/settings", label: "Settings", permission: "settings", icon: Settings },
+  { href: "/admin", labelKey: "admin.sidebar.dashboard", permission: "dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/appointments", labelKey: "admin.sidebar.appointments", permission: "appointments", icon: CalendarDays },
+  { href: "/admin/calendar", labelKey: "admin.sidebar.calendar", permission: "calendar", icon: CalendarRange },
+  { href: "/admin/customers", labelKey: "admin.sidebar.customers", permission: "customers", icon: Users },
+  { href: "/admin/inventory", labelKey: "admin.sidebar.inventory", permission: "inventory", icon: Package },
+  { href: "/admin/promotions", labelKey: "admin.sidebar.promotions", permission: "promotions", icon: Tag },
+  { href: "/admin/media", labelKey: "admin.sidebar.media", permission: "media", icon: ImageIcon },
+  { href: "/admin/staff", labelKey: "admin.sidebar.staff", permission: "staff", icon: UserCog },
+  { href: "/admin/settings", labelKey: "admin.sidebar.settings", permission: "settings", icon: Settings },
 ];
 
 export default function AdminSidebar({
@@ -49,6 +51,7 @@ export default function AdminSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -74,7 +77,7 @@ export default function AdminSidebar({
           className="mt-1 text-2xl text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
-          LUMINA Admin
+          {t("admin.brand")}
         </h1>
         {userName ? (
           <p className="mt-2 truncate text-sm text-[var(--slate)]">{userName}</p>
@@ -100,13 +103,16 @@ export default function AdminSidebar({
               )}
             >
               <Icon size={18} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-[var(--line)] p-3">
+      <div className="space-y-2 border-t border-[var(--line)] p-3">
+        <div className="px-1 py-1">
+          <LanguageSwitcher />
+        </div>
         <button
           type="button"
           onClick={logout}
@@ -114,7 +120,7 @@ export default function AdminSidebar({
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[#fdeaea]"
         >
           <LogOut size={18} />
-          {loggingOut ? "Signing out…" : "Logout"}
+          {t("admin.logout")}
         </button>
       </div>
     </aside>
@@ -129,13 +135,13 @@ export default function AdminSidebar({
           className="text-lg text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
-          LUMINA Admin
+          {t("admin.brand")}
         </span>
         <button
           type="button"
           className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)]"
           onClick={() => setOpen(true)}
-          aria-label="Open menu"
+          aria-label={t("nav.menu")}
         >
           <Menu size={18} />
         </button>
@@ -146,7 +152,7 @@ export default function AdminSidebar({
           <button
             type="button"
             className="absolute inset-0 bg-[rgba(16,21,28,0.4)]"
-            aria-label="Close menu"
+            aria-label={t("nav.close")}
             onClick={() => setOpen(false)}
           />
           <div className="relative h-full w-[min(280px,85vw)] shadow-xl">
@@ -154,7 +160,7 @@ export default function AdminSidebar({
               type="button"
               className="absolute right-3 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white border border-[var(--line)]"
               onClick={() => setOpen(false)}
-              aria-label="Close"
+              aria-label={t("common.close")}
             >
               <X size={16} />
             </button>

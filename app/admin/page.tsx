@@ -22,8 +22,10 @@ import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
 import { formatDate } from "@/lib/format";
 import type { DashboardStats } from "@/lib/types";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function AdminDashboardPage() {
+  const { t } = useLocale();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-[var(--slate)]">Loading dashboard…</p>;
+    return <p className="text-[var(--slate)]">{t("common.loading")}</p>;
   }
 
   if (error || !stats) {
@@ -70,48 +72,39 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="eyebrow">Overview</p>
         <h1
           className="mt-1 text-3xl text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
-          Dashboard
+          {t("admin.dashboard.title")}
         </h1>
-        <p className="mt-1 text-[var(--slate)]">
-          Today&apos;s pulse across bookings, stock, and customers.
-        </p>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          label="Today"
+          label={t("admin.dashboard.today")}
           value={stats.todayAppointments}
-          hint="Appointments"
           icon={CalendarDays}
         />
         <StatCard
-          label="This week"
+          label={t("admin.dashboard.week")}
           value={stats.weekAppointments}
-          hint="Appointments"
           icon={CalendarRange}
         />
         <StatCard
-          label="Inventory"
+          label={t("admin.dashboard.inventory")}
           value={stats.inventoryItems}
-          hint="Active SKUs"
           icon={Package}
         />
         <StatCard
-          label="Low stock"
+          label={t("admin.dashboard.lowStock")}
           value={stats.lowStockAlerts}
-          hint="Needs reorder"
           icon={AlertTriangle}
           tone={stats.lowStockAlerts > 0 ? "warning" : "default"}
         />
         <StatCard
-          label="Customers"
+          label={t("admin.dashboard.customers")}
           value={stats.totalCustomers}
-          hint="In CRM"
           icon={Users}
           tone="success"
         />
@@ -121,10 +114,10 @@ export default function AdminDashboardPage() {
         <section className="admin-card p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
-              Appointments by day
+              {t("admin.dashboard.chart")}
             </h2>
             <Link href="/admin/calendar" className="text-sm font-semibold text-[var(--accent)]">
-              Open calendar
+              {t("admin.sidebar.calendar")}
             </Link>
           </div>
           <div className="h-64 w-full">
@@ -145,7 +138,7 @@ export default function AdminDashboardPage() {
               </ResponsiveContainer>
             ) : (
               <p className="grid h-full place-items-center text-sm text-[var(--slate)]">
-                No appointment data yet
+                {t("admin.common.noResults")}
               </p>
             )}
           </div>
@@ -153,7 +146,7 @@ export default function AdminDashboardPage() {
 
         <section className="admin-card p-5">
           <h2 style={{ fontFamily: "Fraunces, serif" }} className="mb-4 text-xl">
-            Status breakdown
+            {t("common.status")}
           </h2>
           <ul className="space-y-3">
             {(stats.statusBreakdown || []).map((row) => (
@@ -166,7 +159,7 @@ export default function AdminDashboardPage() {
               </li>
             ))}
             {!stats.statusBreakdown?.length ? (
-              <li className="text-sm text-[var(--slate)]">No status data</li>
+              <li className="text-sm text-[var(--slate)]">{t("admin.common.noResults")}</li>
             ) : null}
           </ul>
         </section>
@@ -175,24 +168,24 @@ export default function AdminDashboardPage() {
       <section className="admin-card overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-4">
           <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
-            Recent bookings
+            {t("admin.dashboard.recent")}
           </h2>
           <Link
             href="/admin/appointments"
             className="text-sm font-semibold text-[var(--accent)]"
           >
-            View all
+            {t("admin.sidebar.appointments")}
           </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="table">
             <thead>
               <tr>
-                <th>Customer</th>
-                <th>Service</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
+                <th>{t("common.name")}</th>
+                <th>{t("book.steps.service")}</th>
+                <th>{t("common.date")}</th>
+                <th>{t("common.time")}</th>
+                <th>{t("common.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -215,7 +208,7 @@ export default function AdminDashboardPage() {
               {!stats.recentBookings?.length ? (
                 <tr>
                   <td colSpan={5} className="text-[var(--slate)]">
-                    No recent bookings
+                    {t("admin.common.noResults")}
                   </td>
                 </tr>
               ) : null}

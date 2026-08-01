@@ -4,8 +4,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { addDays, format } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
 import type { ServiceType } from "@/lib/types";
 import { formatDate } from "@/lib/format";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 
 type PublicStaff = {
   id: string;
@@ -45,15 +47,30 @@ type AppointmentResult = {
   manageToken: string;
 };
 
-const STEPS = ["Service", "Specialist", "Date", "Time", "Details"] as const;
+const STEP_KEYS = [
+  "service",
+  "doctor",
+  "date",
+  "time",
+  "details",
+] as const;
+
+const stepMotion = {
+  initial: { opacity: 0, x: 16 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -12 },
+  transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const },
+};
 
 export default function BookingWizard({
   initialService,
 }: {
   initialService?: string | null;
 }) {
+  const { t } = useLocale();
+
   const [options, setOptions] = useState<BookingOptions | null>(null);
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState(false);
   const [step, setStep] = useState(0);
 
   const [service, setService] = useState<ServiceType | null>(null);
@@ -71,6 +88,16 @@ export default function BookingWizard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AppointmentResult | null>(null);
+
+  function translateServiceField(
+    serviceKey: string,
+    field: "title" | "description",
+    fallback: string
+  ) {
+    const path = `servicesPage.items.${serviceKey}.${field}`;
+    const translated = t(path);
+    return translated === path ? fallback : translated;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -93,11 +120,9 @@ export default function BookingWizard({
             setStep(1);
           }
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setLoadError(
-            err instanceof Error ? err.message : "Unable to load booking"
-          );
+          setLoadError(true);
         }
       }
     })();
@@ -166,10 +191,10 @@ export default function BookingWizard({
   function next() {
     setError("");
     if (!canContinue()) {
-      setError("Please complete this step to continue.");
+      setError(t("book.required"));
       return;
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, STEP_KEYS.length - 1));
   }
 
   function back() {
@@ -199,26 +224,41 @@ export default function BookingWizard({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Booking failed");
+        throw new Error(data.error || t("book.errorSubmit"));
       }
       setResult(data.appointment as AppointmentResult);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Booking failed");
+      setError(err instanceof Error ? err.message : t("book.errorSubmit"));
     } finally {
       setSubmitting(false);
     }
   }
 
+  function resetWizard() {
+    setResult(null);
+    setStep(0);
+    setService(null);
+    setStaffId(null);
+    setDate("");
+    setStartTime("");
+    setSlots([]);
+    setName("");
+    setPhone("");
+    setEmail("");
+    setNotes("");
+    setError("");
+  }
+
   if (loadError) {
     return (
-      <div className="surface p-8 text-center">
-        <p className="text-[var(--danger)]">{loadError}</p>
+      <div className="overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white p-8 text-center shadow-[var(--shadow-soft)] md:p-10">
+        <p className="text-[var(--danger)]">{t("book.errorLoad")}</p>
         <button
           type="button"
           className="btn btn-ghost mt-4"
           onClick={() => window.location.reload()}
         >
-          Retry
+          {t("common.retry")}
         </button>
       </div>
     );
@@ -226,352 +266,405 @@ export default function BookingWizard({
 
   if (!options) {
     return (
-      <div className="surface p-10 text-center text-[var(--slate)]">
-        Loading booking options…
+      <div className="overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white p-10 text-center text-[var(--slate)] shadow-[var(--shadow-soft)]">
+        {t("book.loading")}
       </div>
     );
   }
 
   if (result) {
+    const resultServiceTitle = translateServiceField(
+      result.service,
+      "title",
+      result.service
+    );
+
     return (
-      <div className="surface overflow-hidden">
-        <div className="bg-[var(--ink)] px-8 py-10 text-white md:px-12">
-          <span className="eyebrow !text-[#9ec9e6]">Confirmed request</span>
-          <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-white">
-            You&apos;re nearly there
-          </h2>
-          <p className="mt-3 max-w-lg text-white/70">
-            Your appointment request is {result.status}. We&apos;ll confirm shortly
-            — save your manage link to reschedule or cancel anytime.
-          </p>
+      <motion.div
+        className="overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white shadow-[var(--shadow-soft)]"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="relative overflow-hidden bg-[var(--ink)] px-8 py-10 text-white md:px-12">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-40"
+            style={{
+              background:
+                "radial-gradient(ellipse at 20% 0%, rgba(158,201,230,0.35), transparent 55%)",
+            }}
+          />
+          <div className="relative">
+            <span className="eyebrow !text-[#9ec9e6]">{t("book.eyebrow")}</span>
+            <h2 className="mt-3 font-[family-name:var(--font-display)] text-4xl text-white md:text-5xl">
+              {t("book.successTitle")}
+            </h2>
+            <p className="mt-3 max-w-lg text-white/70">{t("book.successLead")}</p>
+          </div>
         </div>
         <div className="grid gap-6 px-8 py-8 md:grid-cols-2 md:px-12">
-          <div className="space-y-3 text-[var(--ink-soft)]">
+          <div className="space-y-4 text-[var(--ink-soft)]">
             <p>
-              <strong className="text-[var(--ink)]">Service:</strong>{" "}
-              {result.service}
+              <strong className="text-[var(--ink)]">
+                {t("book.steps.service")}:
+              </strong>{" "}
+              {resultServiceTitle}
             </p>
             <p>
-              <strong className="text-[var(--ink)]">Specialist:</strong>{" "}
+              <strong className="text-[var(--ink)]">{t("book.specialist")}:</strong>{" "}
               {result.staffName || selectedStaff?.name}
             </p>
             <p>
-              <strong className="text-[var(--ink)]">When:</strong>{" "}
-              {formatDate(result.date)} at {result.startTime}
+              <strong className="text-[var(--ink)]">{t("book.when")}:</strong>{" "}
+              {formatDate(result.date)} · {result.startTime}
             </p>
             <p>
-              <strong className="text-[var(--ink)]">Name:</strong>{" "}
+              <strong className="text-[var(--ink)]">{t("book.fields.name")}:</strong>{" "}
               {result.customerName}
             </p>
           </div>
-          <div className="rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--mist)] p-5">
-            <p className="text-sm text-[var(--slate)]">Manage your appointment</p>
+          <div className="rounded-[1.1rem] border border-[var(--line)] bg-[var(--mist)] p-6">
+            <p className="text-sm text-[var(--slate)]">{t("book.manageBooking")}</p>
             <Link
               href={`/appointments/manage?token=${encodeURIComponent(result.manageToken)}`}
-              className="mt-2 inline-block font-semibold text-[var(--accent)] underline underline-offset-4"
+              className="mt-3 inline-block font-semibold text-[var(--accent)] underline underline-offset-4"
             >
-              Open manage page
+              {t("book.manageBooking")}
             </Link>
-            <p className="mt-3 break-all text-xs text-[var(--slate)]">
-              Token: {result.manageToken}
-            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 border-t border-[var(--line)] px-8 py-6 md:px-12">
-          <Link href="/" className="btn btn-primary">
-            Back home
-          </Link>
-          <Link href="/shop" className="btn btn-ghost">
-            Browse glasses
+          <button type="button" className="btn btn-primary" onClick={resetWizard}>
+            {t("book.bookAnother")}
+          </button>
+          <Link href="/" className="btn btn-ghost">
+            {t("common.backHome")}
           </Link>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
+  const serviceTitle = selectedService
+    ? translateServiceField(
+        selectedService.key,
+        "title",
+        selectedService.title
+      )
+    : service;
+
   return (
-    <div className="surface overflow-hidden">
-      {/* Stepper */}
-      <div className="border-b border-[var(--line)] px-6 py-5 md:px-10">
-        <ol className="flex flex-wrap gap-2 md:gap-3">
-          {STEPS.map((label, i) => (
-            <li key={label} className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={i > step}
-                onClick={() => i < step && setStep(i)}
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition ${
-                  i === step
-                    ? "bg-[var(--ink)] text-white"
-                    : i < step
-                      ? "bg-[var(--accent-wash)] text-[var(--accent)]"
-                      : "bg-[var(--mist)] text-[var(--slate)]"
-                }`}
-              >
-                <span className="opacity-70">{i + 1}</span>
-                {label}
-              </button>
-              {i < STEPS.length - 1 && (
-                <span className="hidden text-[var(--line-strong)] sm:inline">—</span>
-              )}
-            </li>
-          ))}
+    <div className="overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white shadow-[var(--shadow-soft)]">
+      <div className="border-b border-[var(--line)] px-5 py-6 md:px-10">
+        <ol className="flex items-start justify-between gap-1 overflow-x-auto pb-1">
+          {STEP_KEYS.map((key, i) => {
+            const active = i === step;
+            const done = i < step;
+            return (
+              <li key={key} className="relative flex min-w-[4.5rem] flex-1 flex-col items-center">
+                {i < STEP_KEYS.length - 1 && (
+                  <span
+                    className={`absolute start-1/2 top-4 h-px w-full ${
+                      done ? "bg-[var(--accent)]" : "bg-[var(--line-strong)]"
+                    }`}
+                    aria-hidden
+                  />
+                )}
+                <button
+                  type="button"
+                  disabled={i > step}
+                  onClick={() => i < step && setStep(i)}
+                  className="relative z-[1] flex flex-col items-center gap-2"
+                >
+                  <span
+                    className={`grid h-8 w-8 place-items-center rounded-full text-xs font-bold transition ${
+                      active
+                        ? "bg-[var(--ink)] text-white shadow-[var(--shadow-soft)]"
+                        : done
+                          ? "bg-[var(--accent)] text-white"
+                          : "bg-[var(--mist)] text-[var(--slate)]"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <span
+                    className={`text-center text-[0.68rem] font-semibold uppercase tracking-[0.12em] ${
+                      active
+                        ? "text-[var(--ink)]"
+                        : done
+                          ? "text-[var(--accent)]"
+                          : "text-[var(--slate)]"
+                    }`}
+                  >
+                    {t(`book.steps.${key}`)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
       </div>
 
-      <div className="px-6 py-8 md:px-10 md:py-10">
-        {/* Step 1: Service */}
-        {step === 0 && (
-          <div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl">
-              Choose a service
-            </h2>
-            <p className="mt-2 text-[var(--slate)]">
-              Select the care you need — we&apos;ll match the right specialist.
-            </p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              {options.services.map((s) => {
-                const active = service === s.key;
-                return (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => {
-                      setService(s.key);
-                      setStaffId(null);
-                      setDate("");
-                      setStartTime("");
-                    }}
-                    className={`group overflow-hidden rounded-[var(--radius-sm)] border text-left transition ${
-                      active
-                        ? "border-[var(--accent)] ring-2 ring-[var(--accent-wash)]"
-                        : "border-[var(--line)] hover:border-[var(--accent)]"
-                    }`}
-                  >
-                    <div className="relative aspect-[16/9]">
-                      <Image
-                        src={s.image}
-                        alt=""
-                        fill
-                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                        sizes="320px"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <div className="font-[family-name:var(--font-display)] text-xl">
-                        {s.title}
-                      </div>
-                      <p className="mt-1 text-sm text-[var(--slate)]">
-                        {s.description}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Staff */}
-        {step === 1 && (
-          <div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl">
-              Choose your specialist
-            </h2>
-            <p className="mt-2 text-[var(--slate)]">
-              Available for {selectedService?.title || service}.
-            </p>
-            {eligibleStaff.length === 0 ? (
-              <p className="mt-8 text-[var(--slate)]">
-                No specialists available for this service right now.
-              </p>
-            ) : (
-              <div className="mt-8 grid gap-4">
-                {eligibleStaff.map((s) => {
-                  const active = staffId === s.id;
+      <div className="px-5 py-8 md:px-10 md:py-10">
+        <AnimatePresence mode="wait">
+          {step === 0 && (
+            <motion.div key="service" {...stepMotion}>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+                {t("book.chooseService")}
+              </h2>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                {options.services.map((s) => {
+                  const active = service === s.key;
+                  const title = translateServiceField(s.key, "title", s.title);
+                  const description = translateServiceField(
+                    s.key,
+                    "description",
+                    s.description
+                  );
                   return (
                     <button
-                      key={s.id}
+                      key={s.key}
                       type="button"
                       onClick={() => {
-                        setStaffId(s.id);
+                        setService(s.key);
+                        setStaffId(null);
                         setDate("");
                         setStartTime("");
                       }}
-                      className={`flex items-start gap-4 rounded-[var(--radius-sm)] border p-5 text-left transition ${
+                      className={`group overflow-hidden rounded-[1.25rem] border text-left transition duration-300 ${
                         active
-                          ? "border-[var(--accent)] bg-[var(--accent-wash)]"
+                          ? "border-[var(--accent)] shadow-[var(--shadow)] ring-2 ring-[var(--accent-wash)]"
+                          : "border-[var(--line)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-soft)]"
+                      }`}
+                    >
+                      <div className="relative aspect-[16/10]">
+                        <Image
+                          src={s.image}
+                          alt=""
+                          fill
+                          className="object-cover transition duration-700 group-hover:scale-[1.04]"
+                          sizes="(max-width: 768px) 100vw, 360px"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+                      </div>
+                      <div className="p-5">
+                        <div className="font-[family-name:var(--font-display)] text-2xl">
+                          {title}
+                        </div>
+                        <p className="mt-2 text-sm leading-relaxed text-[var(--slate)]">
+                          {description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 1 && (
+            <motion.div key="doctor" {...stepMotion}>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+                {t("book.chooseDoctor")}
+              </h2>
+              {eligibleStaff.length === 0 ? (
+                <p className="mt-8 text-[var(--slate)]">{t("book.noSlots")}</p>
+              ) : (
+                <div className="mt-8 grid gap-4">
+                  {eligibleStaff.map((s) => {
+                    const active = staffId === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setStaffId(s.id);
+                          setDate("");
+                          setStartTime("");
+                        }}
+                        className={`flex items-start gap-5 rounded-[1.25rem] border p-5 text-left transition duration-300 md:p-6 ${
+                          active
+                            ? "border-[var(--accent)] bg-[var(--accent-wash)] shadow-[var(--shadow-soft)]"
+                            : "border-[var(--line)] hover:border-[var(--accent)] hover:shadow-[var(--shadow-soft)]"
+                        }`}
+                      >
+                        {s.image ? (
+                          <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[var(--mist)]">
+                            <Image
+                              src={s.image}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          </span>
+                        ) : (
+                          <span
+                            className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-lg font-semibold text-white"
+                            style={{ background: s.color }}
+                          >
+                            {s.name
+                              .split(" ")
+                              .map((p) => p[0])
+                              .slice(0, 2)
+                              .join("")}
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block font-[family-name:var(--font-display)] text-2xl">
+                            {s.name}
+                          </span>
+                          <span className="mt-1 block text-sm font-semibold text-[var(--accent)]">
+                            {s.title}
+                          </span>
+                          {s.bio && (
+                            <span className="mt-2 block text-sm leading-relaxed text-[var(--slate)]">
+                              {s.bio}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div key="date" {...stepMotion}>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+                {t("book.chooseDate")}
+              </h2>
+              <div className="mt-8 grid max-h-[420px] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4">
+                {dateOptions.map((d) => {
+                  const active = date === d;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDate(d)}
+                      className={`rounded-[1rem] border px-3 py-3.5 text-left text-sm transition ${
+                        active
+                          ? "border-[var(--ink)] bg-[var(--ink)] text-white shadow-[var(--shadow-soft)]"
                           : "border-[var(--line)] hover:border-[var(--accent)]"
                       }`}
                     >
-                      <span
-                        className="mt-1 h-3 w-3 shrink-0 rounded-full"
-                        style={{ background: s.color }}
-                      />
-                      <span>
-                        <span className="block font-[family-name:var(--font-display)] text-xl">
-                          {s.name}
-                        </span>
-                        <span className="mt-1 block text-sm font-semibold text-[var(--accent)]">
-                          {s.title}
-                        </span>
-                        {s.bio && (
-                          <span className="mt-2 block text-sm text-[var(--slate)]">
-                            {s.bio}
-                          </span>
-                        )}
-                      </span>
+                      <span className="block font-semibold">{formatDate(d)}</span>
                     </button>
                   );
                 })}
               </div>
-            )}
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* Step 3: Date */}
-        {step === 2 && (
-          <div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl">
-              Pick a date
-            </h2>
-            <p className="mt-2 text-[var(--slate)]">
-              With {selectedStaff?.name}. Slots refresh based on availability.
-            </p>
-            <div className="mt-8 grid max-h-[420px] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4">
-              {dateOptions.map((d) => {
-                const active = date === d;
-                return (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setDate(d)}
-                    className={`rounded-[var(--radius-sm)] border px-3 py-3 text-left text-sm transition ${
-                      active
-                        ? "border-[var(--ink)] bg-[var(--ink)] text-white"
-                        : "border-[var(--line)] hover:border-[var(--accent)]"
-                    }`}
-                  >
-                    <span className="block font-semibold">{formatDate(d)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+          {step === 3 && (
+            <motion.div key="time" {...stepMotion}>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+                {t("book.chooseTime")}
+              </h2>
+              {slotsLoading ? (
+                <p className="mt-8 text-[var(--slate)]">{t("common.loading")}</p>
+              ) : slots.length === 0 ? (
+                <p className="mt-8 text-[var(--slate)]">{t("book.noSlots")}</p>
+              ) : (
+                <div className="mt-8 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5">
+                  {slots.map((slot) => {
+                    const active = startTime === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setStartTime(slot)}
+                        className={`rounded-xl border py-3.5 text-sm font-semibold transition ${
+                          active
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-white shadow-[var(--shadow-soft)]"
+                            : "border-[var(--line-strong)] hover:border-[var(--accent)]"
+                        }`}
+                      >
+                        {slot}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
 
-        {/* Step 4: Time */}
-        {step === 3 && (
-          <div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl">
-              Select a time
-            </h2>
-            <p className="mt-2 text-[var(--slate)]">
-              {formatDate(date)} · {options.appointmentSlotMinutes}-minute slots
-            </p>
-            {slotsLoading ? (
-              <p className="mt-8 text-[var(--slate)]">Loading available times…</p>
-            ) : slots.length === 0 ? (
-              <p className="mt-8 text-[var(--slate)]">
-                No open slots on this day. Please choose another date.
+          {step === 4 && (
+            <motion.form key="details" {...stepMotion} onSubmit={onSubmit}>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+                {t("book.yourDetails")}
+              </h2>
+              <p className="mt-2 text-[var(--slate)]">
+                {serviceTitle} · {selectedStaff?.name} · {formatDate(date)} ·{" "}
+                {startTime}
               </p>
-            ) : (
-              <div className="mt-8 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                {slots.map((t) => {
-                  const active = startTime === t;
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setStartTime(t)}
-                      className={`rounded-full border py-3 text-sm font-semibold transition ${
-                        active
-                          ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                          : "border-[var(--line-strong)] hover:border-[var(--accent)]"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  );
-                })}
+
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
+                <label>
+                  <span className="label">{t("book.fields.name")}</span>
+                  <input
+                    className="input"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                  />
+                </label>
+                <label>
+                  <span className="label">{t("book.fields.phone")}</span>
+                  <input
+                    className="input"
+                    required
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                  />
+                </label>
+                <label className="md:col-span-2">
+                  <span className="label">{t("book.fields.email")}</span>
+                  <input
+                    className="input"
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </label>
+                <label className="md:col-span-2">
+                  <span className="label">{t("book.fields.notes")}</span>
+                  <textarea
+                    className="textarea"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </label>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* Step 5: Details */}
-        {step === 4 && (
-          <form onSubmit={onSubmit}>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl">
-              Your details
-            </h2>
-            <p className="mt-2 text-[var(--slate)]">
-              {selectedService?.title} with {selectedStaff?.name} on{" "}
-              {formatDate(date)} at {startTime}
-            </p>
+              {error && (
+                <p className="mt-4 text-sm font-medium text-[var(--danger)]">
+                  {error}
+                </p>
+              )}
 
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <label>
-                <span className="label">Full name</span>
-                <input
-                  className="input"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                />
-              </label>
-              <label>
-                <span className="label">Phone</span>
-                <input
-                  className="input"
-                  required
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  autoComplete="tel"
-                />
-              </label>
-              <label className="md:col-span-2">
-                <span className="label">Email</span>
-                <input
-                  className="input"
-                  required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </label>
-              <label className="md:col-span-2">
-                <span className="label">Notes (optional)</span>
-                <textarea
-                  className="textarea"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Lens preferences, previous prescription, accessibility needs…"
-                />
-              </label>
-            </div>
-
-            {error && (
-              <p className="mt-4 text-sm font-medium text-[var(--danger)]">{error}</p>
-            )}
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button type="button" className="btn btn-ghost" onClick={back}>
-                Back
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={submitting}
-              >
-                {submitting ? "Booking…" : "Confirm booking"}
-              </button>
-            </div>
-          </form>
-        )}
+              <div className="mt-8 flex flex-wrap gap-3">
+                <button type="button" className="btn btn-ghost" onClick={back}>
+                  {t("book.back")}
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? t("book.submitting") : t("book.confirm")}
+                </button>
+              </div>
+            </motion.form>
+          )}
+        </AnimatePresence>
 
         {step < 4 && (
           <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--line)] pt-6">
@@ -581,13 +674,13 @@ export default function BookingWizard({
               onClick={back}
               disabled={step === 0}
             >
-              Back
+              {t("book.back")}
             </button>
             {error && (
               <p className="text-sm font-medium text-[var(--danger)]">{error}</p>
             )}
             <button type="button" className="btn btn-primary" onClick={next}>
-              Continue
+              {t("book.continue")}
             </button>
           </div>
         )}
