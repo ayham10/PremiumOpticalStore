@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
               Refresh
             </button>
             <Link
-              href="/admin/eye-exam?tab=appointments"
+              href="/admin/eye-exam?tab=appointments&book=1"
               className="btn btn-accent"
             >
               <Plus size={16} />
@@ -271,7 +271,7 @@ export default function AdminDashboardPage() {
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Link
-            href="/admin/eye-exam?tab=appointments"
+            href="/admin/eye-exam?tab=appointments&book=1"
             className="admin-quick-action"
           >
             <span className="admin-quick-action-icon">

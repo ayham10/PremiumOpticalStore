@@ -34,17 +34,25 @@ function normalizeServices(
 
 export const dynamic = "force-dynamic";
 
-function enrichDay(day: EyeExamAvailability, bookedTimes: Set<string>) {
+function enrichDay(
+  day: EyeExamAvailability,
+  bookedByKey: Map<string, { name: string; id: string }>,
+) {
   return {
     ...day,
     label: formatEyeExamDateDisplay(day.date),
     slots: day.slots
       .slice()
       .sort((a, b) => a.time.localeCompare(b.time))
-      .map((slot) => ({
-        ...slot,
-        isBooked: bookedTimes.has(`${day.date}|${slot.time}`),
-      })),
+      .map((slot) => {
+        const booked = bookedByKey.get(`${day.date}|${slot.time}`);
+        return {
+          ...slot,
+          isBooked: Boolean(booked),
+          bookedBy: booked?.name,
+          bookedId: booked?.id,
+        };
+      }),
   };
 }
 
@@ -52,15 +60,21 @@ export async function GET() {
   try {
     await requireSession("appointments");
     const { data } = await getStore();
-    const booked = new Set(
-      data.eyeExamAppointments
-        .filter((a) => a.status !== "cancelled")
-        .map((a) => `${a.appointmentDate}|${a.appointmentTime}`)
-    );
+    const bookedByKey = new Map<string, { name: string; id: string }>();
+    for (const a of data.eyeExamAppointments) {
+      if (a.status === "cancelled") continue;
+      const key = `${a.appointmentDate}|${a.appointmentTime}`;
+      if (!bookedByKey.has(key)) {
+        bookedByKey.set(key, {
+          id: a.id,
+          name: `${a.firstName} ${a.lastName}`.trim(),
+        });
+      }
+    }
 
     const days = [...data.eyeExamAvailability]
       .sort((a, b) => a.date.localeCompare(b.date))
-      .map((day) => enrichDay(day, booked));
+      .map((day) => enrichDay(day, bookedByKey));
 
     return NextResponse.json({
       days,

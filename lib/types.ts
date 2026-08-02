@@ -135,6 +135,8 @@ export interface EyeExamAppointment {
   appointmentType: ClinicAppointmentType;
   status: EyeExamAppointmentStatus;
   language: "en" | "he" | "ar";
+  /** Optional internal admin note (not shown to customers) */
+  notes?: string;
   smsStatus: "queued" | "sent" | "failed" | "simulated" | "pending";
   smsError?: string;
   createdAt: string;

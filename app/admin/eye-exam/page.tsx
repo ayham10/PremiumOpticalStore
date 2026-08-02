@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "
 import { useRouter, useSearchParams } from "next/navigation";
 import { Copy, Plus, RefreshCw, Search } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import ManualBookingModal from "@/components/admin/ManualBookingModal";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type {
@@ -16,6 +17,8 @@ type SlotRow = {
   time: string;
   isEnabled: boolean;
   isBooked?: boolean;
+  bookedBy?: string;
+  bookedId?: string;
 };
 
 type DayRow = {
@@ -59,10 +62,31 @@ function AdminEyeExamPageInner() {
   const tabParam = searchParams.get("tab");
   const tab: "availability" | "appointments" =
     tabParam === "appointments" ? "appointments" : "availability";
+  const bookParam = searchParams.get("book");
+  const [bookOpen, setBookOpen] = useState(false);
 
   function setTab(next: "availability" | "appointments") {
     router.replace(`/admin/eye-exam?tab=${next}`);
   }
+
+  function openManualBooking() {
+    setBookOpen(true);
+    router.replace("/admin/eye-exam?tab=appointments&book=1");
+  }
+
+  function closeManualBooking() {
+    setBookOpen(false);
+    router.replace("/admin/eye-exam?tab=appointments");
+  }
+
+  useEffect(() => {
+    if (bookParam === "1") {
+      setBookOpen(true);
+      if (tabParam !== "appointments") {
+        router.replace("/admin/eye-exam?tab=appointments&book=1");
+      }
+    }
+  }, [bookParam, tabParam, router]);
 
   const [days, setDays] = useState<DayRow[]>([]);
   const [defaultTimes, setDefaultTimes] = useState<string[]>([]);
@@ -289,15 +313,25 @@ function AdminEyeExamPageInner() {
             : "Search, filter, and manage customer bookings."
         }
         actions={
-          <button
-            type="button"
-            className="btn btn-ghost inline-flex items-center gap-2"
-            onClick={() => void refresh()}
-            disabled={loading || busy}
-          >
-            <RefreshCw size={16} />
-            Refresh
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost inline-flex items-center gap-2"
+              onClick={() => void refresh()}
+              disabled={loading || busy}
+            >
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+            <button
+              type="button"
+              className="btn btn-accent inline-flex items-center gap-2"
+              onClick={openManualBooking}
+            >
+              <Plus size={16} />
+              New Booking
+            </button>
+          </>
         }
       />
 
@@ -572,12 +606,17 @@ function AdminEyeExamPageInner() {
                       ? "Booked"
                       : slot.isEnabled
                         ? "Available"
-                        : "Disabled";
+                        : "Closed";
                     return (
                       <button
                         key={slot.id}
                         type="button"
                         disabled={busy || slot.isBooked}
+                        title={
+                          slot.isBooked
+                            ? `${slot.time} — Booked${slot.bookedBy ? ` · ${slot.bookedBy}` : ""}`
+                            : undefined
+                        }
                         onClick={() =>
                           void patchDay({
                             toggleTime: {
@@ -588,14 +627,19 @@ function AdminEyeExamPageInner() {
                         }
                         className={`rounded-xl border px-3 py-3 text-start text-sm transition ${
                           slot.isBooked
-                            ? "border-amber-200 bg-amber-50 text-amber-900"
+                            ? "border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] text-[#E07A7A]"
                             : slot.isEnabled
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                              : "border-[var(--line)] bg-[var(--mist)] text-[var(--slate)]"
+                              ? "border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.1)] text-[#5EC49A]"
+                              : "border-[var(--line)] bg-[rgba(255,255,255,0.03)] text-[#77818A]"
                         }`}
                       >
                         <strong className="block text-base">{slot.time}</strong>
                         <span className="text-xs uppercase tracking-wide">{state}</span>
+                        {slot.isBooked && slot.bookedBy ? (
+                          <span className="mt-1 block truncate text-xs opacity-90">
+                            {slot.bookedBy}
+                          </span>
+                        ) : null}
                       </button>
                     );
                   })}
@@ -778,6 +822,15 @@ function AdminEyeExamPageInner() {
           </div>
         </section>
       )}
+
+      <ManualBookingModal
+        open={bookOpen}
+        onClose={closeManualBooking}
+        onCreated={() => {
+          setMessage("Booking created");
+          void refresh();
+        }}
+      />
 
       {editing ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">

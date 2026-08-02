@@ -53,6 +53,8 @@ export async function POST(request: Request) {
       appointmentTime?: string;
       language?: string;
       appointmentType?: string;
+      notes?: string;
+      source?: string;
     };
 
     const firstName = sanitizeName(body.firstName || "");
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
     const phoneRaw = (body.phone || "").trim();
     const appointmentDate = (body.appointmentDate || "").trim();
     const appointmentTime = (body.appointmentTime || "").trim();
+    const notes = (body.notes || "").trim().slice(0, 500) || undefined;
     const language = (LOCALES.has(body.language as Locale)
       ? body.language
       : "en") as Locale;
@@ -69,6 +72,7 @@ export async function POST(request: Request) {
     )
       ? body.appointmentType
       : normalizeAppointmentType(body.appointmentType);
+    const fromAdmin = body.source === "admin";
 
     if (!firstName) return jsonError("First name is required", 400, { field: "firstName" });
     if (!lastName) return jsonError("Last name is required", 400, { field: "lastName" });
@@ -134,6 +138,7 @@ export async function POST(request: Request) {
           appointmentType,
           status: "confirmed",
           language,
+          ...(notes ? { notes } : {}),
           smsStatus: "pending",
           createdAt: now,
           updatedAt: now,
@@ -170,14 +175,16 @@ export async function POST(request: Request) {
         });
 
         pushActivity(store, {
-          actor: email,
-          action: "public_booking",
+          actor: fromAdmin ? "admin" : email,
+          action: fromAdmin ? "admin_manual_booking" : "public_booking",
           entity:
             appointmentType === "contact_lens_fitting"
               ? "contact_lens_fitting"
               : "eye_exam_appointment",
           entityId: created.id,
-          detail: `${appointmentType} — ${firstName} ${lastName} — ${appointmentDate} ${appointmentTime}`,
+          detail: `${appointmentType} — ${firstName} ${lastName} — ${appointmentDate} ${appointmentTime}${
+            notes ? ` — note: ${notes}` : ""
+          }`,
         });
 
         return store;
