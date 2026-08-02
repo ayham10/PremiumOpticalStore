@@ -56,6 +56,24 @@ const STATUSES: EyeExamAppointmentStatus[] = [
   "no-show",
 ];
 
+function bookingStatusLabel(
+  t: (key: string) => string,
+  status: string
+): string {
+  const map: Record<string, string> = {
+    pending: "admin.bookings.statusPending",
+    confirmed: "admin.bookings.statusConfirmed",
+    completed: "admin.bookings.statusCompleted",
+    cancelled: "admin.bookings.statusCancelled",
+    "no-show": "admin.bookings.statusNoShow",
+    no_show: "admin.bookings.statusNoShow",
+  };
+  const key = map[status];
+  if (!key) return status;
+  const label = t(key);
+  return label === key ? status : label;
+}
+
 function AdminEyeExamPageInner() {
   const { t } = useLocale();
   const router = useRouter();
@@ -394,56 +412,50 @@ function AdminEyeExamPageInner() {
           }}
         />
       ) : (
-        <section className="admin-card rounded-2xl p-4 md:p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-              Search
-              <div className="relative mt-1">
-                <Search
-                  size={15}
-                  className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--slate)]"
-                />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--line)] py-2 ps-9 pe-3 text-sm"
-                  placeholder="Name, email, phone"
-                />
-              </div>
-            </label>
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-              Date
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="mt-1 block rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-              Status
+        <section className="admin-bookings">
+          <div className="admin-bookings-search">
+            <Search size={18} className="admin-bookings-search-icon" aria-hidden />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="admin-bookings-search-input"
+              placeholder={t("admin.bookings.searchPlaceholder")}
+              aria-label={t("admin.bookings.searchPlaceholder")}
+            />
+          </div>
+
+          <div className="admin-bookings-filters">
+            <label className="admin-filter-chip">
+              <span className="admin-filter-chip-label">
+                {t("admin.bookings.filterStatus")}
+              </span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="mt-1 block rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                className="admin-filter-chip-control"
               >
-                <option value="all">All statuses</option>
+                <option value="all">{t("admin.bookings.allStatuses")}</option>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {bookingStatusLabel(t, s)}
                   </option>
                 ))}
               </select>
             </label>
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-              Type
+
+            <label className="admin-filter-chip">
+              <span className="admin-filter-chip-label">
+                {t("admin.bookings.filterService")}
+              </span>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="mt-1 block rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
+                className="admin-filter-chip-control"
               >
-                <option value="all">All types</option>
-                <option value="eye_exam">{t("clinicBooking.services.eye_exam")}</option>
+                <option value="all">{t("admin.bookings.allServices")}</option>
+                <option value="eye_exam">
+                  {t("clinicBooking.services.eye_exam")}
+                </option>
                 <option value="contact_lens_fitting">
                   {t("clinicBooking.services.contact_lens_fitting")}
                 </option>
@@ -455,116 +467,90 @@ function AdminEyeExamPageInner() {
                 </option>
               </select>
             </label>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => void loadAppointments()}
+
+            <label
+              className={`admin-filter-chip admin-filter-chip--date${
+                dateFilter ? " is-active" : ""
+              }`}
             >
-              Apply
-            </button>
+              <span className="admin-filter-chip-label">
+                {t("admin.bookings.filterDate")}
+              </span>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="admin-filter-chip-control admin-filter-chip-date"
+              />
+            </label>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--line)] text-start text-xs uppercase tracking-wide text-[var(--slate)]">
-                  <th className="px-2 py-3">Customer</th>
-                  <th className="px-2 py-3">Type</th>
-                  <th className="px-2 py-3">Phone</th>
-                  <th className="px-2 py-3">Email</th>
-                  <th className="px-2 py-3">Date</th>
-                  <th className="px-2 py-3">Time</th>
-                  <th className="px-2 py-3">Status</th>
-                  <th className="px-2 py-3">SMS</th>
-                  <th className="px-2 py-3">Created</th>
-                  <th className="px-2 py-3">Lang</th>
-                  <th className="px-2 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} className="px-2 py-8 text-center text-[var(--slate)]">
-                      {t("admin.common.noResults")}
-                    </td>
-                  </tr>
-                ) : (
-                  appointments.map((row) => (
-                    <tr key={row.id} className="border-b border-[var(--line)] align-top">
-                      <td className="px-2 py-3">
-                        <p className="admin-cell-primary">{row.fullName}</p>
-                        <p className="admin-cell-secondary">{row.email}</p>
-                        <p className="admin-cell-secondary">{row.phone}</p>
-                      </td>
-                      <td className="px-2 py-3 whitespace-nowrap">
-                        {t(`clinicBooking.services.${row.appointmentType || "eye_exam"}`)}
-                      </td>
-                      <td className="px-2 py-3 whitespace-nowrap admin-muted">{row.phone}</td>
-                      <td className="px-2 py-3 admin-muted">{row.email}</td>
-                      <td className="px-2 py-3 whitespace-nowrap">{row.dateLabel}</td>
-                      <td className="px-2 py-3">{row.appointmentTime}</td>
-                      <td className="px-2 py-3">
-                        <select
-                          value={row.status}
-                          disabled={busy}
-                          onChange={(e) =>
-                            void updateAppointmentStatus(
-                              row.id,
-                              e.target.value as EyeExamAppointmentStatus
-                            )
-                          }
-                          className="rounded-lg border border-[var(--line)] px-2 py-1"
-                        >
-                          {STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-2 py-3">
-                        <span className="block">{row.smsStatus}</span>
-                        {row.smsError ? (
-                          <span className="mt-1 block text-xs text-red-600">
-                            {row.smsError}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="px-2 py-3 whitespace-nowrap text-xs text-[var(--slate)]">
-                        {new Date(row.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-2 py-3 text-xs text-[var(--slate)]">
-                        {row.language.toUpperCase()}
-                      </td>
-                      <td className="px-2 py-3">
-                        <div className="flex flex-col gap-1">
-                          <button
-                            type="button"
-                            className="text-start text-xs font-semibold text-[var(--accent)]"
-                            onClick={() => openEdit(row)}
-                          >
-                            Edit / Reschedule
-                          </button>
-                          {row.status !== "cancelled" ? (
-                            <button
-                              type="button"
-                              className="text-start text-xs font-semibold text-[var(--danger)]"
-                              disabled={busy}
-                              onClick={() =>
-                                void updateAppointmentStatus(row.id, "cancelled")
-                              }
-                            >
-                              Cancel
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {appointments.length === 0 ? (
+            <div className="admin-bookings-empty">
+              <p>{t("admin.bookings.noResults")}</p>
+            </div>
+          ) : (
+            <div className="admin-bookings-list">
+              {appointments.map((row) => (
+                <article key={row.id} className="admin-booking-card">
+                  <div className="admin-booking-card-main">
+                    <div className="admin-booking-card-copy">
+                      <h3 className="admin-booking-card-name">{row.fullName}</h3>
+                      <p className="admin-booking-card-service">
+                        {t(
+                          `clinicBooking.services.${row.appointmentType || "eye_exam"}`
+                        )}
+                      </p>
+                      <p className="admin-booking-card-when">
+                        <span>{row.dateLabel}</span>
+                        <span className="admin-booking-card-dot" aria-hidden />
+                        <span>{row.appointmentTime}</span>
+                      </p>
+                    </div>
+                    <select
+                      value={row.status}
+                      disabled={busy}
+                      aria-label={t("admin.bookings.filterStatus")}
+                      onChange={(e) =>
+                        void updateAppointmentStatus(
+                          row.id,
+                          e.target.value as EyeExamAppointmentStatus
+                        )
+                      }
+                      className={`admin-booking-status status status-${row.status}`}
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {bookingStatusLabel(t, s)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="admin-booking-card-actions">
+                    <button
+                      type="button"
+                      className="admin-booking-action"
+                      onClick={() => openEdit(row)}
+                    >
+                      {t("admin.bookings.edit")}
+                    </button>
+                    {row.status !== "cancelled" ? (
+                      <button
+                        type="button"
+                        className="admin-booking-action admin-booking-action--danger"
+                        disabled={busy}
+                        onClick={() =>
+                          void updateAppointmentStatus(row.id, "cancelled")
+                        }
+                      >
+                        {t("admin.bookings.cancel")}
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

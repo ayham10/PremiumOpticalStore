@@ -245,6 +245,7 @@ export type Dictionary = {
     demoHint: string;
     sidebar: Record<string, string>;
     dashboard: Record<string, string>;
+    bookings: Record<string, string>;
     common: Record<string, string>;
   };
   days: Record<string, string>;
@@ -935,6 +936,22 @@ const en: Dictionary = {
       justNow: "Just now",
       minutesAgo: "{n}m ago",
       todayAt: "Today, {time}",
+      statusPending: "Pending",
+      statusConfirmed: "Confirmed",
+      statusCompleted: "Completed",
+      statusCancelled: "Cancelled",
+      statusNoShow: "No show",
+    },
+    bookings: {
+      searchPlaceholder: "Search by customer name...",
+      filterStatus: "Status",
+      filterService: "Service",
+      filterDate: "Date",
+      allStatuses: "All statuses",
+      allServices: "All services",
+      edit: "Edit",
+      cancel: "Cancel",
+      noResults: "No bookings found",
       statusPending: "Pending",
       statusConfirmed: "Confirmed",
       statusCompleted: "Completed",
