@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Palette, Save } from "lucide-react";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
@@ -119,40 +120,28 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <p className="eyebrow">Store</p>
-        <h1
-          className="mt-1 text-3xl text-[var(--ink)]"
-          style={{ fontFamily: "Fraunces, serif" }}
-        >
-          Settings
-        </h1>
-        <p className="mt-1 text-sm text-[var(--slate)]">
-          Store details, branding, hours, and contact information.
-        </p>
-      </header>
+      <AdminPageHeader
+        kicker="Store"
+        title="Settings"
+        description="Store details, branding, hours, and contact information."
+      />
 
       <Link
         href="/admin/branding"
-        className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(212,175,55,0.35)] bg-[#0B0F14] px-5 py-4 text-white transition hover:border-[#D4AF37]"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(212,175,106,0.35)] bg-[#0B0F14] px-5 py-4 text-[#F5F5F5] transition hover:border-[#D4AF6A]"
       >
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#131A22] text-[#D4AF37]">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#131A22] text-[#D4AF6A]">
             <Palette size={20} />
           </span>
           <div>
-            <p
-              className="text-lg text-[#D4AF37]"
-              style={{ fontFamily: "Fraunces, serif" }}
-            >
-              Branding & theme
-            </p>
-            <p className="text-sm text-[#A7ADB5]">
+            <p className="admin-section-title text-[#D4AF6A]">Branding & theme</p>
+            <p className="admin-muted mt-1">
               Logo, colors, fonts, store name styling
             </p>
           </div>
         </div>
-        <span className="text-sm font-semibold text-[#D4AF37]">Open →</span>
+        <span className="text-sm font-semibold text-[#D4AF6A]">Open →</span>
       </Link>
 
       {error ? (
@@ -172,7 +161,7 @@ export default function AdminSettingsPage() {
         </div>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             Store info
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -260,7 +249,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             Maps
           </h2>
           <div className="grid gap-4">
@@ -291,7 +280,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             Opening hours
           </h2>
           <div className="space-y-3">
@@ -333,7 +322,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             Social
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -358,7 +347,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             Homepage content (EN / AR / HE)
           </h2>
           <p className="text-sm text-[var(--slate)]">
@@ -401,7 +390,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             SEO
           </h2>
           <div className="grid gap-4">
@@ -448,7 +437,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className="admin-card space-y-4 p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+          <h2 className="admin-section-title">
             Booking & SMS
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">

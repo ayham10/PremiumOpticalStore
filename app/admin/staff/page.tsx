@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { apiFetch } from "@/lib/admin-api";
 import type { ServiceType, StaffMember, UserRole } from "@/lib/types";
 
@@ -204,20 +205,16 @@ export default function AdminStaffPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Team</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            Staff
-          </h1>
-        </div>
-        <button type="button" className="btn btn-accent" onClick={openCreate}>
-          <Plus size={16} /> Add staff
-        </button>
-      </header>
+      <AdminPageHeader
+        kicker="Team"
+        title="Staff"
+        description="Manage admin users and team access."
+        actions={
+          <button type="button" className="btn btn-accent" onClick={openCreate}>
+            <Plus size={16} /> Add staff
+          </button>
+        }
+      />
 
       {message ? (
         <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">

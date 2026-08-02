@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/admin-api";
 import { cn } from "@/lib/format";
 import type { Appointment, Holiday, StaffMember, StoreSettings } from "@/lib/types";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -196,20 +197,11 @@ export default function AdminCalendarPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="eyebrow">Planning</p>
-          <h1
-            className="mt-1 text-[clamp(1.6rem,5vw,1.9rem)] text-[var(--ink)] md:text-3xl"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            Calendar
-          </h1>
-          <p className="mt-1 text-sm text-[var(--slate)]">
-            Working hours & holidays respected · slot length {slotMinutes} min.
-            Select an appointment, then tap a day/slot to reschedule.
-          </p>
-        </div>
+      <AdminPageHeader
+        kicker="Planning"
+        title="Calendar"
+        description={`Working hours & holidays respected · slot length ${slotMinutes} min. Select an appointment, then tap a day/slot to reschedule.`}
+        actions={
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           {(["day", "week", "month"] as ViewMode[])
             .filter((mode) => !(isNarrow && mode === "week"))
@@ -227,7 +219,8 @@ export default function AdminCalendarPage() {
               </button>
             ))}
         </div>
-      </header>
+        }
+      />
 
       <div className="admin-card flex flex-wrap items-center gap-2 p-3 sm:gap-3 sm:p-4">
         <button type="button" className="btn btn-ghost !min-h-11 !px-3" onClick={() => shift(-1)}>
@@ -532,7 +525,7 @@ export default function AdminCalendarPage() {
       )}
 
       <section className="admin-card p-5">
-        <h2 style={{ fontFamily: "Fraunces, serif" }} className="mb-3 text-xl">
+        <h2 className="mb-3 text-xl">
           Staff legend
         </h2>
         <div className="flex flex-wrap gap-3">

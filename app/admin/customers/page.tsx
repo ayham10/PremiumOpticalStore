@@ -7,6 +7,7 @@ import AdminModal from "@/components/admin/AdminModal";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import type { AdminSession, Appointment, Customer } from "@/lib/types";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 
 function unwrapList<T>(data: unknown, keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -161,20 +162,16 @@ export default function AdminCustomersPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">CRM</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            Customers
-          </h1>
-        </div>
-        <button type="button" className="btn btn-accent" onClick={openCreate}>
-          <Plus size={16} /> Add customer
-        </button>
-      </header>
+      <AdminPageHeader
+        kicker="CRM"
+        title="Customers"
+        description="Customer records linked to bookings and orders."
+        actions={
+          <button type="button" className="btn btn-accent" onClick={openCreate}>
+            <Plus size={16} /> Add customer
+          </button>
+        }
+      />
 
       <div className="admin-card p-4">
         <div className="relative max-w-md">
@@ -232,9 +229,13 @@ export default function AdminCustomersPage() {
                   const count = counts.get(c.id) || counts.get(c.email) || 0;
                   return (
                     <tr key={c.id}>
-                      <td data-label="Name" className="font-medium text-[var(--ink)]">{c.name}</td>
+                      <td data-label="Name">
+                        <div className="admin-cell-primary">{c.name}</div>
+                        <div className="admin-cell-secondary">{c.email}</div>
+                        <div className="admin-cell-secondary">{c.phone}</div>
+                      </td>
                       <td data-label="Contact">
-                        <div className="text-sm">{c.email}</div>
+                        <div className="admin-muted text-sm">{c.email}</div>
                         <div className="text-xs text-[var(--slate)]">{c.phone}</div>
                       </td>
                       <td data-label="Notes" className="max-w-none truncate text-sm text-[var(--slate)] md:max-w-[200px]">

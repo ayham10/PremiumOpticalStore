@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
@@ -105,28 +106,20 @@ export default function AdminBrandingPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">Website · Store Settings</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
+      <AdminPageHeader
+        kicker="Website"
+        title="Branding"
+        description="Edit store name, logo, colors, and typography. Preview updates live; save to apply site-wide."
+        actions={
+          <Link
+            href="/admin/settings"
+            className="btn btn-ghost inline-flex items-center gap-2"
           >
-            Branding
-          </h1>
-          <p className="mt-1 max-w-xl text-sm text-[var(--slate)]">
-            Edit store name, logo, colors, and typography. Preview updates live;
-            save to apply site-wide without code changes.
-          </p>
-        </div>
-        <Link
-          href="/admin/settings"
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--line)] px-3 text-sm font-medium text-[var(--ink-soft)] hover:bg-[var(--mist)]"
-        >
-          <ArrowLeft size={16} />
-          Store Settings
-        </Link>
-      </header>
+            <ArrowLeft size={16} />
+            Settings
+          </Link>
+        }
+      />
 
       {error ? (
         <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">

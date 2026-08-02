@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Copy, Plus, RefreshCw, Search } from "lucide-react";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type {
@@ -275,33 +276,30 @@ function AdminEyeExamPageInner() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">Bookings</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
+      <AdminPageHeader
+        kicker="Bookings"
+        title={
+          tab === "availability"
+            ? t("admin.sidebar.availability")
+            : t("admin.sidebar.appointments")
+        }
+        description={
+          tab === "availability"
+            ? "Open dates, time slots, and service availability for online booking."
+            : "Search, filter, and manage customer bookings."
+        }
+        actions={
+          <button
+            type="button"
+            className="btn btn-ghost inline-flex items-center gap-2"
+            onClick={() => void refresh()}
+            disabled={loading || busy}
           >
-            {tab === "availability"
-              ? t("admin.sidebar.availability")
-              : t("admin.sidebar.appointments")}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--slate)]">
-            {tab === "availability"
-              ? "Open dates, time slots, and service availability for online booking."
-              : "Search, filter, and manage customer bookings."}
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-ghost inline-flex items-center gap-2"
-          onClick={() => void refresh()}
-          disabled={loading || busy}
-        >
-          <RefreshCw size={16} />
-          Refresh
-        </button>
-      </div>
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        }
+      />
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -704,12 +702,16 @@ function AdminEyeExamPageInner() {
                 ) : (
                   appointments.map((row) => (
                     <tr key={row.id} className="border-b border-[var(--line)] align-top">
-                      <td className="px-2 py-3 font-medium">{row.fullName}</td>
+                      <td className="px-2 py-3">
+                        <p className="admin-cell-primary">{row.fullName}</p>
+                        <p className="admin-cell-secondary">{row.email}</p>
+                        <p className="admin-cell-secondary">{row.phone}</p>
+                      </td>
                       <td className="px-2 py-3 whitespace-nowrap">
                         {t(`clinicBooking.services.${row.appointmentType || "eye_exam"}`)}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap">{row.phone}</td>
-                      <td className="px-2 py-3">{row.email}</td>
+                      <td className="px-2 py-3 whitespace-nowrap admin-muted">{row.phone}</td>
+                      <td className="px-2 py-3 admin-muted">{row.email}</td>
                       <td className="px-2 py-3 whitespace-nowrap">{row.dateLabel}</td>
                       <td className="px-2 py-3">{row.appointmentTime}</td>
                       <td className="px-2 py-3">
@@ -785,7 +787,6 @@ function AdminEyeExamPageInner() {
           >
             <h3
               className="text-xl text-[var(--ink)]"
-              style={{ fontFamily: "Fraunces, serif" }}
             >
               Edit appointment
             </h3>

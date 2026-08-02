@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import SingleImageField from "@/components/admin/SingleImageField";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
@@ -178,20 +179,16 @@ export default function AdminPromotionsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Marketing</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            Promotions
-          </h1>
-        </div>
-        <button type="button" className="btn btn-accent" onClick={openCreate}>
-          <Plus size={16} /> Add promotion
-        </button>
-      </header>
+      <AdminPageHeader
+        kicker="Marketing"
+        title="Promotions"
+        description="Create and manage store offers shown on the website."
+        actions={
+          <button type="button" className="btn btn-accent" onClick={openCreate}>
+            <Plus size={16} /> Add promotion
+          </button>
+        }
+      />
 
       {message ? (
         <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">

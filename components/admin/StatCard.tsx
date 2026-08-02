@@ -14,8 +14,8 @@ interface StatCardProps {
 }
 
 const tones = {
-  default: { bg: "rgba(212,175,55,0.12)", color: "#D4AF37" },
-  warning: { bg: "rgba(212,175,55,0.16)", color: "#E6C85A" },
+  default: { bg: "rgba(212,175,106,0.12)", color: "#D4AF6A" },
+  warning: { bg: "rgba(212,175,106,0.16)", color: "#E6C58A" },
   success: { bg: "rgba(94,196,154,0.14)", color: "#5EC49A" },
 };
 
@@ -31,27 +31,22 @@ export default function StatCard({
 
   const body = (
     <motion.div
-      className="admin-card p-5"
+      className="admin-card"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[var(--slate)]">
-            {label}
-          </p>
+          <p className="admin-card-label">{label}</p>
           <p
-            className="mt-2 text-3xl text-[var(--ink)]"
-            style={{
-              fontFamily: "Fraunces, serif",
-              color: tone === "warning" ? "#D4AF37" : undefined,
-            }}
+            className="admin-card-value"
+            style={{ color: tone === "warning" ? "#D4AF6A" : undefined }}
           >
             {value}
           </p>
           {hint ? (
-            <p className="mt-2 text-sm font-medium text-[var(--accent)]">
+            <p className="mt-2 text-sm font-semibold text-[var(--accent)]">
               {hint}
             </p>
           ) : null}

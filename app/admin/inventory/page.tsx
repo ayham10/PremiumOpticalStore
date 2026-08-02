@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import ProductImagesField from "@/components/admin/ProductImagesField";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
@@ -281,23 +282,16 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Catalogue</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            Products
-          </h1>
-          <p className="mt-1 text-sm text-[var(--slate)]">
-            Manage frames, stock, pricing, and product photos.
-          </p>
-        </div>
-        <button type="button" className="btn btn-accent" onClick={openCreate}>
-          <Plus size={16} /> Add product
-        </button>
-      </header>
+      <AdminPageHeader
+        kicker="Catalogue"
+        title="Products"
+        description="Manage frames, stock, pricing, and product photos."
+        actions={
+          <button type="button" className="btn btn-accent" onClick={openCreate}>
+            <Plus size={16} /> Add product
+          </button>
+        }
+      />
 
       <div className="admin-card flex flex-wrap gap-3 p-4">
         <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[220px]">
@@ -403,8 +397,8 @@ export default function AdminInventoryPage() {
                         </div>
                       </td>
                       <td data-label="Product">
-                        <div className="font-medium text-[var(--ink)]">{p.name}</div>
-                        <div className="text-xs text-[var(--slate)]">{p.sku}</div>
+                        <div className="admin-cell-primary">{p.name}</div>
+                        <div className="admin-cell-secondary">{p.sku}</div>
                       </td>
                       <td data-label="Category">{p.category}</td>
                       <td data-label="Brand">{p.brand || "—"}</td>

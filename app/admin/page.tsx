@@ -14,6 +14,7 @@ import {
   Glasses,
   Users,
 } from "lucide-react";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
 import type { DashboardRecentBooking, DashboardStats } from "@/lib/types";
@@ -129,40 +130,34 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1
-            className="text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            {t("admin.dashboard.title")}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--slate)]">
-            Today&apos;s bookings, stock alerts, and recent activity.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="rounded-xl border border-[var(--line)] px-3 py-2 text-sm text-[var(--slate)]">
-            {todayLabel}
-          </p>
-          <button
-            type="button"
-            className="btn btn-ghost inline-flex items-center gap-2"
-            onClick={() => void load({ soft: true })}
-            disabled={refreshing}
-          >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-            Refresh
-          </button>
-          <Link
-            href="/admin/eye-exam?tab=appointments"
-            className="btn btn-accent"
-          >
-            <Plus size={16} />
-            Add Appointment
-          </Link>
-        </div>
-      </header>
+      <AdminPageHeader
+        kicker="Overview"
+        title={t("admin.dashboard.title")}
+        description="Today's bookings, stock alerts, and recent activity."
+        actions={
+          <>
+            <p className="rounded-xl border border-[var(--line)] px-3 py-2 text-sm text-[var(--muted)]">
+              {todayLabel}
+            </p>
+            <button
+              type="button"
+              className="btn btn-ghost inline-flex items-center gap-2"
+              onClick={() => void load({ soft: true })}
+              disabled={refreshing}
+            >
+              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              Refresh
+            </button>
+            <Link
+              href="/admin/eye-exam?tab=appointments"
+              className="btn btn-accent"
+            >
+              <Plus size={16} />
+              New Appointment
+            </Link>
+          </>
+        }
+      />
 
       {error ? (
         <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
@@ -206,12 +201,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="admin-card p-5">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2
-              style={{ fontFamily: "Fraunces, serif" }}
-              className="text-xl text-[var(--ink)]"
-            >
-              Today&apos;s appointments
-            </h2>
+            <h2 className="admin-section-title">Today&apos;s appointments</h2>
             <Link
               href="/admin/eye-exam?tab=appointments"
               className="text-sm font-semibold text-[var(--accent)]"
@@ -224,10 +214,8 @@ export default function AdminDashboardPage() {
               <div key={a.id} className="admin-schedule-row">
                 <p className="font-semibold text-[var(--accent)]">{a.startTime}</p>
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-[var(--ink)]">
-                    {a.customerName}
-                  </p>
-                  <p className="truncate text-sm text-[var(--slate)]">
+                  <p className="admin-cell-primary truncate">{a.customerName}</p>
+                  <p className="admin-cell-secondary truncate">
                     {a.customerPhone || a.customerEmail} ·{" "}
                     {serviceLabel(t, a.service)}
                   </p>
@@ -245,12 +233,7 @@ export default function AdminDashboardPage() {
 
         <section className="admin-card p-5">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2
-              style={{ fontFamily: "Fraunces, serif" }}
-              className="text-xl text-[var(--ink)]"
-            >
-              {t("admin.dashboard.recent")}
-            </h2>
+            <h2 className="admin-section-title">{t("admin.dashboard.recent")}</h2>
             <Link
               href="/admin/eye-exam?tab=appointments"
               className="text-sm font-semibold text-[var(--accent)]"
@@ -265,10 +248,8 @@ export default function AdminDashboardPage() {
                   <Glasses size={18} />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-[var(--ink)]">
-                    {a.customerName}
-                  </p>
-                  <p className="truncate text-sm text-[var(--slate)]">
+                  <p className="admin-cell-primary truncate">{a.customerName}</p>
+                  <p className="admin-cell-secondary truncate">
                     {serviceLabel(t, a.service)} · {relativeCreated(a.createdAt)}
                   </p>
                 </div>
@@ -285,10 +266,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <section>
-        <h2
-          style={{ fontFamily: "Fraunces, serif" }}
-          className="mb-3 text-xl text-[var(--ink)]"
-        >
+        <h2 className="admin-section-title mb-3">
           {t("admin.dashboard.quickActions")}
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

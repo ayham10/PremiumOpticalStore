@@ -14,6 +14,7 @@ import AdminModal from "@/components/admin/AdminModal";
 import { apiFetch } from "@/lib/admin-api";
 import { formatDate } from "@/lib/format";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 
 const STATUSES: AppointmentStatus[] = [
   "pending",
@@ -152,20 +153,16 @@ export default function AdminAppointmentsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
-        <div>
-          <p className="eyebrow">Schedule</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
-          >
-            Appointments
-          </h1>
-        </div>
-        <button type="button" className="btn btn-ghost" onClick={printList}>
-          <Printer size={16} /> Print
-        </button>
-      </header>
+      <AdminPageHeader
+        kicker="Schedule"
+        title="Appointments"
+        description="Search, filter, and review store appointments."
+        actions={
+          <button type="button" className="btn btn-ghost" onClick={printList}>
+            <Printer size={16} /> Print
+          </button>
+        }
+      />
 
       <div className="admin-card flex flex-wrap gap-3 p-4 print:hidden">
         <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[220px]">
@@ -207,7 +204,7 @@ export default function AdminAppointmentsPage() {
 
       <div className="admin-card overflow-hidden printable-appointments">
         <div className="hidden print:block px-5 py-4 border-b border-[var(--line)]">
-          <h2 style={{ fontFamily: "Fraunces, serif" }}>{t("admin.sidebar.appointments")}</h2>
+          <h2>{t("admin.sidebar.appointments")}</h2>
           <p className="text-sm text-[var(--slate)]">
             Printed {new Date().toLocaleString()}
           </p>
@@ -241,9 +238,9 @@ export default function AdminAppointmentsPage() {
                 filtered.map((a) => (
                   <tr key={a.id}>
                     <td data-label="Customer">
-                      <div className="font-medium text-[var(--ink)]">{a.customerName}</div>
-                      <div className="text-xs text-[var(--slate)]">{a.customerPhone}</div>
-                      <div className="text-xs text-[var(--slate)]">{a.customerEmail}</div>
+                      <div className="admin-cell-primary">{a.customerName}</div>
+                      <div className="admin-cell-secondary">{a.customerPhone}</div>
+                      <div className="admin-cell-secondary">{a.customerEmail}</div>
                     </td>
                     <td data-label="Service">{a.service}</td>
                     <td data-label="Date / Time">

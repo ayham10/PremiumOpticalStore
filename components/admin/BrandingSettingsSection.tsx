@@ -140,10 +140,10 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
   return (
     <section className="admin-card space-y-5 p-5">
       <div>
-        <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
+        <h2 className="admin-section-title">
           Branding & theme
         </h2>
-        <p className="mt-1 text-sm text-[var(--slate)]">
+        <p className="admin-page-desc mt-2">
           Customize brand, colors, and typography. Preview updates live; save to
           apply site-wide.
         </p>

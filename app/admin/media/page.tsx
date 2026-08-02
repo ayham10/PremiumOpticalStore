@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Upload } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import type { AdminSession, MediaItem } from "@/lib/types";
@@ -174,27 +175,20 @@ export default function AdminMediaPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Library</p>
-          <h1
-            className="mt-1 text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
+      <AdminPageHeader
+        kicker="Library"
+        title="Media"
+        description="Uploaded images for products, promotions, and the website."
+        actions={
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => setModalOpen(true)}
           >
-            Media
-          </h1>
-          <p className="mt-1 text-sm text-[var(--slate)]">
-            Uploaded images for products, promotions, and the website.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-accent"
-          onClick={() => setModalOpen(true)}
-        >
-          <Plus size={16} /> Add media
-        </button>
-      </header>
+            <Plus size={16} /> Add media
+          </button>
+        }
+      />
 
       <div className="admin-card flex flex-wrap gap-3 p-4">
         <select
