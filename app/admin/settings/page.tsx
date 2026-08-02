@@ -120,36 +120,39 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-5">
       <header>
-        <p className="eyebrow">Website</p>
+        <p className="eyebrow">Store</p>
         <h1
           className="mt-1 text-3xl text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
-          Store Settings
+          Settings
         </h1>
+        <p className="mt-1 text-sm text-[var(--slate)]">
+          Store details, branding, hours, and contact information.
+        </p>
       </header>
 
       <Link
         href="/admin/branding"
-        className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(212,175,106,0.35)] bg-[#080C0F] px-5 py-4 text-[var(--brand-text,#F5F5F2)] transition hover:border-[#D4AF6A]"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(212,175,55,0.35)] bg-[#0B0F14] px-5 py-4 text-white transition hover:border-[#D4AF37]"
       >
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#13191E] text-[#D4AF6A]">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#131A22] text-[#D4AF37]">
             <Palette size={20} />
           </span>
           <div>
             <p
-              className="text-lg text-[#D4AF6A]"
+              className="text-lg text-[#D4AF37]"
               style={{ fontFamily: "Fraunces, serif" }}
             >
               Branding & theme
             </p>
-            <p className="text-sm text-[#9CA5AD]">
-              Logo, colors, fonts, store name styling — open the full editor
+            <p className="text-sm text-[#A7ADB5]">
+              Logo, colors, fonts, store name styling
             </p>
           </div>
         </div>
-        <span className="text-sm font-semibold text-[#D4AF6A]">Open →</span>
+        <span className="text-sm font-semibold text-[#D4AF37]">Open →</span>
       </Link>
 
       {error ? (

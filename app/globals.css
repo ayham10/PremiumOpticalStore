@@ -8,11 +8,11 @@
   --mist: #eef2f5;
   --paper: #f7f8fa;
   --white: #ffffff;
-  --accent: #d4af6a;
-  --accent-soft: #e6c58a;
-  --accent-wash: rgba(212, 175, 106, 0.12);
-  --copper: #d4af6a;
-  --copper-soft: #e6c58a;
+  --accent: #d4af37;
+  --accent-soft: #e6c85a;
+  --accent-wash: rgba(212, 175, 55, 0.12);
+  --copper: #d4af37;
+  --copper-soft: #e6c85a;
   --line: rgba(16, 21, 28, 0.08);
   --line-strong: rgba(16, 21, 28, 0.14);
   --shadow: 0 18px 50px rgba(16, 21, 28, 0.08);
@@ -26,20 +26,20 @@
   --background: var(--paper);
   --foreground: var(--ink);
   /* Branding defaults (overridden by BrandingProvider) */
-  --brand-primary: #d4af6a;
-  --brand-secondary: #e6c58a;
-  --brand-gold: #d4af6a;
-  --brand-button: #d4af6a;
-  --brand-button-hover: #e6c58a;
-  --brand-text: #f5f5f2;
-  --brand-text-secondary: #9ca5ad;
-  --brand-bg: #080c0f;
-  --brand-card: #13191e;
-  --brand-border: rgba(255, 255, 255, 0.08);
+  --brand-primary: #d4af37;
+  --brand-secondary: #e6c85a;
+  --brand-gold: #d4af37;
+  --brand-button: #d4af37;
+  --brand-button-hover: #e6c85a;
+  --brand-text: #ffffff;
+  --brand-text-secondary: #a7adb5;
+  --brand-bg: #0b0f14;
+  --brand-card: #131a22;
+  --brand-border: rgba(255, 255, 255, 0.06);
   --brand-heading-font: "Fraunces", ui-serif, Georgia, serif;
   --brand-body-font: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --brand-font-scale: 1;
-  --brand-name-color: #d4af6a;
+  --brand-name-color: #d4af37;
 }
 
 @theme inline {
@@ -396,36 +396,36 @@ p {
 /* ── Admin premium dark theme (scoped; public site unchanged) ── */
 html.admin-dark,
 html.admin-dark body {
-  background: #080c0f !important;
-  color: #f5f5f2;
+  background: #0b0f14 !important;
+  color: #ffffff;
 }
 
 .admin-shell,
 .admin-auth {
-  --ink: #f5f5f2;
+  --ink: #ffffff;
   --ink-soft: #e8eaed;
-  --slate: #9ca5ad;
+  --slate: #a7adb5;
   --mist: rgba(255, 255, 255, 0.04);
-  --paper: #080c0f;
-  --white: #13191e;
-  --accent: #d4af6a;
-  --accent-soft: #e6c58a;
-  --accent-wash: rgba(212, 175, 106, 0.14);
-  --copper: #d4af6a;
-  --copper-soft: #e6c58a;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.14);
+  --paper: #0b0f14;
+  --white: #131a22;
+  --accent: #d4af37;
+  --accent-soft: #e6c85a;
+  --accent-wash: rgba(212, 175, 55, 0.14);
+  --copper: #d4af37;
+  --copper-soft: #e6c85a;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.25);
+  --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.28);
   --success: #5ec49a;
-  --warning: #e6c58a;
+  --warning: #e6c85a;
   --danger: #e07a7a;
-  --glass: rgba(19, 25, 30, 0.88);
-  --background: #080c0f;
-  --foreground: #f5f5f2;
-  --admin-bg: #080c0f;
-  --admin-card: #13191e;
-  --admin-elevated: #181f26;
+  --glass: rgba(19, 26, 34, 0.88);
+  --background: #0b0f14;
+  --foreground: #ffffff;
+  --admin-bg: #0b0f14;
+  --admin-card: #131a22;
+  --admin-elevated: #161d26;
   color: var(--ink);
 }
 
@@ -504,24 +504,30 @@ html.admin-dark body {
 
 .admin-shell .btn-accent,
 .admin-auth .btn-accent {
-  background: #d4af6a;
-  color: #080c0f;
+  background: #d4af37;
+  color: #0b0f14;
+  border-radius: 12px;
 }
 
 .admin-shell .btn-accent:hover,
 .admin-auth .btn-accent:hover {
-  background: #e6c58a;
-  color: #080c0f;
+  background: #e6c85a;
+  color: #0b0f14;
 }
 
 .admin-shell .btn-primary {
-  background: #d4af6a;
-  color: #080c0f;
+  background: #d4af37;
+  color: #0b0f14;
+  border-radius: 12px;
 }
 
 .admin-shell .btn-primary:hover {
-  background: #e6c58a;
-  color: #080c0f;
+  background: #e6c85a;
+  color: #0b0f14;
+}
+
+.admin-shell .btn-ghost {
+  border-radius: 12px;
 }
 
 .admin-shell .btn-ghost {
@@ -613,13 +619,13 @@ html.admin-dark body {
 }
 
 .admin-nav-link.is-active {
-  background: #d4af6a;
-  color: #080c0f;
+  background: #d4af37;
+  color: #0b0f14;
   font-weight: 600;
 }
 
 .admin-nav-link.is-active svg {
-  color: #080c0f;
+  color: #0b0f14;
 }
 
 .admin-quick-action {

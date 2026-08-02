@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import SingleImageField from "@/components/admin/SingleImageField";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import type { AdminSession, Promotion } from "@/lib/types";
@@ -388,15 +389,12 @@ export default function AdminPromotionsPage() {
               }
             />
           </div>
-          <div>
-            <label className="label" htmlFor="pr-image">
-              Image URL
-            </label>
-            <input
-              id="pr-image"
-              className="input"
+          <div className="sm:col-span-2">
+            <SingleImageField
+              label="Promotion image"
               value={form.image}
-              onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
+              onChange={(image) => setForm((f) => ({ ...f, image }))}
+              folder="promotions"
             />
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-[var(--ink)]">

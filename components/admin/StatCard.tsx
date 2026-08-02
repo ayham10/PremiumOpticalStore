@@ -14,8 +14,8 @@ interface StatCardProps {
 }
 
 const tones = {
-  default: { bg: "rgba(212,175,106,0.12)", color: "#D4AF6A" },
-  warning: { bg: "rgba(212,175,106,0.16)", color: "#E6C58A" },
+  default: { bg: "rgba(212,175,55,0.12)", color: "#D4AF37" },
+  warning: { bg: "rgba(212,175,55,0.16)", color: "#E6C85A" },
   success: { bg: "rgba(94,196,154,0.14)", color: "#5EC49A" },
 };
 
@@ -45,7 +45,7 @@ export default function StatCard({
             className="mt-2 text-3xl text-[var(--ink)]"
             style={{
               fontFamily: "Fraunces, serif",
-              color: tone === "warning" ? "#D4AF6A" : undefined,
+              color: tone === "warning" ? "#D4AF37" : undefined,
             }}
           >
             {value}

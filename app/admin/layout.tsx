@@ -67,7 +67,7 @@ export default function AdminLayout({
 
   if (!ready || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#080C0F] text-[var(--slate)]">
+      <div className="flex min-h-screen items-center justify-center bg-[#0B0F14] text-[var(--slate)]">
         Loading admin…
       </div>
     );

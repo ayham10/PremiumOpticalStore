@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
-  CalendarRange,
-  Users,
+  CalendarClock,
   Package,
   Tag,
   ImageIcon,
@@ -15,10 +14,8 @@ import {
   LogOut,
   Menu,
   X,
-  Eye,
-  Palette,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type { UserRole } from "@/lib/types";
 import { hasPermission } from "@/lib/admin-permissions";
 import { apiFetch } from "@/lib/admin-api";
@@ -34,7 +31,7 @@ const NAV: Array<{
   permission: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
-  group?: "appointments" | "catalogue" | "website" | "system";
+  match?: (pathname: string, tab: string | null) => boolean;
 }> = [
   {
     href: "/admin",
@@ -44,163 +41,119 @@ const NAV: Array<{
     exact: true,
   },
   {
-    href: "/admin/appointments",
+    href: "/admin/eye-exam?tab=appointments",
     labelKey: "admin.sidebar.appointments",
     permission: "appointments",
     icon: CalendarDays,
-    group: "appointments",
+    match: (pathname, tab) =>
+      pathname.startsWith("/admin/eye-exam") && tab === "appointments",
   },
   {
-    href: "/admin/eye-exam",
-    labelKey: "admin.sidebar.eyeExam",
+    href: "/admin/eye-exam?tab=availability",
+    labelKey: "admin.sidebar.availability",
     permission: "appointments",
-    icon: Eye,
-    group: "appointments",
-  },
-  {
-    href: "/admin/calendar",
-    labelKey: "admin.sidebar.calendar",
-    permission: "calendar",
-    icon: CalendarRange,
-    group: "appointments",
-  },
-  {
-    href: "/admin/customers",
-    labelKey: "admin.sidebar.customers",
-    permission: "customers",
-    icon: Users,
-    group: "appointments",
+    icon: CalendarClock,
+    match: (pathname, tab) =>
+      pathname.startsWith("/admin/eye-exam") && tab !== "appointments",
   },
   {
     href: "/admin/inventory",
-    labelKey: "admin.sidebar.inventory",
+    labelKey: "admin.sidebar.products",
     permission: "inventory",
     icon: Package,
-    group: "catalogue",
-  },
-  {
-    href: "/admin/promotions",
-    labelKey: "admin.sidebar.promotions",
-    permission: "promotions",
-    icon: Tag,
-    group: "catalogue",
   },
   {
     href: "/admin/media",
     labelKey: "admin.sidebar.media",
     permission: "media",
     icon: ImageIcon,
-    group: "website",
   },
   {
-    href: "/admin/branding",
-    labelKey: "admin.sidebar.branding",
-    permission: "settings",
-    icon: Palette,
-    group: "website",
+    href: "/admin/promotions",
+    labelKey: "admin.sidebar.promotions",
+    permission: "promotions",
+    icon: Tag,
   },
   {
     href: "/admin/settings",
     labelKey: "admin.sidebar.settings",
     permission: "settings",
     icon: Settings,
-    group: "website",
   },
   {
     href: "/admin/staff",
     labelKey: "admin.sidebar.staff",
     permission: "staff",
     icon: UserCog,
-    group: "system",
   },
 ];
 
-const GROUP_LABEL: Record<string, string> = {
-  appointments: "admin.sidebar.groupAppointments",
-  catalogue: "admin.sidebar.groupCatalogue",
-  website: "admin.sidebar.website",
-  system: "admin.sidebar.groupSystem",
-};
-
-export default function AdminSidebar({
+function SidebarNav({
   role,
   userName,
+  onNavigate,
 }: {
   role: UserRole;
   userName?: string;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { t } = useLocale();
   const { branding } = useBranding();
-  const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    document.body.classList.toggle("has-mobile-nav-open", open);
-    return () => document.body.classList.remove("has-mobile-nav-open");
-  }, [open]);
+  const tab = searchParams.get("tab");
 
   async function logout() {
     setLoggingOut(true);
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {
-      /* continue to login */
+      /* continue */
     }
     router.replace("/admin/login");
   }
 
   const links = NAV.filter((item) => hasPermission(role, item.permission));
 
-  const nav = (
-    <aside className="admin-sidebar flex h-full min-h-full flex-col border-e border-[var(--line)] bg-[var(--admin-card,#13191E)]">
+  return (
+    <aside className="admin-sidebar flex h-full min-h-full flex-col border-e border-[var(--line)] bg-[var(--admin-card,#131A22)]">
       <div className="border-b border-[var(--line)] px-5 py-6">
-        <div className="mt-0.5">
-          <BrandMark branding={branding} href="/admin" size="md" suffix="OPTICS" />
-        </div>
+        <BrandMark branding={branding} href="/admin" size="md" suffix="OPTICS" />
         <p className="mt-2 text-xs font-medium text-[var(--slate)]">Admin</p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-        {links.map((item, index) => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        {links.map((item) => {
+          const active = item.match
+            ? item.match(pathname, tab)
+            : item.exact
+              ? pathname === item.href
+              : pathname === item.href.split("?")[0] ||
+                pathname.startsWith(`${item.href.split("?")[0]}/`);
           const Icon = item.icon;
-          const prev = links[index - 1];
-          const showGroup = Boolean(item.group && item.group !== prev?.group);
           return (
-            <div key={item.href}>
-              {showGroup && item.group ? (
-                <p className="mb-1 mt-3 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[var(--slate)]">
-                  {t(GROUP_LABEL[item.group])}
-                </p>
-              ) : null}
-              <Link
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={cn("admin-nav-link", active && "is-active")}
-              >
-                <Icon size={18} />
-                {t(item.labelKey)}
-              </Link>
-            </div>
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn("admin-nav-link", active && "is-active")}
+            >
+              <Icon size={18} />
+              {t(item.labelKey)}
+            </Link>
           );
         })}
       </nav>
 
       <div className="space-y-2 border-t border-[var(--line)] p-3">
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--admin-elevated,#181F26)] px-3 py-3">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--admin-elevated,#161D26)] px-3 py-3">
           <p className="truncate text-sm font-semibold text-[var(--ink)]">
             {userName || "Admin"}
           </p>
           <p className="truncate text-xs text-[var(--slate)]">
-            {role === "admin" ? "Super Administrator" : role}
+            {role === "admin" ? "Store administrator" : role}
           </p>
         </div>
         <div className="px-1 py-1">
@@ -218,10 +171,32 @@ export default function AdminSidebar({
       </div>
     </aside>
   );
+}
+
+export default function AdminSidebar({
+  role,
+  userName,
+}: {
+  role: UserRole;
+  userName?: string;
+}) {
+  const pathname = usePathname();
+  const { t } = useLocale();
+  const { branding } = useBranding();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle("has-mobile-nav-open", open);
+    return () => document.body.classList.remove("has-mobile-nav-open");
+  }, [open]);
 
   return (
     <div className="relative z-40 md:contents">
-      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[rgba(8,12,15,0.92)] px-4 py-3 backdrop-blur md:hidden">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[rgba(11,15,20,0.92)] px-4 py-3 backdrop-blur md:hidden">
         <BrandMark branding={branding} href="/admin" size="sm" />
         <button
           type="button"
@@ -234,7 +209,11 @@ export default function AdminSidebar({
         </button>
       </div>
 
-      <div className="hidden h-full md:block">{nav}</div>
+      <div className="hidden h-full md:block">
+        <Suspense fallback={null}>
+          <SidebarNav role={role} userName={userName} />
+        </Suspense>
+      </div>
 
       {open ? (
         <div className="fixed inset-0 z-50 md:hidden">
@@ -244,21 +223,22 @@ export default function AdminSidebar({
             aria-label={t("nav.close")}
             onClick={() => setOpen(false)}
           />
-          <div
-            className={cn(
-              "relative h-full w-[min(300px,86vw)] shadow-2xl transition-transform duration-300",
-              "animate-[fadeIn_0.2s_ease]",
-            )}
-          >
+          <div className="relative h-full w-[min(300px,86vw)] shadow-2xl animate-[fadeIn_0.2s_ease]">
             <button
               type="button"
-              className="absolute end-3 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--admin-card,#13191E)] text-[var(--ink)]"
+              className="absolute end-3 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--admin-card,#131A22)] text-[var(--ink)]"
               onClick={() => setOpen(false)}
               aria-label={t("common.close")}
             >
               <X size={16} />
             </button>
-            {nav}
+            <Suspense fallback={null}>
+              <SidebarNav
+                role={role}
+                userName={userName}
+                onNavigate={() => setOpen(false)}
+              />
+            </Suspense>
           </div>
         </div>
       ) : null}

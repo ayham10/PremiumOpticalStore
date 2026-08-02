@@ -231,10 +231,6 @@ function ManageContent() {
                 {appointment.endTime ? `–${appointment.endTime}` : ""}
               </p>
               <p>
-                <strong className="text-[var(--ink)]">{t("book.specialist")}:</strong>{" "}
-                {appointment.staffName || t("book.specialist")}
-              </p>
-              <p>
                 <strong className="text-[var(--ink)]">{t("common.name")}:</strong>{" "}
                 {appointment.customerName}
               </p>

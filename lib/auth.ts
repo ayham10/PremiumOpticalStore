@@ -77,7 +77,7 @@ function getAdminUsers(): Array<AdminSession & { password: string }> {
   return [
     {
       id: "staff-maya",
-      name: "Dr. Maya Cohen",
+      name: "Maya Cohen",
       email: process.env.ADMIN_EMAIL || "admin@oyon.optics",
       role: "admin",
       password: pass,

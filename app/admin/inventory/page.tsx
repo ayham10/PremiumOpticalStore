@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import ProductImagesField from "@/components/admin/ProductImagesField";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import { formatPrice, slugify } from "@/lib/format";
@@ -33,7 +34,7 @@ type ProductForm = {
   barcode: string;
   sku: string;
   description: string;
-  images: string;
+  images: string[];
   purchasePrice: string;
   sellingPrice: string;
   stockQuantity: string;
@@ -51,7 +52,7 @@ const emptyForm = (): ProductForm => ({
   barcode: "",
   sku: "",
   description: "",
-  images: "",
+  images: [],
   purchasePrice: "0",
   sellingPrice: "0",
   stockQuantity: "0",
@@ -82,10 +83,7 @@ function toPayload(form: ProductForm) {
     barcode: form.barcode || undefined,
     sku: form.sku,
     description: form.description,
-    images: form.images
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean),
+    images: form.images.filter(Boolean),
     purchasePrice: Number(form.purchasePrice) || 0,
     sellingPrice: Number(form.sellingPrice) || 0,
     stockQuantity: Number(form.stockQuantity) || 0,
@@ -106,7 +104,7 @@ function fromProduct(p: Product): ProductForm {
     barcode: p.barcode || "",
     sku: p.sku,
     description: p.description,
-    images: (p.images || []).join("\n"),
+    images: [...(p.images || [])],
     purchasePrice: String(p.purchasePrice),
     sellingPrice: String(p.sellingPrice),
     stockQuantity: String(p.stockQuantity),
@@ -121,6 +119,7 @@ export default function AdminInventoryPage() {
   const [role, setRole] = useState<AdminSession["role"]>("admin");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -136,7 +135,7 @@ export default function AdminInventoryPage() {
       const [pData, me] = await Promise.all([
         apiFetch<unknown>("/api/products?all=1"),
         apiFetch<{ user: AdminSession } | AdminSession>("/api/auth/me").catch(
-          () => null
+          () => null,
         ),
       ]);
       setProducts(unwrapList<Product>(pData, ["products", "items", "data"]));
@@ -145,7 +144,7 @@ export default function AdminInventoryPage() {
         setRole(user.role);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load inventory");
+      setError(err instanceof Error ? err.message : "Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -159,6 +158,7 @@ export default function AdminInventoryPage() {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
@@ -167,7 +167,7 @@ export default function AdminInventoryPage() {
         (p.barcode || "").toLowerCase().includes(q)
       );
     });
-  }, [products, query, category]);
+  }, [products, query, category, statusFilter]);
 
   function openCreate() {
     setEditing(null);
@@ -190,20 +190,20 @@ export default function AdminInventoryPage() {
       if (editing) {
         const updated = await apiFetch<Product | { product: Product }>(
           "/api/products",
-          { method: "PUT", body: JSON.stringify({ id: editing.id, ...payload }) }
+          { method: "PUT", body: JSON.stringify({ id: editing.id, ...payload }) },
         );
         const row =
           updated && typeof updated === "object" && "product" in updated
             ? updated.product
             : (updated as Product);
         setProducts((prev) =>
-          prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p))
+          prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p)),
         );
         setMessage("Product updated");
       } else {
         const created = await apiFetch<Product | { product: Product }>(
           "/api/products",
-          { method: "POST", body: JSON.stringify(payload) }
+          { method: "POST", body: JSON.stringify(payload) },
         );
         const row =
           created && typeof created === "object" && "product" in created
@@ -232,7 +232,7 @@ export default function AdminInventoryPage() {
       };
       const created = await apiFetch<Product | { product: Product }>(
         "/api/products",
-        { method: "POST", body: JSON.stringify(payload) }
+        { method: "POST", body: JSON.stringify(payload) },
       );
       const row =
         created && typeof created === "object" && "product" in created
@@ -272,7 +272,7 @@ export default function AdminInventoryPage() {
           id={`p-${key}`}
           type={type}
           className="input"
-          value={form[key]}
+          value={form[key] as string}
           onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         />
       </div>
@@ -283,13 +283,16 @@ export default function AdminInventoryPage() {
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Stock</p>
+          <p className="eyebrow">Catalogue</p>
           <h1
             className="mt-1 text-3xl text-[var(--ink)]"
             style={{ fontFamily: "Fraunces, serif" }}
           >
-            Inventory
+            Products
           </h1>
+          <p className="mt-1 text-sm text-[var(--slate)]">
+            Manage frames, stock, pricing, and product photos.
+          </p>
         </div>
         <button type="button" className="btn btn-accent" onClick={openCreate}>
           <Plus size={16} /> Add product
@@ -304,13 +307,13 @@ export default function AdminInventoryPage() {
           />
           <input
             className="input pl-10"
-            placeholder="Search name, brand, SKU, barcode…"
+            placeholder="Search name, brand, SKU…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <select
-          className="select max-w-[220px]"
+          className="select max-w-[200px]"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -318,6 +321,18 @@ export default function AdminInventoryPage() {
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select max-w-[180px]"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All statuses</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
             </option>
           ))}
         </select>
@@ -339,9 +354,10 @@ export default function AdminInventoryPage() {
           <table className="table table-mobile-cards">
             <thead>
               <tr>
+                <th>Image</th>
                 <th>Product</th>
                 <th>Category</th>
-                <th>SKU</th>
+                <th>Brand</th>
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Status</th>
@@ -351,31 +367,50 @@ export default function AdminInventoryPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-[var(--slate)]">
+                  <td colSpan={8} className="text-[var(--slate)]">
                     Loading…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-[var(--slate)]">
+                  <td colSpan={8} className="text-[var(--slate)]">
                     No products found
                   </td>
                 </tr>
               ) : (
                 filtered.map((p) => {
                   const low = p.stockQuantity <= p.minimumStock;
+                  const thumb = p.images?.[0];
                   return (
                     <tr
                       key={p.id}
-                      className={low ? "bg-[rgba(212,175,106,0.08)]" : undefined}
+                      className={low ? "bg-[rgba(212,175,55,0.08)]" : undefined}
                     >
+                      <td data-label="Image">
+                        <div className="h-12 w-12 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--admin-elevated)]">
+                          {thumb ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={thumb}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="grid h-full place-items-center text-[0.65rem] text-[var(--slate)]">
+                              —
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td data-label="Product">
                         <div className="font-medium text-[var(--ink)]">{p.name}</div>
-                        <div className="text-xs text-[var(--slate)]">{p.brand}</div>
+                        <div className="text-xs text-[var(--slate)]">{p.sku}</div>
                       </td>
                       <td data-label="Category">{p.category}</td>
-                      <td data-label="SKU" className="text-sm">{p.sku}</td>
-                      <td data-label="Price">{formatPrice(p.sellingPrice)}</td>
+                      <td data-label="Brand">{p.brand || "—"}</td>
+                      <td data-label="Price" className="font-semibold text-[var(--accent)]">
+                        {formatPrice(p.sellingPrice)}
+                      </td>
                       <td data-label="Stock">
                         <span
                           className={
@@ -392,7 +427,9 @@ export default function AdminInventoryPage() {
                         </span>
                       </td>
                       <td data-label="Status">
-                        <span className="pill">{p.status}</span>
+                        <span className={`status status-${p.status === "active" ? "confirmed" : p.status === "out_of_stock" ? "cancelled" : "pending"}`}>
+                          {p.status}
+                        </span>
                       </td>
                       <td data-label="Actions" className="actions-cell">
                         <div className="flex flex-wrap gap-1.5">
@@ -400,6 +437,7 @@ export default function AdminInventoryPage() {
                             type="button"
                             className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                             onClick={() => openEdit(p)}
+                            aria-label="Edit"
                           >
                             <Pencil size={14} />
                           </button>
@@ -407,6 +445,7 @@ export default function AdminInventoryPage() {
                             type="button"
                             className="btn btn-ghost !min-h-11 !px-3 !text-xs"
                             onClick={() => void onDuplicate(p)}
+                            aria-label="Duplicate"
                           >
                             <Copy size={14} />
                           </button>
@@ -415,6 +454,7 @@ export default function AdminInventoryPage() {
                               type="button"
                               className="btn btn-ghost !min-h-11 !px-3 !text-xs text-[var(--danger)]"
                               onClick={() => void onDelete(p)}
+                              aria-label="Delete"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -492,17 +532,12 @@ export default function AdminInventoryPage() {
               ))}
             </select>
           </div>
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="p-images">
-              Image URLs (one per line)
-            </label>
-            <textarea
-              id="p-images"
-              className="textarea"
-              value={form.images}
-              onChange={(e) => setForm((f) => ({ ...f, images: e.target.value }))}
-            />
-          </div>
+
+          <ProductImagesField
+            images={form.images}
+            onChange={(images) => setForm((f) => ({ ...f, images }))}
+          />
+
           <div className="sm:col-span-2">
             <label className="label" htmlFor="p-description">
               Description
@@ -517,7 +552,7 @@ export default function AdminInventoryPage() {
               required
             />
           </div>
-          <div className="flex justify-end gap-2 sm:col-span-2">
+          <div className="flex flex-wrap justify-end gap-2 sm:col-span-2">
             <button
               type="button"
               className="btn btn-ghost"

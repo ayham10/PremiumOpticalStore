@@ -183,6 +183,9 @@ export default function AdminMediaPage() {
           >
             Media
           </h1>
+          <p className="mt-1 text-sm text-[var(--slate)]">
+            Uploaded images for products, promotions, and the website.
+          </p>
         </div>
         <button
           type="button"

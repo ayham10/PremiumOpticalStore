@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Copy, Plus, RefreshCw, Search } from "lucide-react";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -50,9 +51,18 @@ const STATUSES: EyeExamAppointmentStatus[] = [
   "no-show",
 ];
 
-export default function AdminEyeExamPage() {
+function AdminEyeExamPageInner() {
   const { t } = useLocale();
-  const [tab, setTab] = useState<"availability" | "appointments">("availability");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: "availability" | "appointments" =
+    tabParam === "appointments" ? "appointments" : "availability";
+
+  function setTab(next: "availability" | "appointments") {
+    router.replace(`/admin/eye-exam?tab=${next}`);
+  }
+
   const [days, setDays] = useState<DayRow[]>([]);
   const [defaultTimes, setDefaultTimes] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -264,20 +274,22 @@ export default function AdminEyeExamPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-            Admin
-          </p>
+          <p className="eyebrow">Bookings</p>
           <h1
             className="mt-1 text-3xl text-[var(--ink)]"
             style={{ fontFamily: "Fraunces, serif" }}
           >
-            {t("admin.sidebar.eyeExam")}
+            {tab === "availability"
+              ? t("admin.sidebar.availability")
+              : t("admin.sidebar.appointments")}
           </h1>
           <p className="mt-1 text-sm text-[var(--slate)]">
-            Manage clinic booking dates (08:30–21:00), slots, and appointments for all services. Dates display as DD/MM/YY. Leave all services checked to share the same slots.
+            {tab === "availability"
+              ? "Open dates, time slots, and service availability for online booking."
+              : "Search, filter, and manage customer bookings."}
           </p>
         </div>
         <button
@@ -317,7 +329,7 @@ export default function AdminEyeExamPage() {
       </div>
 
       {message ? (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p className="rounded-xl border border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.12)] px-3 py-2 text-sm text-[var(--success)]">
           {message}
         </p>
       ) : null}
@@ -930,5 +942,13 @@ export default function AdminEyeExamPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function AdminEyeExamPage() {
+  return (
+    <Suspense fallback={<p className="text-[var(--slate)]">Loading…</p>}>
+      <AdminEyeExamPageInner />
+    </Suspense>
   );
 }

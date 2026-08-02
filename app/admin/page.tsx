@@ -12,6 +12,7 @@ import {
   Clock3,
   Tag,
   Glasses,
+  Users,
 } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
@@ -35,7 +36,12 @@ function relativeCreated(iso: string): string {
   if (diffMin < 1) return "Just now";
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return `Today, ${new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  if (diffH < 24) {
+    return `Today, ${new Date(iso).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  }
   return new Date(iso).toLocaleDateString();
 }
 
@@ -132,7 +138,7 @@ export default function AdminDashboardPage() {
             {t("admin.dashboard.title")}
           </h1>
           <p className="mt-1 text-sm text-[var(--slate)]">
-            Welcome back — here is today’s appointment focus.
+            Today&apos;s bookings, stock alerts, and recent activity.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -148,7 +154,10 @@ export default function AdminDashboardPage() {
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
             Refresh
           </button>
-          <Link href="/admin/eye-exam" className="btn btn-accent">
+          <Link
+            href="/admin/eye-exam?tab=appointments"
+            className="btn btn-accent"
+          >
             <Plus size={16} />
             Add Appointment
           </Link>
@@ -161,12 +170,12 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label={t("admin.dashboard.today")}
           value={stats.todayAppointments}
           hint="View today's schedule"
-          href="/admin/eye-exam"
+          href="/admin/eye-exam?tab=appointments"
           icon={CalendarDays}
         />
         <StatCard
@@ -175,28 +184,36 @@ export default function AdminDashboardPage() {
           icon={CalendarRange}
         />
         <StatCard
-          label="Upcoming appointments"
+          label={t("admin.dashboard.upcoming")}
           value={upcomingCount}
           icon={Clock3}
         />
         <StatCard
           label={t("admin.dashboard.lowStock")}
           value={stats.lowStockAlerts}
-          hint="View inventory"
+          hint="View products"
           href="/admin/inventory"
           icon={AlertTriangle}
           tone={stats.lowStockAlerts > 0 ? "warning" : "default"}
+        />
+        <StatCard
+          label={t("admin.dashboard.customers")}
+          value={stats.totalCustomers}
+          icon={Users}
         />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="admin-card p-5">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl text-[var(--ink)]">
+            <h2
+              style={{ fontFamily: "Fraunces, serif" }}
+              className="text-xl text-[var(--ink)]"
+            >
               Today&apos;s appointments
             </h2>
             <Link
-              href="/admin/eye-exam"
+              href="/admin/eye-exam?tab=appointments"
               className="text-sm font-semibold text-[var(--accent)]"
             >
               View all
@@ -211,7 +228,8 @@ export default function AdminDashboardPage() {
                     {a.customerName}
                   </p>
                   <p className="truncate text-sm text-[var(--slate)]">
-                    {a.customerPhone || a.customerEmail} · {serviceLabel(t, a.service)}
+                    {a.customerPhone || a.customerEmail} ·{" "}
+                    {serviceLabel(t, a.service)}
                   </p>
                 </div>
                 <span className={`status status-${a.status}`}>{a.status}</span>
@@ -227,11 +245,14 @@ export default function AdminDashboardPage() {
 
         <section className="admin-card p-5">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl text-[var(--ink)]">
+            <h2
+              style={{ fontFamily: "Fraunces, serif" }}
+              className="text-xl text-[var(--ink)]"
+            >
               {t("admin.dashboard.recent")}
             </h2>
             <Link
-              href="/admin/appointments"
+              href="/admin/eye-exam?tab=appointments"
               className="text-sm font-semibold text-[var(--accent)]"
             >
               View all
@@ -240,7 +261,7 @@ export default function AdminDashboardPage() {
           <div>
             {recent.map((a) => (
               <div key={a.id} className="admin-schedule-row">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[rgba(212,175,106,0.12)] text-[var(--accent)]">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[rgba(212,175,55,0.12)] text-[var(--accent)]">
                   <Glasses size={18} />
                 </div>
                 <div className="min-w-0">
@@ -268,16 +289,22 @@ export default function AdminDashboardPage() {
           style={{ fontFamily: "Fraunces, serif" }}
           className="mb-3 text-xl text-[var(--ink)]"
         >
-          Quick actions
+          {t("admin.dashboard.quickActions")}
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Link href="/admin/eye-exam" className="admin-quick-action">
+          <Link
+            href="/admin/eye-exam?tab=appointments"
+            className="admin-quick-action"
+          >
             <span className="admin-quick-action-icon">
               <Plus size={22} />
             </span>
             <span className="text-sm font-semibold">Add Appointment</span>
           </Link>
-          <Link href="/admin/eye-exam" className="admin-quick-action">
+          <Link
+            href="/admin/eye-exam?tab=availability"
+            className="admin-quick-action"
+          >
             <span className="admin-quick-action-icon">
               <CalendarRange size={22} />
             </span>
@@ -293,7 +320,7 @@ export default function AdminDashboardPage() {
             <span className="admin-quick-action-icon">
               <Tag size={22} />
             </span>
-            <span className="text-sm font-semibold">Add Offer</span>
+            <span className="text-sm font-semibold">Add Promotion</span>
           </Link>
         </div>
       </section>
