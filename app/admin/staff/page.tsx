@@ -225,7 +225,7 @@ export default function AdminStaffPage() {
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-xl bg-[#fdeaea] px-3 py-2 text-sm text-[var(--danger)]">
+        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </p>
       ) : null}

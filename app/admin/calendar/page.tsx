@@ -315,10 +315,10 @@ export default function AdminCalendarPage() {
                   className={cn(
                     "min-h-[64px] rounded-lg border p-1 text-left transition-colors sm:min-h-[96px] sm:rounded-xl sm:p-2",
                     isSameMonth(day, cursor)
-                      ? "border-[var(--line)] bg-white"
+                      ? "border-[var(--line)] bg-[var(--admin-card,#13191E)]"
                       : "border-transparent bg-[var(--mist)]/60 text-[var(--slate)]",
                     isSameDay(day, new Date()) && "ring-2 ring-[var(--accent)]",
-                    isHoliday && "bg-[#fff4df]"
+                    isHoliday && "bg-[rgba(212,175,106,0.12)]"
                   )}
                 >
                   <div className="mb-1 flex items-center justify-between text-[0.7rem] font-semibold sm:text-xs">
@@ -376,7 +376,7 @@ export default function AdminCalendarPage() {
                 <div
                   className={cn(
                     "flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3",
-                    isHoliday && "bg-[#fff4df]"
+                    isHoliday && "bg-[rgba(212,175,106,0.12)]"
                   )}
                 >
                   <div>
@@ -466,7 +466,7 @@ export default function AdminCalendarPage() {
                   key={key}
                   className={cn(
                     "border-b border-s border-[var(--line)] p-3 text-center",
-                    isHoliday && "bg-[#fff4df]"
+                    isHoliday && "bg-[rgba(212,175,106,0.12)]"
                   )}
                 >
                   <p className="text-xs font-semibold uppercase text-[var(--slate)]">

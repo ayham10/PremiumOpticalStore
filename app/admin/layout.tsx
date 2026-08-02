@@ -18,6 +18,15 @@ export default function AdminLayout({
   const [ready, setReady] = useState(isLogin);
 
   useEffect(() => {
+    document.documentElement.classList.add("admin-dark");
+    document.body.classList.add("admin-dark");
+    return () => {
+      document.documentElement.classList.remove("admin-dark");
+      document.body.classList.remove("admin-dark");
+    };
+  }, []);
+
+  useEffect(() => {
     if (isLogin) {
       setReady(true);
       return;
@@ -29,7 +38,7 @@ export default function AdminLayout({
     (async () => {
       try {
         const data = await apiFetch<{ user: AdminSession } | AdminSession>(
-          "/api/auth/me"
+          "/api/auth/me",
         );
         const user = "user" in data ? data.user : data;
         if (!cancelled) {
@@ -53,16 +62,12 @@ export default function AdminLayout({
   }, [isLogin, pathname, router]);
 
   if (isLogin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4 py-10">
-        {children}
-      </div>
-    );
+    return <div className="admin-auth">{children}</div>;
   }
 
   if (!ready || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f2f5f8] text-[var(--slate)]">
+      <div className="flex min-h-screen items-center justify-center bg-[#080C0F] text-[var(--slate)]">
         Loading admin…
       </div>
     );

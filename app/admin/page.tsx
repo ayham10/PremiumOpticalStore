@@ -1,24 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
   CalendarRange,
   Package,
   AlertTriangle,
-  Users,
   RefreshCw,
+  Plus,
+  Clock3,
+  Tag,
+  Glasses,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
 import type { DashboardRecentBooking, DashboardStats } from "@/lib/types";
@@ -28,13 +22,21 @@ type DashboardPayload = DashboardStats & {
   todaysSchedule?: DashboardRecentBooking[];
 };
 
-function serviceLabel(
-  t: (key: string) => string,
-  service: string,
-): string {
+function serviceLabel(t: (key: string) => string, service: string): string {
   const key = `clinicBooking.services.${service}`;
   const label = t(key);
   return label === key ? service : label;
+}
+
+function relativeCreated(iso: string): string {
+  const created = new Date(iso).getTime();
+  if (Number.isNaN(created)) return "";
+  const diffMin = Math.round((Date.now() - created) / 60000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `Today, ${new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  return new Date(iso).toLocaleDateString();
 }
 
 export default function AdminDashboardPage() {
@@ -66,7 +68,6 @@ export default function AdminDashboardPage() {
     void load();
   }, [load]);
 
-  // Refresh when returning to the tab (e.g. after creating/updating a booking)
   useEffect(() => {
     function onFocus() {
       void load({ soft: true });
@@ -83,6 +84,14 @@ export default function AdminDashboardPage() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [load]);
+
+  const upcomingCount = useMemo(() => {
+    if (!stats?.appointmentsByDay?.length) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    return stats.appointmentsByDay
+      .filter((d) => d.date > today)
+      .reduce((sum, d) => sum + d.count, 0);
+  }, [stats]);
 
   if (loading && !stats) {
     return <p className="text-[var(--slate)]">{t("common.loading")}</p>;
@@ -104,42 +113,60 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const chartData = (stats.appointmentsByDay || []).map((d) => ({
-    ...d,
-    label: d.dateLabel || d.date.slice(5),
-  }));
-  const hasChartActivity = chartData.some((d) => d.count > 0);
+  const schedule = stats.todaysSchedule || [];
+  const recent = stats.recentBookings || [];
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <h1
-          className="mt-1 text-3xl text-[var(--ink)]"
-          style={{ fontFamily: "Fraunces, serif" }}
-        >
-          {t("admin.dashboard.title")}
-        </h1>
-        <button
-          type="button"
-          className="btn btn-ghost inline-flex items-center gap-2"
-          onClick={() => void load({ soft: true })}
-          disabled={refreshing}
-        >
-          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-          Refresh
-        </button>
+        <div>
+          <h1
+            className="text-3xl text-[var(--ink)]"
+            style={{ fontFamily: "Fraunces, serif" }}
+          >
+            {t("admin.dashboard.title")}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--slate)]">
+            Welcome back — here is today’s appointment focus.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="rounded-xl border border-[var(--line)] px-3 py-2 text-sm text-[var(--slate)]">
+            {todayLabel}
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost inline-flex items-center gap-2"
+            onClick={() => void load({ soft: true })}
+            disabled={refreshing}
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <Link href="/admin/eye-exam" className="btn btn-accent">
+            <Plus size={16} />
+            Add Appointment
+          </Link>
+        </div>
       </header>
 
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t("admin.dashboard.today")}
           value={stats.todayAppointments}
+          hint="View today's schedule"
+          href="/admin/eye-exam"
           icon={CalendarDays}
         />
         <StatCard
@@ -148,163 +175,126 @@ export default function AdminDashboardPage() {
           icon={CalendarRange}
         />
         <StatCard
-          label={t("admin.dashboard.inventory")}
-          value={stats.inventoryItems}
-          icon={Package}
+          label="Upcoming appointments"
+          value={upcomingCount}
+          icon={Clock3}
         />
         <StatCard
           label={t("admin.dashboard.lowStock")}
           value={stats.lowStockAlerts}
+          hint="View inventory"
+          href="/admin/inventory"
           icon={AlertTriangle}
           tone={stats.lowStockAlerts > 0 ? "warning" : "default"}
         />
-        <StatCard
-          label={t("admin.dashboard.customers")}
-          value={stats.totalCustomers}
-          icon={Users}
-          tone="success"
-        />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-4 xl:grid-cols-2">
         <section className="admin-card p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
-              {t("admin.dashboard.chart")}
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl text-[var(--ink)]">
+              Today&apos;s appointments
             </h2>
             <Link
               href="/admin/eye-exam"
               className="text-sm font-semibold text-[var(--accent)]"
             >
-              {t("admin.sidebar.eyeExam")}
+              View all
             </Link>
           </div>
-          <div className="h-64 w-full">
-            {hasChartActivity ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(16,21,28,0.08)" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#5a6675" }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#5a6675" }} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 12,
-                      border: "1px solid rgba(16,21,28,0.08)",
-                    }}
-                  />
-                  <Bar dataKey="count" fill="#1a4a6b" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="grid h-full place-items-center text-sm text-[var(--slate)]">
-                {t("admin.common.noResults")}
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section className="admin-card p-5">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="mb-4 text-xl">
-            {t("common.status")}
-          </h2>
-          <ul className="space-y-3">
-            {(stats.statusBreakdown || []).map((row) => (
-              <li
-                key={row.status}
-                className="flex items-center justify-between gap-3 text-sm"
-              >
-                <span className={`status status-${row.status}`}>{row.status}</span>
-                <span className="font-semibold text-[var(--ink)]">{row.count}</span>
-              </li>
-            ))}
-            {!stats.statusBreakdown?.length ? (
-              <li className="text-sm text-[var(--slate)]">
-                {t("admin.common.noResults")}
-              </li>
-            ) : null}
-          </ul>
-        </section>
-      </div>
-
-      <section className="admin-card overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-4">
-          <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
-            {t("admin.dashboard.recent")}
-          </h2>
-          <Link
-            href="/admin/eye-exam"
-            className="text-sm font-semibold text-[var(--accent)]"
-          >
-            {t("admin.sidebar.eyeExam")}
-          </Link>
-        </div>
-
-        {/* Mobile: compact cards */}
-        <div className="space-y-3 p-4 md:hidden">
-          {(stats.recentBookings || []).map((a) => (
-            <article key={a.id} className="dashboard-recent-card">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-[var(--ink)]">{a.customerName}</p>
-                  <p className="mt-0.5 text-sm text-[var(--slate)]">
-                    {serviceLabel(t, a.service)}
+          <div>
+            {schedule.map((a) => (
+              <div key={a.id} className="admin-schedule-row">
+                <p className="font-semibold text-[var(--accent)]">{a.startTime}</p>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-[var(--ink)]">
+                    {a.customerName}
+                  </p>
+                  <p className="truncate text-sm text-[var(--slate)]">
+                    {a.customerPhone || a.customerEmail} · {serviceLabel(t, a.service)}
                   </p>
                 </div>
                 <span className={`status status-${a.status}`}>{a.status}</span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--ink-soft)]">
-                <span>{a.dateLabel || a.date}</span>
-                <span>{a.startTime}</span>
-              </div>
-            </article>
-          ))}
-          {!stats.recentBookings?.length ? (
-            <p className="py-6 text-center text-sm text-[var(--slate)]">
-              {t("admin.common.noResults")}
-            </p>
-          ) : null}
-        </div>
+            ))}
+            {!schedule.length ? (
+              <p className="py-8 text-center text-sm text-[var(--slate)]">
+                No appointments scheduled for today
+              </p>
+            ) : null}
+          </div>
+        </section>
 
-        {/* Desktop/tablet: table */}
-        <div className="hidden md:block md:overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{t("common.name")}</th>
-                <th>{t("book.steps.service")}</th>
-                <th>{t("common.date")}</th>
-                <th>{t("common.time")}</th>
-                <th>{t("common.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(stats.recentBookings || []).map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <div className="font-medium text-[var(--ink)]">
-                      {a.customerName}
-                    </div>
-                    <div className="text-xs text-[var(--slate)]">
-                      {a.customerEmail}
-                    </div>
-                  </td>
-                  <td>{serviceLabel(t, a.service)}</td>
-                  <td>{a.dateLabel || a.date}</td>
-                  <td>{a.startTime}</td>
-                  <td>
-                    <span className={`status status-${a.status}`}>{a.status}</span>
-                  </td>
-                </tr>
-              ))}
-              {!stats.recentBookings?.length ? (
-                <tr>
-                  <td colSpan={5} className="text-[var(--slate)]">
-                    {t("admin.common.noResults")}
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <section className="admin-card p-5">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl text-[var(--ink)]">
+              {t("admin.dashboard.recent")}
+            </h2>
+            <Link
+              href="/admin/appointments"
+              className="text-sm font-semibold text-[var(--accent)]"
+            >
+              View all
+            </Link>
+          </div>
+          <div>
+            {recent.map((a) => (
+              <div key={a.id} className="admin-schedule-row">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[rgba(212,175,106,0.12)] text-[var(--accent)]">
+                  <Glasses size={18} />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-[var(--ink)]">
+                    {a.customerName}
+                  </p>
+                  <p className="truncate text-sm text-[var(--slate)]">
+                    {serviceLabel(t, a.service)} · {relativeCreated(a.createdAt)}
+                  </p>
+                </div>
+                <span className={`status status-${a.status}`}>{a.status}</span>
+              </div>
+            ))}
+            {!recent.length ? (
+              <p className="py-8 text-center text-sm text-[var(--slate)]">
+                {t("admin.common.noResults")}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      </div>
+
+      <section>
+        <h2
+          style={{ fontFamily: "Fraunces, serif" }}
+          className="mb-3 text-xl text-[var(--ink)]"
+        >
+          Quick actions
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Link href="/admin/eye-exam" className="admin-quick-action">
+            <span className="admin-quick-action-icon">
+              <Plus size={22} />
+            </span>
+            <span className="text-sm font-semibold">Add Appointment</span>
+          </Link>
+          <Link href="/admin/eye-exam" className="admin-quick-action">
+            <span className="admin-quick-action-icon">
+              <CalendarRange size={22} />
+            </span>
+            <span className="text-sm font-semibold">Manage Availability</span>
+          </Link>
+          <Link href="/admin/inventory" className="admin-quick-action">
+            <span className="admin-quick-action-icon">
+              <Package size={22} />
+            </span>
+            <span className="text-sm font-semibold">Add Product</span>
+          </Link>
+          <Link href="/admin/promotions" className="admin-quick-action">
+            <span className="admin-quick-action-icon">
+              <Tag size={22} />
+            </span>
+            <span className="text-sm font-semibold">Add Offer</span>
+          </Link>
         </div>
       </section>
     </div>

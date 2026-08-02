@@ -30,7 +30,7 @@ function ColorField({
         {!isRgba ? (
           <input
             type="color"
-            className="h-11 w-12 cursor-pointer rounded-lg border border-[var(--line)] bg-white p-1"
+            className="h-11 w-12 cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--admin-elevated,#181F26)] p-1"
             value={value.startsWith("#") ? value : "#D4AF6A"}
             onChange={(e) => onChange(e.target.value)}
           />

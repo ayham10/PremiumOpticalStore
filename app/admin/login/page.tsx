@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
         className="px-8 pb-6 pt-8"
         style={{
           background:
-            "linear-gradient(145deg, rgba(26,74,107,0.1) 0%, rgba(255,255,255,0) 55%)",
+            "linear-gradient(145deg, rgba(212,175,106,0.12) 0%, rgba(19,25,30,0) 55%)",
         }}
       >
         <p className="eyebrow">{t("admin.loginTitle")}</p>
@@ -100,7 +100,7 @@ export default function AdminLoginPage() {
         </div>
 
         {error ? (
-          <p className="rounded-xl bg-[#fdeaea] px-3 py-2 text-sm text-[var(--danger)]">
+          <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
             {error}
           </p>
         ) : null}

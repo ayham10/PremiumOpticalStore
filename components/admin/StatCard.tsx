@@ -1,32 +1,35 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 
 interface StatCardProps {
   label: string;
   value: string | number;
   hint?: string;
+  href?: string;
   icon: LucideIcon;
   tone?: "default" | "warning" | "success";
 }
 
 const tones = {
-  default: { bg: "var(--accent-wash)", color: "var(--accent)" },
-  warning: { bg: "#fff4df", color: "var(--warning)" },
-  success: { bg: "#e7f5f0", color: "var(--success)" },
+  default: { bg: "rgba(212,175,106,0.12)", color: "#D4AF6A" },
+  warning: { bg: "rgba(212,175,106,0.16)", color: "#E6C58A" },
+  success: { bg: "rgba(94,196,154,0.14)", color: "#5EC49A" },
 };
 
 export default function StatCard({
   label,
   value,
   hint,
+  href,
   icon: Icon,
   tone = "default",
 }: StatCardProps) {
   const t = tones[tone];
 
-  return (
+  const body = (
     <motion.div
       className="admin-card p-5"
       initial={{ opacity: 0, y: 10 }}
@@ -39,13 +42,18 @@ export default function StatCard({
             {label}
           </p>
           <p
-            className="mt-2 font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]"
-            style={{ fontFamily: "Fraunces, serif" }}
+            className="mt-2 text-3xl text-[var(--ink)]"
+            style={{
+              fontFamily: "Fraunces, serif",
+              color: tone === "warning" ? "#D4AF6A" : undefined,
+            }}
           >
             {value}
           </p>
           {hint ? (
-            <p className="mt-1 text-sm text-[var(--slate)]">{hint}</p>
+            <p className="mt-2 text-sm font-medium text-[var(--accent)]">
+              {hint}
+            </p>
           ) : null}
         </div>
         <div
@@ -57,4 +65,14 @@ export default function StatCard({
       </div>
     </motion.div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block no-underline">
+        {body}
+      </Link>
+    );
+  }
+
+  return body;
 }

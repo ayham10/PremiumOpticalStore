@@ -329,7 +329,7 @@ export default function AdminInventoryPage() {
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-xl bg-[#fdeaea] px-3 py-2 text-sm text-[var(--danger)]">
+        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </p>
       ) : null}
@@ -367,7 +367,7 @@ export default function AdminInventoryPage() {
                   return (
                     <tr
                       key={p.id}
-                      className={low ? "bg-[#fff8ee]" : undefined}
+                      className={low ? "bg-[rgba(212,175,106,0.08)]" : undefined}
                     >
                       <td data-label="Product">
                         <div className="font-medium text-[var(--ink)]">{p.name}</div>

@@ -34,20 +34,93 @@ const NAV: Array<{
   permission: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
-  group?: string;
+  group?: "appointments" | "catalogue" | "website" | "system";
 }> = [
-  { href: "/admin", labelKey: "admin.sidebar.dashboard", permission: "dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/appointments", labelKey: "admin.sidebar.appointments", permission: "appointments", icon: CalendarDays },
-  { href: "/admin/eye-exam", labelKey: "admin.sidebar.eyeExam", permission: "appointments", icon: Eye },
-  { href: "/admin/calendar", labelKey: "admin.sidebar.calendar", permission: "calendar", icon: CalendarRange },
-  { href: "/admin/customers", labelKey: "admin.sidebar.customers", permission: "customers", icon: Users },
-  { href: "/admin/inventory", labelKey: "admin.sidebar.inventory", permission: "inventory", icon: Package },
-  { href: "/admin/promotions", labelKey: "admin.sidebar.promotions", permission: "promotions", icon: Tag },
-  { href: "/admin/staff", labelKey: "admin.sidebar.staff", permission: "staff", icon: UserCog },
-  { href: "/admin/media", labelKey: "admin.sidebar.media", permission: "media", icon: ImageIcon, group: "website" },
-  { href: "/admin/branding", labelKey: "admin.sidebar.branding", permission: "settings", icon: Palette, group: "website" },
-  { href: "/admin/settings", labelKey: "admin.sidebar.settings", permission: "settings", icon: Settings, group: "website" },
+  {
+    href: "/admin",
+    labelKey: "admin.sidebar.dashboard",
+    permission: "dashboard",
+    icon: LayoutDashboard,
+    exact: true,
+  },
+  {
+    href: "/admin/appointments",
+    labelKey: "admin.sidebar.appointments",
+    permission: "appointments",
+    icon: CalendarDays,
+    group: "appointments",
+  },
+  {
+    href: "/admin/eye-exam",
+    labelKey: "admin.sidebar.eyeExam",
+    permission: "appointments",
+    icon: Eye,
+    group: "appointments",
+  },
+  {
+    href: "/admin/calendar",
+    labelKey: "admin.sidebar.calendar",
+    permission: "calendar",
+    icon: CalendarRange,
+    group: "appointments",
+  },
+  {
+    href: "/admin/customers",
+    labelKey: "admin.sidebar.customers",
+    permission: "customers",
+    icon: Users,
+    group: "appointments",
+  },
+  {
+    href: "/admin/inventory",
+    labelKey: "admin.sidebar.inventory",
+    permission: "inventory",
+    icon: Package,
+    group: "catalogue",
+  },
+  {
+    href: "/admin/promotions",
+    labelKey: "admin.sidebar.promotions",
+    permission: "promotions",
+    icon: Tag,
+    group: "catalogue",
+  },
+  {
+    href: "/admin/media",
+    labelKey: "admin.sidebar.media",
+    permission: "media",
+    icon: ImageIcon,
+    group: "website",
+  },
+  {
+    href: "/admin/branding",
+    labelKey: "admin.sidebar.branding",
+    permission: "settings",
+    icon: Palette,
+    group: "website",
+  },
+  {
+    href: "/admin/settings",
+    labelKey: "admin.sidebar.settings",
+    permission: "settings",
+    icon: Settings,
+    group: "website",
+  },
+  {
+    href: "/admin/staff",
+    labelKey: "admin.sidebar.staff",
+    permission: "staff",
+    icon: UserCog,
+    group: "system",
+  },
 ];
+
+const GROUP_LABEL: Record<string, string> = {
+  appointments: "admin.sidebar.groupAppointments",
+  catalogue: "admin.sidebar.groupCatalogue",
+  website: "admin.sidebar.website",
+  system: "admin.sidebar.groupSystem",
+};
 
 export default function AdminSidebar({
   role,
@@ -85,18 +158,12 @@ export default function AdminSidebar({
   const links = NAV.filter((item) => hasPermission(role, item.permission));
 
   const nav = (
-    <aside className="flex h-full min-h-full flex-col border-e border-[var(--line)] bg-white">
+    <aside className="admin-sidebar flex h-full min-h-full flex-col border-e border-[var(--line)] bg-[var(--admin-card,#13191E)]">
       <div className="border-b border-[var(--line)] px-5 py-6">
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
-          Optical
-        </p>
-        <div className="mt-1">
-          <BrandMark branding={branding} href="/admin" size="md" />
+        <div className="mt-0.5">
+          <BrandMark branding={branding} href="/admin" size="md" suffix="OPTICS" />
         </div>
-        <p className="mt-1 text-xs font-medium text-[var(--slate)]">Admin</p>
-        {userName ? (
-          <p className="mt-2 truncate text-sm text-[var(--slate)]">{userName}</p>
-        ) : null}
+        <p className="mt-2 text-xs font-medium text-[var(--slate)]">Admin</p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
@@ -106,24 +173,18 @@ export default function AdminSidebar({
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           const prev = links[index - 1];
-          const showGroup =
-            item.group === "website" && prev?.group !== "website";
+          const showGroup = Boolean(item.group && item.group !== prev?.group);
           return (
             <div key={item.href}>
-              {showGroup ? (
+              {showGroup && item.group ? (
                 <p className="mb-1 mt-3 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[var(--slate)]">
-                  {t("admin.sidebar.website")}
+                  {t(GROUP_LABEL[item.group])}
                 </p>
               ) : null}
               <Link
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className={cn(
-                  "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-[var(--accent-wash)] text-[var(--accent)]"
-                    : "text-[var(--ink-soft)] hover:bg-[var(--mist)]"
-                )}
+                className={cn("admin-nav-link", active && "is-active")}
               >
                 <Icon size={18} />
                 {t(item.labelKey)}
@@ -134,14 +195,22 @@ export default function AdminSidebar({
       </nav>
 
       <div className="space-y-2 border-t border-[var(--line)] p-3">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--admin-elevated,#181F26)] px-3 py-3">
+          <p className="truncate text-sm font-semibold text-[var(--ink)]">
+            {userName || "Admin"}
+          </p>
+          <p className="truncate text-xs text-[var(--slate)]">
+            {role === "admin" ? "Super Administrator" : role}
+          </p>
+        </div>
         <div className="px-1 py-1">
-          <LanguageSwitcher />
+          <LanguageSwitcher tone="dark" />
         </div>
         <button
           type="button"
           onClick={logout}
           disabled={loggingOut}
-          className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--danger)] hover:bg-[#fdeaea]"
+          className="admin-nav-link w-full text-[var(--danger)] hover:bg-[rgba(224,122,122,0.12)]"
         >
           <LogOut size={18} />
           {t("admin.logout")}
@@ -152,11 +221,11 @@ export default function AdminSidebar({
 
   return (
     <div className="relative z-40 md:contents">
-      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-white/95 px-4 py-3 backdrop-blur md:hidden">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[rgba(8,12,15,0.92)] px-4 py-3 backdrop-blur md:hidden">
         <BrandMark branding={branding} href="/admin" size="sm" />
         <button
           type="button"
-          className="grid h-11 w-11 place-items-center rounded-full border border-[var(--line)]"
+          className="grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[var(--ink)]"
           onClick={() => setOpen(true)}
           aria-label={t("nav.menu")}
           aria-expanded={open}
@@ -171,19 +240,19 @@ export default function AdminSidebar({
         <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-[rgba(16,21,28,0.45)] backdrop-blur-[2px]"
+            className="absolute inset-0 bg-[rgba(0,0,0,0.55)] backdrop-blur-[2px]"
             aria-label={t("nav.close")}
             onClick={() => setOpen(false)}
           />
           <div
             className={cn(
               "relative h-full w-[min(300px,86vw)] shadow-2xl transition-transform duration-300",
-              "animate-[fadeIn_0.2s_ease]"
+              "animate-[fadeIn_0.2s_ease]",
             )}
           >
             <button
               type="button"
-              className="absolute end-3 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-white"
+              className="absolute end-3 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--admin-card,#13191E)] text-[var(--ink)]"
               onClick={() => setOpen(false)}
               aria-label={t("common.close")}
             >

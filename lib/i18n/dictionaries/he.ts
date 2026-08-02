@@ -630,6 +630,9 @@ const he: Dictionary = {
       website: "אתר",
       branding: "מיתוג",
       settings: "הגדרות חנות",
+      groupAppointments: "תורים",
+      groupCatalogue: "קטלוג",
+      groupSystem: "מערכת",
     },
     dashboard: {
       title: "לוח בקרה",

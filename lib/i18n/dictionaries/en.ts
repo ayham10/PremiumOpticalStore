@@ -901,6 +901,9 @@ const en: Dictionary = {
       website: "Website",
       branding: "Branding",
       settings: "Store Settings",
+      groupAppointments: "Appointments",
+      groupCatalogue: "Catalogue",
+      groupSystem: "System",
     },
     dashboard: {
       title: "Dashboard",

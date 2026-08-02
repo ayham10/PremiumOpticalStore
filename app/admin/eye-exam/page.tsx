@@ -322,7 +322,7 @@ export default function AdminEyeExamPage() {
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </p>
       ) : null}
@@ -333,7 +333,7 @@ export default function AdminEyeExamPage() {
 
       {tab === "availability" ? (
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+          <section className="admin-card rounded-2xl p-4">
             <h2 className="text-lg font-semibold">Dates</h2>
             <form onSubmit={createDay} className="mt-3 space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
@@ -434,7 +434,7 @@ export default function AdminEyeExamPage() {
             </ul>
           </section>
 
-          <section className="rounded-2xl border border-[var(--line)] bg-white p-4 md:p-5">
+          <section className="admin-card rounded-2xl p-4 md:p-5">
             {!selected ? (
               <p className="text-sm text-[var(--slate)]">Select or add a date.</p>
             ) : (
@@ -595,7 +595,7 @@ export default function AdminEyeExamPage() {
           </section>
         </div>
       ) : (
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 md:p-5">
+        <section className="admin-card rounded-2xl p-4 md:p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-end">
             <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
               Search
@@ -769,7 +769,7 @@ export default function AdminEyeExamPage() {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
           <form
             onSubmit={saveEdit}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+            className="admin-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
           >
             <h3
               className="text-xl text-[var(--ink)]"

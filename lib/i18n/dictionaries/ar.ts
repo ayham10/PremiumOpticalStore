@@ -630,6 +630,9 @@ const ar: Dictionary = {
       website: "الموقع",
       branding: "الهوية البصرية",
       settings: "إعدادات المتجر",
+      groupAppointments: "المواعيد",
+      groupCatalogue: "الكتالوج",
+      groupSystem: "النظام",
     },
     dashboard: {
       title: "لوحة التحكم",
