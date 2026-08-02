@@ -8,11 +8,11 @@
   --mist: #eef2f5;
   --paper: #f7f8fa;
   --white: #ffffff;
-  --accent: #1a4a6b;
-  --accent-soft: #2d6a8f;
-  --accent-wash: rgba(26, 74, 107, 0.08);
-  --copper: #8d6844;
-  --copper-soft: #b08a5e;
+  --accent: #d4af6a;
+  --accent-soft: #e6c58a;
+  --accent-wash: rgba(212, 175, 106, 0.12);
+  --copper: #d4af6a;
+  --copper-soft: #e6c58a;
   --line: rgba(16, 21, 28, 0.08);
   --line-strong: rgba(16, 21, 28, 0.14);
   --shadow: 0 18px 50px rgba(16, 21, 28, 0.08);
@@ -25,6 +25,21 @@
   --glass: rgba(255, 255, 255, 0.72);
   --background: var(--paper);
   --foreground: var(--ink);
+  /* Branding defaults (overridden by BrandingProvider) */
+  --brand-primary: #d4af6a;
+  --brand-secondary: #e6c58a;
+  --brand-gold: #d4af6a;
+  --brand-button: #d4af6a;
+  --brand-button-hover: #e6c58a;
+  --brand-text: #f5f5f2;
+  --brand-text-secondary: #9ca5ad;
+  --brand-bg: #080c0f;
+  --brand-card: #13191e;
+  --brand-border: rgba(255, 255, 255, 0.08);
+  --brand-heading-font: "Fraunces", ui-serif, Georgia, serif;
+  --brand-body-font: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --brand-font-scale: 1;
+  --brand-name-color: #d4af6a;
 }
 
 @theme inline {
@@ -242,14 +257,14 @@ p {
 }
 
 .btn-copper {
-  background: #c4a574;
-  color: #14110d;
-  box-shadow: 0 10px 28px rgba(196, 165, 116, 0.28);
+  background: var(--brand-button, #d4af6a);
+  color: var(--brand-bg, #080c0f);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--brand-button, #d4af6a) 35%, transparent);
 }
 
 .btn-copper:hover {
-  background: #d4b483;
-  color: #14110d;
+  background: var(--brand-button-hover, #e6c58a);
+  color: var(--brand-bg, #080c0f);
 }
 
 .btn-ghost {

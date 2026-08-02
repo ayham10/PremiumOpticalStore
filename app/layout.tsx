@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ConditionalChrome from "@/components/ConditionalChrome";
+import { BrandingProvider } from "@/components/branding/BrandingProvider";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
 import { isRtl } from "@/lib/i18n/config";
@@ -22,7 +23,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f7f8fa",
+  themeColor: "#080C0F",
 };
 
 export default async function RootLayout({
@@ -38,7 +39,9 @@ export default async function RootLayout({
     <html lang={locale} dir={dir}>
       <body>
         <LocaleProvider locale={locale} dict={dict}>
-          <ConditionalChrome>{children}</ConditionalChrome>
+          <BrandingProvider>
+            <ConditionalChrome>{children}</ConditionalChrome>
+          </BrandingProvider>
         </LocaleProvider>
       </body>
     </html>

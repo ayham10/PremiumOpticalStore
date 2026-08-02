@@ -2,7 +2,9 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Save } from "lucide-react";
+import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
+import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
 import type { StoreSettings, WorkingHours } from "@/lib/types";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -30,6 +32,7 @@ const EMPTY_SETTINGS: StoreSettings = {
     heroLine: { en: "", ar: "", he: "" },
     brandSuffix: { en: "", ar: "", he: "" },
   },
+  branding: { ...DEFAULT_BRANDING },
   smtp: {},
   sms: { provider: "console", enabled: true },
   appointmentSlotMinutes: 30,
@@ -39,10 +42,19 @@ const EMPTY_SETTINGS: StoreSettings = {
 };
 
 function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): StoreSettings {
-  if (data && typeof data === "object" && "settings" in data) {
-    return data.settings;
-  }
-  return data as StoreSettings;
+  const settings =
+    data && typeof data === "object" && "settings" in data
+      ? data.settings
+      : (data as StoreSettings);
+  return {
+    ...EMPTY_SETTINGS,
+    ...settings,
+    branding: mergeBranding(settings.branding),
+    content: {
+      ...EMPTY_SETTINGS.content,
+      ...(settings.content || {}),
+    },
+  };
 }
 
 export default function AdminSettingsPage() {
@@ -89,8 +101,10 @@ export default function AdminSettingsPage() {
         "/api/settings",
         { method: "PUT", body: JSON.stringify({ settings: form }) }
       );
-      setForm(normalizeSettings(saved));
-      setMessage("Settings saved");
+      const next = normalizeSettings(saved);
+      setForm(next);
+      setMessage("Settings saved — branding applied site-wide");
+      window.dispatchEvent(new Event("oyon:branding-saved"));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -126,6 +140,8 @@ export default function AdminSettingsPage() {
       ) : null}
 
       <form onSubmit={onSubmit} className="space-y-5">
+        <BrandingSettingsSection value={form} onChange={setForm} />
+
         <section className="admin-card space-y-4 p-5">
           <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
             Store info

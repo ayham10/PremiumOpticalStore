@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 const SESSION_KEY = "oyon-intro-shown";
@@ -17,6 +19,7 @@ function markIntroSeen() {
 
 export default function IntroLoader() {
   const { t } = useLocale();
+  const { branding } = useBranding();
   const [visible, setVisible] = useState(false);
   const [phase, setPhase] = useState(0);
   const opticalLabel = t("intro.optical");
@@ -100,10 +103,13 @@ export default function IntroLoader() {
             animate={phase >= 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="font-[family-name:var(--font-display)] text-[clamp(2.4rem,8vw,4.2rem)] tracking-[0.18em]">
-              {t("hero.brand")}
+            <div className="flex justify-center text-[clamp(2.4rem,8vw,4.2rem)]">
+              <BrandMark branding={branding} link={false} size="lg" onDark />
             </div>
-            <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.42em] text-[#d4b483]">
+            <div
+              className="mt-2 text-[11px] font-semibold uppercase tracking-[0.42em]"
+              style={{ color: "var(--brand-gold, #d4af6a)" }}
+            >
               {opticalLabel}
             </div>
             <p className="mt-5 font-[family-name:var(--font-display)] text-[clamp(1.15rem,3.5vw,1.65rem)] text-white/90">

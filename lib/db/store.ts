@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { mergeBranding } from "@/lib/branding";
 import { createSeedData } from "@/lib/seed";
 import type { AppData } from "@/lib/types";
 
@@ -137,7 +138,11 @@ function normalizeData(data: AppData): AppData {
       ? data.eyeExamAvailability
       : createSeedData().eyeExamAvailability,
     eyeExamAppointments,
-    settings: { ...createSeedData().settings, ...(data.settings || {}) },
+    settings: {
+      ...createSeedData().settings,
+      ...(data.settings || {}),
+      branding: mergeBranding(data.settings?.branding),
+    },
     version: data.version || 1,
     updatedAt: data.updatedAt || new Date().toISOString(),
   };

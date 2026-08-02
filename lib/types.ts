@@ -255,6 +255,48 @@ export interface LocalizedContent {
   he?: string;
 }
 
+export interface BrandingColors {
+  primaryAccent: string;
+  secondaryAccent: string;
+  gold: string;
+  button: string;
+  buttonHover: string;
+  text: string;
+  textSecondary: string;
+  background: string;
+  card: string;
+  border: string;
+}
+
+export interface BrandingTypography {
+  headingFont: string;
+  bodyFont: string;
+  /** 0.85 – 1.35 relative scale */
+  fontScale: number;
+}
+
+export interface BrandingStoreNameStyle {
+  color: string;
+  fontWeight: number;
+  letterSpacing: string;
+  textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+  goldGradient: boolean;
+  glow: boolean;
+  underline: boolean;
+  showLogo: boolean;
+}
+
+export interface BrandingSettings {
+  storeNameEn: string;
+  storeNameAr: string;
+  storeNameHe?: string;
+  logo?: string;
+  favicon?: string;
+  colors: BrandingColors;
+  typography: BrandingTypography;
+  storeNameStyle: BrandingStoreNameStyle;
+}
+
 export interface StoreSettings {
   storeName: string;
   tagline: string;
@@ -284,6 +326,8 @@ export interface StoreSettings {
     heroLine?: LocalizedContent;
     brandSuffix?: LocalizedContent;
   };
+  /** Admin-editable brand, colors, typography (no code changes needed) */
+  branding?: BrandingSettings;
   smtp: {
     host?: string;
     port?: number;

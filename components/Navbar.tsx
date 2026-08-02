@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function Navbar() {
   const { t } = useLocale();
+  const { branding } = useBranding();
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isProduct = pathname?.startsWith("/product/") ?? false;
@@ -75,22 +78,14 @@ export default function Navbar() {
         }`}
       >
         <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-4">
-          <Link
-            href="/"
-            className={`font-[family-name:var(--font-display)] text-[1.35rem] tracking-[0.1em] sm:text-[1.5rem] ${
-              whiteText || open ? "text-white" : "text-[var(--ink)]"
-            }`}
-            onClick={() => setOpen(false)}
-          >
-            {t("hero.brand")}
-            <span
-              className={`ms-1 hidden text-[0.62em] tracking-[0.18em] sm:inline ${
-                whiteText || open ? "text-white/70" : "text-[var(--slate)]"
-              }`}
-            >
-              {t("hero.brandSuffix")}
-            </span>
-          </Link>
+          <span onClick={() => setOpen(false)}>
+            <BrandMark
+              branding={branding}
+              href="/"
+              onDark={whiteText || open}
+              suffix={t("hero.brandSuffix")}
+            />
+          </span>
 
           <nav
             className={`hidden items-center gap-5 text-[0.86rem] font-semibold uppercase tracking-[0.12em] xl:flex ${

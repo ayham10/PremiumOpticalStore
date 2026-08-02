@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function Footer() {
   const { t } = useLocale();
+  const { branding, settings } = useBranding();
 
   return (
     <footer className="border-t border-[var(--line)] bg-[var(--ink)] text-white">
       <div className="wrap grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <div className="font-[family-name:var(--font-display)] text-3xl tracking-[0.08em]">
-            {t("hero.brand")}
-          </div>
+          <BrandMark branding={branding} href="/" size="lg" onDark />
           <p className="mt-4 max-w-sm text-[0.95rem] text-white/65">
             {t("footer.tagline")}
           </p>
@@ -23,12 +24,12 @@ export default function Footer() {
             {t("footer.visit")}
           </div>
           <p className="mt-4 text-white/75">
-            Main Street
+            {settings?.address || "Main Street"}
             <br />
-            Deir Hanna
+            {settings?.city || "Deir Hanna"}
           </p>
-          <p className="mt-3 text-white/75">+972-52-123-4567</p>
-          <p className="text-white/75">hello@oyon.optics</p>
+          <p className="mt-3 text-white/75">{settings?.phone || "+972-52-123-4567"}</p>
+          <p className="text-white/75">{settings?.email || "hello@oyon.optics"}</p>
         </div>
 
         <div>

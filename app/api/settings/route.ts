@@ -6,6 +6,7 @@ import {
   jsonError,
   pushActivity,
 } from "@/lib/api/helpers";
+import { mergeBranding } from "@/lib/branding";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
   return {
     storeName: settings.storeName,
     tagline: settings.tagline,
-    logo: settings.logo,
+    logo: settings.logo || settings.branding?.logo,
     address: settings.address,
     city: settings.city,
     phone: settings.phone,
@@ -33,6 +34,7 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
     social: settings.social,
     seo: settings.seo,
     content: settings.content,
+    branding: mergeBranding(settings.branding),
     sms: {
       enabled: Boolean(settings.sms?.enabled),
       provider: settings.sms?.provider,
@@ -109,10 +111,33 @@ export async function PUT(request: Request) {
             ...(patch.content?.brandSuffix || {}),
           },
         },
+        branding: mergeBranding({
+          ...store.settings.branding,
+          ...(patch.branding || {}),
+          colors: {
+            ...mergeBranding(store.settings.branding).colors,
+            ...(patch.branding?.colors || {}),
+          },
+          typography: {
+            ...mergeBranding(store.settings.branding).typography,
+            ...(patch.branding?.typography || {}),
+          },
+          storeNameStyle: {
+            ...mergeBranding(store.settings.branding).storeNameStyle,
+            ...(patch.branding?.storeNameStyle || {}),
+          },
+        }),
         openingHours: Array.isArray(patch.openingHours)
           ? patch.openingHours
           : store.settings.openingHours,
       };
+
+      if (next.branding?.storeNameEn) {
+        next.storeName = next.branding.storeNameEn;
+      }
+      if (next.branding?.logo) {
+        next.logo = next.branding.logo;
+      }
 
       if (typeof next.appointmentSlotMinutes === "number") {
         next.appointmentSlotMinutes = Math.max(15, Math.min(120, next.appointmentSlotMinutes));

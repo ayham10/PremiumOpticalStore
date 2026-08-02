@@ -22,6 +22,8 @@ import type { UserRole } from "@/lib/types";
 import { hasPermission } from "@/lib/admin-permissions";
 import { apiFetch } from "@/lib/admin-api";
 import { cn } from "@/lib/format";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
@@ -54,6 +56,7 @@ export default function AdminSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLocale();
+  const { branding } = useBranding();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -84,12 +87,10 @@ export default function AdminSidebar({
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
           Optical
         </p>
-        <h1
-          className="mt-1 text-2xl text-[var(--ink)]"
-          style={{ fontFamily: "Fraunces, serif" }}
-        >
-          {t("admin.brand")}
-        </h1>
+        <div className="mt-1">
+          <BrandMark branding={branding} href="/admin" size="md" />
+        </div>
+        <p className="mt-1 text-xs font-medium text-[var(--slate)]">Admin</p>
         {userName ? (
           <p className="mt-2 truncate text-sm text-[var(--slate)]">{userName}</p>
         ) : null}
@@ -140,12 +141,7 @@ export default function AdminSidebar({
   return (
     <div className="relative z-40 md:contents">
       <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-white/95 px-4 py-3 backdrop-blur md:hidden">
-        <span
-          className="text-lg text-[var(--ink)]"
-          style={{ fontFamily: "Fraunces, serif" }}
-        >
-          {t("admin.brand")}
-        </span>
+        <BrandMark branding={branding} href="/admin" size="sm" />
         <button
           type="button"
           className="grid h-11 w-11 place-items-center rounded-full border border-[var(--line)]"

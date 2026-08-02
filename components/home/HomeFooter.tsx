@@ -1,19 +1,24 @@
 "use client";
 
-import Link from "next/link";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function HomeFooter() {
   const { t } = useLocale();
+  const { branding } = useBranding();
   const year = new Date().getFullYear();
 
   return (
     <footer className="home-footer">
       <div className="home-footer-inner">
-        <Link href="/" className="home-footer-brand">
-          {t("hero.brand")}{" "}
-          <span className="home-footer-brand-soft">{t("hero.brandSuffix")}</span>
-        </Link>
+        <BrandMark
+          branding={branding}
+          href="/"
+          className="home-footer-brand"
+          suffix={t("hero.brandSuffix")}
+          onDark
+        />
 
         <div className="home-footer-social" aria-label="Social">
           <a

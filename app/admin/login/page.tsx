@@ -4,12 +4,15 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Lock, Mail } from "lucide-react";
 import { motion } from "framer-motion";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { t } = useLocale();
+  const { branding } = useBranding();
   const [email, setEmail] = useState("admin@oyon.optics");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,12 +50,9 @@ export default function AdminLoginPage() {
         }}
       >
         <p className="eyebrow">{t("admin.loginTitle")}</p>
-        <h1
-          className="mt-2 text-3xl text-[var(--ink)]"
-          style={{ fontFamily: "Fraunces, serif" }}
-        >
-          {t("admin.brand")}
-        </h1>
+        <div className="mt-2">
+          <BrandMark branding={branding} href="/" size="lg" />
+        </div>
         <p className="mt-2 text-sm text-[var(--slate)]">{t("admin.loginLead")}</p>
       </div>
 

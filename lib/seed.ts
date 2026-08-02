@@ -5,6 +5,7 @@ import {
   weekdayUtc,
 } from "@/lib/eye-exam";
 import { newId } from "@/lib/auth";
+import { DEFAULT_BRANDING } from "@/lib/branding";
 import type {
   AppData,
   EyeExamAvailability,
@@ -65,6 +66,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
       he: "אופטיקה",
     },
   },
+  branding: { ...DEFAULT_BRANDING },
   smtp: {},
   sms: {
     provider: "console",

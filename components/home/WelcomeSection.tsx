@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { StoreSettings } from "@/lib/types";
 
 export default function WelcomeSection() {
   const { t, locale } = useLocale();
+  const { branding } = useBranding();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [content, setContent] = useState<StoreSettings["content"]>();
 
@@ -97,15 +100,20 @@ export default function WelcomeSection() {
       <div className="home-welcome-overlay" aria-hidden />
 
       <div className="home-welcome-content">
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="home-welcome-brand"
         >
-          {t("hero.brand")}{" "}
-          <span className="home-welcome-brand-soft">{brandSuffix}</span>
-        </motion.p>
+          <BrandMark
+            branding={branding}
+            link={false}
+            size="lg"
+            onDark
+            suffix={brandSuffix}
+          />
+        </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
