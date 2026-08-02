@@ -785,12 +785,8 @@ function AdminEyeExamPageInner() {
             onSubmit={saveEdit}
             className="admin-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
           >
-            <h3
-              className="text-xl text-[var(--ink)]"
-            >
-              Edit appointment
-            </h3>
-            <p className="mt-1 text-sm text-[var(--slate)]">{editing.fullName}</p>
+            <h3 className="admin-section-title">Edit appointment</h3>
+            <p className="admin-page-desc mt-2">{editing.fullName}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
                 First name
