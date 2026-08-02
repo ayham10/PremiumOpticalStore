@@ -2,8 +2,9 @@
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, Plus, RefreshCw, Search } from "lucide-react";
+import { Plus, RefreshCw, Search } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AvailabilityCalendarPanel from "@/components/admin/AvailabilityCalendarPanel";
 import ManualBookingModal from "@/components/admin/ManualBookingModal";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -97,18 +98,10 @@ function AdminEyeExamPageInner() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const [newDate, setNewDate] = useState("");
-  const [copyFrom, setCopyFrom] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
-  const [newServices, setNewServices] = useState<ClinicAppointmentType[]>([
-    "eye_exam",
-    "contact_lens_fitting",
-    "frame_consultation",
-    "sunglasses_consultation",
-  ]);
   const [editing, setEditing] = useState<AppointmentRow | null>(null);
   const [editForm, setEditForm] = useState({
     firstName: "",
@@ -176,25 +169,31 @@ function AdminEyeExamPageInner() {
     void refresh();
   }, [refresh]);
 
-  async function createDay(e: FormEvent) {
-    e.preventDefault();
-    if (!newDate || busy) return;
+  async function createDay(payload: {
+    date: string;
+    services: ClinicAppointmentType[];
+    copyFromDate?: string;
+  }) {
+    if (!payload.date || busy) return;
     setBusy(true);
     setMessage("");
     setError("");
     try {
-      await apiFetch("/api/admin/eye-exam/availability", {
-        method: "POST",
-        body: JSON.stringify({
-          date: newDate,
-          isOpen: true,
-          copyFromDate: copyFrom || undefined,
-          services: newServices,
-        }),
-      });
-      setNewDate("");
+      const created = await apiFetch<{ day?: DayRow }>(
+        "/api/admin/eye-exam/availability",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            date: payload.date,
+            isOpen: true,
+            copyFromDate: payload.copyFromDate || undefined,
+            services: payload.services,
+          }),
+        },
+      );
       setMessage("Availability date added");
       await loadAvailability();
+      if (created.day?.id) setSelectedId(created.day.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add date");
     } finally {
@@ -203,14 +202,16 @@ function AdminEyeExamPageInner() {
   }
 
   async function patchDay(body: Record<string, unknown>) {
-    if (!selected || busy) return;
+    const targetId =
+      (typeof body.id === "string" && body.id) || selected?.id || selectedId;
+    if (!targetId || busy) return;
     setBusy(true);
     setMessage("");
     setError("");
     try {
       await apiFetch("/api/admin/eye-exam/availability", {
         method: "PATCH",
-        body: JSON.stringify({ id: selected.id, ...body }),
+        body: JSON.stringify({ id: targetId, ...body }),
       });
       setMessage("Availability updated");
       await loadAvailability();
@@ -376,278 +377,22 @@ function AdminEyeExamPageInner() {
       ) : null}
 
       {tab === "availability" ? (
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <section className="admin-card rounded-2xl p-4">
-            <h2 className="text-lg font-semibold">Dates</h2>
-            <form onSubmit={createDay} className="mt-3 space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                Add date
-                <input
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  required
-                />
-              </label>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                Copy schedule from
-                <select
-                  value={copyFrom}
-                  onChange={(e) => setCopyFrom(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                >
-                  <option value="">Default slots</option>
-                  {days.map((d) => (
-                    <option key={d.id} value={d.date}>
-                      {d.label} ({d.date})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <fieldset className="space-y-1 text-xs">
-                <legend className="font-semibold uppercase tracking-wide text-[var(--slate)]">
-                  Services for this date
-                </legend>
-                {(
-                  [
-                    "eye_exam",
-                    "contact_lens_fitting",
-                    "frame_consultation",
-                    "sunglasses_consultation",
-                  ] as ClinicAppointmentType[]
-                ).map((service) => (
-                  <label
-                    key={service}
-                    className="flex items-center gap-2 text-sm normal-case tracking-normal"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={newServices.includes(service)}
-                      onChange={(e) =>
-                        setNewServices((prev) =>
-                          e.target.checked
-                            ? Array.from(new Set([...prev, service]))
-                            : prev.filter((s) => s !== service),
-                        )
-                      }
-                    />
-                    {t(`clinicBooking.services.${service}`)}
-                  </label>
-                ))}
-              </fieldset>
-              <button
-                type="submit"
-                className="btn btn-primary inline-flex w-full items-center justify-center gap-2"
-                disabled={busy || newServices.length === 0}
-              >
-                <Plus size={16} />
-                Add date
-              </button>
-            </form>
-
-            <ul className="mt-4 max-h-[50vh] space-y-1 overflow-y-auto">
-              {days.map((day) => (
-                <li key={day.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(day.id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-start text-sm ${
-                      selectedId === day.id
-                        ? "bg-[var(--accent-wash)] text-[var(--accent)]"
-                        : "hover:bg-[var(--mist)]"
-                    }`}
-                  >
-                    <span>
-                      <strong className="block">{day.label}</strong>
-                      <span className="text-xs opacity-70">{day.date}</span>
-                      <span className="mt-0.5 block text-[0.65rem] opacity-70">
-                        {!day.services || day.services.length === 0
-                          ? "Shared"
-                          : day.services
-                              .map((s) => t(`clinicBooking.services.${s}`))
-                              .join(" · ")}
-                      </span>
-                    </span>
-                    <span className="text-xs font-semibold uppercase">
-                      {day.isOpen ? "Open" : "Closed"}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="admin-card rounded-2xl p-4 md:p-5">
-            {!selected ? (
-              <p className="text-sm text-[var(--slate)]">Select or add a date.</p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-semibold">{selected.label}</h2>
-                    <p className="text-sm text-[var(--slate)]">{selected.date}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      disabled={busy}
-                      onClick={() => void patchDay({ isOpen: !selected.isOpen })}
-                    >
-                      {selected.isOpen ? "Mark closed" : "Mark open"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost inline-flex items-center gap-2"
-                      disabled={busy}
-                      onClick={() => {
-                        setNewDate("");
-                        setCopyFrom(selected.date);
-                      }}
-                    >
-                      <Copy size={15} />
-                      Use as copy source
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost text-[var(--danger)]"
-                      disabled={busy}
-                      onClick={() => void deleteDay(selected.id)}
-                    >
-                      Delete date
-                    </button>
-                  </div>
-                </div>
-
-                <fieldset className="mt-4 flex flex-wrap gap-4 text-sm">
-                  <legend className="mb-1 w-full text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                    Services (all checked = shared slots)
-                  </legend>
-                  {(
-                    [
-                      "eye_exam",
-                      "contact_lens_fitting",
-                      "frame_consultation",
-                      "sunglasses_consultation",
-                    ] as ClinicAppointmentType[]
-                  ).map((service) => {
-                      const allTypes: ClinicAppointmentType[] = [
-                        "eye_exam",
-                        "contact_lens_fitting",
-                        "frame_consultation",
-                        "sunglasses_consultation",
-                      ];
-                      const active =
-                        !selected.services ||
-                        selected.services.length === 0 ||
-                        selected.services.includes(service);
-                      return (
-                        <label key={service} className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={active}
-                            disabled={busy}
-                            onChange={(e) => {
-                              const current =
-                                !selected.services || selected.services.length === 0
-                                  ? allTypes
-                                  : selected.services;
-                              const next = e.target.checked
-                                ? Array.from(new Set([...current, service]))
-                                : current.filter((s) => s !== service);
-                              void patchDay({
-                                services: next.length ? next : null,
-                              });
-                            }}
-                          />
-                          {t(`clinicBooking.services.${service}`)}
-                        </label>
-                      );
-                    })}
-                </fieldset>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-ghost text-sm"
-                    disabled={busy}
-                    onClick={() =>
-                      void patchDay({
-                        slots: defaultTimes.map((time) => ({
-                          time,
-                          isEnabled: true,
-                        })),
-                      })
-                    }
-                  >
-                    Enable all default slots
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost text-sm"
-                    disabled={busy}
-                    onClick={() =>
-                      void patchDay({
-                        slots: selected.slots.map((s) => ({
-                          ...s,
-                          isEnabled: false,
-                        })),
-                      })
-                    }
-                  >
-                    Disable all slots
-                  </button>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                  {selected.slots.map((slot) => {
-                    const state = slot.isBooked
-                      ? "Booked"
-                      : slot.isEnabled
-                        ? "Available"
-                        : "Closed";
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={busy || slot.isBooked}
-                        title={
-                          slot.isBooked
-                            ? `${slot.time} — Booked${slot.bookedBy ? ` · ${slot.bookedBy}` : ""}`
-                            : undefined
-                        }
-                        onClick={() =>
-                          void patchDay({
-                            toggleTime: {
-                              time: slot.time,
-                              isEnabled: !slot.isEnabled,
-                            },
-                          })
-                        }
-                        className={`rounded-xl border px-3 py-3 text-start text-sm transition ${
-                          slot.isBooked
-                            ? "border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] text-[#E07A7A]"
-                            : slot.isEnabled
-                              ? "border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.1)] text-[#5EC49A]"
-                              : "border-[var(--line)] bg-[rgba(255,255,255,0.03)] text-[#77818A]"
-                        }`}
-                      >
-                        <strong className="block text-base">{slot.time}</strong>
-                        <span className="text-xs uppercase tracking-wide">{state}</span>
-                        {slot.isBooked && slot.bookedBy ? (
-                          <span className="mt-1 block truncate text-xs opacity-90">
-                            {slot.bookedBy}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </section>
-        </div>
+        <AvailabilityCalendarPanel
+          days={days}
+          defaultTimes={defaultTimes}
+          busy={busy}
+          selectedId={selectedId}
+          onSelectDayId={setSelectedId}
+          onPatchDay={async (body) => {
+            await patchDay(body);
+          }}
+          onCreateDay={async (payload) => {
+            await createDay(payload);
+          }}
+          onDeleteDay={async (id) => {
+            await deleteDay(id);
+          }}
+        />
       ) : (
         <section className="admin-card rounded-2xl p-4 md:p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-end">
