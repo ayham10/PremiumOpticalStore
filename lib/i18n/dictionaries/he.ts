@@ -627,7 +627,9 @@ const he: Dictionary = {
       promotions: "מבצעים",
       media: "מדיה",
       staff: "צוות",
-      settings: "הגדרות",
+      website: "אתר",
+      branding: "מיתוג",
+      settings: "הגדרות חנות",
     },
     dashboard: {
       title: "לוח בקרה",

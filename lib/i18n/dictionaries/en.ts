@@ -898,7 +898,9 @@ const en: Dictionary = {
       promotions: "Promotions",
       media: "Media",
       staff: "Staff",
-      settings: "Settings",
+      website: "Website",
+      branding: "Branding",
+      settings: "Store Settings",
     },
     dashboard: {
       title: "Dashboard",

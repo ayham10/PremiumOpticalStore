@@ -627,7 +627,9 @@ const ar: Dictionary = {
       promotions: "العروض",
       media: "الوسائط",
       staff: "الفريق",
-      settings: "الإعدادات",
+      website: "الموقع",
+      branding: "الهوية البصرية",
+      settings: "إعدادات المتجر",
     },
     dashboard: {
       title: "لوحة التحكم",

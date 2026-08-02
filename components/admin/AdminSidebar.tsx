@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Eye,
+  Palette,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { UserRole } from "@/lib/types";
@@ -33,6 +34,7 @@ const NAV: Array<{
   permission: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
+  group?: string;
 }> = [
   { href: "/admin", labelKey: "admin.sidebar.dashboard", permission: "dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/appointments", labelKey: "admin.sidebar.appointments", permission: "appointments", icon: CalendarDays },
@@ -41,9 +43,10 @@ const NAV: Array<{
   { href: "/admin/customers", labelKey: "admin.sidebar.customers", permission: "customers", icon: Users },
   { href: "/admin/inventory", labelKey: "admin.sidebar.inventory", permission: "inventory", icon: Package },
   { href: "/admin/promotions", labelKey: "admin.sidebar.promotions", permission: "promotions", icon: Tag },
-  { href: "/admin/media", labelKey: "admin.sidebar.media", permission: "media", icon: ImageIcon },
   { href: "/admin/staff", labelKey: "admin.sidebar.staff", permission: "staff", icon: UserCog },
-  { href: "/admin/settings", labelKey: "admin.sidebar.settings", permission: "settings", icon: Settings },
+  { href: "/admin/media", labelKey: "admin.sidebar.media", permission: "media", icon: ImageIcon, group: "website" },
+  { href: "/admin/branding", labelKey: "admin.sidebar.branding", permission: "settings", icon: Palette, group: "website" },
+  { href: "/admin/settings", labelKey: "admin.sidebar.settings", permission: "settings", icon: Settings, group: "website" },
 ];
 
 export default function AdminSidebar({
@@ -97,26 +100,35 @@ export default function AdminSidebar({
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-        {links.map((item) => {
+        {links.map((item, index) => {
           const active = item.exact
             ? pathname === item.href
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
+          const prev = links[index - 1];
+          const showGroup =
+            item.group === "website" && prev?.group !== "website";
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[var(--accent-wash)] text-[var(--accent)]"
-                  : "text-[var(--ink-soft)] hover:bg-[var(--mist)]"
-              )}
-            >
-              <Icon size={18} />
-              {t(item.labelKey)}
-            </Link>
+            <div key={item.href}>
+              {showGroup ? (
+                <p className="mb-1 mt-3 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[var(--slate)]">
+                  {t("admin.sidebar.website")}
+                </p>
+              ) : null}
+              <Link
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-[var(--accent-wash)] text-[var(--accent)]"
+                    : "text-[var(--ink-soft)] hover:bg-[var(--mist)]"
+                )}
+              >
+                <Icon size={18} />
+                {t(item.labelKey)}
+              </Link>
+            </div>
           );
         })}
       </nav>

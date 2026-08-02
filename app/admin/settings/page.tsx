@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import Link from "next/link";
+import { Palette, Save } from "lucide-react";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
@@ -119,14 +120,37 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-5">
       <header>
-        <p className="eyebrow">Store</p>
+        <p className="eyebrow">Website</p>
         <h1
           className="mt-1 text-3xl text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
-          Settings
+          Store Settings
         </h1>
       </header>
+
+      <Link
+        href="/admin/branding"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(212,175,106,0.35)] bg-[#080C0F] px-5 py-4 text-[var(--brand-text,#F5F5F2)] transition hover:border-[#D4AF6A]"
+      >
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#13191E] text-[#D4AF6A]">
+            <Palette size={20} />
+          </span>
+          <div>
+            <p
+              className="text-lg text-[#D4AF6A]"
+              style={{ fontFamily: "Fraunces, serif" }}
+            >
+              Branding & theme
+            </p>
+            <p className="text-sm text-[#9CA5AD]">
+              Logo, colors, fonts, store name styling — open the full editor
+            </p>
+          </div>
+        </div>
+        <span className="text-sm font-semibold text-[#D4AF6A]">Open →</span>
+      </Link>
 
       {error ? (
         <p className="rounded-xl bg-[#fdeaea] px-3 py-2 text-sm text-[var(--danger)]">
@@ -140,7 +164,9 @@ export default function AdminSettingsPage() {
       ) : null}
 
       <form onSubmit={onSubmit} className="space-y-5">
-        <BrandingSettingsSection value={form} onChange={setForm} />
+        <div id="branding">
+          <BrandingSettingsSection value={form} onChange={setForm} />
+        </div>
 
         <section className="admin-card space-y-4 p-5">
           <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
