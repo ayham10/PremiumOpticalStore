@@ -889,49 +889,189 @@ html.admin-dark[lang="he"] .admin-auth {
   color: #0b0f14;
 }
 
+.admin-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-width: 36rem;
+}
+
 .admin-quick-action {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.35rem;
-  min-height: 140px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
+  flex-direction: row;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: var(--admin-card, #131a22);
-  padding: 1.35rem;
+  padding: 0.9rem 1rem;
   color: var(--ink);
   font-weight: 600;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  box-shadow: none;
 }
 
 .admin-quick-action:hover {
-  border-color: rgba(212, 175, 106, 0.45);
-  transform: translateY(-2px);
+  border-color: rgba(212, 175, 106, 0.4);
+  transform: translateY(-1px);
+  background: rgba(212, 175, 106, 0.06);
 }
 
 .admin-quick-action-icon {
   display: grid;
-  height: 2.75rem;
-  width: 2.75rem;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(212, 175, 106, 0.12);
   color: #d4af6a;
+}
+
+.admin-quick-action-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #f5f5f5;
 }
 
 .admin-schedule-row {
   display: grid;
   grid-template-columns: 4.75rem 1fr auto;
-  gap: 0.95rem;
+  gap: 0.85rem;
   align-items: center;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--line);
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .admin-schedule-row:last-child {
   border-bottom: none;
+}
+
+.admin-recent-row {
+  grid-template-columns: minmax(0, 1.4fr) minmax(5.5rem, 0.9fr) auto;
+}
+
+.admin-dashboard-date {
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #a7adb5;
+}
+
+.admin-dashboard-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.admin-dashboard-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-dashboard-link {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.admin-dashboard-link:hover {
+  color: #e6c58a;
+}
+
+.admin-dashboard-time {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+
+.admin-dashboard-meta {
+  min-width: 0;
+  text-align: start;
+}
+
+.admin-dashboard-list {
+  margin: 0;
+}
+
+.admin-dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 1rem 0 0.25rem;
+}
+
+.admin-dashboard-empty--compact {
+  padding: 0.75rem 0 0.15rem;
+}
+
+.admin-dashboard-empty-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f5f5f5;
+  letter-spacing: -0.02em;
+}
+
+.admin-dashboard-empty-lead {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #77818a;
+}
+
+.admin-dashboard-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+@media (max-width: 639px) {
+  .admin-schedule-row {
+    grid-template-columns: 1fr auto;
+    gap: 0.45rem 0.75rem;
+  }
+
+  .admin-schedule-row .admin-dashboard-time {
+    grid-column: 1 / -1;
+  }
+
+  .admin-recent-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .admin-recent-row .admin-dashboard-meta {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.65rem;
+  }
+
+  .admin-recent-row .admin-dashboard-meta .admin-cell-secondary {
+    margin-top: 0;
+  }
+
+  .admin-quick-actions-grid {
+    max-width: none;
+  }
 }
 
 .input,

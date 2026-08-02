@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -9,9 +9,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Plus,
-  Clock3,
   Tag,
-  Glasses,
   Users,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -19,9 +17,16 @@ import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
 import type { DashboardRecentBooking, DashboardStats } from "@/lib/types";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import type { Locale } from "@/lib/i18n/config";
 
 type DashboardPayload = DashboardStats & {
   todaysSchedule?: DashboardRecentBooking[];
+};
+
+const LOCALE_TAGS: Record<Locale, string> = {
+  en: "en-US",
+  ar: "ar",
+  he: "he",
 };
 
 function serviceLabel(t: (key: string) => string, service: string): string {
@@ -30,24 +35,45 @@ function serviceLabel(t: (key: string) => string, service: string): string {
   return label === key ? service : label;
 }
 
-function relativeCreated(iso: string): string {
-  const created = new Date(iso).getTime();
-  if (Number.isNaN(created)) return "";
-  const diffMin = Math.round((Date.now() - created) / 60000);
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) {
-    return `Today, ${new Date(iso).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`;
-  }
-  return new Date(iso).toLocaleDateString();
+function statusLabel(t: (key: string) => string, status: string): string {
+  const map: Record<string, string> = {
+    pending: "admin.dashboard.statusPending",
+    confirmed: "admin.dashboard.statusConfirmed",
+    completed: "admin.dashboard.statusCompleted",
+    cancelled: "admin.dashboard.statusCancelled",
+    "no-show": "admin.dashboard.statusNoShow",
+    no_show: "admin.dashboard.statusNoShow",
+  };
+  const key = map[status];
+  if (!key) return status;
+  const label = t(key);
+  return label === key ? status : label;
+}
+
+function formatDateLabel(isoDate: string, locale: Locale): string {
+  const d = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString(LOCALE_TAGS[locale], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatTime(time: string, locale: Locale): string {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString(LOCALE_TAGS[locale], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function AdminDashboardPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [stats, setStats] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -64,12 +90,14 @@ export default function AdminDashboardPage() {
       const next = "stats" in data ? data.stats : data;
       setStats(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+      setError(
+        err instanceof Error ? err.message : t("admin.dashboard.loadError")
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -92,68 +120,63 @@ export default function AdminDashboardPage() {
     };
   }, [load]);
 
-  const upcomingCount = useMemo(() => {
-    if (!stats?.appointmentsByDay?.length) return 0;
-    const today = new Date().toISOString().slice(0, 10);
-    return stats.appointmentsByDay
-      .filter((d) => d.date > today)
-      .reduce((sum, d) => sum + d.count, 0);
-  }, [stats]);
-
   if (loading && !stats) {
-    return <p className="text-[var(--slate)]">{t("common.loading")}</p>;
+    return <p className="admin-muted">{t("common.loading")}</p>;
   }
 
   if ((error && !stats) || !stats) {
     return (
-      <div className="admin-card space-y-3 p-6 text-[var(--danger)]">
-        <p>{error || "Unable to load dashboard"}</p>
+      <div className="admin-card space-y-3">
+        <p className="text-[var(--danger)]">
+          {error || t("admin.dashboard.loadError")}
+        </p>
         <button
           type="button"
           className="btn btn-ghost inline-flex items-center gap-2"
           onClick={() => void load()}
         >
           <RefreshCw size={16} />
-          Refresh
+          {t("admin.dashboard.refresh")}
         </button>
       </div>
     );
   }
 
   const schedule = stats.todaysSchedule || [];
-  const recent = stats.recentBookings || [];
-  const todayLabel = new Date().toLocaleDateString(undefined, {
+  const recent = (stats.recentBookings || []).slice(0, 5);
+  const todayLabel = new Date().toLocaleDateString(LOCALE_TAGS[locale], {
     weekday: "long",
     month: "short",
     day: "numeric",
   });
 
   return (
-    <div className="space-y-6">
+    <div className="admin-dashboard space-y-5 md:space-y-6">
       <AdminPageHeader
-        kicker="Overview"
-        title={t("admin.dashboard.title")}
-        description="Today's bookings, stock alerts, and recent activity."
+        kicker={t("admin.dashboard.overview")}
+        title={t("admin.dashboard.welcome")}
+        description={t("admin.dashboard.description")}
         actions={
           <>
-            <p className="rounded-xl border border-[var(--line)] px-3 py-2 text-sm text-[var(--muted)]">
-              {todayLabel}
-            </p>
+            <p className="admin-dashboard-date">{todayLabel}</p>
             <button
               type="button"
               className="btn btn-ghost inline-flex items-center gap-2"
               onClick={() => void load({ soft: true })}
               disabled={refreshing}
             >
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-              Refresh
+              <RefreshCw
+                size={16}
+                className={refreshing ? "animate-spin" : ""}
+              />
+              {t("admin.dashboard.refresh")}
             </button>
             <Link
               href="/admin/eye-exam?tab=appointments&book=1"
-              className="btn btn-accent"
+              className="btn btn-accent inline-flex items-center gap-2"
             >
               <Plus size={16} />
-              New Appointment
+              {t("admin.dashboard.newAppointment")}
             </Link>
           </>
         }
@@ -165,103 +188,138 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 sm:gap-4">
         <StatCard
           label={t("admin.dashboard.today")}
           value={stats.todayAppointments}
-          hint="View today's schedule"
+          hint={t("admin.dashboard.todayHint")}
           href="/admin/eye-exam?tab=appointments"
           icon={CalendarDays}
-        />
-        <StatCard
-          label={t("admin.dashboard.week")}
-          value={stats.weekAppointments}
-          icon={CalendarRange}
-        />
-        <StatCard
-          label={t("admin.dashboard.upcoming")}
-          value={upcomingCount}
-          icon={Clock3}
-        />
-        <StatCard
-          label={t("admin.dashboard.lowStock")}
-          value={stats.lowStockAlerts}
-          hint="View products"
-          href="/admin/inventory"
-          icon={AlertTriangle}
-          tone={stats.lowStockAlerts > 0 ? "warning" : "default"}
         />
         <StatCard
           label={t("admin.dashboard.customers")}
           value={stats.totalCustomers}
           icon={Users}
         />
+        <StatCard
+          label={t("admin.dashboard.lowStock")}
+          value={stats.lowStockAlerts}
+          hint={t("admin.dashboard.lowStockHint")}
+          href="/admin/inventory"
+          icon={AlertTriangle}
+          tone={stats.lowStockAlerts > 0 ? "warning" : "default"}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <section className="admin-card p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="admin-section-title">Today&apos;s appointments</h2>
-            <Link
-              href="/admin/eye-exam?tab=appointments"
-              className="text-sm font-semibold text-[var(--accent)]"
-            >
-              View all
-            </Link>
-          </div>
-          <div>
-            {schedule.map((a) => (
-              <div key={a.id} className="admin-schedule-row">
-                <p className="font-semibold text-[var(--accent)]">{a.startTime}</p>
-                <div className="min-w-0">
-                  <p className="admin-cell-primary truncate">{a.customerName}</p>
-                  <p className="admin-cell-secondary truncate">
-                    {a.customerPhone || a.customerEmail} ·{" "}
-                    {serviceLabel(t, a.service)}
-                  </p>
-                </div>
-                <span className={`status status-${a.status}`}>{a.status}</span>
-              </div>
-            ))}
-            {!schedule.length ? (
-              <p className="py-8 text-center text-sm text-[var(--slate)]">
-                No appointments scheduled for today
-              </p>
+        <section className="admin-card admin-dashboard-panel">
+          <div className="admin-dashboard-panel-head">
+            <h2 className="admin-section-title">{t("admin.dashboard.today")}</h2>
+            {schedule.length ? (
+              <Link
+                href="/admin/eye-exam?tab=appointments"
+                className="admin-dashboard-link"
+              >
+                {t("admin.dashboard.viewAll")}
+              </Link>
             ) : null}
           </div>
+
+          {schedule.length ? (
+            <div className="admin-dashboard-list">
+              {schedule.map((a) => (
+                <div key={a.id} className="admin-schedule-row">
+                  <p className="admin-dashboard-time">
+                    {formatTime(a.startTime, locale)}
+                  </p>
+                  <div className="min-w-0">
+                    <p className="admin-cell-primary truncate">
+                      {a.customerName}
+                    </p>
+                    <p className="admin-cell-secondary truncate">
+                      {serviceLabel(t, a.service)}
+                    </p>
+                  </div>
+                  <span className={`status status-${a.status}`}>
+                    {statusLabel(t, a.status)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-dashboard-empty">
+              <p className="admin-dashboard-empty-title">
+                {t("admin.dashboard.emptyToday")}
+              </p>
+              <p className="admin-dashboard-empty-lead">
+                {t("admin.dashboard.emptyTodayLead")}
+              </p>
+              <div className="admin-dashboard-empty-actions">
+                <Link
+                  href="/admin/eye-exam?tab=appointments&book=1"
+                  className="btn btn-accent inline-flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  {t("admin.dashboard.newAppointment")}
+                </Link>
+                <Link
+                  href="/admin/eye-exam?tab=availability"
+                  className="btn btn-ghost inline-flex items-center gap-2"
+                >
+                  <CalendarRange size={16} />
+                  {t("admin.dashboard.manageAvailability")}
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
 
-        <section className="admin-card p-5">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="admin-section-title">{t("admin.dashboard.recent")}</h2>
+        <section className="admin-card admin-dashboard-panel">
+          <div className="admin-dashboard-panel-head">
+            <h2 className="admin-section-title">
+              {t("admin.dashboard.recent")}
+            </h2>
             <Link
               href="/admin/eye-exam?tab=appointments"
-              className="text-sm font-semibold text-[var(--accent)]"
+              className="admin-dashboard-link"
             >
-              View all
+              {t("admin.dashboard.viewAll")}
             </Link>
           </div>
-          <div>
-            {recent.map((a) => (
-              <div key={a.id} className="admin-schedule-row">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[rgba(212,175,55,0.12)] text-[var(--accent)]">
-                  <Glasses size={18} />
+
+          {recent.length ? (
+            <div className="admin-dashboard-list">
+              {recent.map((a) => (
+                <div key={a.id} className="admin-schedule-row admin-recent-row">
+                  <div className="min-w-0">
+                    <p className="admin-cell-primary truncate">
+                      {a.customerName}
+                    </p>
+                    <p className="admin-cell-secondary truncate">
+                      {serviceLabel(t, a.service)}
+                    </p>
+                  </div>
+                  <div className="admin-dashboard-meta">
+                    <p className="admin-cell-primary text-sm font-semibold">
+                      {formatDateLabel(a.date, locale)}
+                    </p>
+                    <p className="admin-cell-secondary">
+                      {formatTime(a.startTime, locale)}
+                    </p>
+                  </div>
+                  <span className={`status status-${a.status}`}>
+                    {statusLabel(t, a.status)}
+                  </span>
                 </div>
-                <div className="min-w-0">
-                  <p className="admin-cell-primary truncate">{a.customerName}</p>
-                  <p className="admin-cell-secondary truncate">
-                    {serviceLabel(t, a.service)} · {relativeCreated(a.createdAt)}
-                  </p>
-                </div>
-                <span className={`status status-${a.status}`}>{a.status}</span>
-              </div>
-            ))}
-            {!recent.length ? (
-              <p className="py-8 text-center text-sm text-[var(--slate)]">
+              ))}
+            </div>
+          ) : (
+            <div className="admin-dashboard-empty admin-dashboard-empty--compact">
+              <p className="admin-dashboard-empty-title">
                 {t("admin.common.noResults")}
               </p>
-            ) : null}
-          </div>
+            </div>
+          )}
         </section>
       </div>
 
@@ -269,36 +327,44 @@ export default function AdminDashboardPage() {
         <h2 className="admin-section-title mb-3">
           {t("admin.dashboard.quickActions")}
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="admin-quick-actions-grid">
           <Link
             href="/admin/eye-exam?tab=appointments&book=1"
             className="admin-quick-action"
           >
             <span className="admin-quick-action-icon">
-              <Plus size={22} />
+              <Plus size={18} />
             </span>
-            <span className="text-sm font-semibold">Add Appointment</span>
+            <span className="admin-quick-action-label">
+              {t("admin.dashboard.newAppointment")}
+            </span>
           </Link>
           <Link
             href="/admin/eye-exam?tab=availability"
             className="admin-quick-action"
           >
             <span className="admin-quick-action-icon">
-              <CalendarRange size={22} />
+              <CalendarRange size={18} />
             </span>
-            <span className="text-sm font-semibold">Manage Availability</span>
+            <span className="admin-quick-action-label">
+              {t("admin.dashboard.manageAvailability")}
+            </span>
           </Link>
           <Link href="/admin/inventory" className="admin-quick-action">
             <span className="admin-quick-action-icon">
-              <Package size={22} />
+              <Package size={18} />
             </span>
-            <span className="text-sm font-semibold">Add Product</span>
+            <span className="admin-quick-action-label">
+              {t("admin.dashboard.products")}
+            </span>
           </Link>
           <Link href="/admin/promotions" className="admin-quick-action">
             <span className="admin-quick-action-icon">
-              <Tag size={22} />
+              <Tag size={18} />
             </span>
-            <span className="text-sm font-semibold">Add Promotion</span>
+            <span className="admin-quick-action-label">
+              {t("admin.dashboard.offers")}
+            </span>
           </Link>
         </div>
       </section>
