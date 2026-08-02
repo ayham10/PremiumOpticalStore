@@ -329,13 +329,27 @@ export interface AppData {
   updatedAt: string;
 }
 
+export interface DashboardRecentBooking {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  service: string;
+  appointmentType: ClinicAppointmentType | string;
+  date: string;
+  dateLabel: string;
+  startTime: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface DashboardStats {
   todayAppointments: number;
   weekAppointments: number;
   inventoryItems: number;
   lowStockAlerts: number;
   totalCustomers: number;
-  recentBookings: Appointment[];
-  appointmentsByDay: { date: string; count: number }[];
-  statusBreakdown: { status: AppointmentStatus; count: number }[];
+  recentBookings: DashboardRecentBooking[];
+  appointmentsByDay: { date: string; dateLabel: string; count: number }[];
+  statusBreakdown: { status: string; count: number }[];
 }

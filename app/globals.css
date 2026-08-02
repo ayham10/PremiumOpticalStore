@@ -557,6 +557,18 @@ p {
   background: #e8eef5;
   color: var(--accent);
 }
+.status-no-show {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.dashboard-recent-card {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #fff;
+  padding: 0.9rem 1rem;
+}
+
 .status-rescheduled {
   background: #f3ebe3;
   color: var(--copper);

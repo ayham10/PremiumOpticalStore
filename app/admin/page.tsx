@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -8,6 +8,7 @@ import {
   Package,
   AlertTriangle,
   Users,
+  RefreshCw,
 } from "lucide-react";
 import {
   Bar,
@@ -20,65 +21,120 @@ import {
 } from "recharts";
 import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
-import { formatDate } from "@/lib/format";
-import type { DashboardStats } from "@/lib/types";
+import type { DashboardRecentBooking, DashboardStats } from "@/lib/types";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+
+type DashboardPayload = DashboardStats & {
+  todaysSchedule?: DashboardRecentBooking[];
+};
+
+function serviceLabel(
+  t: (key: string) => string,
+  service: string,
+): string {
+  const key = `clinicBooking.services.${service}`;
+  const label = t(key);
+  return label === key ? service : label;
+}
 
 export default function AdminDashboardPage() {
   const { t } = useLocale();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await apiFetch<
-          DashboardStats | { stats: DashboardStats }
-        >("/api/dashboard");
-        const next = "stats" in data ? data.stats : data;
-        if (!cancelled) setStats(next);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load dashboard");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
+    if (opts?.soft) setRefreshing(true);
+    else setLoading(true);
+    setError("");
+    try {
+      const data = await apiFetch<
+        DashboardPayload | { stats: DashboardPayload }
+      >("/api/dashboard");
+      const next = "stats" in data ? data.stats : data;
+      setStats(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  if (loading) {
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Refresh when returning to the tab (e.g. after creating/updating a booking)
+  useEffect(() => {
+    function onFocus() {
+      void load({ soft: true });
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        void load({ soft: true });
+      }
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [load]);
+
+  if (loading && !stats) {
     return <p className="text-[var(--slate)]">{t("common.loading")}</p>;
   }
 
-  if (error || !stats) {
+  if ((error && !stats) || !stats) {
     return (
-      <div className="admin-card p-6 text-[var(--danger)]">
-        {error || "Unable to load dashboard"}
+      <div className="admin-card space-y-3 p-6 text-[var(--danger)]">
+        <p>{error || "Unable to load dashboard"}</p>
+        <button
+          type="button"
+          className="btn btn-ghost inline-flex items-center gap-2"
+          onClick={() => void load()}
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
       </div>
     );
   }
 
   const chartData = (stats.appointmentsByDay || []).map((d) => ({
     ...d,
-    label: d.date.slice(5),
+    label: d.dateLabel || d.date.slice(5),
   }));
+  const hasChartActivity = chartData.some((d) => d.count > 0);
 
   return (
     <div className="space-y-6">
-      <header>
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <h1
           className="mt-1 text-3xl text-[var(--ink)]"
           style={{ fontFamily: "Fraunces, serif" }}
         >
           {t("admin.dashboard.title")}
         </h1>
+        <button
+          type="button"
+          className="btn btn-ghost inline-flex items-center gap-2"
+          onClick={() => void load({ soft: true })}
+          disabled={refreshing}
+        >
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          Refresh
+        </button>
       </header>
+
+      {error ? (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
@@ -116,12 +172,15 @@ export default function AdminDashboardPage() {
             <h2 style={{ fontFamily: "Fraunces, serif" }} className="text-xl">
               {t("admin.dashboard.chart")}
             </h2>
-            <Link href="/admin/calendar" className="text-sm font-semibold text-[var(--accent)]">
-              {t("admin.sidebar.calendar")}
+            <Link
+              href="/admin/eye-exam"
+              className="text-sm font-semibold text-[var(--accent)]"
+            >
+              {t("admin.sidebar.eyeExam")}
             </Link>
           </div>
           <div className="h-64 w-full">
-            {chartData.length ? (
+            {hasChartActivity ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(16,21,28,0.08)" />
@@ -159,7 +218,9 @@ export default function AdminDashboardPage() {
               </li>
             ))}
             {!stats.statusBreakdown?.length ? (
-              <li className="text-sm text-[var(--slate)]">{t("admin.common.noResults")}</li>
+              <li className="text-sm text-[var(--slate)]">
+                {t("admin.common.noResults")}
+              </li>
             ) : null}
           </ul>
         </section>
@@ -171,14 +232,42 @@ export default function AdminDashboardPage() {
             {t("admin.dashboard.recent")}
           </h2>
           <Link
-            href="/admin/appointments"
+            href="/admin/eye-exam"
             className="text-sm font-semibold text-[var(--accent)]"
           >
-            {t("admin.sidebar.appointments")}
+            {t("admin.sidebar.eyeExam")}
           </Link>
         </div>
-        <div className="md:overflow-x-auto">
-          <table className="table table-mobile-cards">
+
+        {/* Mobile: compact cards */}
+        <div className="space-y-3 p-4 md:hidden">
+          {(stats.recentBookings || []).map((a) => (
+            <article key={a.id} className="dashboard-recent-card">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-[var(--ink)]">{a.customerName}</p>
+                  <p className="mt-0.5 text-sm text-[var(--slate)]">
+                    {serviceLabel(t, a.service)}
+                  </p>
+                </div>
+                <span className={`status status-${a.status}`}>{a.status}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--ink-soft)]">
+                <span>{a.dateLabel || a.date}</span>
+                <span>{a.startTime}</span>
+              </div>
+            </article>
+          ))}
+          {!stats.recentBookings?.length ? (
+            <p className="py-6 text-center text-sm text-[var(--slate)]">
+              {t("admin.common.noResults")}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Desktop/tablet: table */}
+        <div className="hidden md:block md:overflow-x-auto">
+          <table className="table">
             <thead>
               <tr>
                 <th>{t("common.name")}</th>
@@ -191,16 +280,18 @@ export default function AdminDashboardPage() {
             <tbody>
               {(stats.recentBookings || []).map((a) => (
                 <tr key={a.id}>
-                  <td data-label={t("common.name")}>
-                    <div className="font-medium text-[var(--ink)]">{a.customerName}</div>
-                    <div className="text-xs text-[var(--slate)]">{a.customerEmail}</div>
+                  <td>
+                    <div className="font-medium text-[var(--ink)]">
+                      {a.customerName}
+                    </div>
+                    <div className="text-xs text-[var(--slate)]">
+                      {a.customerEmail}
+                    </div>
                   </td>
-                  <td data-label={t("book.steps.service")}>{a.service}</td>
-                  <td data-label={t("common.date")}>{formatDate(a.date)}</td>
-                  <td data-label={t("common.time")}>
-                    {a.startTime}–{a.endTime}
-                  </td>
-                  <td data-label={t("common.status")}>
+                  <td>{serviceLabel(t, a.service)}</td>
+                  <td>{a.dateLabel || a.date}</td>
+                  <td>{a.startTime}</td>
+                  <td>
                     <span className={`status status-${a.status}`}>{a.status}</span>
                   </td>
                 </tr>
