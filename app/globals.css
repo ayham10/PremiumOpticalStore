@@ -528,22 +528,19 @@ html.admin-dark body {
 
 .admin-shell .btn-ghost {
   border-radius: 12px;
-}
-
-.admin-shell .btn-ghost {
   color: var(--ink);
   border-color: var(--line-strong);
 }
 
 .admin-shell .btn-ghost:hover {
-  border-color: #d4af6a;
-  color: #d4af6a;
-  background: rgba(212, 175, 106, 0.08);
+  border-color: #d4af37;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.08);
 }
 
 .admin-shell .status-pending {
-  background: rgba(212, 175, 106, 0.16);
-  color: #e6c58a;
+  background: rgba(212, 175, 55, 0.16);
+  color: #e6c85a;
 }
 
 .admin-shell .status-confirmed,
