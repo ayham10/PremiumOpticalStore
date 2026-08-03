@@ -3,13 +3,13 @@
 import type { ReactNode } from "react";
 
 type Props = {
-  kicker: string;
+  kicker?: string;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
 };
 
-/** Consistent premium page header: kicker → title → description → actions */
+/** Consistent premium page header: title → description → actions */
 export default function AdminPageHeader({
   kicker,
   title,
@@ -19,7 +19,7 @@ export default function AdminPageHeader({
   return (
     <header className="admin-page-header">
       <div className="admin-page-header-copy">
-        <p className="admin-kicker">{kicker}</p>
+        {kicker ? <p className="admin-kicker">{kicker}</p> : null}
         <h1 className="admin-page-title">{title}</h1>
         {description ? (
           <p className="admin-page-desc">{description}</p>
