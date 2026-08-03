@@ -1994,7 +1994,7 @@ html[lang="he"] .home-welcome-title {
 
 .home-card-img--sunglasses {
   object-fit: cover;
-  object-position: center 55%;
+  object-position: center 48%;
 }
 
 .home-card-img--promotions {
@@ -2017,7 +2017,7 @@ html[lang="he"] .home-welcome-title {
   }
 
   .home-card-img--sunglasses {
-    object-position: center 48%;
+    object-position: center 45%;
   }
 
   .home-card-img--promotions {
@@ -2458,18 +2458,28 @@ main.frames-main {
   object-position: center;
 }
 
-/* Keep sunglasses frames visible on mobile instead of cropping to the face */
+/* Mobile: keep the existing sunglasses hero video, but crop toward the eyewear
+   so phones don't land on a face/neck/shoulder close-up. Desktop stays default. */
 @media (max-width: 767px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
-    object-position: center 72%;
+  .sunglasses-page .frames-hero {
+    overflow: hidden;
   }
-}
 
-@media (min-width: 768px) {
   .sunglasses-page .frames-hero-video,
   .sunglasses-page .frames-hero img {
-    object-position: center 58%;
+    object-fit: cover;
+    object-position: center 34%;
+    transform: scale(1.72);
+    transform-origin: center 34%;
+  }
+
+  .sunglasses-page .frames-hero-veil {
+    background: linear-gradient(
+      180deg,
+      rgba(7, 10, 13, 0.28) 0%,
+      rgba(7, 10, 13, 0.22) 40%,
+      rgba(7, 10, 13, 0.82) 100%
+    );
   }
 }
 

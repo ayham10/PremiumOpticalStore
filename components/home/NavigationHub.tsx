@@ -23,7 +23,7 @@ const TILES = [
   {
     key: "sunglasses",
     href: "/sunglasses",
-    image: "/images/sunglasses-hero-poster.jpg",
+    image: "/images/sunglasses-category.jpg",
     position: "home-card-img--sunglasses",
   },
   {
