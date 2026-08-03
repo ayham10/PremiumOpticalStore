@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import {
   BRANDING_FONT_OPTIONS,
   mergeBranding,
 } from "@/lib/branding";
+import OyonLogo from "@/components/branding/OyonLogo";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { BrandingSettings, StoreSettings } from "@/lib/types";
 
@@ -27,21 +28,22 @@ function ColorField({
   return (
     <label className="block space-y-1.5">
       <span className="label">{label}</span>
-      <div className="flex items-center gap-2">
-        {!isRgba ? (
-          <input
-            type="color"
-            className="h-11 w-12 cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--admin-elevated,#181F26)] p-1"
-            value={value.startsWith("#") ? value : "#D4AF6A"}
-            onChange={(e) => onChange(e.target.value)}
-          />
-        ) : null}
+      <div className="admin-color-field">
         <input
           className="input flex-1 font-mono text-sm"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="#D4AF6A"
         />
+        {!isRgba ? (
+          <input
+            type="color"
+            className="admin-color-swatch"
+            value={value.startsWith("#") ? value : "#D4AF6A"}
+            onChange={(e) => onChange(e.target.value)}
+            aria-label={label}
+          />
+        ) : null}
       </div>
     </label>
   );
@@ -104,8 +106,11 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
     setUploadError("");
     try {
       const url = await uploadAsset(file);
-      if (kind === "logo") patchBranding({ logo: url });
-      else patchBranding({ favicon: url });
+      if (kind === "logo") {
+        patchBranding({ logo: url, storeNameStyle: { ...branding.storeNameStyle, showLogo: true } });
+      } else {
+        patchBranding({ favicon: url });
+      }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -113,133 +118,19 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
     }
   }
 
-  const previewNameStyle: CSSProperties = {
-    color: branding.storeNameStyle.goldGradient
-      ? undefined
-      : branding.storeNameStyle.color,
-    fontWeight: branding.storeNameStyle.fontWeight,
-    letterSpacing: branding.storeNameStyle.letterSpacing,
-    textTransform: branding.storeNameStyle.textTransform,
-    fontFamily: `"${branding.typography.headingFont}", serif`,
-    backgroundImage: branding.storeNameStyle.goldGradient
-      ? "linear-gradient(120deg, #E6C58A 0%, #D4AF6A 45%, #B8914A 100%)"
-      : undefined,
-    WebkitBackgroundClip: branding.storeNameStyle.goldGradient
-      ? "text"
-      : undefined,
-    backgroundClip: branding.storeNameStyle.goldGradient ? "text" : undefined,
-    WebkitTextFillColor: branding.storeNameStyle.goldGradient
-      ? "transparent"
-      : undefined,
-    textShadow: branding.storeNameStyle.glow
-      ? "0 0 18px rgba(212,175,106,0.45)"
-      : undefined,
-    textDecoration: branding.storeNameStyle.underline ? "underline" : undefined,
-    textUnderlineOffset: "0.22em",
-    fontSize: `${1.5 * (branding.typography.fontScale || 1)}rem`,
-  };
-
   return (
-    <section className="admin-card space-y-5 p-5">
-      <div>
-        <h2 className="admin-section-title">
-          {t("admin.settings.identity")}
-        </h2>
-      </div>
+    <div className="space-y-5">
+      {/* Store identity — compact premium card matching reference */}
+      <section className="admin-card admin-identity-card space-y-5 p-5">
+        <h2 className="admin-section-title">{t("admin.settings.identity")}</h2>
 
-      {uploadError ? (
-        <p className="rounded-xl bg-[#fdeaea] px-3 py-2 text-sm text-[var(--danger)]">
-          {uploadError}
-        </p>
-      ) : null}
+        {uploadError ? (
+          <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+            {uploadError}
+          </p>
+        ) : null}
 
-      {/* Live preview */}
-      <div
-        className="overflow-hidden rounded-2xl border p-5"
-        style={{
-          background: branding.colors.background,
-          borderColor: branding.colors.border,
-          color: branding.colors.text,
-        }}
-      >
-        <p
-          className="text-[0.68rem] font-semibold uppercase tracking-[0.2em]"
-          style={{ color: branding.colors.textSecondary }}
-        >
-          {t("admin.settings.preview")}
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {branding.storeNameStyle.showLogo && branding.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={branding.logo}
-              alt=""
-              className="h-10 w-10 rounded-md object-contain"
-            />
-          ) : null}
-          <div>
-            <p style={previewNameStyle}>{branding.storeNameEn || "Oyon"}</p>
-            <p
-              className="mt-1 text-sm"
-              style={{
-                color: branding.colors.textSecondary,
-                fontFamily: `"${branding.typography.bodyFont}", sans-serif`,
-              }}
-            >
-              {branding.storeNameAr || "عيون"} · Premium optical
-            </p>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: branding.colors.card,
-              border: `1px solid ${branding.colors.border}`,
-            }}
-          >
-            <p className="text-sm" style={{ color: branding.colors.textSecondary }}>
-              Card surface
-            </p>
-            <p className="mt-1 font-semibold" style={{ color: branding.colors.text }}>
-              Eye Exam booking
-            </p>
-          </div>
-          <div className="flex flex-col justify-end gap-2">
-            <button
-              type="button"
-              className="rounded-full px-5 py-3 text-sm font-semibold transition"
-              style={{
-                background: branding.colors.button,
-                color: branding.colors.background,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = branding.colors.buttonHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = branding.colors.button;
-              }}
-            >
-              Book an Appointment
-            </button>
-            <p className="text-xs" style={{ color: branding.colors.textSecondary }}>
-              Accent {branding.colors.primaryAccent} · Gold {branding.colors.gold}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Brand identity */}
-      <div className="space-y-3">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="label">{t("admin.settings.storeNameEn")}</label>
-            <input
-              className="input"
-              value={branding.storeNameEn}
-              onChange={(e) => patchBranding({ storeNameEn: e.target.value })}
-            />
-          </div>
+        <div className="admin-identity-names">
           <div>
             <label className="label">{t("admin.settings.storeNameAr")}</label>
             <input
@@ -247,6 +138,14 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
               dir="rtl"
               value={branding.storeNameAr}
               onChange={(e) => patchBranding({ storeNameAr: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="label">{t("admin.settings.storeNameEn")}</label>
+            <input
+              className="input"
+              value={branding.storeNameEn}
+              onChange={(e) => patchBranding({ storeNameEn: e.target.value })}
             />
           </div>
           <div>
@@ -260,15 +159,18 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="label">{t("admin.settings.logoUrl")}</label>
-            <input
-              className="input"
-              value={branding.logo || ""}
-              onChange={(e) => patchBranding({ logo: e.target.value })}
-            />
-            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--accent)]">
+        <div className="admin-identity-media">
+          <div className="admin-identity-logo">
+            <label className="label">{t("admin.settings.storeLogo")}</label>
+            <div className="admin-logo-preview">
+              {branding.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={branding.logo} alt="" className="admin-logo-preview-img" />
+              ) : (
+                <OyonLogo link={false} size="lg" />
+              )}
+            </div>
+            <label className="admin-upload-link">
               <Upload size={15} />
               {uploading === "logo"
                 ? t("admin.settings.saving")
@@ -278,42 +180,63 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
                 accept="image/*"
                 className="hidden"
                 disabled={uploading !== null}
-                onChange={(e) => void onUpload("logo", e.target.files?.[0] || null)}
-              />
-            </label>
-          </div>
-          <div>
-            <label className="label">{t("admin.settings.faviconUrl")}</label>
-            <input
-              className="input"
-              value={branding.favicon || ""}
-              onChange={(e) => patchBranding({ favicon: e.target.value })}
-            />
-            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--accent)]">
-              <Upload size={15} />
-              {uploading === "favicon"
-                ? t("admin.settings.saving")
-                : t("admin.settings.changeLogo")}
-              <input
-                type="file"
-                accept="image/*,.ico"
-                className="hidden"
-                disabled={uploading !== null}
                 onChange={(e) =>
-                  void onUpload("favicon", e.target.files?.[0] || null)
+                  void onUpload("logo", e.target.files?.[0] || null)
                 }
               />
             </label>
           </div>
+
+          <div className="admin-identity-side">
+            <div>
+              <label className="label">{t("admin.settings.faviconUrl")}</label>
+              <div className="admin-favicon-row">
+                <span className="admin-favicon-preview" aria-hidden>
+                  {branding.favicon ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={branding.favicon} alt="" />
+                  ) : (
+                    <span className="admin-favicon-fallback">
+                      {(branding.storeNameEn || "O").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </span>
+                <label className="admin-upload-link admin-upload-link--inline">
+                  <Upload size={15} />
+                  {uploading === "favicon"
+                    ? t("admin.settings.saving")
+                    : t("admin.settings.changeFavicon")}
+                  <input
+                    type="file"
+                    accept="image/*,.ico"
+                    className="hidden"
+                    disabled={uploading !== null}
+                    onChange={(e) =>
+                      void onUpload("favicon", e.target.files?.[0] || null)
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="label">{t("admin.settings.tagline")}</label>
+              <input
+                className="input"
+                value={value.tagline}
+                onChange={(e) =>
+                  onChange({ ...value, tagline: e.target.value })
+                }
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Colors */}
-      <div className="space-y-3">
-        <h3 className="admin-section-title text-base">
-          {t("admin.settings.colors")}
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="admin-card space-y-4 p-5">
+        <h2 className="admin-section-title">{t("admin.settings.colors")}</h2>
+        <div className="admin-colors-row">
           <ColorField
             label={t("admin.settings.primaryColor")}
             value={branding.colors.primaryAccent}
@@ -321,23 +244,8 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
           />
           <ColorField
             label={t("admin.settings.secondaryColor")}
-            value={branding.colors.secondaryAccent}
-            onChange={(v) => patchColors("secondaryAccent", v)}
-          />
-          <ColorField
-            label={t("admin.settings.secondaryColor")}
             value={branding.colors.gold}
             onChange={(v) => patchColors("gold", v)}
-          />
-          <ColorField
-            label={t("admin.settings.primaryColor")}
-            value={branding.colors.button}
-            onChange={(v) => patchColors("button", v)}
-          />
-          <ColorField
-            label={t("admin.settings.secondaryColor")}
-            value={branding.colors.buttonHover}
-            onChange={(v) => patchColors("buttonHover", v)}
           />
           <ColorField
             label={t("admin.settings.textColor")}
@@ -345,33 +253,48 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             onChange={(v) => patchColors("text", v)}
           />
           <ColorField
-            label={t("admin.settings.textColor")}
-            value={branding.colors.textSecondary}
-            onChange={(v) => patchColors("textSecondary", v)}
-          />
-          <ColorField
             label={t("admin.settings.backgroundColor")}
             value={branding.colors.background}
             onChange={(v) => patchColors("background", v)}
           />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ColorField
-            label={t("admin.settings.backgroundColor")}
+            label={t("admin.settings.secondaryColor")}
+            value={branding.colors.secondaryAccent}
+            onChange={(v) => patchColors("secondaryAccent", v)}
+          />
+          <ColorField
+            label="Button"
+            value={branding.colors.button}
+            onChange={(v) => patchColors("button", v)}
+          />
+          <ColorField
+            label="Button hover"
+            value={branding.colors.buttonHover}
+            onChange={(v) => patchColors("buttonHover", v)}
+          />
+          <ColorField
+            label="Secondary text"
+            value={branding.colors.textSecondary}
+            onChange={(v) => patchColors("textSecondary", v)}
+          />
+          <ColorField
+            label="Card"
             value={branding.colors.card}
             onChange={(v) => patchColors("card", v)}
           />
           <ColorField
-            label={t("admin.settings.secondaryColor")}
+            label="Border"
             value={branding.colors.border}
             onChange={(v) => patchColors("border", v)}
           />
         </div>
-      </div>
+      </section>
 
-      {/* Typography */}
-      <div className="space-y-3">
-        <h3 className="admin-section-title text-base">
-          Typography
-        </h3>
+      {/* Advanced branding (unchanged capabilities, below identity) */}
+      <section className="admin-card space-y-4 p-5">
+        <h2 className="admin-section-title text-base">Typography</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className="label">Heading font</label>
@@ -416,13 +339,10 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Store name styling */}
-      <div className="space-y-3">
-        <h3 className="admin-section-title text-base">
-          {t("admin.settings.identity")}
-        </h3>
+      <section className="admin-card space-y-4 p-5">
+        <h2 className="admin-section-title text-base">Store name styling</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ColorField
             label="Name color"
@@ -492,7 +412,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             </label>
           ))}
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }

@@ -214,16 +214,6 @@ export default function AdminSettingsPage() {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="label">{t("admin.settings.tagline")}</label>
-                  <input
-                    className="input"
-                    value={form.tagline}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, tagline: e.target.value }))
-                    }
-                  />
-                </div>
-                <div>
                   <label className="label">{t("admin.settings.currency")}</label>
                   <input
                     className="input"

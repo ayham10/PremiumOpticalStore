@@ -1120,6 +1120,158 @@ html.admin-dark[lang="he"] .admin-auth {
   border-bottom-color: #d4af6a;
 }
 
+/* Settings — store identity card */
+.admin-identity-card {
+  padding: 1.35rem 1.4rem !important;
+}
+
+.admin-identity-names {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .admin-identity-names {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.1rem;
+  }
+}
+
+.admin-identity-media {
+  display: grid;
+  gap: 1.35rem;
+}
+
+@media (min-width: 768px) {
+  .admin-identity-media {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+  }
+}
+
+.admin-identity-logo,
+.admin-identity-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-identity-side {
+  gap: 1.15rem;
+}
+
+.admin-logo-preview {
+  display: grid;
+  place-items: center;
+  min-height: 9.5rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(80% 70% at 50% 40%, rgba(212, 175, 106, 0.08), transparent 65%),
+    #0b0f14;
+  padding: 1.25rem;
+}
+
+.admin-logo-preview-img {
+  max-height: 5.5rem;
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.admin-favicon-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 3.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.55rem 0.85rem;
+}
+
+.admin-favicon-preview {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 106, 0.45);
+  background: #0b0f14;
+}
+
+.admin-favicon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-favicon-fallback {
+  color: #d4af6a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-upload-link {
+  display: inline-flex;
+  width: fit-content;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.45rem;
+  color: #d4af6a;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.admin-upload-link:hover {
+  color: #e6c58a;
+}
+
+.admin-upload-link--inline {
+  margin-inline-start: auto;
+}
+
+.admin-color-field {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.admin-color-swatch {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  padding: 0.2rem;
+}
+
+.admin-colors-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .admin-colors-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-colors-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 /* Working hours table */
 .admin-hours-table {
   width: 100%;
