@@ -153,8 +153,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="admin-dashboard space-y-5 md:space-y-6">
       <AdminPageHeader
-        kicker={t("admin.dashboard.overview")}
-        title={t("admin.dashboard.welcome")}
+        title={t("admin.dashboard.title")}
         description={t("admin.dashboard.description")}
         actions={
           <>

@@ -90,11 +90,9 @@ const NAV: Array<{
 
 function SidebarNav({
   role,
-  userName,
   onNavigate,
 }: {
   role: UserRole;
-  userName?: string;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -119,9 +117,9 @@ function SidebarNav({
 
   return (
     <aside className="admin-sidebar flex h-full min-h-full flex-col border-e border-[var(--line)] bg-[var(--admin-card,#131A22)]">
-      <div className="border-b border-[var(--line)] px-5 py-6">
-        <BrandMark branding={branding} href="/admin" size="md" suffix="OPTICS" />
-        <p className="mt-2 text-xs font-medium text-[var(--slate)]">Admin</p>
+      <div className="admin-sidebar-brand border-b border-[var(--line)] px-5 py-6">
+        <BrandMark branding={branding} href="/admin" size="md" />
+        <p className="admin-sidebar-admin-label">{t("admin.sidebar.adminLabel")}</p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
@@ -148,14 +146,6 @@ function SidebarNav({
       </nav>
 
       <div className="space-y-2 border-t border-[var(--line)] p-3">
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--admin-elevated,#161D26)] px-3 py-3">
-          <p className="truncate text-sm font-semibold text-[var(--ink)]">
-            {userName || "Admin"}
-          </p>
-          <p className="truncate text-xs text-[var(--slate)]">
-            {role === "admin" ? "Store administrator" : role}
-          </p>
-        </div>
         <div className="px-1 py-1">
           <LanguageSwitcher tone="dark" />
         </div>
@@ -175,7 +165,6 @@ function SidebarNav({
 
 export default function AdminSidebar({
   role,
-  userName,
 }: {
   role: UserRole;
   userName?: string;
@@ -211,7 +200,7 @@ export default function AdminSidebar({
 
       <div className="hidden h-full md:block">
         <Suspense fallback={null}>
-          <SidebarNav role={role} userName={userName} />
+          <SidebarNav role={role} />
         </Suspense>
       </div>
 
@@ -233,11 +222,7 @@ export default function AdminSidebar({
               <X size={16} />
             </button>
             <Suspense fallback={null}>
-              <SidebarNav
-                role={role}
-                userName={userName}
-                onNavigate={() => setOpen(false)}
-              />
+              <SidebarNav role={role} onNavigate={() => setOpen(false)} />
             </Suspense>
           </div>
         </div>

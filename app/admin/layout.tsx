@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { AdminSession } from "@/lib/types";
 import { apiFetch, ApiError } from "@/lib/admin-api";
 
@@ -13,6 +14,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
   const isLogin = pathname === "/admin/login";
   const [session, setSession] = useState<AdminSession | null>(null);
   const [ready, setReady] = useState(isLogin);
@@ -68,7 +70,7 @@ export default function AdminLayout({
   if (!ready || !session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0B0F14] text-[var(--slate)]">
-        Loading admin…
+        {t("admin.sidebar.loading")}
       </div>
     );
   }

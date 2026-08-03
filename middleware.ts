@@ -9,16 +9,7 @@ import {
 function detectLocale(request: NextRequest): Locale {
   const cookie = request.cookies.get(LOCALE_COOKIE)?.value;
   if (isLocale(cookie)) return cookie;
-
-  const accept = request.headers.get("accept-language") || "";
-  const preferred = accept
-    .split(",")
-    .map((part) => part.trim().split(";")[0]?.toLowerCase())
-    .find(Boolean);
-
-  if (preferred?.startsWith("he")) return "he";
-  if (preferred?.startsWith("ar")) return "ar";
-  if (preferred?.startsWith("en")) return "en";
+  // New visits default to Arabic (RTL). Manual language choice is preserved via cookie.
   return defaultLocale;
 }
 

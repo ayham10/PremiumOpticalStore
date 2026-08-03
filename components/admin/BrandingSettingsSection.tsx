@@ -6,6 +6,7 @@ import {
   BRANDING_FONT_OPTIONS,
   mergeBranding,
 } from "@/lib/branding";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { BrandingSettings, StoreSettings } from "@/lib/types";
 
 type Props = {
@@ -62,6 +63,7 @@ async function uploadAsset(file: File): Promise<string> {
 }
 
 export default function BrandingSettingsSection({ value, onChange }: Props) {
+  const { t } = useLocale();
   const branding = useMemo(
     () => mergeBranding(value.branding),
     [value.branding],
@@ -141,12 +143,8 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
     <section className="admin-card space-y-5 p-5">
       <div>
         <h2 className="admin-section-title">
-          Branding & theme
+          {t("admin.settings.identity")}
         </h2>
-        <p className="admin-page-desc mt-2">
-          Customize brand, colors, and typography. Preview updates live; save to
-          apply site-wide.
-        </p>
       </div>
 
       {uploadError ? (
@@ -168,7 +166,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
           className="text-[0.68rem] font-semibold uppercase tracking-[0.2em]"
           style={{ color: branding.colors.textSecondary }}
         >
-          Live preview
+          {t("admin.settings.preview")}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {branding.storeNameStyle.showLogo && branding.logo ? (
@@ -233,12 +231,9 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
       {/* Brand identity */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-          Brand
-        </h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="label">Store name (English)</label>
+            <label className="label">{t("admin.settings.storeNameEn")}</label>
             <input
               className="input"
               value={branding.storeNameEn}
@@ -246,7 +241,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             />
           </div>
           <div>
-            <label className="label">Store name (Arabic)</label>
+            <label className="label">{t("admin.settings.storeNameAr")}</label>
             <input
               className="input"
               dir="rtl"
@@ -255,7 +250,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             />
           </div>
           <div>
-            <label className="label">Store name (Hebrew)</label>
+            <label className="label">{t("admin.settings.storeNameHe")}</label>
             <input
               className="input"
               dir="rtl"
@@ -267,16 +262,17 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="label">Logo URL</label>
+            <label className="label">{t("admin.settings.logoUrl")}</label>
             <input
               className="input"
               value={branding.logo || ""}
               onChange={(e) => patchBranding({ logo: e.target.value })}
-              placeholder="https://… or upload"
             />
             <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--accent)]">
               <Upload size={15} />
-              {uploading === "logo" ? "Uploading…" : "Upload logo"}
+              {uploading === "logo"
+                ? t("admin.settings.saving")
+                : t("admin.settings.changeLogo")}
               <input
                 type="file"
                 accept="image/*"
@@ -287,16 +283,17 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             </label>
           </div>
           <div>
-            <label className="label">Favicon URL</label>
+            <label className="label">{t("admin.settings.faviconUrl")}</label>
             <input
               className="input"
               value={branding.favicon || ""}
               onChange={(e) => patchBranding({ favicon: e.target.value })}
-              placeholder="https://… or upload"
             />
             <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--accent)]">
               <Upload size={15} />
-              {uploading === "favicon" ? "Uploading…" : "Upload favicon"}
+              {uploading === "favicon"
+                ? t("admin.settings.saving")
+                : t("admin.settings.changeLogo")}
               <input
                 type="file"
                 accept="image/*,.ico"
@@ -313,57 +310,57 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
       {/* Colors */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-          Colors
+        <h3 className="admin-section-title text-base">
+          {t("admin.settings.colors")}
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ColorField
-            label="Primary accent"
+            label={t("admin.settings.primaryColor")}
             value={branding.colors.primaryAccent}
             onChange={(v) => patchColors("primaryAccent", v)}
           />
           <ColorField
-            label="Secondary accent"
+            label={t("admin.settings.secondaryColor")}
             value={branding.colors.secondaryAccent}
             onChange={(v) => patchColors("secondaryAccent", v)}
           />
           <ColorField
-            label="Gold"
+            label={t("admin.settings.secondaryColor")}
             value={branding.colors.gold}
             onChange={(v) => patchColors("gold", v)}
           />
           <ColorField
-            label="Button"
+            label={t("admin.settings.primaryColor")}
             value={branding.colors.button}
             onChange={(v) => patchColors("button", v)}
           />
           <ColorField
-            label="Button hover"
+            label={t("admin.settings.secondaryColor")}
             value={branding.colors.buttonHover}
             onChange={(v) => patchColors("buttonHover", v)}
           />
           <ColorField
-            label="Text"
+            label={t("admin.settings.textColor")}
             value={branding.colors.text}
             onChange={(v) => patchColors("text", v)}
           />
           <ColorField
-            label="Secondary text"
+            label={t("admin.settings.textColor")}
             value={branding.colors.textSecondary}
             onChange={(v) => patchColors("textSecondary", v)}
           />
           <ColorField
-            label="Background"
+            label={t("admin.settings.backgroundColor")}
             value={branding.colors.background}
             onChange={(v) => patchColors("background", v)}
           />
           <ColorField
-            label="Card"
+            label={t("admin.settings.backgroundColor")}
             value={branding.colors.card}
             onChange={(v) => patchColors("card", v)}
           />
           <ColorField
-            label="Border"
+            label={t("admin.settings.secondaryColor")}
             value={branding.colors.border}
             onChange={(v) => patchColors("border", v)}
           />
@@ -372,7 +369,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
       {/* Typography */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
+        <h3 className="admin-section-title text-base">
           Typography
         </h3>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -423,8 +420,8 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
       {/* Store name styling */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-          Store name styling
+        <h3 className="admin-section-title text-base">
+          {t("admin.settings.identity")}
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ColorField

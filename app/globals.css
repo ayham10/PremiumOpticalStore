@@ -1302,6 +1302,24 @@ html.admin-dark[lang="he"] .admin-auth {
   color: #0b0f14;
 }
 
+.admin-sidebar-brand {
+  text-align: center;
+}
+
+.admin-sidebar-brand .brand-mark,
+.admin-sidebar-brand a {
+  justify-content: center;
+}
+
+.admin-sidebar-admin-label {
+  margin-top: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #77818a;
+}
+
 .admin-quick-actions-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

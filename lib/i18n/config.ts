@@ -1,7 +1,7 @@
 export const locales = ["en", "he", "ar"] as const;
 export type Locale = (typeof locales)[number];
 
-export const defaultLocale: Locale = "en";
+export const defaultLocale: Locale = "ar";
 export const rtlLocales: Locale[] = ["he", "ar"];
 export const LOCALE_COOKIE = "lumina_locale";
 
