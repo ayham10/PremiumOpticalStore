@@ -256,10 +256,16 @@ export type Dictionary = {
     title: string;
     lead: string;
     progress: string;
+    stepOf: string;
+    next: string;
     askService: string;
+    scheduleTitle: string;
     selectDate: string;
     selectTime: string;
     yourDetails: string;
+    countryCode: string;
+    phonePlaceholder: string;
+    whatsappFooter: string;
     changeService: string;
     changeDate: string;
     changeTime: string;
@@ -885,12 +891,18 @@ const en: Dictionary = {
   },
   clinicBooking: {
     title: "Book an Appointment",
-    lead: "Choose your service, pick a date and time, then confirm your visit.",
+    lead: "Choose your service, then pick a time and share your details.",
     progress: "Booking progress",
-    askService: "What would you like to book?",
+    stepOf: "Step {current} of {total}",
+    next: "Next",
+    askService: "Select a service",
+    scheduleTitle: "Choose a time and enter your details",
     selectDate: "Select a date",
     selectTime: "Select a time",
     yourDetails: "Your details",
+    countryCode: "Country code",
+    phonePlaceholder: "05X-XXXXXXX",
+    whatsappFooter: "Contact us on WhatsApp",
     changeService: "Change service",
     changeDate: "Change date",
     changeTime: "Change time",
@@ -900,7 +912,7 @@ const en: Dictionary = {
     reviewDate: "Date",
     reviewTime: "Time",
     reviewCustomer: "Customer details",
-    confirm: "Confirm booking",
+    confirm: "Book Appointment",
     submitting: "Confirming…",
     successTitle: "Your appointment is confirmed.",
     successLead: "We look forward to seeing you at Oyon.",

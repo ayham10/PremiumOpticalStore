@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  CalendarCheck2,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -11,6 +12,8 @@ import {
   Clock3,
   Eye,
   Glasses,
+  MessageCircle,
+  Phone,
   Sparkles,
   Sun,
 } from "lucide-react";
@@ -23,7 +26,7 @@ import {
 } from "@/lib/clinic-booking";
 import type { ClinicAppointmentType } from "@/lib/types";
 
-type Step = "service" | "date" | "time" | "details" | "review" | "success";
+type Step = "service" | "schedule" | "success";
 
 type DateOption = { date: string; label: string };
 
@@ -59,6 +62,8 @@ const SERVICE_META: Array<{
   },
 ];
 
+const COUNTRY_CODES = [{ value: "+972", label: "+972" }] as const;
+
 function normalizePhoneHint(value: string): boolean {
   const digits = value.replace(/\D/g, "");
   return (
@@ -66,6 +71,24 @@ function normalizePhoneHint(value: string): boolean {
     /^9725\d{8}$/.test(digits) ||
     /^5\d{8}$/.test(digits)
   );
+}
+
+function combinePhone(countryCode: string, local: string): string {
+  const localDigits = local.replace(/\D/g, "");
+  const ccDigits = countryCode.replace(/\D/g, "");
+  if (!localDigits) return "";
+  if (ccDigits === "972") {
+    if (localDigits.startsWith("0")) return `972${localDigits.slice(1)}`;
+    if (localDigits.startsWith("972")) return localDigits;
+    return `972${localDigits}`;
+  }
+  return `${ccDigits}${localDigits}`;
+}
+
+/** Backend still expects email; UI no longer collects it. */
+function syntheticEmail(phoneCombined: string): string {
+  const digits = phoneCombined.replace(/\D/g, "") || "guest";
+  return `booking.${digits}@oyon.guest`;
 }
 
 export default function ClinicBookingPage() {
@@ -76,7 +99,7 @@ export default function ClinicBookingPage() {
     searchParams.get("service"),
   );
 
-  const [step, setStep] = useState<Step>(preset ? "date" : "service");
+  const [step, setStep] = useState<Step>(preset ? "schedule" : "service");
   const [appointmentType, setAppointmentType] =
     useState<ClinicAppointmentType | null>(preset);
   const [availableDates, setAvailableDates] = useState<DateOption[]>([]);
@@ -88,8 +111,8 @@ export default function ClinicBookingPage() {
   const [time, setTime] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+972");
+  const [phoneLocal, setPhoneLocal] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -115,12 +138,12 @@ export default function ClinicBookingPage() {
   useEffect(() => {
     if (preset) {
       setAppointmentType(preset);
-      setStep("date");
+      setStep("schedule");
     }
   }, [preset]);
 
   useEffect(() => {
-    if (!appointmentType || (step !== "date" && step !== "time")) return;
+    if (!appointmentType || step !== "schedule") return;
     let cancelled = false;
     setLoadingDates(true);
     setError("");
@@ -156,7 +179,7 @@ export default function ClinicBookingPage() {
   }, [appointmentType, step, t]);
 
   useEffect(() => {
-    if (!appointmentType || !date || step !== "time") {
+    if (!appointmentType || !date || step !== "schedule") {
       return;
     }
     let cancelled = false;
@@ -205,35 +228,33 @@ export default function ClinicBookingPage() {
     ? t(`clinicBooking.services.${appointmentType}`)
     : "";
 
-  function selectService(type: ClinicAppointmentType) {
-    setAppointmentType(type);
-    setDate("");
-    setTime("");
-    setStep("date");
-  }
+  const whatsappHref = `https://wa.me/9725550180?text=${encodeURIComponent(
+    locale === "ar"
+      ? "مرحباً عيون، أود الاستفسار عن حجز موعد."
+      : "Hello Oyon, I would like help with booking.",
+  )}`;
 
-  function selectDate(iso: string) {
-    setDate(iso);
-    setTime("");
-    setStep("time");
-  }
-
-  function validateDetails(): boolean {
+  function validateSchedule(): boolean {
     const next: Record<string, string> = {};
+    if (!date) next.date = t("eyeExam.errors.dateRequired");
+    if (!time) next.time = t("eyeExam.errors.timeRequired");
     if (!firstName.trim()) next.firstName = t("validation.required");
     if (!lastName.trim()) next.lastName = t("validation.required");
-    if (!email.trim()) next.email = t("validation.required");
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      next.email = t("validation.email");
+    const combined = combinePhone(countryCode, phoneLocal);
+    if (!phoneLocal.trim()) next.phone = t("validation.required");
+    else if (!normalizePhoneHint(combined) && !normalizePhoneHint(phoneLocal)) {
+      next.phone = t("validation.phone");
     }
-    if (!phone.trim()) next.phone = t("validation.required");
-    else if (!normalizePhoneHint(phone)) next.phone = t("validation.phone");
     setFieldErrors(next);
     return Object.keys(next).length === 0;
   }
 
-  async function confirmBooking() {
-    if (!appointmentType || !date || !time || submitting) return;
+  async function confirmBooking(e?: FormEvent) {
+    e?.preventDefault();
+    if (!appointmentType || submitting) return;
+    if (!validateSchedule()) return;
+
+    const phone = combinePhone(countryCode, phoneLocal);
     setSubmitting(true);
     setError("");
     try {
@@ -243,8 +264,8 @@ export default function ClinicBookingPage() {
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
+          email: syntheticEmail(phone),
+          phone,
           appointmentDate: date,
           appointmentTime: time,
           language: locale,
@@ -262,330 +283,278 @@ export default function ClinicBookingPage() {
     }
   }
 
-  function onDetailsSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!validateDetails()) return;
-    setStep("review");
-  }
-
-  const stepIndex =
-    step === "service"
-      ? 1
-      : step === "date"
-        ? 2
-        : step === "time"
-          ? 3
-          : step === "details"
-            ? 4
-            : step === "review"
-              ? 5
-              : 5;
+  const stepNumber = step === "service" ? 1 : 2;
 
   return (
     <div className="clinic-book-page" dir={rtl ? "rtl" : "ltr"}>
       <div className="clinic-book-inner wrap">
         <header className="clinic-book-header">
-          <p className="clinic-book-brand">{t("hero.brand")}</p>
-          <h1 className="clinic-book-title">{t("clinicBooking.title")}</h1>
-          <p className="clinic-book-lead">{t("clinicBooking.lead")}</p>
           {step !== "success" ? (
-            <ol className="clinic-book-steps" aria-label={t("clinicBooking.progress")}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <li
-                  key={n}
-                  className={`clinic-book-step-dot ${stepIndex >= n ? "is-active" : ""}`}
-                >
-                  <span>{n}</span>
-                </li>
-              ))}
-            </ol>
+            <div className="clinic-book-progress" aria-label={t("clinicBooking.progress")}>
+              <div className="clinic-book-progress-track">
+                <span className={`clinic-book-progress-node${stepNumber >= 1 ? " is-active" : ""}${stepNumber > 1 ? " is-done" : ""}`}>
+                  {stepNumber > 1 ? <Check size={12} strokeWidth={2.4} /> : "1"}
+                </span>
+                <span className={`clinic-book-progress-line${stepNumber > 1 ? " is-active" : ""}`} />
+                <span className={`clinic-book-progress-node${stepNumber >= 2 ? " is-active" : ""}`}>
+                  2
+                </span>
+              </div>
+              <p className="clinic-book-progress-label">
+                {t("clinicBooking.stepOf", { current: stepNumber, total: 2 })}
+              </p>
+            </div>
           ) : null}
+          <h1 className="clinic-book-title">
+            {step === "service"
+              ? t("clinicBooking.askService")
+              : step === "schedule"
+                ? t("clinicBooking.scheduleTitle")
+                : t("clinicBooking.successTitle")}
+          </h1>
         </header>
 
         <section className="clinic-book-card">
           {step === "service" ? (
             <>
-              <h2 className="clinic-book-section-title">
-                {t("clinicBooking.askService")}
-              </h2>
-              <div className="clinic-book-service-grid">
-                {SERVICE_META.map((item) => (
-                  <button
-                    key={item.type}
-                    type="button"
-                    className="clinic-book-service"
-                    onClick={() => selectService(item.type)}
-                  >
-                    <item.icon size={22} aria-hidden />
-                    <strong>{t(item.labelKey)}</strong>
-                    <span>{t(item.hintKey)}</span>
-                  </button>
-                ))}
+              <div className="clinic-book-service-list" role="radiogroup" aria-label={t("clinicBooking.askService")}>
+                {SERVICE_META.map((item) => {
+                  const selected = appointmentType === item.type;
+                  return (
+                    <button
+                      key={item.type}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      className={`clinic-book-service${selected ? " is-selected" : ""}`}
+                      onClick={() => setAppointmentType(item.type)}
+                    >
+                      <span className={`clinic-book-service-check${selected ? " is-on" : ""}`} aria-hidden>
+                        {selected ? <Check size={12} strokeWidth={2.5} /> : null}
+                      </span>
+                      <span className="clinic-book-service-copy">
+                        <strong>{t(item.labelKey)}</strong>
+                        <span>{t(item.hintKey)}</span>
+                      </span>
+                      <item.icon className="clinic-book-service-icon" size={20} aria-hidden />
+                    </button>
+                  );
+                })}
               </div>
+              <button
+                type="button"
+                className="btn btn-copper clinic-book-cta"
+                disabled={!appointmentType}
+                onClick={() => {
+                  if (!appointmentType) return;
+                  setDate("");
+                  setTime("");
+                  setStep("schedule");
+                }}
+              >
+                <span>{t("clinicBooking.next")}</span>
+                {rtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
             </>
           ) : null}
 
-          {step === "date" && appointmentType ? (
-            <>
-              <div className="clinic-book-toolbar">
+          {step === "schedule" && appointmentType ? (
+            <form className="clinic-book-schedule" onSubmit={(e) => void confirmBooking(e)} noValidate>
+              <div className="clinic-book-schedule-panel">
+                <div className="clinic-cal">
+                  <div className="clinic-cal-nav">
+                    <button
+                      type="button"
+                      aria-label={t("clinicBooking.prevMonth")}
+                      onClick={() => {
+                        if (viewMonth === 0) {
+                          setViewMonth(11);
+                          setViewYear((y) => y - 1);
+                        } else setViewMonth((m) => m - 1);
+                      }}
+                    >
+                      {rtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                    </button>
+                    <strong>{monthLabel}</strong>
+                    <button
+                      type="button"
+                      aria-label={t("clinicBooking.nextMonth")}
+                      onClick={() => {
+                        if (viewMonth === 11) {
+                          setViewMonth(0);
+                          setViewYear((y) => y + 1);
+                        } else setViewMonth((m) => m + 1);
+                      }}
+                    >
+                      {rtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                  </div>
+                  <div className="clinic-cal-weekdays">
+                    {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                      <span key={d}>{t(`eyeExam.weekdays.${d}`).slice(0, 2)}</span>
+                    ))}
+                  </div>
+                  {loadingDates ? (
+                    <p className="clinic-book-muted">{t("common.loading")}</p>
+                  ) : (
+                    <div className="clinic-cal-grid" role="grid">
+                      {grid.map((cell, idx) => {
+                        if (!cell.iso || cell.day == null) {
+                          return <span key={`e-${idx}`} className="clinic-cal-empty" />;
+                        }
+                        const disabled =
+                          cell.iso < today || !availableSet.has(cell.iso);
+                        const selected = date === cell.iso;
+                        return (
+                          <button
+                            key={cell.iso}
+                            type="button"
+                            disabled={disabled}
+                            className={`clinic-cal-day ${selected ? "is-selected" : ""} ${
+                              disabled ? "is-disabled" : "is-available"
+                            }`}
+                            onClick={() => {
+                              setDate(cell.iso!);
+                              setTime("");
+                            }}
+                          >
+                            {cell.day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!loadingDates && availableDates.length === 0 ? (
+                    <p className="clinic-book-muted">{t("clinicBooking.emptyDates")}</p>
+                  ) : null}
+                  {fieldErrors.date ? <em className="clinic-book-field-error">{fieldErrors.date}</em> : null}
+                </div>
+
+                <div className="clinic-book-times">
+                  <p className="clinic-time-label">{t("clinicBooking.selectTime")}</p>
+                  {loadingTimes ? (
+                    <p className="clinic-book-muted">{t("common.loading")}</p>
+                  ) : !date ? (
+                    <p className="clinic-book-muted">{t("eyeExam.pickDateFirst")}</p>
+                  ) : times.length === 0 ? (
+                    <p className="clinic-book-muted">{t("clinicBooking.emptyTimes")}</p>
+                  ) : (
+                    <div className="clinic-time-grid clinic-time-grid--compact">
+                      {times.map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          className={`clinic-time-chip ${time === slot ? "is-active" : ""}`}
+                          onClick={() => setTime(slot)}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {fieldErrors.time ? <em className="clinic-book-field-error">{fieldErrors.time}</em> : null}
+                </div>
+              </div>
+
+              <div className="clinic-book-form">
+                <h2 className="clinic-book-form-title">{t("clinicBooking.yourDetails")}</h2>
+                <div className="clinic-book-name-row">
+                  <label>
+                    <span>{t("eyeExam.fields.firstName")}</span>
+                    <input
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
+                      required
+                    />
+                    {fieldErrors.firstName ? <em>{fieldErrors.firstName}</em> : null}
+                  </label>
+                  <label>
+                    <span>{t("eyeExam.fields.lastName")}</span>
+                    <input
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
+                      required
+                    />
+                    {fieldErrors.lastName ? <em>{fieldErrors.lastName}</em> : null}
+                  </label>
+                </div>
+
+                <div className="clinic-book-phone-row">
+                  <label className="clinic-book-country">
+                    <span className="sr-only">{t("clinicBooking.countryCode")}</span>
+                    <span className="clinic-book-country-control">
+                      <Phone size={13} aria-hidden />
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        aria-label={t("clinicBooking.countryCode")}
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  </label>
+                  <label className="clinic-book-phone">
+                    <span className="sr-only">{t("eyeExam.fields.phone")}</span>
+                    <input
+                      type="tel"
+                      value={phoneLocal}
+                      onChange={(e) => setPhoneLocal(e.target.value)}
+                      autoComplete="tel-national"
+                      placeholder={t("clinicBooking.phonePlaceholder")}
+                      required
+                    />
+                    {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
+                  </label>
+                </div>
+              </div>
+
+              <div className="clinic-book-summary-bar" aria-label={t("clinicBooking.reviewTitle")}>
+                <span>
+                  <Eye size={14} aria-hidden />
+                  {serviceLabel}
+                </span>
+                <span>
+                  <CalendarDays size={14} aria-hidden />
+                  {date ? formatClinicDateDisplay(date) : "—"}
+                </span>
+                <span>
+                  <Clock3 size={14} aria-hidden />
+                  {time || "—"}
+                </span>
+              </div>
+
+              {error ? <p className="clinic-book-error">{error}</p> : null}
+
+              <div className="clinic-book-actions">
                 {!preset ? (
                   <button
                     type="button"
-                    className="clinic-book-back"
+                    className="clinic-book-back-btn"
                     onClick={() => setStep("service")}
+                    disabled={submitting}
                   >
-                    {rtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                    {t("clinicBooking.changeService")}
+                    {rtl ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                    {t("common.back")}
                   </button>
                 ) : (
-                  <span className="clinic-book-pill">{serviceLabel}</span>
+                  <span />
                 )}
-              </div>
-              <h2 className="clinic-book-section-title">
-                <CalendarDays size={18} aria-hidden />
-                {t("clinicBooking.selectDate")}
-              </h2>
-              <div className="clinic-cal">
-                <div className="clinic-cal-nav">
-                  <button
-                    type="button"
-                    aria-label={t("clinicBooking.prevMonth")}
-                    onClick={() => {
-                      if (viewMonth === 0) {
-                        setViewMonth(11);
-                        setViewYear((y) => y - 1);
-                      } else setViewMonth((m) => m - 1);
-                    }}
-                  >
-                    {rtl ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                  </button>
-                  <strong>{monthLabel}</strong>
-                  <button
-                    type="button"
-                    aria-label={t("clinicBooking.nextMonth")}
-                    onClick={() => {
-                      if (viewMonth === 11) {
-                        setViewMonth(0);
-                        setViewYear((y) => y + 1);
-                      } else setViewMonth((m) => m + 1);
-                    }}
-                  >
-                    {rtl ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-                  </button>
-                </div>
-                <div className="clinic-cal-weekdays">
-                  {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-                    <span key={d}>{t(`eyeExam.weekdays.${d}`).slice(0, 3)}</span>
-                  ))}
-                </div>
-                {loadingDates ? (
-                  <p className="clinic-book-muted">{t("common.loading")}</p>
-                ) : (
-                  <div className="clinic-cal-grid" role="grid">
-                    {grid.map((cell, idx) => {
-                      if (!cell.iso || cell.day == null) {
-                        return <span key={`e-${idx}`} className="clinic-cal-empty" />;
-                      }
-                      const disabled =
-                        cell.iso < today || !availableSet.has(cell.iso);
-                      const selected = date === cell.iso;
-                      return (
-                        <button
-                          key={cell.iso}
-                          type="button"
-                          disabled={disabled}
-                          className={`clinic-cal-day ${selected ? "is-selected" : ""} ${
-                            disabled ? "is-disabled" : "is-available"
-                          }`}
-                          onClick={() => selectDate(cell.iso!)}
-                        >
-                          {cell.day}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {!loadingDates && availableDates.length === 0 ? (
-                  <p className="clinic-book-muted">{t("clinicBooking.emptyDates")}</p>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-
-          {step === "time" && appointmentType ? (
-            <>
-              <div className="clinic-book-toolbar">
                 <button
-                  type="button"
-                  className="clinic-book-back"
-                  onClick={() => setStep("date")}
-                >
-                  {rtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                  {t("clinicBooking.changeDate")}
-                </button>
-                <span className="clinic-book-pill">
-                  {formatClinicDateDisplay(date)}
-                </span>
-              </div>
-              <h2 className="clinic-book-section-title">
-                <Clock3 size={18} aria-hidden />
-                {t("clinicBooking.selectTime")}
-              </h2>
-              {loadingTimes ? (
-                <p className="clinic-book-muted">{t("common.loading")}</p>
-              ) : times.length === 0 ? (
-                <p className="clinic-book-muted">{t("clinicBooking.emptyTimes")}</p>
-              ) : (
-                (["morning", "afternoon", "evening"] as const).map((group) => {
-                  const slots = grouped[group];
-                  if (!slots.length) return null;
-                  return (
-                    <div key={group} className="clinic-time-group">
-                      <p className="clinic-time-label">
-                        {t(`clinicBooking.periods.${group}`)}
-                      </p>
-                      <div className="clinic-time-grid">
-                        {slots.map((slot) => (
-                          <button
-                            key={slot}
-                            type="button"
-                            className={`clinic-time-chip ${time === slot ? "is-active" : ""}`}
-                            onClick={() => {
-                              setTime(slot);
-                              setStep("details");
-                            }}
-                          >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </>
-          ) : null}
-
-          {step === "details" ? (
-            <>
-              <div className="clinic-book-toolbar">
-                <button
-                  type="button"
-                  className="clinic-book-back"
-                  onClick={() => setStep("time")}
-                >
-                  {rtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                  {t("clinicBooking.changeTime")}
-                </button>
-                <span className="clinic-book-pill">
-                  {formatClinicDateDisplay(date)} · {time}
-                </span>
-              </div>
-              <h2 className="clinic-book-section-title">
-                {t("clinicBooking.yourDetails")}
-              </h2>
-              <form className="clinic-book-form" onSubmit={onDetailsSubmit} noValidate>
-                <label>
-                  <span>{t("eyeExam.fields.firstName")}</span>
-                  <input
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    autoComplete="given-name"
-                    required
-                  />
-                  {fieldErrors.firstName ? <em>{fieldErrors.firstName}</em> : null}
-                </label>
-                <label>
-                  <span>{t("eyeExam.fields.lastName")}</span>
-                  <input
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    autoComplete="family-name"
-                    required
-                  />
-                  {fieldErrors.lastName ? <em>{fieldErrors.lastName}</em> : null}
-                </label>
-                <label>
-                  <span>{t("eyeExam.fields.email")}</span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    required
-                  />
-                  {fieldErrors.email ? <em>{fieldErrors.email}</em> : null}
-                </label>
-                <label>
-                  <span>{t("eyeExam.fields.phone")}</span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    autoComplete="tel"
-                    placeholder="0501234567"
-                    required
-                  />
-                  {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
-                </label>
-                <button type="submit" className="btn btn-copper clinic-book-cta">
-                  {t("clinicBooking.continueReview")}
-                </button>
-              </form>
-            </>
-          ) : null}
-
-          {step === "review" ? (
-            <>
-              <h2 className="clinic-book-section-title">
-                {t("clinicBooking.reviewTitle")}
-              </h2>
-              <dl className="clinic-book-review">
-                <div>
-                  <dt>{t("clinicBooking.reviewService")}</dt>
-                  <dd>{serviceLabel}</dd>
-                </div>
-                <div>
-                  <dt>{t("clinicBooking.reviewDate")}</dt>
-                  <dd>{formatClinicDateDisplay(date)}</dd>
-                </div>
-                <div>
-                  <dt>{t("clinicBooking.reviewTime")}</dt>
-                  <dd>{time}</dd>
-                </div>
-                <div>
-                  <dt>{t("clinicBooking.reviewCustomer")}</dt>
-                  <dd>
-                    {firstName} {lastName}
-                    <br />
-                    {email}
-                    <br />
-                    {phone}
-                  </dd>
-                </div>
-              </dl>
-              {error ? <p className="clinic-book-error">{error}</p> : null}
-              <div className="clinic-book-actions">
-                <button
-                  type="button"
-                  className="btn clinic-book-secondary"
-                  onClick={() => setStep("details")}
+                  type="submit"
+                  className="btn btn-copper clinic-book-cta clinic-book-cta--primary"
                   disabled={submitting}
                 >
-                  {t("common.back")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-copper clinic-book-cta"
-                  onClick={() => void confirmBooking()}
-                  disabled={submitting}
-                >
-                  {submitting
-                    ? t("clinicBooking.submitting")
-                    : t("clinicBooking.confirm")}
+                  <CalendarCheck2 size={16} aria-hidden />
+                  {submitting ? t("clinicBooking.submitting") : t("clinicBooking.confirm")}
                 </button>
               </div>
-            </>
+            </form>
           ) : null}
 
           {step === "success" ? (
@@ -615,10 +584,22 @@ export default function ClinicBookingPage() {
             </div>
           ) : null}
 
-          {error && step !== "review" && step !== "success" ? (
+          {error && step === "service" ? (
             <p className="clinic-book-error">{error}</p>
           ) : null}
         </section>
+
+        {step !== "success" ? (
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="clinic-book-whatsapp"
+          >
+            <MessageCircle size={15} aria-hidden />
+            {t("clinicBooking.whatsappFooter")}
+          </a>
+        ) : null}
       </div>
     </div>
   );
