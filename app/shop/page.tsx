@@ -2,43 +2,67 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import ProductCard from "@/components/ProductCard";
-import PageAtmosphere from "@/components/PageAtmosphere";
-import Reveal from "@/components/Reveal";
+import { Search } from "lucide-react";
+import { CatalogueProductCard } from "@/components/catalogue/CategoryCatalogue";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Product, ProductCategory } from "@/lib/types";
 
-const CATEGORIES: Array<ProductCategory | "All"> = [
+type StoreFilter =
+  | "All"
+  | "Prescription Frames"
+  | "Sunglasses"
+  | "Contact Lenses"
+  | "Accessories";
+
+const FILTERS: StoreFilter[] = [
   "All",
-  "Prescription Glasses",
+  "Prescription Frames",
   "Sunglasses",
   "Contact Lenses",
-  "Frames",
   "Accessories",
-  "Cleaning Products",
 ];
 
+const FILTER_CATEGORIES: Record<Exclude<StoreFilter, "All">, ProductCategory[]> = {
+  "Prescription Frames": ["Frames", "Prescription Glasses"],
+  Sunglasses: ["Sunglasses"],
+  "Contact Lenses": ["Contact Lenses"],
+  Accessories: ["Accessories", "Cleaning Products"],
+};
+
 function ShopContent() {
-  const { t, dict } = useLocale();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
 
-  const initialCategory = useMemo(() => {
+  const initialFilter = useMemo(() => {
     const raw = searchParams.get("category");
-    if (!raw) return "All" as const;
+    if (!raw) return "All" as StoreFilter;
     const decoded = decodeURIComponent(raw);
-    return CATEGORIES.includes(decoded as ProductCategory | "All")
-      ? (decoded as ProductCategory | "All")
-      : ("All" as const);
+    if (decoded === "Frames" || decoded === "Prescription Glasses") {
+      return "Prescription Frames";
+    }
+    if ((FILTERS as string[]).includes(decoded)) {
+      return decoded as StoreFilter;
+    }
+    return "All";
   }, [searchParams]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState<ProductCategory | "All">(initialCategory);
+  const [filter, setFilter] = useState<StoreFilter>(initialFilter);
   const [query, setQuery] = useState("");
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    setCategory(initialCategory);
-  }, [initialCategory]);
+    setFilter(initialFilter);
+  }, [initialFilter]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,51 +85,78 @@ function ShopContent() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
-      if (category !== "All" && p.category !== category) return false;
+      if (p.status !== "active") return false;
+      if (filter !== "All") {
+        const allowed = FILTER_CATEGORIES[filter];
+        if (!allowed.includes(p.category)) return false;
+      }
       if (!q) return true;
-      return [p.name, p.brand, p.description, p.category, p.sku]
+      return [p.name, p.brand, p.sku]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q));
     });
-  }, [products, category, query]);
+  }, [products, filter, query]);
 
-  function categoryLabel(cat: ProductCategory | "All") {
-    if (cat === "All") return t("shop.all");
-    return (
-      dict.shop.categories[cat as keyof typeof dict.shop.categories] || cat
-    );
+  function filterLabel(f: StoreFilter) {
+    if (f === "All") return t("shop.all");
+    if (f === "Prescription Frames") return t("shop.filterFrames");
+    if (f === "Sunglasses") return t("shop.categories.Sunglasses");
+    if (f === "Contact Lenses") return t("shop.categories.Contact Lenses");
+    return t("shop.categories.Accessories");
   }
 
   return (
-    <div className="pb-20">
-      <PageAtmosphere
-        eyebrow={t("shop.eyebrow")}
-        title={t("shop.title")}
-        lead={t("shop.lead")}
-        image="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1800&q=80"
-      />
-      <section className="wrap relative z-10">
-        <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:overflow-visible">
-            {CATEGORIES.map((cat) => (
+    <div className="frames-page store-page">
+      <section className="frames-hero store-hero" aria-label={t("shop.title")}>
+        {reduceMotion ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/images/store-hero-poster.jpg"
+            alt=""
+            className="store-hero-fallback"
+          />
+        ) : (
+          <video
+            className="frames-hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            poster="/images/store-hero-poster.jpg"
+          >
+            <source src="/videos/store-hero.mp4" type="video/mp4" />
+          </video>
+        )}
+        <span className="frames-hero-veil store-hero-veil" aria-hidden />
+        <div className="store-hero-copy">
+          <h1 className="store-hero-title">{t("shop.title")}</h1>
+          <p className="store-hero-lead">{t("shop.lead")}</p>
+        </div>
+      </section>
+
+      <section className="frames-catalogue wrap">
+        <div className="store-toolbar">
+          <div className="store-filters" role="tablist" aria-label={t("shop.title")}>
+            {FILTERS.map((f) => (
               <button
-                key={cat}
+                key={f}
                 type="button"
-                onClick={() => setCategory(cat)}
-                className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-                  category === cat
-                    ? "border-[var(--ink)] bg-[var(--ink)] text-white shadow-[var(--shadow-soft)]"
-                    : "border-[var(--line-strong)] bg-white/80 text-[var(--slate)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-                }`}
+                role="tab"
+                aria-selected={filter === f}
+                onClick={() => setFilter(f)}
+                className={`store-filter-chip${filter === f ? " is-active" : ""}`}
               >
-                {categoryLabel(cat)}
+                {filterLabel(f)}
               </button>
             ))}
           </div>
-          <label className="relative block w-full max-w-none lg:max-w-sm">
+
+          <label className="store-search">
+            <Search size={16} className="store-search-icon" aria-hidden />
             <span className="sr-only">{t("shop.search")}</span>
             <input
-              className="input"
+              className="store-search-input"
               placeholder={t("shop.search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -114,22 +165,17 @@ function ShopContent() {
         </div>
 
         {loading ? (
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="aspect-[4/5] animate-pulse rounded-[var(--radius)] bg-[var(--mist)]"
-              />
+          <div className="frames-product-grid" aria-hidden>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="frames-product-skeleton" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <p className="mt-16 text-[var(--slate)]">{t("shop.empty")}</p>
+          <p className="frames-empty">{t("shop.empty")}</p>
         ) : (
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((product, i) => (
-              <Reveal key={product.id} delay={(i % 6) * 60}>
-                <ProductCard product={product} />
-              </Reveal>
+          <div className="frames-product-grid">
+            {filtered.map((product) => (
+              <CatalogueProductCard key={product.id} product={product} />
             ))}
           </div>
         )}

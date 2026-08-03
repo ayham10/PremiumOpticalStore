@@ -1,55 +1,86 @@
 "use client";
 
 import Link from "next/link";
+import { MapPin, Navigation } from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
+const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
+const WAZE_URL =
+  "https://waze.com/ul?ll=32.861202%2C35.363229&navigate=yes";
+
 export default function Footer() {
   const { t } = useLocale();
   const { branding, settings } = useBranding();
+  const phone = settings?.phone || "+972-52-123-4567";
+  const city = settings?.city || t("footer.city");
+  const hours = t("footer.hoursValue");
+  const mapsUrl = settings?.googleMapsLink || MAPS_URL;
 
   return (
-    <footer className="border-t border-[var(--line)] bg-[var(--ink)] text-white">
-      <div className="wrap grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div>
+    <footer className="oyon-footer">
+      <div className="oyon-footer-inner wrap">
+        <div className="oyon-footer-brand">
           <BrandMark branding={branding} href="/" size="lg" onDark />
-          <p className="mt-4 max-w-sm text-[0.95rem] text-white/65">
-            {t("footer.tagline")}
-          </p>
+          <p className="oyon-footer-tagline">{t("footer.tagline")}</p>
         </div>
 
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-            {t("footer.visit")}
-          </div>
-          <p className="mt-4 text-white/75">
-            {settings?.address || "Main Street"}
-            <br />
-            {settings?.city || "Deir Hanna"}
+        <div className="oyon-footer-info">
+          <p className="oyon-footer-info-row">
+            <span className="oyon-footer-label">{t("footer.hours")}</span>
+            <span dir="ltr">{hours}</span>
           </p>
-          <p className="mt-3 text-white/75">{settings?.phone || "+972-52-123-4567"}</p>
-          <p className="text-white/75">{settings?.email || "hello@oyon.optics"}</p>
+          <p className="oyon-footer-info-row">
+            <span className="oyon-footer-label">{t("footer.phone")}</span>
+            <a href={`tel:${phone.replace(/\s+/g, "")}`} dir="ltr">
+              {phone}
+            </a>
+          </p>
+          <p className="oyon-footer-info-row">
+            <span className="oyon-footer-label">{t("footer.location")}</span>
+            <span>{city}</span>
+          </p>
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="oyon-footer-show-location"
+          >
+            {t("footer.showLocation")}
+          </a>
         </div>
 
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-            {t("footer.explore")}
+        <div className="oyon-footer-actions">
+          <div className="oyon-footer-map-actions">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="oyon-footer-map-btn"
+            >
+              <MapPin size={15} aria-hidden />
+              {t("footer.maps")}
+            </a>
+            <a
+              href={WAZE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="oyon-footer-map-btn"
+            >
+              <Navigation size={15} aria-hidden />
+              {t("footer.waze")}
+            </a>
           </div>
-          <div className="mt-4 flex flex-col gap-2 text-white/75">
-            <Link href="/shop">{t("nav.shop")}</Link>
-            <Link href="/services">{t("nav.services")}</Link>
-            <Link href="/book">{t("nav.book")}</Link>
-            <Link href="/gallery">{t("nav.gallery")}</Link>
-            <Link href="/contact">{t("nav.contact")}</Link>
-            <Link href="/admin">{t("nav.admin")}</Link>
-          </div>
+          <Link href="/book" className="btn btn-copper oyon-footer-book">
+            {t("nav.bookCta")}
+          </Link>
         </div>
       </div>
-      <div className="border-t border-white/10">
-        <div className="wrap flex flex-col gap-2 py-5 text-sm text-white/45 md:flex-row md:justify-between">
-          <span>{t("footer.copyright", { year: new Date().getFullYear() })}</span>
-          <span>{t("footer.short")}</span>
+
+      <div className="oyon-footer-copy">
+        <div className="wrap">
+          <p>{t("footer.copyright", { year: 2026 })}</p>
         </div>
       </div>
     </footer>

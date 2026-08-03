@@ -7,6 +7,9 @@ export type Dictionary = {
     scrollHint: string;
     bookAppointment: string;
     welcomeLine: string;
+    heroBrandLine: string;
+    brandsTitle: string;
+    featureCards: Record<string, { title: string; text: string }>;
     categoriesEyebrow: string;
     categoriesTitle: string;
     categoriesLead: string;
@@ -52,6 +55,7 @@ export type Dictionary = {
     empty: string;
     view: string;
     all: string;
+    filterFrames: string;
     categories: Record<string, string>;
   };
   product: {
@@ -228,7 +232,19 @@ export type Dictionary = {
   };
   manage: Record<string, string>;
   contact: Record<string, string>;
-  about: Record<string, string>;
+  about: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    statement: string;
+    storyTitle: string;
+    story: string;
+    closingTitle: string;
+    closingLead: string;
+    features: Record<string, { title: string; text: string }>;
+    ctaBook: string;
+    ctaShop: string;
+  };
   gallery: Record<string, string>;
   footer: Record<string, string>;
   common: Record<string, string>;
@@ -256,10 +272,12 @@ const en: Dictionary = {
     home: "Home",
     services: "Services",
     exam: "Eye Exam",
-    shop: "Shop",
+    frames: "Prescription Frames",
+    sunglasses: "Sunglasses",
+    shop: "Store",
     book: "Book",
     gallery: "Gallery",
-    about: "About",
+    about: "About Us",
     contact: "Contact",
     admin: "Admin",
     bookCta: "Book an Appointment",
@@ -268,8 +286,8 @@ const en: Dictionary = {
     language: "Language",
   },
   hero: {
-    brand: "Oyon",
-    brandSuffix: "OPTICAL",
+    brand: "OYON",
+    brandSuffix: "",
     title: "SEE LIFE IN FOCUS",
     line1: "Premium Eyewear.",
     line2: "Advanced Eye Care.",
@@ -284,9 +302,25 @@ const en: Dictionary = {
   },
   home: {
     hubEyebrow: "Premium Navigation",
-    scrollHint: "Scroll",
+    scrollHint: "Explore More",
     bookAppointment: "Book an Appointment",
-    welcomeLine: "Premium Eyewear • Eye Examinations • Sunglasses",
+    welcomeLine: "Prescription Frames • Sunglasses • Professional Eye Exam",
+    heroBrandLine: "OYON",
+    brandsTitle: "Leading International Brands",
+    featureCards: {
+      exam: {
+        title: "Professional Eye Exam",
+        text: "Comprehensive, precise examinations with advanced optical technology.",
+      },
+      frames: {
+        title: "Prescription Frames",
+        text: "Elegant design and lasting quality tailored to your style.",
+      },
+      brands: {
+        title: "Premium Brands",
+        text: "The latest models from the world's most luxurious eyewear houses.",
+      },
+    },
     categoriesEyebrow: "Explore",
     categoriesTitle: "Everything your vision needs",
     categoriesLead:
@@ -500,14 +534,14 @@ const en: Dictionary = {
     },
   },
   shop: {
-    eyebrow: "Shop",
-    title: "Glasses & optical care",
-    lead:
-      "Explore prescription frames, sunglasses, contact lenses, and daily essentials from the Oyon edit.",
-    search: "Search frames, brands, SKU…",
+    eyebrow: "Store",
+    title: "Complete Catalogue",
+    lead: "Prescription frames, sunglasses, contact lenses, and essentials.",
+    search: "Search by name, brand, or SKU…",
     empty: "No products match your filters.",
     view: "View",
     all: "All",
+    filterFrames: "Prescription Frames",
     categories: {
       "Prescription Glasses": "Prescription Glasses",
       Sunglasses: "Sunglasses",
@@ -814,20 +848,37 @@ const en: Dictionary = {
     bookCta: "Book Eye Exam",
   },
   about: {
-    eyebrow: "About",
-    title: "Precision vision. Quiet luxury.",
-    lead:
-      "Oyon is an optical atelier devoted to clinical accuracy and beautiful eyewear — never rushed, never ordinary.",
-    storyTitle: "Our approach",
+    eyebrow: "About Us",
+    title: "A premium optical boutique",
+    lead: "Authentic brands. Advanced eye testing. Personal guidance.",
+    statement:
+      "OYON is a luxury optical destination dedicated to clearer vision, refined style, and an elevated in-store experience.",
+    storyTitle: "Our Approach",
     story:
-      "Every visit balances thorough examination with considered styling. We measure carefully, explain clearly, and help you choose frames and lenses that feel inevitable.",
-    craftTitle: "What we stand for",
-    craft1: "Clinical precision without compromise",
-    craft2: "Curated frames with lasting craftsmanship",
-    craft3: "Personal fittings and honest guidance",
-    teamTitle: "Meet the team",
-    ctaBook: "Book an exam",
-    ctaShop: "Browse frames",
+      "We combine advanced eye-testing technology with carefully curated frames and lenses — then guide each guest with honest, personal recommendations.",
+    closingTitle: "Clarity, crafted with care",
+    closingLead:
+      "From authentic premium brands to precision fittings, every detail is chosen for lasting quality and quiet confidence.",
+    features: {
+      precision: {
+        title: "Precision",
+        text: "Advanced eye-testing technology for clear, reliable results.",
+      },
+      quality: {
+        title: "Premium Quality",
+        text: "Quality frames and lenses selected for comfort and longevity.",
+      },
+      selection: {
+        title: "Luxury Selection",
+        text: "Authentic premium brands and the latest eyewear collections.",
+      },
+      service: {
+        title: "Personal Service",
+        text: "Honest, personalized guidance for every visit.",
+      },
+    },
+    ctaBook: "Book an Appointment",
+    ctaShop: "Browse the Store",
   },
   gallery: {
     eyebrow: "Gallery",
@@ -839,12 +890,19 @@ const en: Dictionary = {
     close: "Close",
   },
   footer: {
-    tagline:
-      "Premium optical care — precise examinations, curated frames, and effortless appointments.",
+    tagline: "Clearer vision. Purer style. A luxury experience.",
     visit: "Visit",
     explore: "Explore",
-    copyright: "© {year} Oyon Optical.",
-    short: "Precision vision. Quiet luxury.",
+    copyright: "© {year} OYON Optical",
+    short: "Clearer vision. Purer style.",
+    hours: "Hours",
+    hoursValue: "08:30 – 21:00",
+    phone: "Phone",
+    location: "Location",
+    city: "Deir Hanna",
+    showLocation: "Show location",
+    maps: "Maps",
+    waze: "Waze",
   },
   common: {
     loading: "Loading…",

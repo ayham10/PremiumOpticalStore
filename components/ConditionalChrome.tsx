@@ -17,7 +17,9 @@ export default function ConditionalChrome({
   const isFrames = pathname === "/frames";
   const isSunglasses = pathname === "/sunglasses";
   const isContactLenses = pathname === "/contact-lenses";
-  const isCatalogue = isFrames || isSunglasses || isContactLenses;
+  const isShop = pathname === "/shop";
+  const isAbout = pathname === "/about";
+  const isCatalogue = isFrames || isSunglasses || isContactLenses || isShop;
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
   const isBook = pathname === "/book";
@@ -34,14 +36,16 @@ export default function ConditionalChrome({
         ? "product-main"
         : isEyeExam
           ? "eye-exam-main"
-          : undefined;
+          : isAbout
+            ? "about-main"
+            : undefined;
 
   return (
     <>
       {isHome ? <IntroLoader /> : null}
       <Navbar />
       <main className={mainClass}>{children}</main>
-      {isHome ? null : <Footer />}
+      <Footer />
       {isHome ? null : <WhatsAppButton />}
     </>
   );

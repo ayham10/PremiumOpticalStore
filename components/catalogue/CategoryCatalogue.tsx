@@ -7,7 +7,7 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product, ProductCategory } from "@/lib/types";
 
-function CatalogueProductCard({ product }: { product: Product }) {
+export function CatalogueProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
   const image = product.images[0] || "/images/placeholder-frame.svg";
 

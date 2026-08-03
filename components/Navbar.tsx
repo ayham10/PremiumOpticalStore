@@ -4,37 +4,63 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import {
+  Menu,
+  X,
+  Eye,
+  Glasses,
+  Sun,
+  Store,
+  Info,
+  Phone,
+  MapPin,
+  Clock,
+} from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
+const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
+
+const MOBILE_LINKS = [
+  { href: "/eye-exams", labelKey: "nav.exam", icon: Eye },
+  { href: "/frames", labelKey: "nav.frames", icon: Glasses },
+  { href: "/sunglasses", labelKey: "nav.sunglasses", icon: Sun },
+  { href: "/shop", labelKey: "nav.shop", icon: Store },
+  { href: "/about", labelKey: "nav.about", icon: Info },
+  { href: "/contact", labelKey: "nav.contact", icon: Phone },
+] as const;
+
 export default function Navbar() {
   const { t } = useLocale();
-  const { branding } = useBranding();
+  const { branding, settings } = useBranding();
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
+  const isAbout = pathname === "/about";
   const isCatalogue =
     pathname === "/frames" ||
     pathname === "/sunglasses" ||
-    pathname === "/contact-lenses";
+    pathname === "/contact-lenses" ||
+    pathname === "/shop";
   const isBook = pathname === "/book";
-  const isSolidDark = isProduct || isEyeExam || isCatalogue || isBook;
+  const isSolidDark =
+    isProduct || isEyeExam || isCatalogue || isBook || isAbout || isHome;
   const isDarkPage = isHome || isSolidDark;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const links = [
-    { href: "/", label: t("nav.home") },
-    { href: "/services", label: t("nav.services") },
-    { href: "/eye-exams", label: t("nav.exam") },
-    { href: "/shop", label: t("nav.shop") },
-    { href: "/about", label: t("nav.about") },
-    { href: "/contact", label: t("nav.contact") },
-  ];
+  const desktopLinks = MOBILE_LINKS;
+
+  const phone = settings?.phone || t("eyeExam.info.whatsappValue");
+  const hours = t("footer.hoursValue");
+  const city = settings?.city || t("footer.city");
+  const instagram = settings?.social?.instagram || "https://instagram.com";
+  const whatsappRaw =
+    settings?.whatsapp || settings?.phone || "972521234567";
+  const whatsapp = String(whatsappRaw).replace(/[^\d]/g, "");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -77,28 +103,27 @@ export default function Navbar() {
               : "border-b border-transparent bg-transparent"
         }`}
       >
-        <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-4">
-          <span onClick={() => setOpen(false)}>
-            <BrandMark
-              branding={branding}
-              href="/"
-              onDark={whiteText || open}
-              suffix={t("hero.brandSuffix")}
-            />
-          </span>
+        <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-3.5">
+          <BrandMark
+            branding={branding}
+            href="/"
+            onDark={whiteText || open}
+            size="sm"
+            onClick={() => setOpen(false)}
+          />
 
           <nav
-            className={`hidden items-center gap-5 text-[0.86rem] font-semibold uppercase tracking-[0.12em] xl:flex ${
+            className={`hidden items-center gap-5 text-[0.82rem] font-semibold uppercase tracking-[0.12em] xl:flex ${
               whiteText ? "text-white/80" : "text-[var(--slate)]"
             }`}
           >
-            {links.map((l) => (
+            {desktopLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 className="transition-colors hover:text-[var(--copper-soft)]"
               >
-                {l.label}
+                {t(l.labelKey)}
               </Link>
             ))}
           </nav>
@@ -119,7 +144,7 @@ export default function Navbar() {
             type="button"
             className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
               whiteText || open
-                ? "border-white/35 text-white"
+                ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
                 : "border-[var(--line-strong)] text-[var(--ink)]"
             }`}
             onClick={() => setOpen((v) => !v)}
@@ -129,66 +154,128 @@ export default function Navbar() {
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
-
-        {/* Premium mobile dropdown — not a full-screen drawer */}
-        <AnimatePresence>
-          {open ? (
-            <motion.div
-              className="lg:hidden"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-              style={{ overflow: "hidden" }}
-            >
-              <div className="mobile-nav-panel">
-                <nav className="wrap flex flex-col pb-5 pt-1">
-                  {links.map((l, i) => (
-                    <motion.div
-                      key={l.href}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.04 + i * 0.035, duration: 0.28 }}
-                    >
-                      <Link
-                        href={l.href}
-                        className="mobile-nav-link"
-                        onClick={() => setOpen(false)}
-                      >
-                        {l.label}
-                      </Link>
-                    </motion.div>
-                  ))}
-
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-1 pt-4">
-                    <LanguageSwitcher tone="dark" />
-                    <Link
-                      href="/book"
-                      className="btn btn-copper !min-h-11 !px-5 !text-sm"
-                      onClick={() => setOpen(false)}
-                    >
-                      {t("nav.bookCta")}
-                    </Link>
-                  </div>
-                </nav>
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
       </header>
 
       <AnimatePresence>
         {open ? (
-          <motion.button
-            type="button"
-            className="mobile-nav-scrim lg:hidden"
-            aria-label={t("nav.close")}
+          <motion.div
+            className="oyon-mobile-menu lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            onClick={() => setOpen(false)}
-          />
+            transition={{ duration: 0.28 }}
+          >
+            <div className="oyon-mobile-menu-top">
+              <BrandMark
+                branding={branding}
+                href="/"
+                size="lg"
+                onDark
+                onClick={() => setOpen(false)}
+              />
+              <button
+                type="button"
+                className="oyon-mobile-close"
+                onClick={() => setOpen(false)}
+                aria-label={t("nav.close")}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <nav className="oyon-mobile-nav" aria-label={t("nav.menu")}>
+              {MOBILE_LINKS.map((l, i) => {
+                const Icon = l.icon;
+                const active = pathname === l.href;
+                return (
+                  <motion.div
+                    key={l.href}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 + i * 0.03, duration: 0.28 }}
+                  >
+                    <Link
+                      href={l.href}
+                      className={`oyon-mobile-link${active ? " is-active" : ""}`}
+                      onClick={() => setOpen(false)}
+                    >
+                      <span className="oyon-mobile-link-icon" aria-hidden>
+                        <Icon size={20} strokeWidth={1.5} />
+                      </span>
+                      <span>{t(l.labelKey)}</span>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </nav>
+
+            <div className="oyon-mobile-bottom">
+              <div className="oyon-mobile-lang">
+                <LanguageSwitcher tone="dark" />
+              </div>
+
+              <Link
+                href="/book"
+                className="btn btn-copper oyon-mobile-book"
+                onClick={() => setOpen(false)}
+              >
+                {t("nav.bookCta")}
+              </Link>
+
+              <div className="oyon-mobile-meta">
+                <p>
+                  <MapPin size={14} aria-hidden />
+                  <span>{city}</span>
+                </p>
+                <p>
+                  <Clock size={14} aria-hidden />
+                  <span dir="ltr">{hours}</span>
+                </p>
+                <p>
+                  <Phone size={14} aria-hidden />
+                  <a href={`tel:${phone.replace(/\s+/g, "")}`} dir="ltr">
+                    {phone}
+                  </a>
+                </p>
+              </div>
+
+              <div className="oyon-mobile-social">
+                <a
+                  href={instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className="oyon-mobile-social-btn"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+                    <rect x="3" y="3" width="18" height="18" rx="5" />
+                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                  </svg>
+                </a>
+                <a
+                  href={`https://wa.me/${whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="WhatsApp"
+                  className="oyon-mobile-social-btn"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden>
+                    <path d="M20.5 3.5A11 11 0 0 0 2.1 17.2L1 23l5.9-1.1A11 11 0 0 0 20.5 3.5zm-8.5 17a9 9 0 0 1-4.6-1.3l-.3-.2-3.5.7.7-3.4-.2-.3A9 9 0 1 1 12 20.5zm4.9-6.7c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.6.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.5-1.5-1.8-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.6-1.5-.8-2-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.2.1-1.3-.1-.1-.3-.2-.6-.3z" />
+                  </svg>
+                </a>
+                <a
+                  href={MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t("footer.maps")}
+                  className="oyon-mobile-social-btn"
+                >
+                  <MapPin size={18} strokeWidth={1.5} />
+                </a>
+              </div>
+            </div>
+          </motion.div>
         ) : null}
       </AnimatePresence>
     </>
