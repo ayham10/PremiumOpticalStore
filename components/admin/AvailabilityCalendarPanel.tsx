@@ -193,7 +193,10 @@ export default function AvailabilityCalendarPanel({
     if (!source) return;
     if (
       !window.confirm(
-        `Overwrite schedule for ${selected.label} with ${source.label}?`,
+        t("admin.availability.overwriteConfirm", {
+          target: selected.label,
+          source: source.label,
+        }),
       )
     ) {
       return;
@@ -226,12 +229,18 @@ export default function AvailabilityCalendarPanel({
     setAddServices([...ALL_SERVICES]);
   }
 
+  function slotStatusLabel(booked: boolean, available: boolean) {
+    if (booked) return t("admin.availability.booked");
+    if (available) return t("admin.availability.available");
+    return t("admin.availability.unavailable");
+  }
+
+  const weekdayKeys = ["0", "1", "2", "3", "4", "5", "6"] as const;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="admin-muted text-sm">
-          Calendar → select date → manage services & slots
-        </p>
+        <p className="admin-muted text-sm">{t("admin.availability.guide")}</p>
         <button
           type="button"
           className="btn btn-accent"
@@ -241,7 +250,7 @@ export default function AvailabilityCalendarPanel({
           }}
         >
           <CalendarPlus size={16} />
-          Add Available Date
+          {t("admin.availability.addDate")}
         </button>
       </div>
 
@@ -253,7 +262,7 @@ export default function AvailabilityCalendarPanel({
               type="button"
               className="btn btn-ghost !min-h-10 !px-3"
               onClick={() => setMonthCursor((d) => subMonths(d, 1))}
-              aria-label="Previous month"
+              aria-label={t("admin.availability.prevMonth")}
             >
               <ChevronLeft size={16} />
             </button>
@@ -270,23 +279,23 @@ export default function AvailabilityCalendarPanel({
                   selectCalendarDate(today);
                 }}
               >
-                Today
+                {t("admin.availability.today")}
               </button>
             </div>
             <button
               type="button"
               className="btn btn-ghost !min-h-10 !px-3"
               onClick={() => setMonthCursor((d) => addMonths(d, 1))}
-              aria-label="Next month"
+              aria-label={t("admin.availability.nextMonth")}
             >
               <ChevronRight size={16} />
             </button>
           </div>
 
           <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[0.68rem] font-bold uppercase tracking-wide text-[var(--muted)]">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            {weekdayKeys.map((d) => (
               <div key={d} className="py-1">
-                {d}
+                {t(`days.${d}`)}
               </div>
             ))}
           </div>
@@ -334,16 +343,32 @@ export default function AvailabilityCalendarPanel({
 
           <div className="mt-4 flex flex-wrap gap-3 text-[0.7rem] font-semibold text-[var(--muted)]">
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#5EC49A]" /> Open
+              <span className="h-2 w-2 rounded-full bg-[#5EC49A]" />{" "}
+              {t("admin.availability.legendOpen")}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#6EA8FF]" /> Bookings
+              <span className="h-2 w-2 rounded-full bg-[#6EA8FF]" />{" "}
+              {t("admin.availability.legendBookings")}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#77818A]" /> Closed
+              <span className="h-2 w-2 rounded-full bg-[#77818A]" />{" "}
+              {t("admin.availability.legendClosed")}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#D4AF6A]" /> Selected
+              <span className="h-2 w-2 rounded-full bg-[#D4AF6A]" />{" "}
+              {t("admin.availability.legendSelected")}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full border border-[rgba(94,196,154,0.55)] bg-[rgba(94,196,154,0.2)]" />{" "}
+              {t("admin.availability.legendAvailable")}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full border border-[rgba(224,122,122,0.55)] bg-[rgba(224,122,122,0.2)]" />{" "}
+              {t("admin.availability.legendBooked")}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.06)]" />{" "}
+              {t("admin.availability.legendUnavailable")}
             </span>
           </div>
         </section>
@@ -352,16 +377,20 @@ export default function AvailabilityCalendarPanel({
         <section className="admin-card relative pb-20 lg:pb-5">
           {!selected ? (
             <div className="py-10 text-center">
-              <p className="admin-section-title">No date selected</p>
+              <p className="admin-section-title">
+                {t("admin.availability.noDate")}
+              </p>
               <p className="admin-page-desc mx-auto mt-2">
-                Pick a date on the calendar, or add a new available date.
+                {t("admin.availability.noDateLead")}
               </p>
             </div>
           ) : (
             <>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="admin-kicker">Selected date</p>
+                  <p className="admin-kicker">
+                    {t("admin.availability.selectedDate")}
+                  </p>
                   <h2 className="admin-page-title mt-1 text-[1.55rem]">
                     {selected.label}
                   </h2>
@@ -375,17 +404,27 @@ export default function AvailabilityCalendarPanel({
                           : "bg-[rgba(119,129,138,0.2)] text-[#A7ADB5]",
                       )}
                     >
-                      {selected.isOpen ? "Open" : "Closed"}
+                      {selected.isOpen
+                        ? t("admin.availability.open")
+                        : t("admin.availability.closed")}
                     </span>
                     <span className="rounded-full bg-[rgba(255,255,255,0.06)] px-2.5 py-1 text-[var(--slate)]">
-                      {summary.serviceCount} services
-                      {isShared ? " · shared" : ""}
+                      {t("admin.availability.servicesCount", {
+                        n: summary.serviceCount,
+                      })}
+                      {isShared
+                        ? ` · ${t("admin.availability.shared")}`
+                        : ""}
                     </span>
                     <span className="rounded-full bg-[rgba(94,196,154,0.12)] px-2.5 py-1 text-[#5EC49A]">
-                      {summary.available} available
+                      {t("admin.availability.availableCount", {
+                        n: summary.available,
+                      })}
                     </span>
                     <span className="rounded-full bg-[rgba(224,122,122,0.12)] px-2.5 py-1 text-[#E07A7A]">
-                      {summary.booked} booked
+                      {t("admin.availability.bookedCount", {
+                        n: summary.booked,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -398,14 +437,14 @@ export default function AvailabilityCalendarPanel({
                     aria-expanded={moreOpen}
                   >
                     <MoreHorizontal size={16} />
-                    More
+                    {t("admin.availability.more")}
                   </button>
                   {moreOpen ? (
                     <>
                       <button
                         type="button"
                         className="fixed inset-0 z-20 cursor-default"
-                        aria-label="Close menu"
+                        aria-label={t("common.close")}
                         onClick={() => setMoreOpen(false)}
                       />
                       <div className="absolute end-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--admin-card)] shadow-xl">
@@ -416,7 +455,9 @@ export default function AvailabilityCalendarPanel({
                             void onPatchDay({ isOpen: !selected.isOpen });
                           }}
                         >
-                          {selected.isOpen ? "Mark date closed" : "Mark date open"}
+                          {selected.isOpen
+                            ? t("admin.availability.markClosed")
+                            : t("admin.availability.markOpen")}
                         </MenuButton>
                         <MenuButton
                           disabled={busy}
@@ -426,7 +467,7 @@ export default function AvailabilityCalendarPanel({
                             setMoreOpen(false);
                           }}
                         >
-                          Copy schedule…
+                          {t("admin.availability.copySchedule")}
                         </MenuButton>
                         <MenuButton
                           disabled={busy}
@@ -440,7 +481,7 @@ export default function AvailabilityCalendarPanel({
                             });
                           }}
                         >
-                          Enable all default slots
+                          {t("admin.availability.enableAll")}
                         </MenuButton>
                         <MenuButton
                           disabled={busy}
@@ -454,7 +495,7 @@ export default function AvailabilityCalendarPanel({
                             });
                           }}
                         >
-                          Disable all slots
+                          {t("admin.availability.disableAll")}
                         </MenuButton>
                         <MenuButton
                           danger
@@ -464,7 +505,7 @@ export default function AvailabilityCalendarPanel({
                             void onDeleteDay(selected.id);
                           }}
                         >
-                          Delete date
+                          {t("admin.availability.deleteDate")}
                         </MenuButton>
                       </div>
                     </>
@@ -474,14 +515,16 @@ export default function AvailabilityCalendarPanel({
 
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="admin-card-label">Services</p>
+                  <p className="admin-card-label">
+                    {t("admin.availability.services")}
+                  </p>
                   <button
                     type="button"
                     className="text-xs font-semibold text-[var(--accent)]"
                     disabled={busy || isShared}
                     onClick={() => void selectAllServices()}
                   >
-                    Select all (shared)
+                    {t("admin.availability.selectAllShared")}
                   </button>
                 </div>
                 <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
@@ -507,30 +550,29 @@ export default function AvailabilityCalendarPanel({
                 </div>
                 <p className="admin-muted mt-2 text-xs">
                   {isShared
-                    ? "Shared availability — all services use the same slots."
-                    : "Separate services — only selected services can book this date."}
+                    ? t("admin.availability.sharedLead")
+                    : t("admin.availability.separateLead")}
                 </p>
               </div>
 
               <div className="mt-5">
-                <p className="admin-card-label mb-2">Time slots</p>
+                <p className="admin-card-label mb-2">
+                  {t("admin.availability.timeSlots")}
+                </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                   {selected.slots.map((slot) => {
                     const booked = Boolean(slot.isBooked);
                     const available = slot.isEnabled && !booked;
                     const closed = !slot.isEnabled && !booked;
+                    const status = slotStatusLabel(booked, available);
                     return (
                       <button
                         key={slot.id}
                         type="button"
                         disabled={busy}
-                        title={
-                          booked
-                            ? `${slot.time} — Booked${slot.bookedBy ? ` · ${slot.bookedBy}` : ""}`
-                            : available
-                              ? `${slot.time} — Available (tap to close)`
-                              : `${slot.time} — Closed (tap to open)`
-                        }
+                        title={`${slot.time} — ${status}${
+                          booked && slot.bookedBy ? ` · ${slot.bookedBy}` : ""
+                        }`}
                         onClick={() => {
                           if (booked) {
                             setBookedSlot(slot);
@@ -557,7 +599,7 @@ export default function AvailabilityCalendarPanel({
                           {slot.time}
                         </strong>
                         <span className="mt-0.5 block text-[0.65rem] font-bold uppercase tracking-wide">
-                          {booked ? "Booked" : available ? "Available" : "Closed"}
+                          {status}
                         </span>
                         {booked && slot.bookedBy ? (
                           <span className="mt-1 block truncate text-[0.7rem] opacity-90">
@@ -578,7 +620,7 @@ export default function AvailabilityCalendarPanel({
                     className="btn btn-ghost flex-1"
                     onClick={() => setMoreOpen(true)}
                   >
-                    More
+                    {t("admin.availability.more")}
                   </button>
                   <button
                     type="button"
@@ -589,7 +631,7 @@ export default function AvailabilityCalendarPanel({
                     }}
                   >
                     <CalendarPlus size={16} />
-                    Add date
+                    {t("admin.availability.addDate")}
                   </button>
                 </div>
               </div>
@@ -600,11 +642,13 @@ export default function AvailabilityCalendarPanel({
                   <button
                     type="button"
                     className="absolute inset-0 bg-[rgba(11,15,20,0.7)]"
-                    aria-label="Close"
+                    aria-label={t("common.close")}
                     onClick={() => setMoreOpen(false)}
                   />
                   <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-[var(--line)] bg-[var(--admin-card)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
-                    <p className="admin-section-title mb-3 text-base">Date actions</p>
+                    <p className="admin-section-title mb-3 text-base">
+                      {t("admin.availability.dateActions")}
+                    </p>
                     <div className="space-y-1">
                       <MenuButton
                         disabled={busy}
@@ -613,7 +657,9 @@ export default function AvailabilityCalendarPanel({
                           void onPatchDay({ isOpen: !selected.isOpen });
                         }}
                       >
-                        {selected.isOpen ? "Mark date closed" : "Mark date open"}
+                        {selected.isOpen
+                          ? t("admin.availability.markClosed")
+                          : t("admin.availability.markOpen")}
                       </MenuButton>
                       <MenuButton
                         disabled={busy}
@@ -623,7 +669,7 @@ export default function AvailabilityCalendarPanel({
                           setMoreOpen(false);
                         }}
                       >
-                        Copy schedule…
+                        {t("admin.availability.copySchedule")}
                       </MenuButton>
                       <MenuButton
                         disabled={busy}
@@ -637,7 +683,7 @@ export default function AvailabilityCalendarPanel({
                           });
                         }}
                       >
-                        Enable all default slots
+                        {t("admin.availability.enableAll")}
                       </MenuButton>
                       <MenuButton
                         disabled={busy}
@@ -651,7 +697,7 @@ export default function AvailabilityCalendarPanel({
                           });
                         }}
                       >
-                        Disable all slots
+                        {t("admin.availability.disableAll")}
                       </MenuButton>
                       <MenuButton
                         danger
@@ -661,7 +707,7 @@ export default function AvailabilityCalendarPanel({
                           void onDeleteDay(selected.id);
                         }}
                       >
-                        Delete date
+                        {t("admin.availability.deleteDate")}
                       </MenuButton>
                     </div>
                   </div>
@@ -674,15 +720,20 @@ export default function AvailabilityCalendarPanel({
 
       {/* Booked slot details */}
       {bookedSlot ? (
-        <ModalShell title="Booked slot" onClose={() => setBookedSlot(null)}>
+        <ModalShell
+          title={t("admin.availability.bookedSlotTitle")}
+          onClose={() => setBookedSlot(null)}
+          closeLabel={t("common.close")}
+        >
           <p className="admin-section-title">{bookedSlot.time}</p>
-          <p className="mt-2 text-sm text-[var(--danger)] font-semibold">Booked</p>
+          <p className="mt-2 text-sm text-[var(--danger)] font-semibold">
+            {t("admin.availability.booked")}
+          </p>
           <p className="mt-2 text-[var(--ink)]">
-            {bookedSlot.bookedBy || "Customer booking"}
+            {bookedSlot.bookedBy || t("admin.availability.customerBooking")}
           </p>
           <p className="admin-muted mt-2 text-sm">
-            This slot cannot be disabled or deleted while a booking exists.
-            Manage the booking from Appointments.
+            {t("admin.availability.bookedSlotHint")}
           </p>
           <div className="mt-5 flex justify-end">
             <button
@@ -690,7 +741,7 @@ export default function AvailabilityCalendarPanel({
               className="btn btn-accent"
               onClick={() => setBookedSlot(null)}
             >
-              Got it
+              {t("admin.availability.gotIt")}
             </button>
           </div>
         </ModalShell>
@@ -698,10 +749,14 @@ export default function AvailabilityCalendarPanel({
 
       {/* Add date modal */}
       {addOpen ? (
-        <ModalShell title="Add available date" onClose={() => setAddOpen(false)}>
+        <ModalShell
+          title={t("admin.availability.addDate")}
+          onClose={() => setAddOpen(false)}
+          closeLabel={t("common.close")}
+        >
           <div className="space-y-3">
             <div>
-              <label className="label">Date</label>
+              <label className="label">{t("common.date")}</label>
               <input
                 type="date"
                 className="input"
@@ -710,13 +765,15 @@ export default function AvailabilityCalendarPanel({
               />
             </div>
             <div>
-              <label className="label">Copy schedule from (optional)</label>
+              <label className="label">
+                {t("admin.availability.copyFromOptional")}
+              </label>
               <select
                 className="select"
                 value={addCopyFrom}
                 onChange={(e) => setAddCopyFrom(e.target.value)}
               >
-                <option value="">Default slots</option>
+                <option value="">{t("admin.availability.defaultSlots")}</option>
                 {days.map((d) => (
                   <option key={d.id} value={d.date}>
                     {d.label}
@@ -725,7 +782,7 @@ export default function AvailabilityCalendarPanel({
               </select>
             </div>
             <div>
-              <p className="label">Services</p>
+              <p className="label">{t("admin.availability.services")}</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_SERVICES.map((service) => {
                   const active = addServices.includes(service);
@@ -759,7 +816,7 @@ export default function AvailabilityCalendarPanel({
                 className="btn btn-ghost"
                 onClick={() => setAddOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -767,7 +824,7 @@ export default function AvailabilityCalendarPanel({
                 disabled={busy || !addDate || addServices.length === 0}
                 onClick={() => void handleAddConfirm()}
               >
-                Confirm
+                {t("admin.availability.confirm")}
               </button>
             </div>
           </div>
@@ -776,16 +833,24 @@ export default function AvailabilityCalendarPanel({
 
       {/* Copy schedule modal */}
       {copyOpen && selected ? (
-        <ModalShell title="Copy schedule" onClose={() => setCopyOpen(false)}>
+        <ModalShell
+          title={t("admin.availability.copySchedule")}
+          onClose={() => setCopyOpen(false)}
+          closeLabel={t("common.close")}
+        >
           <div className="space-y-3">
             <div>
-              <label className="label">Copy from</label>
+              <label className="label">
+                {t("admin.availability.copyFrom")}
+              </label>
               <select
                 className="select"
                 value={copyFromDate}
                 onChange={(e) => setCopyFromDate(e.target.value)}
               >
-                <option value="">Select existing date</option>
+                <option value="">
+                  {t("admin.availability.selectExistingDate")}
+                </option>
                 {days
                   .filter((d) => d.id !== selected.id)
                   .map((d) => (
@@ -796,12 +861,11 @@ export default function AvailabilityCalendarPanel({
               </select>
             </div>
             <div>
-              <label className="label">Copy to</label>
+              <label className="label">{t("admin.availability.copyTo")}</label>
               <input className="input" value={selected.label} readOnly />
             </div>
             <p className="admin-muted text-sm">
-              This overwrites services, time slots, and open/closed state on the
-              selected date.
+              {t("admin.availability.copyOverwrite")}
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button
@@ -809,7 +873,7 @@ export default function AvailabilityCalendarPanel({
                 className="btn btn-ghost"
                 onClick={() => setCopyOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -817,7 +881,7 @@ export default function AvailabilityCalendarPanel({
                 disabled={busy || !copyFromDate}
                 onClick={() => void handleCopyConfirm()}
               >
-                Confirm copy
+                {t("admin.availability.confirmCopy")}
               </button>
             </div>
           </div>
@@ -857,10 +921,12 @@ function ModalShell({
   title,
   onClose,
   children,
+  closeLabel = "Close",
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  closeLabel?: string;
 }) {
   return (
     <div
@@ -881,7 +947,7 @@ function ModalShell({
             type="button"
             className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)] text-[var(--muted)]"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={closeLabel}
           >
             <X size={16} />
           </button>

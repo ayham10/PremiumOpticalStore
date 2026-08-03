@@ -778,8 +778,21 @@ html.admin-dark[lang="he"] .admin-auth {
   gap: 1.1rem;
 }
 
+.admin-bookings-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--admin-card, #131a22);
+  padding: 1rem 1.1rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+}
+
 .admin-bookings-search {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-bookings-search-icon {
@@ -793,17 +806,16 @@ html.admin-dark[lang="he"] .admin-auth {
 
 .admin-bookings-search-input {
   width: 100%;
-  min-height: 3.35rem;
+  min-height: 3rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  background: var(--admin-card, #131a22);
-  padding: 0.9rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.8rem 1.25rem;
   padding-inline-start: 3.15rem;
   color: #f5f5f5;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   outline: none;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -820,6 +832,7 @@ html.admin-dark[lang="he"] .admin-auth {
 .admin-bookings-filters {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.65rem;
 }
 
@@ -876,66 +889,88 @@ html.admin-dark[lang="he"] .admin-auth {
   color-scheme: dark;
 }
 
-.admin-bookings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
+.admin-bookings-more {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #a7adb5;
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.admin-booking-card {
+.admin-bookings-table-wrap {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: var(--admin-card, #131a22);
-  padding: 1.15rem 1.2rem;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
 }
 
-.admin-booking-card-main {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.85rem 1rem;
+.admin-bookings-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.admin-booking-card-copy {
-  min-width: 0;
-  flex: 1;
+.admin-bookings-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
 }
 
-.admin-booking-card-name {
-  margin: 0;
-  color: #f5f5f5;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-}
-
-.admin-booking-card-service {
-  margin: 0.35rem 0 0;
+.admin-bookings-table th {
+  padding: 0.95rem 0.9rem;
   color: #a7adb5;
-  font-size: 0.9rem;
-  font-weight: 500;
-  line-height: 1.35;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: start;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.admin-booking-card-when {
+.admin-bookings-table td {
+  padding: 1.05rem 0.9rem;
+  color: #f5f5f5;
+  font-size: 0.92rem;
+  font-weight: 500;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-bookings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-bookings-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-bookings-notes {
+  max-width: 12rem;
+  color: #a7adb5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-bookings-empty-cell {
+  padding: 2.25rem 1.25rem !important;
+  text-align: center;
+  color: #77818a;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.admin-bookings-row-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0.55rem 0 0;
-  color: #77818a;
-  font-size: 0.85rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.admin-booking-card-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: #77818a;
+  gap: 0.45rem;
 }
 
 .admin-booking-status {
@@ -968,51 +1003,50 @@ html.admin-dark[lang="he"] .admin-auth {
   color: #f5f5f5;
 }
 
-.admin-booking-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 0.95rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
 .admin-booking-action {
-  min-height: 2.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 2.35rem;
+  border: 1px solid rgba(212, 175, 106, 0.35);
   border-radius: 12px;
-  background: transparent;
-  padding: 0.45rem 0.95rem;
+  background: rgba(212, 175, 106, 0.08);
+  padding: 0.4rem 0.9rem;
   color: #d4af6a;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .admin-booking-action:hover {
-  background: rgba(212, 175, 106, 0.1);
-  border-color: rgba(212, 175, 106, 0.35);
+  background: rgba(212, 175, 106, 0.16);
+  border-color: rgba(212, 175, 106, 0.55);
 }
 
 .admin-booking-action--danger {
   color: #e07a7a;
+  border-color: rgba(224, 122, 122, 0.3);
+  background: rgba(224, 122, 122, 0.08);
 }
 
 .admin-booking-action--danger:hover {
-  background: rgba(224, 122, 122, 0.1);
-  border-color: rgba(224, 122, 122, 0.35);
+  background: rgba(224, 122, 122, 0.14);
+  border-color: rgba(224, 122, 122, 0.45);
 }
 
-.admin-bookings-empty {
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--admin-card, #131a22);
-  padding: 2rem 1.25rem;
-  text-align: center;
-  color: #77818a;
-  font-size: 0.95rem;
-  font-weight: 500;
+@media (min-width: 900px) {
+  .admin-bookings-toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .admin-bookings-search {
+    max-width: 22rem;
+  }
+
+  .admin-bookings-filters {
+    flex: 1;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 639px) {
@@ -1021,7 +1055,7 @@ html.admin-dark[lang="he"] .admin-auth {
   }
 
   .admin-bookings-search-input {
-    min-height: 3.5rem;
+    min-height: 3.25rem;
     font-size: 1.02rem;
   }
 
@@ -1039,30 +1073,8 @@ html.admin-dark[lang="he"] .admin-auth {
     flex: 1;
   }
 
-  .admin-bookings-list {
-    gap: 1rem;
-  }
-
-  .admin-booking-card {
-    padding: 1.25rem 1.15rem;
-  }
-
-  .admin-booking-card-main {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .admin-booking-status {
-    align-self: flex-start;
-  }
-
-  .admin-booking-card-actions {
-    gap: 0.65rem;
-  }
-
-  .admin-booking-action {
-    flex: 1 1 auto;
-    min-height: 2.75rem;
+  .admin-bookings-more {
+    margin-inline-start: auto;
   }
 }
 
