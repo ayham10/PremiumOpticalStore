@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import RelatedProductsCarousel from "@/components/product/RelatedProductsCarousel";
+import ProductBackButton from "@/components/navigation/ProductBackButton";
 import { getStore } from "@/lib/db/store";
 import { formatPrice } from "@/lib/format";
 import { getDictionary, getLocale } from "@/lib/i18n/get-dictionary";
@@ -93,11 +94,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
   return (
     <div className="product-page">
       <div className="product-page-inner wrap">
-        <nav className="product-breadcrumb" aria-label="Breadcrumb">
-          <Link href="/shop">{t(dict, "product.shop")}</Link>
-          <span aria-hidden>/</span>
-          <span>{categoryLabel}</span>
-        </nav>
+        <div className="product-topbar">
+          <ProductBackButton />
+          <nav className="product-breadcrumb" aria-label="Breadcrumb">
+            <Link href="/shop">{t(dict, "product.shop")}</Link>
+            <span aria-hidden>/</span>
+            <span>{categoryLabel}</span>
+          </nav>
+        </div>
 
         <div className="product-layout">
           <div className="product-gallery">

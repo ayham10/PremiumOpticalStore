@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { Heart, ArrowUpDown } from "lucide-react";
 import {
   CatalogueFilterNav,
   type CatalogueFilterKey,
 } from "@/components/catalogue/CatalogueFilters";
+import SaveReturnLink from "@/components/navigation/SaveReturnLink";
+import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product, ProductCategory } from "@/lib/types";
@@ -59,7 +60,7 @@ export function CatalogueProductCard({ product }: { product: Product }) {
 
   return (
     <article className="frames-product-card">
-      <Link
+      <SaveReturnLink
         href={`/product/${product.slug}`}
         className="frames-product-media"
         aria-label={product.name}
@@ -72,11 +73,11 @@ export function CatalogueProductCard({ product }: { product: Product }) {
           className="object-cover"
           loading="lazy"
         />
-      </Link>
+      </SaveReturnLink>
       <div className="frames-product-body">
-        <Link href={`/product/${product.slug}`} className="frames-product-name">
+        <SaveReturnLink href={`/product/${product.slug}`} className="frames-product-name">
           {product.name}
-        </Link>
+        </SaveReturnLink>
         <div className="frames-product-meta">
           <strong className="frames-product-price">
             {formatPrice(product.sellingPrice)}
@@ -185,6 +186,7 @@ export default function CategoryCatalogue({
 
   return (
     <div className="frames-page catalogue-page">
+      <ScrollRestore />
       <section className="frames-hero" aria-label={title}>
         {reduceMotion ? (
           <Image

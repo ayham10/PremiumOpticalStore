@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
@@ -108,7 +108,7 @@ export default function RelatedProductsCarousel({
 
           return (
             <article key={product.id} className="product-related-card">
-              <Link
+              <SaveReturnLink
                 href={`/product/${product.slug}`}
                 className="product-related-media"
                 aria-label={product.name}
@@ -121,15 +121,15 @@ export default function RelatedProductsCarousel({
                   className="object-cover"
                   loading="lazy"
                 />
-              </Link>
+              </SaveReturnLink>
               <div className="product-related-body">
                 <span className="product-related-cat">{categoryLabel}</span>
-                <Link
+                <SaveReturnLink
                   href={`/product/${product.slug}`}
                   className="product-related-name"
                 >
                   {product.name}
-                </Link>
+                </SaveReturnLink>
                 <strong className="product-related-price">
                   {formatPrice(product.sellingPrice, {
                     currencySymbol: currencySymbol || "₪",

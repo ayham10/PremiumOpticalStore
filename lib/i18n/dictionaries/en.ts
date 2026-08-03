@@ -64,8 +64,33 @@ export type Dictionary = {
     sortPriceDesc: string;
     categories: Record<string, string>;
   };
+  offersPage: {
+    title: string;
+    lead: string;
+    limitedTime: string;
+    endsIn: string;
+    days: string;
+    hours: string;
+    minutes: string;
+    seconds: string;
+    shopOffer: string;
+    activeOffers: string;
+    offerProducts: string;
+    newBadge: string;
+    until: string;
+    code: string;
+    empty: string;
+    trustTitle: string;
+    trust: {
+      shipping: string;
+      authentic: string;
+      returns: string;
+      warranty: string;
+    };
+  };
   product: {
     shop: string;
+    back: string;
     outOfStock: string;
     inStore: string;
     frame: string;
@@ -563,8 +588,33 @@ const en: Dictionary = {
       "Cleaning Products": "Cleaning Products",
     },
   },
+  offersPage: {
+    title: "Promotions",
+    lead: "Discover limited-time offers on selected eyewear",
+    limitedTime: "Limited time",
+    endsIn: "Offer ends in",
+    days: "Days",
+    hours: "Hours",
+    minutes: "Minutes",
+    seconds: "Seconds",
+    shopOffer: "Shop the offer now",
+    activeOffers: "Active offers",
+    offerProducts: "Offer products",
+    newBadge: "New",
+    until: "Until",
+    code: "Code",
+    empty: "No active promotions right now.",
+    trustTitle: "Why shop with Oyon",
+    trust: {
+      shipping: "Fast shipping nationwide",
+      authentic: "100% authentic products",
+      returns: "Easy returns within 14 days",
+      warranty: "12-month warranty",
+    },
+  },
   product: {
     shop: "Shop",
+    back: "Go back",
     outOfStock: "Out of stock",
     inStore: "In store",
     frame: "Frame",

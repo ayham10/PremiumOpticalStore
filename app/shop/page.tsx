@@ -13,6 +13,7 @@ import {
   CatalogueFilterChips,
   type CatalogueFilterKey,
 } from "@/components/catalogue/CatalogueFilters";
+import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Product, ProductCategory } from "@/lib/types";
 
@@ -94,6 +95,7 @@ function ShopContent() {
 
   return (
     <div className="frames-page catalogue-page store-page">
+      <ScrollRestore />
       <section className="frames-hero store-hero" aria-label={t("shop.title")}>
         <Image
           src="/images/store-hero.jpg"

@@ -18,8 +18,10 @@ export default function ConditionalChrome({
   const isSunglasses = pathname === "/sunglasses";
   const isContactLenses = pathname === "/contact-lenses";
   const isShop = pathname === "/shop";
+  const isPromotions = pathname === "/promotions";
   const isAbout = pathname === "/about";
-  const isCatalogue = isFrames || isSunglasses || isContactLenses || isShop;
+  const isCatalogue =
+    isFrames || isSunglasses || isContactLenses || isShop || isPromotions;
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
   const isBook = pathname === "/book";

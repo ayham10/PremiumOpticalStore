@@ -45,7 +45,8 @@ export default function Navbar() {
     pathname === "/frames" ||
     pathname === "/sunglasses" ||
     pathname === "/contact-lenses" ||
-    pathname === "/shop";
+    pathname === "/shop" ||
+    pathname === "/promotions";
   const isBook = pathname === "/book";
   const isSolidDark =
     isProduct || isEyeExam || isCatalogue || isBook || isAbout || isHome;
