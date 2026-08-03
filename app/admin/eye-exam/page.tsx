@@ -1,8 +1,16 @@
 "use client";
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MoreHorizontal, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  CalendarCheck,
+  Eye,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AvailabilityCalendarPanel from "@/components/admin/AvailabilityCalendarPanel";
 import ManualBookingModal from "@/components/admin/ManualBookingModal";
@@ -342,19 +350,37 @@ function AdminEyeExamPageInner() {
             : t("admin.bookings.description")
         }
         actions={
-          <>
-            <button
-              type="button"
-              className="btn btn-ghost inline-flex items-center gap-2"
-              onClick={() => void refresh()}
-              disabled={loading || busy}
-            >
-              <RefreshCw size={16} />
-              {tab === "availability"
-                ? t("admin.availability.refresh")
-                : t("admin.bookings.refresh")}
-            </button>
-            {tab === "appointments" ? (
+          tab === "availability" ? (
+            <>
+              <Link
+                href="/"
+                target="_blank"
+                className="btn btn-ghost inline-flex items-center gap-2"
+              >
+                <Eye size={16} />
+                {t("admin.availability.previewSite")}
+              </Link>
+              <button
+                type="button"
+                className="btn btn-accent inline-flex items-center gap-2"
+                onClick={() => void refresh()}
+                disabled={loading || busy}
+              >
+                <CalendarCheck size={16} />
+                {t("admin.availability.saveChanges")}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost inline-flex items-center gap-2"
+                onClick={() => void refresh()}
+                disabled={loading || busy}
+              >
+                <RefreshCw size={16} />
+                {t("admin.bookings.refresh")}
+              </button>
               <button
                 type="button"
                 className="btn btn-accent inline-flex items-center gap-2"
@@ -363,8 +389,8 @@ function AdminEyeExamPageInner() {
                 <Plus size={16} />
                 {t("admin.bookings.newBooking")}
               </button>
-            ) : null}
-          </>
+            </>
+          )
         }
       />
 

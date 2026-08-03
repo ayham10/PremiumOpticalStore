@@ -12,11 +12,19 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
+import { ar, enUS, he } from "date-fns/locale";
 import {
+  Ban,
+  CalendarDays,
   CalendarPlus,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Copy,
+  Info,
   MoreHorizontal,
+  Plus,
   X,
 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -82,12 +90,17 @@ export default function AvailabilityCalendarPanel({
   onCreateDay,
   onDeleteDay,
 }: Props) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const dateLocale = locale === "ar" ? ar : locale === "he" ? he : enUS;
+
   const [monthCursor, setMonthCursor] = useState(() => new Date());
   const [pickedDate, setPickedDate] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [addTimeOpen, setAddTimeOpen] = useState(false);
+  const [newTime, setNewTime] = useState("09:00");
+  const [activeSlotTime, setActiveSlotTime] = useState<string | null>(null);
   const [bookedSlot, setBookedSlot] = useState<AvailabilitySlot | null>(null);
 
   const [addDate, setAddDate] = useState("");
@@ -109,7 +122,7 @@ export default function AvailabilityCalendarPanel({
       if (byId) return byId;
     }
     if (pickedDate) return dayByDate.get(pickedDate) || null;
-    return days[0] || null;
+    return null;
   }, [days, selectedId, pickedDate, dayByDate]);
 
   useEffect(() => {
@@ -118,6 +131,10 @@ export default function AvailabilityCalendarPanel({
       setMonthCursor(parseYmd(selected.date));
     }
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setActiveSlotTime(null);
+  }, [selected?.id]);
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 0 });
@@ -138,26 +155,6 @@ export default function AvailabilityCalendarPanel({
     selected.services.length === 0 ||
     ALL_SERVICES.every((s) => activeServices.includes(s));
 
-  const summary = useMemo(() => {
-    if (!selected) {
-      return { available: 0, booked: 0, closed: 0, serviceCount: 0 };
-    }
-    let available = 0;
-    let booked = 0;
-    let closed = 0;
-    for (const slot of selected.slots) {
-      if (slot.isBooked) booked += 1;
-      else if (slot.isEnabled) available += 1;
-      else closed += 1;
-    }
-    return {
-      available,
-      booked,
-      closed,
-      serviceCount: isShared ? ALL_SERVICES.length : activeServices.length,
-    };
-  }, [selected, activeServices, isShared]);
-
   function selectCalendarDate(day: Date) {
     const key = ymd(day);
     setPickedDate(key);
@@ -169,6 +166,48 @@ export default function AvailabilityCalendarPanel({
       setAddDate(key);
       setAddOpen(true);
     }
+  }
+
+  function openCopyModal() {
+    if (!selected) {
+      setAddDate(pickedDate || "");
+      setAddOpen(true);
+      return;
+    }
+    setCopyFromDate("");
+    setCopyOpen(true);
+  }
+
+  function openAddTimeModal() {
+    if (!selected) {
+      setAddDate(pickedDate || "");
+      setAddOpen(true);
+      return;
+    }
+    setNewTime("09:00");
+    setAddTimeOpen(true);
+  }
+
+  async function handleAddTimeConfirm() {
+    if (!selected || !newTime || busy) return;
+    const existing = selected.slots.find((s) => s.time === newTime);
+    if (existing) {
+      await onPatchDay({
+        toggleTime: { time: newTime, isEnabled: true },
+      });
+    } else {
+      await onPatchDay({
+        slots: [
+          ...selected.slots.map((s) => ({
+            time: s.time,
+            isEnabled: s.isEnabled,
+          })),
+          { time: newTime, isEnabled: true },
+        ],
+      });
+    }
+    setActiveSlotTime(newTime);
+    setAddTimeOpen(false);
   }
 
   async function toggleService(service: ClinicAppointmentType) {
@@ -235,80 +274,60 @@ export default function AvailabilityCalendarPanel({
     return t("admin.availability.unavailable");
   }
 
+  function dayDotClass(row: AvailabilityDay | undefined) {
+    if (!row) return "is-none";
+    if (!row.isOpen) return "is-closed";
+    if (row.slots.some((s) => s.isBooked)) return "is-limited";
+    return "is-open";
+  }
+
   const weekdayKeys = ["0", "1", "2", "3", "4", "5", "6"] as const;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="admin-muted text-sm">{t("admin.availability.guide")}</p>
-        <button
-          type="button"
-          className="btn btn-accent"
-          onClick={() => {
-            setAddDate(pickedDate || "");
-            setAddOpen(true);
-          }}
-        >
-          <CalendarPlus size={16} />
-          {t("admin.availability.addDate")}
-        </button>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
-        {/* Calendar */}
-        <section className="admin-card">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              className="btn btn-ghost !min-h-10 !px-3"
-              onClick={() => setMonthCursor((d) => subMonths(d, 1))}
-              aria-label={t("admin.availability.prevMonth")}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="text-center">
-              <p className="admin-section-title text-base">
-                {format(monthCursor, "MMMM yyyy")}
+    <div className="admin-wh-shell">
+      <div className="admin-wh-grid">
+        {/* Compact calendar */}
+        <section className="admin-wh-calendar">
+          <div className="admin-wh-calendar-head">
+            <h3 className="admin-wh-calendar-title">
+              {t("admin.availability.calendarTitle")}
+            </h3>
+            <div className="admin-wh-month-nav">
+              <button
+                type="button"
+                className="admin-wh-nav-btn"
+                onClick={() => setMonthCursor((d) => subMonths(d, 1))}
+                aria-label={t("admin.availability.prevMonth")}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <p className="admin-wh-month-label">
+                {format(monthCursor, "MMMM yyyy", { locale: dateLocale })}
               </p>
               <button
                 type="button"
-                className="mt-1 text-xs font-semibold text-[var(--accent)]"
-                onClick={() => {
-                  const today = new Date();
-                  setMonthCursor(today);
-                  selectCalendarDate(today);
-                }}
+                className="admin-wh-nav-btn"
+                onClick={() => setMonthCursor((d) => addMonths(d, 1))}
+                aria-label={t("admin.availability.nextMonth")}
               >
-                {t("admin.availability.today")}
+                <ChevronRight size={16} />
               </button>
             </div>
-            <button
-              type="button"
-              className="btn btn-ghost !min-h-10 !px-3"
-              onClick={() => setMonthCursor((d) => addMonths(d, 1))}
-              aria-label={t("admin.availability.nextMonth")}
-            >
-              <ChevronRight size={16} />
-            </button>
           </div>
 
-          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[0.68rem] font-bold uppercase tracking-wide text-[var(--muted)]">
+          <div className="admin-wh-weekdays">
             {weekdayKeys.map((d) => (
-              <div key={d} className="py-1">
-                {t(`days.${d}`)}
-              </div>
+              <div key={d}>{t(`days.${d}`)}</div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          <div className="admin-wh-days">
             {calendarDays.map((day) => {
               const key = ymd(day);
               const row = dayByDate.get(key);
               const inMonth = isSameMonth(day, monthCursor);
               const selectedDay = pickedDate === key || selected?.date === key;
-              const hasBookings = Boolean(row?.slots.some((s) => s.isBooked));
-              const isOpen = Boolean(row?.isOpen);
-              const isClosed = Boolean(row && !row.isOpen);
+              const dot = dayDotClass(row);
 
               return (
                 <button
@@ -316,128 +335,76 @@ export default function AvailabilityCalendarPanel({
                   type="button"
                   onClick={() => selectCalendarDate(day)}
                   className={cn(
-                    "relative flex aspect-square min-h-10 flex-col items-center justify-center rounded-xl border text-sm font-semibold transition",
-                    !inMonth && "opacity-35",
-                    selectedDay
-                      ? "border-[#D4AF6A] bg-[rgba(212,175,106,0.18)] text-[#D4AF6A]"
-                      : "border-transparent hover:border-[var(--line)] hover:bg-[rgba(255,255,255,0.03)]",
-                    isClosed && !selectedDay && "text-[var(--muted)]",
+                    "admin-wh-day-cell",
+                    !inMonth && "is-outside",
+                    selectedDay && "is-selected",
                   )}
                 >
-                  <span>{format(day, "d")}</span>
-                  <span className="mt-0.5 flex h-2 items-center justify-center gap-0.5">
-                    {row && isOpen ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#5EC49A]" />
-                    ) : null}
-                    {hasBookings ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#6EA8FF]" />
-                    ) : null}
-                    {isClosed ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#77818A]" />
-                    ) : null}
-                  </span>
+                  <span className="admin-wh-day-num">{format(day, "d")}</span>
+                  <span className={cn("admin-wh-day-dot", dot)} />
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3 text-[0.7rem] font-semibold text-[var(--muted)]">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#5EC49A]" />{" "}
-              {t("admin.availability.legendOpen")}
+          <div className="admin-wh-legend">
+            <span>
+              <i className="admin-wh-day-dot is-open" />
+              {t("admin.availability.available")}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#6EA8FF]" />{" "}
-              {t("admin.availability.legendBookings")}
+            <span>
+              <i className="admin-wh-day-dot is-limited" />
+              {t("admin.availability.legendLimited")}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#77818A]" />{" "}
-              {t("admin.availability.legendClosed")}
+            <span>
+              <i className="admin-wh-day-dot is-closed" />
+              {t("admin.availability.closed")}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#D4AF6A]" />{" "}
-              {t("admin.availability.legendSelected")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full border border-[rgba(94,196,154,0.55)] bg-[rgba(94,196,154,0.2)]" />{" "}
-              {t("admin.availability.legendAvailable")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full border border-[rgba(224,122,122,0.55)] bg-[rgba(224,122,122,0.2)]" />{" "}
-              {t("admin.availability.legendBooked")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.06)]" />{" "}
-              {t("admin.availability.legendUnavailable")}
+            <span>
+              <i className="admin-wh-day-dot is-none" />
+              {t("admin.availability.unavailable")}
             </span>
           </div>
+
+          <button
+            type="button"
+            className="admin-wh-copy-footer"
+            disabled={busy}
+            onClick={openCopyModal}
+          >
+            <Copy size={15} />
+            {t("admin.availability.copyPrevious")}
+          </button>
         </section>
 
-        {/* Details */}
-        <section className="admin-card relative pb-20 lg:pb-5">
+        {/* Day / slots panel */}
+        <section className="admin-wh-day">
           {!selected ? (
-            <div className="py-10 text-center">
-              <p className="admin-section-title">
+            <div className="admin-wh-empty">
+              <CalendarPlus size={28} className="admin-wh-empty-icon" />
+              <p className="admin-wh-empty-title">
                 {t("admin.availability.noDate")}
               </p>
-              <p className="admin-page-desc mx-auto mt-2">
+              <p className="admin-wh-empty-lead">
                 {t("admin.availability.noDateLead")}
               </p>
             </div>
           ) : (
             <>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="admin-kicker">
-                    {t("admin.availability.selectedDate")}
-                  </p>
-                  <h2 className="admin-page-title mt-1 text-[1.55rem]">
-                    {selected.label}
-                  </h2>
-                  <p className="admin-muted mt-1">{selected.date}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                    <span
-                      className={cn(
-                        "rounded-full px-2.5 py-1",
-                        selected.isOpen
-                          ? "bg-[rgba(94,196,154,0.16)] text-[#5EC49A]"
-                          : "bg-[rgba(119,129,138,0.2)] text-[#A7ADB5]",
-                      )}
-                    >
-                      {selected.isOpen
-                        ? t("admin.availability.open")
-                        : t("admin.availability.closed")}
-                    </span>
-                    <span className="rounded-full bg-[rgba(255,255,255,0.06)] px-2.5 py-1 text-[var(--slate)]">
-                      {t("admin.availability.servicesCount", {
-                        n: summary.serviceCount,
-                      })}
-                      {isShared
-                        ? ` · ${t("admin.availability.shared")}`
-                        : ""}
-                    </span>
-                    <span className="rounded-full bg-[rgba(94,196,154,0.12)] px-2.5 py-1 text-[#5EC49A]">
-                      {t("admin.availability.availableCount", {
-                        n: summary.available,
-                      })}
-                    </span>
-                    <span className="rounded-full bg-[rgba(224,122,122,0.12)] px-2.5 py-1 text-[#E07A7A]">
-                      {t("admin.availability.bookedCount", {
-                        n: summary.booked,
-                      })}
-                    </span>
-                  </div>
+              <div className="admin-wh-day-header">
+                <div className="admin-wh-day-heading">
+                  <CalendarDays size={22} className="admin-wh-gold-icon" />
+                  <h2 className="admin-wh-day-label">{selected.label}</h2>
                 </div>
-
                 <div className="relative">
                   <button
                     type="button"
-                    className="btn btn-ghost !min-h-11"
+                    className="admin-wh-more-btn"
                     onClick={() => setMoreOpen((v) => !v)}
                     aria-expanded={moreOpen}
+                    aria-label={t("admin.availability.more")}
                   >
-                    <MoreHorizontal size={16} />
-                    {t("admin.availability.more")}
+                    <MoreHorizontal size={18} />
                   </button>
                   {moreOpen ? (
                     <>
@@ -447,28 +414,7 @@ export default function AvailabilityCalendarPanel({
                         aria-label={t("common.close")}
                         onClick={() => setMoreOpen(false)}
                       />
-                      <div className="absolute end-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--admin-card)] shadow-xl">
-                        <MenuButton
-                          disabled={busy}
-                          onClick={() => {
-                            setMoreOpen(false);
-                            void onPatchDay({ isOpen: !selected.isOpen });
-                          }}
-                        >
-                          {selected.isOpen
-                            ? t("admin.availability.markClosed")
-                            : t("admin.availability.markOpen")}
-                        </MenuButton>
-                        <MenuButton
-                          disabled={busy}
-                          onClick={() => {
-                            setCopyFromDate("");
-                            setCopyOpen(true);
-                            setMoreOpen(false);
-                          }}
-                        >
-                          {t("admin.availability.copySchedule")}
-                        </MenuButton>
+                      <div className="admin-wh-more-menu">
                         <MenuButton
                           disabled={busy}
                           onClick={() => {
@@ -489,7 +435,7 @@ export default function AvailabilityCalendarPanel({
                             setMoreOpen(false);
                             void onPatchDay({
                               slots: selected.slots.map((s) => ({
-                                ...s,
+                                time: s.time,
                                 isEnabled: false,
                               })),
                             });
@@ -513,21 +459,73 @@ export default function AvailabilityCalendarPanel({
                 </div>
               </div>
 
-              <div className="mt-5">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="admin-card-label">
-                    {t("admin.availability.services")}
-                  </p>
+              <div className="admin-wh-actions">
+                <button
+                  type="button"
+                  className="admin-wh-action"
+                  disabled={busy}
+                  onClick={openCopyModal}
+                >
+                  <Copy size={15} />
+                  {t("admin.availability.copyPrevious")}
+                </button>
+                <button
+                  type="button"
+                  className="admin-wh-action"
+                  disabled={busy}
+                  onClick={openAddTimeModal}
+                >
+                  <Plus size={15} />
+                  {t("admin.availability.addTime")}
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "admin-wh-action",
+                    selected.isOpen && "is-danger",
+                  )}
+                  disabled={busy}
+                  onClick={() =>
+                    void onPatchDay({ isOpen: !selected.isOpen })
+                  }
+                >
+                  <Ban size={15} />
+                  {selected.isOpen
+                    ? t("admin.availability.markClosed")
+                    : t("admin.availability.markOpen")}
+                </button>
+              </div>
+
+              <div
+                className={cn(
+                  "admin-wh-banner",
+                  selected.isOpen ? "is-open" : "is-closed",
+                )}
+              >
+                <strong>
+                  {selected.isOpen
+                    ? t("admin.availability.dayOpenBanner")
+                    : t("admin.availability.dayClosedBanner")}
+                </strong>
+                <span>
+                  {selected.isOpen
+                    ? t("admin.availability.dayOpenLead")
+                    : t("admin.availability.dayClosedLead")}
+                </span>
+              </div>
+
+              <div className="admin-wh-services">
+                <div className="admin-wh-services-head">
+                  <span>{t("admin.availability.services")}</span>
                   <button
                     type="button"
-                    className="text-xs font-semibold text-[var(--accent)]"
                     disabled={busy || isShared}
                     onClick={() => void selectAllServices()}
                   >
                     {t("admin.availability.selectAllShared")}
                   </button>
                 </div>
-                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
+                <div className="admin-wh-service-chips">
                   {ALL_SERVICES.map((service) => {
                     const active = activeServices.includes(service);
                     return (
@@ -537,10 +535,8 @@ export default function AvailabilityCalendarPanel({
                         disabled={busy}
                         onClick={() => void toggleService(service)}
                         className={cn(
-                          "shrink-0 rounded-full border px-3 py-2 text-sm font-semibold whitespace-nowrap transition",
-                          active
-                            ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
-                            : "border-[var(--line)] text-[var(--slate)]",
+                          "admin-wh-service-chip",
+                          active && "is-active",
                         )}
                       >
                         {t(`clinicBooking.services.${service}`)}
@@ -548,171 +544,85 @@ export default function AvailabilityCalendarPanel({
                     );
                   })}
                 </div>
-                <p className="admin-muted mt-2 text-xs">
-                  {isShared
-                    ? t("admin.availability.sharedLead")
-                    : t("admin.availability.separateLead")}
-                </p>
               </div>
 
-              <div className="mt-5">
-                <p className="admin-card-label mb-2">
-                  {t("admin.availability.timeSlots")}
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                  {selected.slots.map((slot) => {
-                    const booked = Boolean(slot.isBooked);
-                    const available = slot.isEnabled && !booked;
-                    const closed = !slot.isEnabled && !booked;
-                    const status = slotStatusLabel(booked, available);
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={busy}
-                        title={`${slot.time} — ${status}${
-                          booked && slot.bookedBy ? ` · ${slot.bookedBy}` : ""
-                        }`}
-                        onClick={() => {
-                          if (booked) {
-                            setBookedSlot(slot);
-                            return;
-                          }
-                          void onPatchDay({
-                            toggleTime: {
-                              time: slot.time,
-                              isEnabled: !slot.isEnabled,
-                            },
-                          });
-                        }}
-                        className={cn(
-                          "rounded-xl border px-2.5 py-2.5 text-start transition",
-                          available &&
-                            "border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.1)] text-[#5EC49A]",
-                          booked &&
-                            "border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] text-[#E07A7A]",
-                          closed &&
-                            "border-[var(--line)] bg-[rgba(255,255,255,0.03)] text-[#77818A]",
-                        )}
-                      >
-                        <strong className="block text-sm font-bold tabular-nums">
-                          {slot.time}
-                        </strong>
-                        <span className="mt-0.5 block text-[0.65rem] font-bold uppercase tracking-wide">
-                          {status}
+              <div className="admin-wh-slots-head">
+                <Clock size={16} className="admin-wh-gold-icon" />
+                <h3>{t("admin.availability.availableTimes")}</h3>
+              </div>
+
+              <div className="admin-wh-slots">
+                {selected.slots.map((slot) => {
+                  const booked = Boolean(slot.isBooked);
+                  const available = slot.isEnabled && !booked;
+                  const closed = !slot.isEnabled && !booked;
+                  const status = slotStatusLabel(booked, available);
+                  const isActive = activeSlotTime === slot.time;
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      disabled={busy}
+                      title={`${slot.time} — ${status}${
+                        booked && slot.bookedBy ? ` · ${slot.bookedBy}` : ""
+                      }`}
+                      onClick={() => {
+                        setActiveSlotTime(slot.time);
+                        if (booked) {
+                          setBookedSlot(slot);
+                          return;
+                        }
+                        void onPatchDay({
+                          toggleTime: {
+                            time: slot.time,
+                            isEnabled: !slot.isEnabled,
+                          },
+                        });
+                      }}
+                      className={cn(
+                        "admin-wh-slot",
+                        available && "is-available",
+                        booked && "is-booked",
+                        closed && "is-closed",
+                        isActive && "is-active",
+                      )}
+                    >
+                      {isActive ? (
+                        <span className="admin-wh-slot-check">
+                          <Check size={11} strokeWidth={3} />
                         </span>
-                        {booked && slot.bookedBy ? (
-                          <span className="mt-1 block truncate text-[0.7rem] opacity-90">
-                            {slot.bookedBy}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
+                      ) : null}
+                      <strong className="admin-wh-slot-time">{slot.time}</strong>
+                      <span className="admin-wh-slot-status">
+                        <i
+                          className={cn(
+                            "admin-wh-slot-dot",
+                            available && "is-available",
+                            booked && "is-booked",
+                            closed && "is-closed",
+                          )}
+                        />
+                        {status}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className="admin-wh-slot-add"
+                  disabled={busy}
+                  onClick={openAddTimeModal}
+                >
+                  <Plus size={16} />
+                  {t("admin.availability.addNew")}
+                </button>
               </div>
 
-              {/* Mobile sticky add / open more */}
-              <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--line)] bg-[rgba(11,15,20,0.92)] p-3 backdrop-blur lg:hidden">
-                <div className="mx-auto flex max-w-lg gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-ghost flex-1"
-                    onClick={() => setMoreOpen(true)}
-                  >
-                    {t("admin.availability.more")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-accent flex-1"
-                    onClick={() => {
-                      setAddDate(selected.date);
-                      setAddOpen(true);
-                    }}
-                  >
-                    <CalendarPlus size={16} />
-                    {t("admin.availability.addDate")}
-                  </button>
-                </div>
-              </div>
-
-              {/* Mobile more sheet */}
-              {moreOpen ? (
-                <div className="fixed inset-0 z-40 lg:hidden" role="presentation">
-                  <button
-                    type="button"
-                    className="absolute inset-0 bg-[rgba(11,15,20,0.7)]"
-                    aria-label={t("common.close")}
-                    onClick={() => setMoreOpen(false)}
-                  />
-                  <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-[var(--line)] bg-[var(--admin-card)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
-                    <p className="admin-section-title mb-3 text-base">
-                      {t("admin.availability.dateActions")}
-                    </p>
-                    <div className="space-y-1">
-                      <MenuButton
-                        disabled={busy}
-                        onClick={() => {
-                          setMoreOpen(false);
-                          void onPatchDay({ isOpen: !selected.isOpen });
-                        }}
-                      >
-                        {selected.isOpen
-                          ? t("admin.availability.markClosed")
-                          : t("admin.availability.markOpen")}
-                      </MenuButton>
-                      <MenuButton
-                        disabled={busy}
-                        onClick={() => {
-                          setCopyFromDate("");
-                          setCopyOpen(true);
-                          setMoreOpen(false);
-                        }}
-                      >
-                        {t("admin.availability.copySchedule")}
-                      </MenuButton>
-                      <MenuButton
-                        disabled={busy}
-                        onClick={() => {
-                          setMoreOpen(false);
-                          void onPatchDay({
-                            slots: defaultTimes.map((time) => ({
-                              time,
-                              isEnabled: true,
-                            })),
-                          });
-                        }}
-                      >
-                        {t("admin.availability.enableAll")}
-                      </MenuButton>
-                      <MenuButton
-                        disabled={busy}
-                        onClick={() => {
-                          setMoreOpen(false);
-                          void onPatchDay({
-                            slots: selected.slots.map((s) => ({
-                              ...s,
-                              isEnabled: false,
-                            })),
-                          });
-                        }}
-                      >
-                        {t("admin.availability.disableAll")}
-                      </MenuButton>
-                      <MenuButton
-                        danger
-                        disabled={busy}
-                        onClick={() => {
-                          setMoreOpen(false);
-                          void onDeleteDay(selected.id);
-                        }}
-                      >
-                        {t("admin.availability.deleteDate")}
-                      </MenuButton>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
+              <p className="admin-wh-tip">
+                <Info size={14} />
+                {t("admin.availability.slotTip")}
+              </p>
             </>
           )}
         </section>
@@ -726,7 +636,7 @@ export default function AvailabilityCalendarPanel({
           closeLabel={t("common.close")}
         >
           <p className="admin-section-title">{bookedSlot.time}</p>
-          <p className="mt-2 text-sm text-[var(--danger)] font-semibold">
+          <p className="mt-2 text-sm font-semibold text-[var(--danger)]">
             {t("admin.availability.booked")}
           </p>
           <p className="mt-2 text-[var(--ink)]">
@@ -743,6 +653,44 @@ export default function AvailabilityCalendarPanel({
             >
               {t("admin.availability.gotIt")}
             </button>
+          </div>
+        </ModalShell>
+      ) : null}
+
+      {/* Add time modal */}
+      {addTimeOpen && selected ? (
+        <ModalShell
+          title={t("admin.availability.addTime")}
+          onClose={() => setAddTimeOpen(false)}
+          closeLabel={t("common.close")}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="label">{t("admin.availability.timeLabel")}</label>
+              <input
+                type="time"
+                className="input"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setAddTimeOpen(false)}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-accent"
+                disabled={busy || !newTime}
+                onClick={() => void handleAddTimeConfirm()}
+              >
+                {t("admin.availability.confirm")}
+              </button>
+            </div>
           </div>
         </ModalShell>
       ) : null}
