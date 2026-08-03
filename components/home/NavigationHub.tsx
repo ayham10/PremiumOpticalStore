@@ -5,7 +5,14 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
+/** Existing homepage service grid — routes and cards preserved */
 const TILES = [
+  {
+    key: "exams",
+    href: "/eye-exams",
+    image: "/images/card-eye-exams.jpg",
+    position: "home-card-img--exams",
+  },
   {
     key: "frames",
     href: "/frames",
@@ -14,10 +21,10 @@ const TILES = [
     position: "object-[center_45%]",
   },
   {
-    key: "exams",
-    href: "/eye-exams",
-    image: "/images/card-eye-exams.jpg",
-    position: "home-card-img--exams",
+    key: "sunglasses",
+    href: "/sunglasses",
+    image: "/images/sunglasses-category.jpg",
+    position: "home-card-img--sunglasses",
   },
   {
     key: "contacts",
@@ -26,10 +33,11 @@ const TILES = [
     position: "home-card-img--contacts",
   },
   {
-    key: "sunglasses",
-    href: "/sunglasses",
-    image: "/images/sunglasses-category.jpg",
-    position: "home-card-img--sunglasses",
+    key: "promotions",
+    href: "/promotions",
+    image:
+      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1600&q=85",
+    position: "object-[center_50%]",
   },
   {
     key: "booking",
@@ -37,20 +45,13 @@ const TILES = [
     image: "/images/book-consultation.jpg",
     position: "home-card-img--booking",
   },
-  {
-    key: "promotions",
-    href: "/promotions",
-    image:
-      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_50%]",
-  },
 ] as const;
 
 export default function NavigationHub() {
   const { t } = useLocale();
 
   return (
-    <section className="home-hub" aria-label={t("home.hubEyebrow")}>
+    <section className="home-hub" id="home-hub" aria-label={t("home.hubEyebrow")}>
       <div className="home-hub-shell">
         <div className="home-hub-grid">
           {TILES.map((tile, index) => (

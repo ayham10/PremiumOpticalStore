@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import WelcomeSection from "@/components/home/WelcomeSection";
+import NavigationHub from "@/components/home/NavigationHub";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <WelcomeSection />
+      <NavigationHub />
     </div>
   );
 }

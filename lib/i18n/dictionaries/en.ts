@@ -371,7 +371,7 @@ const en: Dictionary = {
     visitHours: "Hours",
     gateway: {
       frames: {
-        title: "Premium Frames",
+        title: "Prescription Frames",
         subtitle: "Luxury prescription frames",
         cta: "Shop Now",
       },

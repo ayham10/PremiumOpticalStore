@@ -104,7 +104,7 @@ const ar: Dictionary = {
     visitHours: "ساعات العمل",
     gateway: {
       frames: {
-        title: "الإطارات",
+        title: "إطارات طبية",
         subtitle: "إطارات طبية فاخرة بتصاميم عصرية",
         cta: "تسوق الآن",
       },
