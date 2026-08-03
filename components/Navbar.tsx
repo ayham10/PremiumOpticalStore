@@ -15,6 +15,7 @@ import {
   Phone,
   MapPin,
   Clock,
+  ShoppingBag,
 } from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
@@ -103,56 +104,134 @@ export default function Navbar() {
               : "border-b border-transparent bg-transparent"
         }`}
       >
-        <div className="wrap flex items-center justify-between gap-3 py-3 sm:gap-4 sm:py-3.5">
-          <BrandMark
-            branding={branding}
-            href="/"
-            onDark={whiteText || open}
-            size="sm"
-            onClick={() => setOpen(false)}
-          />
+        <div
+          className={`wrap py-3 sm:py-3.5 ${
+            isCatalogue
+              ? "oyon-nav-bar oyon-nav-bar--catalogue"
+              : "flex items-center justify-between gap-3 sm:gap-4"
+          }`}
+        >
+          {isCatalogue ? (
+            <>
+              <div className="oyon-nav-side oyon-nav-side--start">
+                <button
+                  type="button"
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full border ${
+                    whiteText || open
+                      ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
+                      : "border-[var(--line-strong)] text-[var(--ink)]"
+                  } xl:hidden`}
+                  onClick={() => setOpen((v) => !v)}
+                  aria-label={open ? t("nav.close") : t("nav.menu")}
+                  aria-expanded={open}
+                >
+                  {open ? <X size={18} /> : <Menu size={18} />}
+                </button>
+                <nav
+                  className={`hidden items-center gap-4 text-[0.78rem] font-semibold uppercase tracking-[0.12em] xl:flex ${
+                    whiteText ? "text-white/80" : "text-[var(--slate)]"
+                  }`}
+                >
+                  {desktopLinks.slice(0, 3).map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className="transition-colors hover:text-[var(--copper-soft)]"
+                    >
+                      {t(l.labelKey)}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
 
-          <nav
-            className={`hidden items-center gap-5 text-[0.82rem] font-semibold uppercase tracking-[0.12em] xl:flex ${
-              whiteText ? "text-white/80" : "text-[var(--slate)]"
-            }`}
-          >
-            {desktopLinks.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="transition-colors hover:text-[var(--copper-soft)]"
+              <div className="oyon-nav-center">
+                <BrandMark
+                  branding={branding}
+                  href="/"
+                  onDark={whiteText || open}
+                  size="sm"
+                  onClick={() => setOpen(false)}
+                />
+              </div>
+
+              <div className="oyon-nav-side oyon-nav-side--end">
+                <div className="hidden items-center gap-3 lg:flex">
+                  <LanguageSwitcher compact tone={whiteText ? "dark" : "light"} />
+                  <Link
+                    href="/book"
+                    className={`btn !min-h-11 !px-5 !text-sm ${
+                      whiteText ? "btn-copper" : "btn-primary"
+                    }`}
+                  >
+                    {t("nav.bookCta")}
+                  </Link>
+                </div>
+                <Link
+                  href="/shop"
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
+                    whiteText || open
+                      ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
+                      : "border-[var(--line-strong)] text-[var(--ink)]"
+                  }`}
+                  aria-label={t("nav.shop")}
+                >
+                  <ShoppingBag size={17} strokeWidth={1.6} />
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <BrandMark
+                branding={branding}
+                href="/"
+                onDark={whiteText || open}
+                size="sm"
+                onClick={() => setOpen(false)}
+              />
+
+              <nav
+                className={`hidden items-center gap-5 text-[0.82rem] font-semibold uppercase tracking-[0.12em] xl:flex ${
+                  whiteText ? "text-white/80" : "text-[var(--slate)]"
+                }`}
               >
-                {t(l.labelKey)}
-              </Link>
-            ))}
-          </nav>
+                {desktopLinks.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className="transition-colors hover:text-[var(--copper-soft)]"
+                  >
+                    {t(l.labelKey)}
+                  </Link>
+                ))}
+              </nav>
 
-          <div className="hidden items-center gap-3 lg:flex">
-            <LanguageSwitcher compact tone={whiteText ? "dark" : "light"} />
-            <Link
-              href="/book"
-              className={`btn !min-h-11 !px-5 !text-sm ${
-                whiteText ? "btn-copper" : "btn-primary"
-              }`}
-            >
-              {t("nav.bookCta")}
-            </Link>
-          </div>
+              <div className="hidden items-center gap-3 lg:flex">
+                <LanguageSwitcher compact tone={whiteText ? "dark" : "light"} />
+                <Link
+                  href="/book"
+                  className={`btn !min-h-11 !px-5 !text-sm ${
+                    whiteText ? "btn-copper" : "btn-primary"
+                  }`}
+                >
+                  {t("nav.bookCta")}
+                </Link>
+              </div>
 
-          <button
-            type="button"
-            className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
-              whiteText || open
-                ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
-                : "border-[var(--line-strong)] text-[var(--ink)]"
-            }`}
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? t("nav.close") : t("nav.menu")}
-            aria-expanded={open}
-          >
-            {open ? <X size={18} /> : <Menu size={18} />}
-          </button>
+              <button
+                type="button"
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
+                  whiteText || open
+                    ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
+                    : "border-[var(--line-strong)] text-[var(--ink)]"
+                }`}
+                onClick={() => setOpen((v) => !v)}
+                aria-label={open ? t("nav.close") : t("nav.menu")}
+                aria-expanded={open}
+              >
+                {open ? <X size={18} /> : <Menu size={18} />}
+              </button>
+            </>
+          )}
         </div>
       </header>
 

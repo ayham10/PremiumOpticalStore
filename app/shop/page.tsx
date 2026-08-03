@@ -3,32 +3,23 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
 import {
   CatalogueProductCard,
   CatalogueSortSelect,
   sortProducts,
   type CatalogueSort,
 } from "@/components/catalogue/CategoryCatalogue";
+import {
+  CatalogueFilterChips,
+  type CatalogueFilterKey,
+} from "@/components/catalogue/CatalogueFilters";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Product, ProductCategory } from "@/lib/types";
 
-type StoreFilter =
-  | "All"
-  | "Prescription Frames"
-  | "Sunglasses"
-  | "Contact Lenses"
-  | "Accessories";
-
-const FILTERS: StoreFilter[] = [
-  "All",
-  "Prescription Frames",
-  "Sunglasses",
-  "Contact Lenses",
-  "Accessories",
-];
-
-const FILTER_CATEGORIES: Record<Exclude<StoreFilter, "All">, ProductCategory[]> = {
+const FILTER_CATEGORIES: Record<
+  Exclude<CatalogueFilterKey, "All">,
+  ProductCategory[]
+> = {
   "Prescription Frames": ["Frames", "Prescription Glasses"],
   Sunglasses: ["Sunglasses"],
   "Contact Lenses": ["Contact Lenses"],
@@ -41,21 +32,30 @@ function ShopContent() {
 
   const initialFilter = useMemo(() => {
     const raw = searchParams.get("category");
-    if (!raw) return "All" as StoreFilter;
+    if (!raw) return "All" as CatalogueFilterKey;
     const decoded = decodeURIComponent(raw);
     if (decoded === "Frames" || decoded === "Prescription Glasses") {
       return "Prescription Frames";
     }
-    if ((FILTERS as string[]).includes(decoded)) {
-      return decoded as StoreFilter;
+    if (
+      (
+        [
+          "All",
+          "Prescription Frames",
+          "Sunglasses",
+          "Contact Lenses",
+          "Accessories",
+        ] as string[]
+      ).includes(decoded)
+    ) {
+      return decoded as CatalogueFilterKey;
     }
     return "All";
   }, [searchParams]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<StoreFilter>(initialFilter);
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<CatalogueFilterKey>(initialFilter);
   const [sort, setSort] = useState<CatalogueSort>("newest");
 
   useEffect(() => {
@@ -81,28 +81,16 @@ function ShopContent() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const list = products.filter((p) => {
       if (p.status !== "active") return false;
       if (filter !== "All") {
         const allowed = FILTER_CATEGORIES[filter];
         if (!allowed.includes(p.category)) return false;
       }
-      if (!q) return true;
-      return [p.name, p.brand, p.sku]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(q));
+      return true;
     });
     return sortProducts(list, sort);
-  }, [products, filter, query, sort]);
-
-  function filterLabel(f: StoreFilter) {
-    if (f === "All") return t("shop.all");
-    if (f === "Prescription Frames") return t("shop.filterFrames");
-    if (f === "Sunglasses") return t("shop.categories.Sunglasses");
-    if (f === "Contact Lenses") return t("shop.categories.Contact Lenses");
-    return t("shop.categories.Accessories");
-  }
+  }, [products, filter, sort]);
 
   return (
     <div className="frames-page catalogue-page store-page">
@@ -124,32 +112,8 @@ function ShopContent() {
 
       <section className="frames-catalogue wrap">
         <div className="store-toolbar">
-          <div className="store-filters" role="tablist" aria-label={t("shop.title")}>
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                role="tab"
-                aria-selected={filter === f}
-                onClick={() => setFilter(f)}
-                className={`store-filter-chip${filter === f ? " is-active" : ""}`}
-              >
-                {filterLabel(f)}
-              </button>
-            ))}
-          </div>
-
-          <div className="store-toolbar-row">
-            <label className="store-search">
-              <Search size={15} className="store-search-icon" aria-hidden />
-              <span className="sr-only">{t("shop.search")}</span>
-              <input
-                className="store-search-input"
-                placeholder={t("shop.search")}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
+          <CatalogueFilterChips active={filter} onChange={setFilter} />
+          <div className="catalogue-toolbar">
             <CatalogueSortSelect value={sort} onChange={setSort} />
           </div>
         </div>

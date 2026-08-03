@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Heart } from "lucide-react";
+import {
+  CatalogueFilterNav,
+  type CatalogueFilterKey,
+} from "@/components/catalogue/CatalogueFilters";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product, ProductCategory } from "@/lib/types";
@@ -122,6 +126,8 @@ export type CategoryCatalogueProps = {
   lead: string;
   videoSrc: string;
   posterSrc: string;
+  /** Active category pill for shared catalogue navigation */
+  activeFilter?: CatalogueFilterKey;
   bookHref?: string;
   bookLabel?: string;
 };
@@ -132,6 +138,7 @@ export default function CategoryCatalogue({
   lead,
   videoSrc,
   posterSrc,
+  activeFilter = "All",
 }: CategoryCatalogueProps) {
   const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
@@ -206,8 +213,11 @@ export default function CategoryCatalogue({
       </section>
 
       <section className="frames-catalogue wrap">
-        <div className="catalogue-toolbar">
-          <CatalogueSortSelect value={sort} onChange={setSort} />
+        <div className="store-toolbar">
+          <CatalogueFilterNav active={activeFilter} />
+          <div className="catalogue-toolbar">
+            <CatalogueSortSelect value={sort} onChange={setSort} />
+          </div>
         </div>
 
         {loading ? (

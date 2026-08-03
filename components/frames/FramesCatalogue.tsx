@@ -13,6 +13,7 @@ export default function FramesCatalogue() {
       lead={dict.destinations.frames.lead}
       videoSrc="/videos/premium-frames.mp4"
       posterSrc="/images/premium-video-poster.jpg"
+      activeFilter="Prescription Frames"
       bookHref="/book?type=frame_consultation"
       bookLabel={dict.home.bookAppointment}
     />

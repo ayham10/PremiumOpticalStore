@@ -13,6 +13,7 @@ export default function SunglassesCatalogue() {
       lead={dict.destinations.sunglasses.lead}
       videoSrc="/videos/sunglasses-hero.mp4"
       posterSrc="/images/sunglasses-hero-poster.jpg"
+      activeFilter="Sunglasses"
       bookHref="/book?type=sunglasses_consultation"
       bookLabel={dict.home.bookAppointment}
     />
