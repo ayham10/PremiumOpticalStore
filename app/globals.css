@@ -1980,21 +1980,25 @@ html[lang="he"] .home-welcome-title {
   }
 }
 
-/* Keep exam / contact subjects framed across breakpoints */
+/* Keep premium card subjects framed across breakpoints */
 .home-card-img--exams {
+  object-fit: cover;
+  object-position: center 38%;
+}
+
+.home-card-img--frames {
   object-fit: cover;
   object-position: center 45%;
 }
 
 .home-card-img--contacts {
   object-fit: cover;
-  /* Bias left so the fingertip contact lens stays in frame on narrow cards */
-  object-position: 28% 50%;
+  object-position: center 42%;
 }
 
 .home-card-img--sunglasses {
   object-fit: cover;
-  object-position: center 48%;
+  object-position: center 28%;
 }
 
 .home-card-img--promotions {
@@ -2009,15 +2013,19 @@ html[lang="he"] .home-welcome-title {
 
 @media (min-width: 640px) {
   .home-card-img--exams {
+    object-position: center 36%;
+  }
+
+  .home-card-img--frames {
     object-position: center 42%;
   }
 
   .home-card-img--contacts {
-    object-position: 36% 50%;
+    object-position: center 40%;
   }
 
   .home-card-img--sunglasses {
-    object-position: center 45%;
+    object-position: center 26%;
   }
 
   .home-card-img--promotions {
@@ -2031,15 +2039,19 @@ html[lang="he"] .home-welcome-title {
 
 @media (min-width: 1024px) {
   .home-card-img--exams {
+    object-position: center 38%;
+  }
+
+  .home-card-img--frames {
     object-position: center 45%;
   }
 
   .home-card-img--contacts {
-    object-position: 42% 50%;
+    object-position: center 42%;
   }
 
   .home-card-img--sunglasses {
-    object-position: center 45%;
+    object-position: center 28%;
   }
 
   .home-card-img--promotions {

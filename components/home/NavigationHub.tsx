@@ -16,9 +16,8 @@ const TILES = [
   {
     key: "frames",
     href: "/frames",
-    image:
-      "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_45%]",
+    image: "/images/card-frames.jpg",
+    position: "home-card-img--frames",
   },
   {
     key: "sunglasses",
