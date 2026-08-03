@@ -1,15 +1,57 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Heart } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product, ProductCategory } from "@/lib/types";
 
+export type CatalogueSort = "newest" | "price-asc" | "price-desc";
+
+export function sortProducts(items: Product[], sort: CatalogueSort): Product[] {
+  const next = [...items];
+  if (sort === "price-asc") {
+    next.sort((a, b) => a.sellingPrice - b.sellingPrice);
+  } else if (sort === "price-desc") {
+    next.sort((a, b) => b.sellingPrice - a.sellingPrice);
+  } else {
+    next.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  return next;
+}
+
 export function CatalogueProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
   const image = product.images[0] || "/images/placeholder-frame.svg";
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("oyon-wishlist");
+      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
+      setSaved(ids.includes(product.id));
+    } catch {
+      /* ignore */
+    }
+  }, [product.id]);
+
+  function toggleWish(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const raw = localStorage.getItem("oyon-wishlist");
+      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
+      const next = saved
+        ? ids.filter((id) => id !== product.id)
+        : [...ids, product.id];
+      localStorage.setItem("oyon-wishlist", JSON.stringify(next));
+      setSaved(!saved);
+    } catch {
+      setSaved((v) => !v);
+    }
+  }
 
   return (
     <article className="frames-product-card">
@@ -22,7 +64,7 @@ export function CatalogueProductCard({ product }: { product: Product }) {
           src={image}
           alt={product.name}
           fill
-          sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
+          sizes="(max-width: 639px) 33vw, (max-width: 1023px) 33vw, 25vw"
           className="object-cover"
           loading="lazy"
         />
@@ -35,12 +77,42 @@ export function CatalogueProductCard({ product }: { product: Product }) {
           <strong className="frames-product-price">
             {formatPrice(product.sellingPrice)}
           </strong>
-          <Link href={`/product/${product.slug}`} className="frames-product-view">
-            {t("shop.view")}
-          </Link>
+          <button
+            type="button"
+            className={`frames-product-wish${saved ? " is-active" : ""}`}
+            aria-label={t("shop.wishlist")}
+            aria-pressed={saved}
+            onClick={toggleWish}
+          >
+            <Heart size={15} strokeWidth={1.6} fill={saved ? "currentColor" : "none"} />
+          </button>
         </div>
       </div>
     </article>
+  );
+}
+
+export function CatalogueSortSelect({
+  value,
+  onChange,
+}: {
+  value: CatalogueSort;
+  onChange: (value: CatalogueSort) => void;
+}) {
+  const { t } = useLocale();
+  return (
+    <label className="catalogue-sort">
+      <span className="sr-only">{t("shop.sortLabel")}</span>
+      <select
+        className="catalogue-sort-select"
+        value={value}
+        onChange={(e) => onChange(e.target.value as CatalogueSort)}
+      >
+        <option value="newest">{t("shop.sortNewest")}</option>
+        <option value="price-asc">{t("shop.sortPriceAsc")}</option>
+        <option value="price-desc">{t("shop.sortPriceDesc")}</option>
+      </select>
+    </label>
   );
 }
 
@@ -60,12 +132,11 @@ export default function CategoryCatalogue({
   lead,
   videoSrc,
   posterSrc,
-  bookHref,
-  bookLabel,
 }: CategoryCatalogueProps) {
   const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sort, setSort] = useState<CatalogueSort>("newest");
   const [reduceMotion, setReduceMotion] = useState(false);
   const categorySet = useMemo(() => new Set(categories), [categories]);
 
@@ -95,16 +166,15 @@ export default function CategoryCatalogue({
     };
   }, []);
 
-  const items = useMemo(
-    () =>
-      products.filter(
-        (p) => p.status === "active" && categorySet.has(p.category),
-      ),
-    [products, categorySet],
-  );
+  const items = useMemo(() => {
+    const filtered = products.filter(
+      (p) => p.status === "active" && categorySet.has(p.category),
+    );
+    return sortProducts(filtered, sort);
+  }, [products, categorySet, sort]);
 
   return (
-    <div className="frames-page">
+    <div className="frames-page catalogue-page">
       <section className="frames-hero" aria-label={title}>
         {reduceMotion ? (
           <Image
@@ -129,22 +199,20 @@ export default function CategoryCatalogue({
           </video>
         )}
         <span className="frames-hero-veil" aria-hidden />
+        <div className="catalogue-hero-copy">
+          <h1 className="catalogue-hero-title">{title}</h1>
+          <p className="catalogue-hero-lead">{lead}</p>
+        </div>
       </section>
 
       <section className="frames-catalogue wrap">
-        <header className="frames-catalogue-head">
-          <h1 className="frames-catalogue-title">{title}</h1>
-          <p className="frames-catalogue-lead">{lead}</p>
-          {bookHref && bookLabel ? (
-            <Link href={bookHref} className="btn btn-copper frames-book-cta">
-              {bookLabel}
-            </Link>
-          ) : null}
-        </header>
+        <div className="catalogue-toolbar">
+          <CatalogueSortSelect value={sort} onChange={setSort} />
+        </div>
 
         {loading ? (
           <div className="frames-product-grid" aria-hidden>
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="frames-product-skeleton" />
             ))}
           </div>

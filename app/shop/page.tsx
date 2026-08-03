@@ -1,9 +1,15 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
-import { CatalogueProductCard } from "@/components/catalogue/CategoryCatalogue";
+import {
+  CatalogueProductCard,
+  CatalogueSortSelect,
+  sortProducts,
+  type CatalogueSort,
+} from "@/components/catalogue/CategoryCatalogue";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { Product, ProductCategory } from "@/lib/types";
 
@@ -50,19 +56,11 @@ function ShopContent() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StoreFilter>(initialFilter);
   const [query, setQuery] = useState("");
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [sort, setSort] = useState<CatalogueSort>("newest");
 
   useEffect(() => {
     setFilter(initialFilter);
   }, [initialFilter]);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduceMotion(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +82,7 @@ function ShopContent() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       if (p.status !== "active") return false;
       if (filter !== "All") {
         const allowed = FILTER_CATEGORIES[filter];
@@ -95,7 +93,8 @@ function ShopContent() {
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q));
     });
-  }, [products, filter, query]);
+    return sortProducts(list, sort);
+  }, [products, filter, query, sort]);
 
   function filterLabel(f: StoreFilter) {
     if (f === "All") return t("shop.all");
@@ -106,32 +105,20 @@ function ShopContent() {
   }
 
   return (
-    <div className="frames-page store-page">
+    <div className="frames-page catalogue-page store-page">
       <section className="frames-hero store-hero" aria-label={t("shop.title")}>
-        {reduceMotion ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src="/images/store-hero-poster.jpg"
-            alt=""
-            className="store-hero-fallback"
-          />
-        ) : (
-          <video
-            className="frames-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            poster="/images/store-hero-poster.jpg"
-          >
-            <source src="/videos/store-hero.mp4" type="video/mp4" />
-          </video>
-        )}
+        <Image
+          src="/images/store-hero.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover store-hero-image"
+        />
         <span className="frames-hero-veil store-hero-veil" aria-hidden />
-        <div className="store-hero-copy">
-          <h1 className="store-hero-title">{t("shop.title")}</h1>
-          <p className="store-hero-lead">{t("shop.lead")}</p>
+        <div className="catalogue-hero-copy store-hero-copy">
+          <h1 className="catalogue-hero-title">{t("shop.title")}</h1>
+          <p className="catalogue-hero-lead">{t("shop.lead")}</p>
         </div>
       </section>
 
@@ -152,21 +139,24 @@ function ShopContent() {
             ))}
           </div>
 
-          <label className="store-search">
-            <Search size={16} className="store-search-icon" aria-hidden />
-            <span className="sr-only">{t("shop.search")}</span>
-            <input
-              className="store-search-input"
-              placeholder={t("shop.search")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
+          <div className="store-toolbar-row">
+            <label className="store-search">
+              <Search size={15} className="store-search-icon" aria-hidden />
+              <span className="sr-only">{t("shop.search")}</span>
+              <input
+                className="store-search-input"
+                placeholder={t("shop.search")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            <CatalogueSortSelect value={sort} onChange={setSort} />
+          </div>
         </div>
 
         {loading ? (
           <div className="frames-product-grid" aria-hidden>
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: 9 }).map((_, i) => (
               <div key={i} className="frames-product-skeleton" />
             ))}
           </div>

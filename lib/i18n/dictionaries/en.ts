@@ -57,6 +57,11 @@ export type Dictionary = {
     view: string;
     all: string;
     filterFrames: string;
+    wishlist: string;
+    sortLabel: string;
+    sortNewest: string;
+    sortPriceAsc: string;
+    sortPriceDesc: string;
     categories: Record<string, string>;
   };
   product: {
@@ -537,13 +542,18 @@ const en: Dictionary = {
   },
   shop: {
     eyebrow: "Store",
-    title: "Complete Catalogue",
-    lead: "Prescription frames, sunglasses, contact lenses, and essentials.",
+    title: "Store",
+    lead: "Discover our luxury collection",
     search: "Search by name, brand, or SKU…",
     empty: "No products match your filters.",
     view: "View",
     all: "All",
     filterFrames: "Prescription Frames",
+    wishlist: "Save to wishlist",
+    sortLabel: "Sort",
+    sortNewest: "Newest",
+    sortPriceAsc: "Price: Low to High",
+    sortPriceDesc: "Price: High to Low",
     categories: {
       "Prescription Glasses": "Prescription Glasses",
       Sunglasses: "Sunglasses",
