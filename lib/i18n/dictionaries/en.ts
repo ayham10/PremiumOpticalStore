@@ -152,6 +152,23 @@ export type Dictionary = {
     servicesCta: string;
     videoAlt: string;
     blurb: string;
+    features: {
+      aria: string;
+      specialists: string;
+      duration: string;
+      equipment: string;
+      comprehensive: string;
+    };
+    benefits: {
+      title: string;
+      items: string[];
+    };
+    values: {
+      aria: string;
+      precision: string;
+      quality: string;
+      care: string;
+    };
     trust: {
       aria: string;
       professional: string;
@@ -173,6 +190,12 @@ export type Dictionary = {
       location: string;
       locationCity: string;
       locationStreet: string;
+    };
+    badges: {
+      aria: string;
+      specialists: string;
+      privacy: string;
+      accuracy: string;
     };
     privacy: string;
     weekdays: Record<string, string>;
@@ -735,15 +758,38 @@ const en: Dictionary = {
     required: "Please complete all required fields",
   },
   eyeExam: {
-    eyebrow: "Clinical Care",
-    title: "Eye Exam",
+    eyebrow: "Professional Care",
+    title: "Comprehensive Eye Exam",
     description:
-      "Book a professional eye examination with our specialists. Choose an available date and time that suits you.",
+      "Accurate examination with the latest devices and certified specialists for clearer vision and a better life.",
     bookCta: "Book Eye Exam",
     servicesCta: "View All Services",
     videoAlt: "Patient receiving a professional eye examination",
     blurb:
       "A complete vision and eye-health assessment followed by a personalized recommendation for glasses or contact lenses.",
+    features: {
+      aria: "Exam highlights",
+      specialists: "Certified specialists",
+      duration: "Only 20–30 minutes",
+      equipment: "Modern, precise devices",
+      comprehensive: "Full vision assessment",
+    },
+    benefits: {
+      title: "What makes our eye exam different",
+      items: [
+        "Visual acuity measured for each eye separately.",
+        "Eye pressure check for early glaucoma detection.",
+        "Retina and optic nerve health evaluation.",
+        "Eye coordination and muscle movement assessment.",
+        "Clear guidance on glasses or contact lenses when needed.",
+      ],
+    },
+    values: {
+      aria: "Care standards",
+      precision: "High precision results",
+      quality: "Global quality standards",
+      care: "Personal care for every client",
+    },
     trust: {
       aria: "Why choose Oyon",
       professional: "Professional Eye Exam",
@@ -765,6 +811,12 @@ const en: Dictionary = {
       location: "Location",
       locationCity: "Deir Hanna",
       locationStreet: "Main Street",
+    },
+    badges: {
+      aria: "Trust assurances",
+      specialists: "Certified specialists · trusted experience",
+      privacy: "Full privacy · your data is secure",
+      accuracy: "Accurate results · modern devices",
     },
     privacy: "Your privacy matters. Your information is secure.",
     weekdays: {

@@ -3,26 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  CalendarDays,
+  Award,
+  Check,
   Clock3,
+  Eye,
+  Heart,
+  Lock,
   MapPin,
   MessageCircle,
-  Microscope,
   ShieldCheck,
+  Target,
   UserRound,
-  Zap,
 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import EyeExamHeroVideo from "@/components/eye-exam/EyeExamHeroVideo";
-
-type NextSlot = {
-  available: boolean;
-  date?: string;
-  time?: string;
-  label?: string;
-  weekday?: number;
-  displayDate?: string;
-};
 
 type PublicSettings = {
   address?: string;
@@ -44,38 +38,41 @@ function formatWhatsAppDisplay(raw?: string): string {
   return raw;
 }
 
+const FEATURES = [
+  { key: "specialists", Icon: UserRound },
+  { key: "duration", Icon: Clock3 },
+  { key: "equipment", Icon: ShieldCheck },
+  { key: "comprehensive", Icon: Eye },
+] as const;
+
+const VALUES = [
+  { key: "precision", Icon: Target },
+  { key: "quality", Icon: Award },
+  { key: "care", Icon: Heart },
+] as const;
+
+const BADGES = [
+  { key: "specialists", Icon: Award },
+  { key: "privacy", Icon: Lock },
+  { key: "accuracy", Icon: Check },
+] as const;
+
 export default function EyeExamPage() {
-  const { t, rtl } = useLocale();
-  const [nextSlot, setNextSlot] = useState<NextSlot | null>(null);
+  const { t, rtl, dict } = useLocale();
   const [settings, setSettings] = useState<PublicSettings | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/eye-exam/next-available")
-      .then((res) => res.json())
-      .then((data: NextSlot) => {
-        if (alive) setNextSlot(data);
-      })
-      .catch(() => {
-        if (alive) setNextSlot({ available: false });
-      });
-
     fetch("/api/settings")
       .then((res) => res.json())
       .then((data) => {
         if (alive) setSettings(data.settings || null);
       })
       .catch(() => undefined);
-
     return () => {
       alive = false;
     };
   }, []);
-
-  const weekdayLabel =
-    typeof nextSlot?.weekday === "number"
-      ? t(`eyeExam.weekdays.${nextSlot.weekday}`)
-      : "";
 
   const whatsappDisplay =
     formatWhatsAppDisplay(settings?.whatsapp) ||
@@ -84,8 +81,7 @@ export default function EyeExamPage() {
 
   const whatsappHref = `https://wa.me/${(settings?.whatsapp || "9725550180").replace(/\D/g, "")}`;
 
-  const locationLine1 = t("eyeExam.info.locationCity");
-  const locationLine2 = t("eyeExam.info.locationStreet");
+  const benefits = dict.eyeExam.benefits.items;
 
   return (
     <div className="eye-exam-page" dir={rtl ? "rtl" : "ltr"}>
@@ -106,54 +102,43 @@ export default function EyeExamPage() {
             >
               {t("eyeExam.bookCta")}
             </Link>
-            <Link href="/services" className="btn eye-exam-btn eye-exam-btn-secondary">
-              {t("eyeExam.servicesCta")}
-            </Link>
           </div>
         </section>
 
-        <section className="eye-exam-trust" aria-label={t("eyeExam.trust.aria")}>
-          <div className="eye-exam-trust-grid">
-            <article className="eye-exam-trust-item">
-              <UserRound className="eye-exam-trust-icon" aria-hidden size={22} strokeWidth={1.6} />
-              <p>{t("eyeExam.trust.professional")}</p>
-            </article>
-            <article className="eye-exam-trust-item">
-              <Microscope className="eye-exam-trust-icon" aria-hidden size={22} strokeWidth={1.6} />
-              <p>{t("eyeExam.trust.equipment")}</p>
-            </article>
-            <article className="eye-exam-trust-item">
-              <Zap className="eye-exam-trust-icon" aria-hidden size={22} strokeWidth={1.6} />
-              <p>{t("eyeExam.trust.booking")}</p>
-            </article>
+        <section className="eye-exam-features" aria-label={t("eyeExam.features.aria")}>
+          <div className="eye-exam-features-grid">
+            {FEATURES.map(({ key, Icon }) => (
+              <article key={key} className="eye-exam-feature-card">
+                <Icon className="eye-exam-feature-icon" aria-hidden size={20} strokeWidth={1.6} />
+                <p>{t(`eyeExam.features.${key}`)}</p>
+              </article>
+            ))}
           </div>
         </section>
 
-        <p className="eye-exam-blurb">{t("eyeExam.blurb")}</p>
+        <section className="eye-exam-benefits" aria-labelledby="eye-exam-benefits-title">
+          <h2 id="eye-exam-benefits-title" className="eye-exam-benefits-title">
+            {t("eyeExam.benefits.title")}
+          </h2>
+          <ul className="eye-exam-benefits-list">
+            {benefits.map((item) => (
+              <li key={item}>
+                <Check className="eye-exam-benefits-check" aria-hidden size={16} strokeWidth={2.2} />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-        <section className="eye-exam-next-card">
-          <div className="eye-exam-next-top">
-            <CalendarDays className="eye-exam-next-icon" aria-hidden size={28} strokeWidth={1.5} />
-            <div>
-              <p className="eye-exam-next-label">{t("eyeExam.next.label")}</p>
-              {nextSlot?.available && nextSlot.time ? (
-                <p className="eye-exam-next-value">
-                  <span>{weekdayLabel}</span>
-                  <span className="eye-exam-next-sep"> </span>
-                  <span>{nextSlot.displayDate || nextSlot.label}</span>
-                  <span className="eye-exam-next-sep"> — </span>
-                  <span>{nextSlot.time}</span>
-                </p>
-              ) : (
-                <p className="eye-exam-next-empty">
-                  {nextSlot === null ? t("common.loading") : t("eyeExam.next.empty")}
-                </p>
-              )}
-            </div>
+        <section className="eye-exam-values" aria-label={t("eyeExam.values.aria")}>
+          <div className="eye-exam-values-grid">
+            {VALUES.map(({ key, Icon }) => (
+              <article key={key} className="eye-exam-value-card">
+                <Icon className="eye-exam-value-icon" aria-hidden size={22} strokeWidth={1.6} />
+                <p>{t(`eyeExam.values.${key}`)}</p>
+              </article>
+            ))}
           </div>
-          <Link href="/book?type=eye_exam" className="eye-exam-next-btn">
-            {t("eyeExam.next.cta")}
-          </Link>
         </section>
 
         <section className="eye-exam-info-card" aria-label={t("eyeExam.info.aria")}>
@@ -169,7 +154,7 @@ export default function EyeExamPage() {
               {whatsappDisplay}
             </p>
           </a>
-          <div className="eye-exam-info-col" aria-hidden={false}>
+          <div className="eye-exam-info-col">
             <Clock3 className="eye-exam-info-icon" aria-hidden size={20} strokeWidth={1.6} />
             <p className="eye-exam-info-label">{t("eyeExam.info.hours")}</p>
             <p className="eye-exam-info-value">{t("eyeExam.info.hoursValue")}</p>
@@ -178,17 +163,20 @@ export default function EyeExamPage() {
           <div className="eye-exam-info-col">
             <MapPin className="eye-exam-info-icon" aria-hidden size={20} strokeWidth={1.6} />
             <p className="eye-exam-info-label">{t("eyeExam.info.location")}</p>
-            <p className="eye-exam-info-value">{locationLine1}</p>
-            <p className="eye-exam-info-sub">{locationLine2}</p>
+            <p className="eye-exam-info-value">{t("eyeExam.info.locationCity")}</p>
+            <p className="eye-exam-info-sub">{t("eyeExam.info.locationStreet")}</p>
           </div>
         </section>
 
-        <p className="eye-exam-privacy">
-          <ShieldCheck size={14} aria-hidden strokeWidth={1.7} />
-          <span>{t("eyeExam.privacy")}</span>
-        </p>
+        <section className="eye-exam-badges" aria-label={t("eyeExam.badges.aria")}>
+          {BADGES.map(({ key, Icon }) => (
+            <div key={key} className="eye-exam-badge">
+              <Icon size={14} strokeWidth={1.7} aria-hidden />
+              <span>{t(`eyeExam.badges.${key}`)}</span>
+            </div>
+          ))}
+        </section>
       </div>
-
     </div>
   );
 }

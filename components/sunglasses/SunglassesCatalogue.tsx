@@ -16,6 +16,7 @@ export default function SunglassesCatalogue() {
       activeFilter="Sunglasses"
       bookHref="/book?type=sunglasses_consultation"
       bookLabel={dict.home.bookAppointment}
+      pageClass="sunglasses-page"
     />
   );
 }

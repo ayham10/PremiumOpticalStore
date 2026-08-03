@@ -23,7 +23,7 @@ const TILES = [
   {
     key: "sunglasses",
     href: "/sunglasses",
-    image: "/images/sunglasses-category.jpg",
+    image: "/images/sunglasses-hero-poster.jpg",
     position: "home-card-img--sunglasses",
   },
   {
@@ -35,9 +35,8 @@ const TILES = [
   {
     key: "promotions",
     href: "/promotions",
-    image:
-      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1600&q=85",
-    position: "object-[center_50%]",
+    image: "/images/promotions-category.jpg",
+    position: "home-card-img--promotions",
   },
   {
     key: "booking",

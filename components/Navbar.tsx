@@ -16,6 +16,7 @@ import {
   MapPin,
   Clock,
   ShoppingBag,
+  Percent,
 } from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
@@ -30,7 +31,7 @@ const MOBILE_LINKS = [
   { href: "/sunglasses", labelKey: "nav.sunglasses", icon: Sun },
   { href: "/shop", labelKey: "nav.shop", icon: Store },
   { href: "/about", labelKey: "nav.about", icon: Info },
-  { href: "/contact", labelKey: "nav.contact", icon: Phone },
+  { href: "/promotions", labelKey: "home.gateway.promotions.title", icon: Percent },
 ] as const;
 
 export default function Navbar() {

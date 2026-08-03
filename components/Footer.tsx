@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { MapPin, Navigation } from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
@@ -72,9 +71,6 @@ export default function Footer() {
               {t("footer.waze")}
             </a>
           </div>
-          <Link href="/book" className="btn btn-copper oyon-footer-book">
-            {t("nav.bookCta")}
-          </Link>
         </div>
       </div>
 

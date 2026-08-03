@@ -134,6 +134,7 @@ export type CategoryCatalogueProps = {
   activeFilter?: CatalogueFilterKey;
   bookHref?: string;
   bookLabel?: string;
+  pageClass?: string;
 };
 
 export default function CategoryCatalogue({
@@ -143,6 +144,7 @@ export default function CategoryCatalogue({
   videoSrc,
   posterSrc,
   activeFilter = "All",
+  pageClass = "",
 }: CategoryCatalogueProps) {
   const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
@@ -185,7 +187,7 @@ export default function CategoryCatalogue({
   }, [products, categorySet, sort]);
 
   return (
-    <div className="frames-page catalogue-page">
+    <div className={`frames-page catalogue-page${pageClass ? ` ${pageClass}` : ""}`}>
       <ScrollRestore />
       <section className="frames-hero" aria-label={title}>
         {reduceMotion ? (
