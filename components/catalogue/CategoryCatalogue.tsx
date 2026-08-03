@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart } from "lucide-react";
+import { Heart, ArrowUpDown } from "lucide-react";
 import {
   CatalogueFilterNav,
   type CatalogueFilterKey,
@@ -107,6 +107,9 @@ export function CatalogueSortSelect({
   return (
     <label className="catalogue-sort">
       <span className="sr-only">{t("shop.sortLabel")}</span>
+      <span className="catalogue-sort-icon" aria-hidden>
+        <ArrowUpDown size={13} strokeWidth={1.75} />
+      </span>
       <select
         className="catalogue-sort-select"
         value={value}
