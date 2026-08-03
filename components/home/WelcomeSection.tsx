@@ -1,12 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import OyonLogo from "@/components/branding/OyonLogo";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { StoreSettings } from "@/lib/types";
+
+function HeroSubtitle({ text }: { text: string }) {
+  const parts = text.split(/\s*•\s*/).filter(Boolean);
+  return (
+    <p className="home-welcome-line">
+      {parts.map((part, i) => (
+        <Fragment key={`${part}-${i}`}>
+          {i > 0 ? (
+            <span className="home-welcome-line-sep" aria-hidden>
+              •
+            </span>
+          ) : null}
+          <span className="home-welcome-line-item">{part}</span>
+        </Fragment>
+      ))}
+    </p>
+  );
+}
 
 export default function WelcomeSection() {
   const { t, locale } = useLocale();
@@ -126,14 +144,13 @@ export default function WelcomeSection() {
           {heroTitle}
         </motion.h1>
 
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
-          className="home-welcome-line"
         >
-          {welcomeLine}
-        </motion.p>
+          <HeroSubtitle text={welcomeLine} />
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 14 }}
@@ -154,10 +171,58 @@ export default function WelcomeSection() {
         onClick={scrollToHome}
         aria-label={t("home.scrollHint")}
       >
-        <span className="home-welcome-explore-pill" aria-hidden>
-          <span className="home-welcome-explore-dot" />
+        <span className="home-welcome-glasses-wrap" aria-hidden>
+          <svg
+            className="home-welcome-waveform"
+            viewBox="0 0 120 12"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M1 6h10l2-3 2 6 2-4 2 2h8l2-2.5 2 5 2-4 2 1.5h14"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M61 6h14l2-1.5 2 4 2-5 2 2.5h8l2-2 2 4 2-6 2 3h10"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="home-welcome-glasses">
+            <svg
+              viewBox="0 0 64 28"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="home-welcome-glasses-icon"
+            >
+              <circle cx="16" cy="14" r="11" stroke="currentColor" strokeWidth="1.6" />
+              <circle cx="48" cy="14" r="11" stroke="currentColor" strokeWidth="1.6" />
+              <path
+                d="M27 14h10"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <path
+                d="M5 14H1.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <path
+                d="M59 14h3.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
         </span>
-        <span className="home-welcome-scroll-label">{t("home.scrollHint")}</span>
         <ChevronDown size={16} className="home-welcome-explore-chevron" aria-hidden />
       </button>
     </section>
