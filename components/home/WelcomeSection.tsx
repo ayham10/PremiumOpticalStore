@@ -108,8 +108,8 @@ export default function WelcomeSection() {
   }
 
   const heroTitle = content?.heroTitle?.[locale]?.trim() || t("hero.title");
-  const welcomeLine =
-    content?.heroLine?.[locale]?.trim() || t("home.welcomeLine");
+  // Approved hero subtitle copy (ignore CMS override so spacing/text stay consistent)
+  const welcomeLine = t("home.welcomeLine");
 
   return (
     <section className="home-welcome" aria-label="Welcome">
@@ -174,24 +174,41 @@ export default function WelcomeSection() {
         <span className="home-welcome-glasses-wrap" aria-hidden>
           <svg
             className="home-welcome-waveform"
-            viewBox="0 0 120 12"
+            viewBox="0 0 200 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="none"
           >
-            <path
-              d="M1 6h10l2-3 2 6 2-4 2 2h8l2-2.5 2 5 2-4 2 1.5h14"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M61 6h14l2-1.5 2 4 2-5 2 2.5h8l2-2 2 4 2-6 2 3h10"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <g stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+              <line x1="3" y1="12" x2="3" y2="12" />
+              <line x1="8" y1="9" x2="8" y2="15" />
+              <line x1="13" y1="6.5" x2="13" y2="17.5" />
+              <line x1="18" y1="10" x2="18" y2="14" />
+              <line x1="23" y1="5" x2="23" y2="19" />
+              <line x1="28" y1="8" x2="28" y2="16" />
+              <line x1="33" y1="6" x2="33" y2="18" />
+              <line x1="38" y1="9.5" x2="38" y2="14.5" />
+              <line x1="43" y1="4" x2="43" y2="20" />
+              <line x1="48" y1="7.5" x2="48" y2="16.5" />
+              <line x1="53" y1="6" x2="53" y2="18" />
+              <line x1="58" y1="10" x2="58" y2="14" />
+              <line x1="63" y1="8" x2="63" y2="16" />
+              <line x1="68" y1="10.5" x2="68" y2="13.5" />
+              <line x1="132" y1="10.5" x2="132" y2="13.5" />
+              <line x1="137" y1="8" x2="137" y2="16" />
+              <line x1="142" y1="10" x2="142" y2="14" />
+              <line x1="147" y1="6" x2="147" y2="18" />
+              <line x1="152" y1="7.5" x2="152" y2="16.5" />
+              <line x1="157" y1="4" x2="157" y2="20" />
+              <line x1="162" y1="9.5" x2="162" y2="14.5" />
+              <line x1="167" y1="6" x2="167" y2="18" />
+              <line x1="172" y1="8" x2="172" y2="16" />
+              <line x1="177" y1="5" x2="177" y2="19" />
+              <line x1="182" y1="10" x2="182" y2="14" />
+              <line x1="187" y1="6.5" x2="187" y2="17.5" />
+              <line x1="192" y1="9" x2="192" y2="15" />
+              <line x1="197" y1="12" x2="197" y2="12" />
+            </g>
           </svg>
           <span className="home-welcome-glasses">
             <svg
