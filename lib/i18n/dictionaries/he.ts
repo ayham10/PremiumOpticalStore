@@ -37,6 +37,7 @@ const he: Dictionary = {
     hubEyebrow: "ניווט פרימיום",
     scrollHint: "גלו עוד",
     bookAppointment: "קביעת תור",
+    shopNow: "קנו עכשיו",
     welcomeLine: "מסגרות רפואיות • משקפי שמש • בדיקת ראייה מקצועית",
     heroBrandLine: "OYON",
     brandsTitle: "המותגים הבינלאומיים המובילים",

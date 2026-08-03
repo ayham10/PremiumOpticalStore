@@ -6,6 +6,7 @@ export type Dictionary = {
     hubEyebrow: string;
     scrollHint: string;
     bookAppointment: string;
+    shopNow: string;
     welcomeLine: string;
     heroBrandLine: string;
     brandsTitle: string;
@@ -304,6 +305,7 @@ const en: Dictionary = {
     hubEyebrow: "Premium Navigation",
     scrollHint: "Explore More",
     bookAppointment: "Book an Appointment",
+    shopNow: "Shop Now",
     welcomeLine: "Prescription Frames • Sunglasses • Professional Eye Exam",
     heroBrandLine: "OYON",
     brandsTitle: "Leading International Brands",

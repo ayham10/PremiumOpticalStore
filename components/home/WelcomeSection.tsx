@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays, ChevronDown, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import OyonLogo from "@/components/branding/OyonLogo";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -157,10 +157,15 @@ export default function WelcomeSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="home-welcome-cta-wrap"
+          dir="ltr"
         >
-          <Link href="/book" className="btn btn-copper home-welcome-cta">
-            <CalendarDays size={18} aria-hidden />
-            {t("home.bookAppointment")}
+          <Link href="/book" className="home-welcome-cta home-welcome-cta--primary">
+            <span>{t("home.bookAppointment")}</span>
+            <CalendarDays size={17} aria-hidden />
+          </Link>
+          <Link href="/shop" className="home-welcome-cta home-welcome-cta--secondary">
+            <span>{t("home.shopNow")}</span>
+            <ShoppingBag size={17} aria-hidden />
           </Link>
         </motion.div>
       </div>

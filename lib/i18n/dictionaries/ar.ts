@@ -37,6 +37,7 @@ const ar: Dictionary = {
     hubEyebrow: "تنقل فاخر",
     scrollHint: "اكتشف المزيد",
     bookAppointment: "احجز موعدًا",
+    shopNow: "تسوق الآن",
     welcomeLine: "إطارات طبية • نظارات شمسية • فحص نظر احترافي",
     heroBrandLine: "OYON",
     brandsTitle: "أفضل الماركات العالمية",
