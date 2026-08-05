@@ -11,7 +11,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Calendar,
   Gift,
   Percent,
@@ -101,7 +100,8 @@ export default function PromotionsExperience({
   const { t, locale, rtl } = useLocale();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const touchStartX = useRef<number | null>(null);
+  const heroTouchX = useRef<number | null>(null);
+  const productRailRef = useRef<HTMLDivElement | null>(null);
   const multi = slides.length > 1;
 
   const goTo = useCallback(
@@ -115,6 +115,7 @@ export default function PromotionsExperience({
 
   const pause = useCallback(() => setPaused(true), []);
 
+  // Auto-rotate hero only — never driven by product slider
   useEffect(() => {
     if (!multi || paused) return;
     const id = window.setInterval(() => {
@@ -123,32 +124,39 @@ export default function PromotionsExperience({
     return () => window.clearInterval(id);
   }, [multi, paused, slides.length]);
 
-  function onTouchStart(e: ReactTouchEvent) {
-    touchStartX.current = e.touches[0]?.clientX ?? null;
+  // Reset product rail scroll when the selected promotion changes
+  useEffect(() => {
+    const rail = productRailRef.current;
+    if (!rail) return;
+    rail.scrollTo({ left: 0, behavior: "smooth" });
+  }, [index]);
+
+  function onHeroTouchStart(e: ReactTouchEvent) {
+    heroTouchX.current = e.touches[0]?.clientX ?? null;
     pause();
   }
 
-  function onTouchEnd(e: ReactTouchEvent) {
-    if (touchStartX.current == null || !multi) return;
-    const endX = e.changedTouches[0]?.clientX ?? touchStartX.current;
-    const delta = endX - touchStartX.current;
-    touchStartX.current = null;
+  function onHeroTouchEnd(e: ReactTouchEvent) {
+    if (heroTouchX.current == null || !multi) return;
+    const endX = e.changedTouches[0]?.clientX ?? heroTouchX.current;
+    const delta = endX - heroTouchX.current;
+    heroTouchX.current = null;
     if (Math.abs(delta) < 48) return;
     const forward = rtl ? delta > 0 : delta < 0;
     goTo(index + (forward ? 1 : -1));
   }
 
-  function onPointerDown(e: ReactPointerEvent) {
+  function onHeroPointerDown(e: ReactPointerEvent) {
     if (e.pointerType === "touch") return;
-    touchStartX.current = e.clientX;
+    heroTouchX.current = e.clientX;
     pause();
   }
 
-  function onPointerUp(e: ReactPointerEvent) {
+  function onHeroPointerUp(e: ReactPointerEvent) {
     if (e.pointerType === "touch") return;
-    if (touchStartX.current == null || !multi) return;
-    const delta = e.clientX - touchStartX.current;
-    touchStartX.current = null;
+    if (heroTouchX.current == null || !multi) return;
+    const delta = e.clientX - heroTouchX.current;
+    heroTouchX.current = null;
     if (Math.abs(delta) < 48) return;
     const forward = rtl ? delta > 0 : delta < 0;
     goTo(index + (forward ? 1 : -1));
@@ -167,21 +175,23 @@ export default function PromotionsExperience({
 
   const current = slides[index];
   const promo = current.promotion;
+  const products = current.products;
 
   return (
     <div className="promo-page">
       <ScrollRestore />
 
+      {/* Hero carousel — promotion only */}
       <section
         className="promo-carousel"
         aria-roledescription="carousel"
         aria-label={t("offersPage.activeOffers")}
         onMouseEnter={pause}
         onFocusCapture={pause}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
+        onTouchStart={onHeroTouchStart}
+        onTouchEnd={onHeroTouchEnd}
+        onPointerDown={onHeroPointerDown}
+        onPointerUp={onHeroPointerUp}
       >
         <div
           className="promo-carousel-track"
@@ -199,7 +209,7 @@ export default function PromotionsExperience({
                   alt=""
                   fill
                   priority={slide.promotion.id === promo.id}
-                  sizes="100vw"
+                  sizes="(max-width: 767px) 100vw, 960px"
                   className="object-cover promo-hero-image"
                 />
                 <span className="promo-hero-veil" aria-hidden />
@@ -225,41 +235,14 @@ export default function PromotionsExperience({
                     </p>
                   ) : null}
                   <p className="promo-card-until promo-slide-until">
-                    <Calendar size={13} strokeWidth={1.7} aria-hidden />
+                    <Calendar size={12} strokeWidth={1.7} aria-hidden />
                     <span>
                       {t("offersPage.until")}{" "}
                       {formatUntil(slide.promotion.endDate, locale)}
                     </span>
                   </p>
-                  <Link href="/shop" className="promo-hero-cta">
-                    <span>{t("offersPage.shopOffer")}</span>
-                    <ArrowLeft
-                      size={16}
-                      strokeWidth={1.8}
-                      className={rtl ? undefined : "promo-hero-cta-icon-ltr"}
-                    />
-                  </Link>
                 </div>
               </div>
-
-              {slide.products.length > 0 ? (
-                <div className="promo-slide-products wrap">
-                  <header className="promo-section-head">
-                    <span className="promo-section-rule" aria-hidden />
-                    <h2>{t("offersPage.offerProducts")}</h2>
-                    <span className="promo-section-rule" aria-hidden />
-                  </header>
-                  <div className="promo-product-rail" role="list">
-                    {slide.products.map((product) => (
-                      <PromoProductCard
-                        key={product.id}
-                        product={product}
-                        promo={slide.promotion}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </article>
           ))}
         </div>
@@ -283,6 +266,31 @@ export default function PromotionsExperience({
           </div>
         ) : null}
       </section>
+
+      {/* Independent product slider — swipe never changes promotion */}
+      {products.length > 0 ? (
+        <section className="promo-section promo-products-section wrap">
+          <header className="promo-section-head">
+            <span className="promo-section-rule" aria-hidden />
+            <h2>{t("offersPage.offerProducts")}</h2>
+            <span className="promo-section-rule" aria-hidden />
+          </header>
+          <div
+            ref={productRailRef}
+            className="promo-product-rail"
+            role="list"
+            aria-label={t("offersPage.offerProducts")}
+          >
+            {products.map((product) => (
+              <PromoProductCard
+                key={`${promo.id}-${product.id}`}
+                product={product}
+                promo={promo}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {slides.length > 1 ? (
         <section className="promo-section wrap">
@@ -309,14 +317,14 @@ export default function PromotionsExperience({
                       src={slide.promotion.image || FALLBACK_HERO}
                       alt={slide.promotion.title}
                       fill
-                      sizes="(max-width: 767px) 70vw, 280px"
+                      sizes="(max-width: 767px) 42vw, 160px"
                       className="object-cover"
                     />
                     <span className="promo-card-badge" aria-hidden>
                       {icon === "percent" ? (
-                        <Percent size={14} strokeWidth={1.8} />
+                        <Percent size={11} strokeWidth={1.8} />
                       ) : (
-                        <Gift size={14} strokeWidth={1.8} />
+                        <Gift size={11} strokeWidth={1.8} />
                       )}
                     </span>
                   </div>
@@ -395,7 +403,10 @@ function PromoProductCard({
       <div className="promo-product-prices">
         {hasDiscount ? (
           <>
-            <span className="promo-product-price-was" aria-label={t("offersPage.wasPrice")}>
+            <span
+              className="promo-product-price-was"
+              aria-label={t("offersPage.wasPrice")}
+            >
               {formatPrice(original)}
             </span>
             <strong className="promo-product-price promo-product-price-now">
