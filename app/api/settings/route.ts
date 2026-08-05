@@ -7,6 +7,7 @@ import {
   pushActivity,
 } from "@/lib/api/helpers";
 import { mergeBranding } from "@/lib/branding";
+import { ensureFutureAvailability } from "@/lib/eye-exam";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -148,6 +149,13 @@ export async function PUT(request: Request) {
 
       store.settings = next;
       settings = next;
+
+      // Keep public booking calendar in sync with weekly opening hours
+      store.eyeExamAvailability = ensureFutureAvailability(
+        store.eyeExamAvailability,
+        next,
+        { forceRefreshDefaults: Array.isArray(patch.openingHours) },
+      );
 
       pushActivity(store, {
         actor: session.email,

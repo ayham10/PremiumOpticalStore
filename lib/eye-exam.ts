@@ -4,6 +4,9 @@ import type {
   EyeExamAppointment,
   EyeExamAvailability,
   EyeExamTimeSlot,
+  StoreSettings,
+  WorkingHours,
+  WorkingPeriod,
 } from "@/lib/types";
 
 export const CLINIC_APPOINTMENT_TYPES: ClinicAppointmentType[] = [
@@ -306,4 +309,233 @@ export function addDaysIso(isoDate: string, days: number): string {
 export function weekdayUtc(isoDate: string): number {
   const [y, m, d] = isoDate.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+export function getOpeningHoursForWeekday(
+  openingHours: WorkingHours[],
+  weekday: number,
+): WorkingHours | undefined {
+  return openingHours.find((h) => h.day === weekday);
+}
+
+export function buildPeriodsFromOpeningHours(
+  hours: WorkingHours | undefined,
+): WorkingPeriod[] {
+  if (!hours || hours.closed) return [];
+  const start = parseTimeToMinutes(hours.open);
+  const end = parseTimeToMinutes(hours.close);
+  if (start == null || end == null || end <= start) return [];
+  return [
+    {
+      id: newId("period"),
+      start: hours.open,
+      end: hours.close,
+      enabled: true,
+    },
+  ];
+}
+
+export function buildSlotsFromPeriodRange(
+  start: string,
+  end: string,
+  intervalMinutes = 30,
+  enabled = true,
+): EyeExamTimeSlot[] {
+  const startMin = parseTimeToMinutes(start);
+  const endMin = parseTimeToMinutes(end);
+  if (startMin == null || endMin == null || endMin <= startMin) return [];
+  const interval = Math.max(5, Math.min(120, intervalMinutes || 30));
+  const slots: EyeExamTimeSlot[] = [];
+  for (let minute = startMin; minute < endMin; minute += interval) {
+    slots.push({
+      id: newId("slot"),
+      time: minutesToTime(minute),
+      isEnabled: enabled,
+    });
+  }
+  return slots;
+}
+
+export function buildSlotsFromPeriods(
+  periods: WorkingPeriod[],
+  intervalMinutes = 30,
+): EyeExamTimeSlot[] {
+  const byTime = new Map<string, EyeExamTimeSlot>();
+  for (const period of periods) {
+    const generated = buildSlotsFromPeriodRange(
+      period.start,
+      period.end,
+      intervalMinutes,
+      period.enabled,
+    );
+    for (const slot of generated) {
+      const existing = byTime.get(slot.time);
+      if (!existing) {
+        byTime.set(slot.time, slot);
+      } else if (slot.isEnabled) {
+        existing.isEnabled = true;
+      }
+    }
+  }
+  return Array.from(byTime.values()).sort((a, b) =>
+    a.time.localeCompare(b.time),
+  );
+}
+
+export function inferPeriodsFromSlots(slots: EyeExamTimeSlot[]): WorkingPeriod[] {
+  const enabled = slots
+    .filter((s) => s.isEnabled)
+    .map((s) => s.time)
+    .sort();
+  if (!enabled.length) {
+    const all = slots.map((s) => s.time).sort();
+    if (!all.length) return [];
+    return [
+      {
+        id: newId("period"),
+        start: all[0],
+        end: minutesToTime((parseTimeToMinutes(all[all.length - 1]) || 0) + 30),
+        enabled: false,
+      },
+    ];
+  }
+
+  const periods: WorkingPeriod[] = [];
+  let runStart = enabled[0];
+  let prev = enabled[0];
+  for (let i = 1; i <= enabled.length; i++) {
+    const cur = enabled[i];
+    const prevMin = parseTimeToMinutes(prev) || 0;
+    const curMin = cur ? parseTimeToMinutes(cur) : null;
+    const gap = curMin == null ? Infinity : curMin - prevMin;
+    if (gap > 60 || curMin == null) {
+      periods.push({
+        id: newId("period"),
+        start: runStart,
+        end: minutesToTime(prevMin + 30),
+        enabled: true,
+      });
+      if (cur) {
+        runStart = cur;
+        prev = cur;
+      }
+    } else {
+      prev = cur;
+    }
+  }
+  return periods;
+}
+
+export function periodsForDay(
+  day: EyeExamAvailability,
+): WorkingPeriod[] {
+  if (day.periods && day.periods.length) return day.periods;
+  return inferPeriodsFromSlots(day.slots);
+}
+
+export function buildDefaultSlotsFromOpeningHours(
+  openingHours: WorkingHours[],
+  isoDate: string,
+  intervalMinutes = 30,
+): { isOpen: boolean; periods: WorkingPeriod[]; slots: EyeExamTimeSlot[] } {
+  const weekday = weekdayUtc(isoDate);
+  const hours = getOpeningHoursForWeekday(openingHours, weekday);
+  if (!hours || hours.closed) {
+    return { isOpen: false, periods: [], slots: [] };
+  }
+  const periods = buildPeriodsFromOpeningHours(hours);
+  const slots = buildSlotsFromPeriods(periods, intervalMinutes);
+  return { isOpen: slots.length > 0, periods, slots };
+}
+
+/**
+ * Ensure availability rows exist for today..leadDays from settings opening hours.
+ * Non-exception days are refreshed from opening hours so public booking stays in sync.
+ */
+export function ensureFutureAvailability(
+  availability: EyeExamAvailability[],
+  settings: StoreSettings,
+  opts?: { forceRefreshDefaults?: boolean },
+): EyeExamAvailability[] {
+  const today = todayInJerusalem();
+  const lead = Math.max(1, Math.min(365, settings.bookingLeadDays || 45));
+  const interval = settings.appointmentSlotMinutes || 30;
+  const byDate = new Map(availability.map((d) => [d.date, d]));
+  const now = new Date().toISOString();
+  const next: EyeExamAvailability[] = [];
+
+  for (let i = 0; i <= lead; i++) {
+    const date = addDaysIso(today, i);
+    const existing = byDate.get(date);
+    const generated = buildDefaultSlotsFromOpeningHours(
+      settings.openingHours || [],
+      date,
+      interval,
+    );
+
+    if (existing?.isException) {
+      next.push(existing);
+      byDate.delete(date);
+      continue;
+    }
+
+    if (existing && !opts?.forceRefreshDefaults) {
+      // Keep existing non-exception day but ensure slots exist if empty
+      if (!existing.slots.length && generated.slots.length) {
+        next.push({
+          ...existing,
+          isOpen: generated.isOpen,
+          periods: generated.periods,
+          slots: generated.slots,
+          updatedAt: now,
+        });
+      } else if (!existing.periods?.length) {
+        next.push({
+          ...existing,
+          periods: inferPeriodsFromSlots(existing.slots),
+        });
+      } else {
+        next.push(existing);
+      }
+      byDate.delete(date);
+      continue;
+    }
+
+    if (existing) {
+      next.push({
+        ...existing,
+        isOpen: generated.isOpen,
+        periods: generated.periods,
+        slots: generated.slots,
+        isException: false,
+        updatedAt: now,
+      });
+      byDate.delete(date);
+    } else if (generated.slots.length || generated.isOpen === false) {
+      // Create closed days too so admin can reopen exceptions
+      const hours = getOpeningHoursForWeekday(
+        settings.openingHours || [],
+        weekdayUtc(date),
+      );
+      if (hours && !hours.closed) {
+        next.push({
+          id: newId("exa"),
+          date,
+          isOpen: generated.isOpen,
+          periods: generated.periods,
+          slots: generated.slots,
+          isException: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+  }
+
+  // Preserve past / out-of-range days (and leftover exceptions)
+  for (const day of byDate.values()) {
+    next.push(day);
+  }
+
+  return next.sort((a, b) => a.date.localeCompare(b.date));
 }

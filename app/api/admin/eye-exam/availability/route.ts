@@ -4,18 +4,23 @@ import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   buildDefaultSlots,
+  buildSlotsFromPeriods,
   CLINIC_APPOINTMENT_TYPES,
+  ensureFutureAvailability,
   formatEyeExamDateDisplay,
   hasEyeExamSlotConflict,
+  inferPeriodsFromSlots,
   isClinicAppointmentType,
   isValidIsoDate,
   parseTimeToMinutes,
+  periodsForDay,
   todayInJerusalem,
 } from "@/lib/eye-exam";
 import type {
   ClinicAppointmentType,
   EyeExamAvailability,
   EyeExamTimeSlot,
+  WorkingPeriod,
 } from "@/lib/types";
 
 function normalizeServices(
@@ -24,12 +29,31 @@ function normalizeServices(
   if (!input) return undefined;
   const services = input.filter(isClinicAppointmentType);
   if (services.length === 0) return undefined;
-  if (
-    CLINIC_APPOINTMENT_TYPES.every((type) => services.includes(type))
-  ) {
-    return undefined; // shared
+  if (CLINIC_APPOINTMENT_TYPES.every((type) => services.includes(type))) {
+    return undefined;
   }
   return Array.from(new Set(services));
+}
+
+function normalizePeriods(
+  input?: Array<Partial<WorkingPeriod>> | null,
+): WorkingPeriod[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+  return input
+    .map((p) => {
+      const start = String(p.start || "").trim();
+      const end = String(p.end || "").trim();
+      if (parseTimeToMinutes(start) == null || parseTimeToMinutes(end) == null) {
+        return null;
+      }
+      return {
+        id: p.id || newId("period"),
+        start,
+        end,
+        enabled: p.enabled !== false,
+      } satisfies WorkingPeriod;
+    })
+    .filter(Boolean) as WorkingPeriod[];
 }
 
 export const dynamic = "force-dynamic";
@@ -38,9 +62,11 @@ function enrichDay(
   day: EyeExamAvailability,
   bookedByKey: Map<string, { name: string; id: string }>,
 ) {
+  const periods = periodsForDay(day);
   return {
     ...day,
     label: formatEyeExamDateDisplay(day.date),
+    periods,
     slots: day.slots
       .slice()
       .sort((a, b) => a.time.localeCompare(b.time))
@@ -59,6 +85,15 @@ function enrichDay(
 export async function GET() {
   try {
     await requireSession("appointments");
+
+    await updateStore((store) => {
+      store.eyeExamAvailability = ensureFutureAvailability(
+        store.eyeExamAvailability,
+        store.settings,
+      );
+      return store;
+    });
+
     const { data } = await getStore();
     const bookedByKey = new Map<string, { name: string; id: string }>();
     for (const a of data.eyeExamAppointments) {
@@ -72,15 +107,18 @@ export async function GET() {
       }
     }
 
+    const today = todayInJerusalem();
     const days = [...data.eyeExamAvailability]
+      .filter((d) => d.date >= today)
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((day) => enrichDay(day, bookedByKey));
 
     return NextResponse.json({
       days,
       slotMinutes: data.settings.appointmentSlotMinutes || 30,
+      openingHours: data.settings.openingHours,
       defaultSlotTimes: buildDefaultSlots(
-        data.settings.appointmentSlotMinutes || 30
+        data.settings.appointmentSlotMinutes || 30,
       ).map((s) => s.time),
     });
   } catch (error) {
@@ -98,6 +136,8 @@ export async function POST(request: Request) {
       copyFromDate?: string;
       enabledTimes?: string[];
       services?: string[];
+      periods?: Array<Partial<WorkingPeriod>>;
+      isException?: boolean;
     };
 
     const date = body.date?.trim() || "";
@@ -115,24 +155,27 @@ export async function POST(request: Request) {
 
       const now = new Date().toISOString();
       const interval = store.settings.appointmentSlotMinutes || 30;
-      let slots: EyeExamTimeSlot[] = buildDefaultSlots(interval);
+      let periods = normalizePeriods(body.periods);
+      let slots: EyeExamTimeSlot[] = [];
 
       if (body.copyFromDate && isValidIsoDate(body.copyFromDate)) {
         const source = store.eyeExamAvailability.find(
-          (d) => d.date === body.copyFromDate
+          (d) => d.date === body.copyFromDate,
         );
         if (source) {
-          slots = source.slots.map((slot) => ({
-            id: newId("slot"),
-            time: slot.time,
-            isEnabled: slot.isEnabled,
+          periods = periodsForDay(source).map((p) => ({
+            ...p,
+            id: newId("period"),
           }));
+          slots = buildSlotsFromPeriods(periods, interval);
         }
+      } else if (periods?.length) {
+        slots = buildSlotsFromPeriods(periods, interval);
       } else if (Array.isArray(body.times) && body.times.length) {
         const enabled = new Set(
           (body.enabledTimes || body.times).filter(
-            (t) => parseTimeToMinutes(t) != null
-          )
+            (t) => parseTimeToMinutes(t) != null,
+          ),
         );
         slots = body.times
           .filter((t) => parseTimeToMinutes(t) != null)
@@ -141,6 +184,10 @@ export async function POST(request: Request) {
             time,
             isEnabled: enabled.has(time),
           }));
+        periods = inferPeriodsFromSlots(slots);
+      } else {
+        slots = buildDefaultSlots(interval);
+        periods = inferPeriodsFromSlots(slots);
       }
 
       const services = normalizeServices(body.services);
@@ -149,6 +196,8 @@ export async function POST(request: Request) {
         date,
         isOpen: body.isOpen !== false,
         slots,
+        periods,
+        isException: body.isException !== false,
         ...(services ? { services } : {}),
         createdAt: now,
         updatedAt: now,
@@ -184,10 +233,13 @@ export async function PATCH(request: Request) {
       id?: string;
       isOpen?: boolean;
       slots?: Array<{ id?: string; time: string; isEnabled: boolean }>;
+      periods?: Array<Partial<WorkingPeriod>>;
       addTimes?: string[];
       removeTimes?: string[];
       toggleTime?: { time: string; isEnabled: boolean };
       services?: string[] | null;
+      isException?: boolean;
+      copyFromDate?: string;
     };
 
     const id = body.id?.trim();
@@ -200,7 +252,31 @@ export async function PATCH(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
 
       const current = store.eyeExamAvailability[index];
+      const interval = store.settings.appointmentSlotMinutes || 30;
       let slots = current.slots.map((s) => ({ ...s }));
+      let periods = current.periods ? current.periods.map((p) => ({ ...p })) : undefined;
+      let markException = Boolean(current.isException);
+
+      if (body.copyFromDate && isValidIsoDate(body.copyFromDate)) {
+        const source = store.eyeExamAvailability.find(
+          (d) => d.date === body.copyFromDate,
+        );
+        if (source) {
+          periods = periodsForDay(source).map((p) => ({
+            ...p,
+            id: newId("period"),
+          }));
+          slots = buildSlotsFromPeriods(periods, interval);
+          markException = true;
+        }
+      }
+
+      const normalizedPeriods = normalizePeriods(body.periods);
+      if (normalizedPeriods) {
+        periods = normalizedPeriods;
+        slots = buildSlotsFromPeriods(periods, interval);
+        markException = true;
+      }
 
       if (Array.isArray(body.slots)) {
         slots = body.slots
@@ -210,6 +286,8 @@ export async function PATCH(request: Request) {
             time: s.time,
             isEnabled: Boolean(s.isEnabled),
           }));
+        periods = inferPeriodsFromSlots(slots);
+        markException = true;
       }
 
       if (Array.isArray(body.addTimes)) {
@@ -218,23 +296,28 @@ export async function PATCH(request: Request) {
           if (slots.some((s) => s.time === time)) continue;
           slots.push({ id: newId("slot"), time, isEnabled: true });
         }
+        periods = inferPeriodsFromSlots(slots);
+        markException = true;
       }
 
       if (Array.isArray(body.removeTimes)) {
-        const remove = new Set(body.removeTimes);
-        slots = slots.filter((s) => {
-          if (!remove.has(s.time)) return true;
-          return hasEyeExamSlotConflict(
-            store.eyeExamAppointments,
-            current.date,
-            s.time
-          );
-        });
-        // If booked, keep but disable instead of removing
         for (const time of body.removeTimes) {
           const slot = slots.find((s) => s.time === time);
-          if (slot) slot.isEnabled = false;
+          if (!slot) continue;
+          if (
+            hasEyeExamSlotConflict(
+              store.eyeExamAppointments,
+              current.date,
+              time,
+            )
+          ) {
+            slot.isEnabled = false;
+          } else {
+            slots = slots.filter((s) => s.time !== time);
+          }
         }
+        periods = inferPeriodsFromSlots(slots);
+        markException = true;
       }
 
       if (body.toggleTime?.time) {
@@ -247,6 +330,16 @@ export async function PATCH(request: Request) {
             isEnabled: Boolean(body.toggleTime.isEnabled),
           });
         }
+        periods = inferPeriodsFromSlots(slots);
+        markException = true;
+      }
+
+      if (typeof body.isOpen === "boolean") {
+        markException = true;
+      }
+
+      if (typeof body.isException === "boolean") {
+        markException = body.isException;
       }
 
       slots.sort((a, b) => a.time.localeCompare(b.time));
@@ -262,6 +355,8 @@ export async function PATCH(request: Request) {
         ...current,
         isOpen: typeof body.isOpen === "boolean" ? body.isOpen : current.isOpen,
         slots,
+        periods: periods || inferPeriodsFromSlots(slots),
+        isException: markException,
         services: nextServices,
         updatedAt: new Date().toISOString(),
       };
@@ -308,11 +403,17 @@ export async function DELETE(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
       const day = store.eyeExamAvailability[index];
       const hasBookings = store.eyeExamAppointments.some(
-        (a) => a.appointmentDate === day.date && a.status !== "cancelled"
+        (a) => a.appointmentDate === day.date && a.status !== "cancelled",
       );
       if (hasBookings) throw new Error("HAS_BOOKINGS");
 
-      store.eyeExamAvailability.splice(index, 1);
+      // Soft-delete: close & mark exception instead of removing auto days
+      store.eyeExamAvailability[index] = {
+        ...day,
+        isOpen: false,
+        isException: true,
+        updatedAt: new Date().toISOString(),
+      };
       pushActivity(store, {
         actor: session.email,
         action: "delete",
@@ -332,7 +433,7 @@ export async function DELETE(request: Request) {
       if (error.message === "HAS_BOOKINGS") {
         return jsonError(
           "Cannot delete a date that has active bookings. Disable it instead.",
-          409
+          409,
         );
       }
     }
