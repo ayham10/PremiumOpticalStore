@@ -6112,6 +6112,7 @@ html[dir="rtl"] .promo-product-name {
 .promo-carousel-track {
   display: flex;
   width: 100%;
+  direction: ltr;
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
@@ -6168,7 +6169,7 @@ html[dir="rtl"] .promo-product-name {
 .promo-carousel-dots {
   position: absolute;
   left: 50%;
-  bottom: 1rem;
+  top: calc(min(72vh, 640px) - 2.25rem);
   z-index: 4;
   display: flex;
   gap: 0.45rem;
@@ -6177,6 +6178,12 @@ html[dir="rtl"] .promo-product-name {
   border-radius: 999px;
   background: rgba(11, 15, 20, 0.45);
   backdrop-filter: blur(8px);
+}
+
+@media (min-width: 768px) {
+  .promo-carousel-dots {
+    top: calc(min(78vh, 720px) - 2.25rem);
+  }
 }
 
 .promo-carousel-dot {

@@ -7,9 +7,32 @@ import {
   jsonError,
   pushActivity,
 } from "@/lib/api/helpers";
-import type { Promotion } from "@/lib/types";
+import type {
+  DiscountType,
+  Promotion,
+  PromotionScope,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
+const DISCOUNT_TYPES: DiscountType[] = ["percentage", "fixed"];
+
+function buildDiscountDisplay(
+  discountType: DiscountType | undefined,
+  discountValue: number | undefined,
+  explicit?: string
+): string {
+  const trimmed = explicit?.trim();
+  if (trimmed) return trimmed;
+  if (discountType === "percentage" && typeof discountValue === "number") {
+    return `${discountValue}%`;
+  }
+  if (discountType === "fixed" && typeof discountValue === "number") {
+    return `₪${discountValue}`;
+  }
+  return "";
+}
 
 function sanitizePromotion(
   input: Partial<Promotion>,
@@ -17,9 +40,34 @@ function sanitizePromotion(
 ): Omit<Promotion, "id" | "createdAt" | "updatedAt"> | null {
   const title = (input.title ?? existing?.title)?.trim();
   const description = (input.description ?? existing?.description)?.trim();
-  const discount = (input.discount ?? existing?.discount)?.trim();
   const startDate = (input.startDate ?? existing?.startDate)?.trim();
   const endDate = (input.endDate ?? existing?.endDate)?.trim();
+
+  const rawType = input.discountType ?? existing?.discountType;
+  const discountType: DiscountType | undefined =
+    rawType && DISCOUNT_TYPES.includes(rawType) ? rawType : undefined;
+
+  const rawValue = input.discountValue ?? existing?.discountValue;
+  const discountValue =
+    rawValue === undefined || rawValue === null || Number.isNaN(Number(rawValue))
+      ? undefined
+      : Number(rawValue);
+
+  const discount = buildDiscountDisplay(
+    discountType,
+    discountValue,
+    input.discount ?? existing?.discount
+  );
+
+  const rawScope = input.scope ?? existing?.scope ?? "all";
+  const scope: PromotionScope = SCOPES.includes(rawScope as PromotionScope)
+    ? (rawScope as PromotionScope)
+    : "all";
+
+  const rawIds = input.productIds ?? existing?.productIds ?? [];
+  const productIds = Array.isArray(rawIds)
+    ? rawIds.map(String).filter(Boolean)
+    : [];
 
   if (!title || !description || !discount || !startDate || !endDate) {
     return null;
@@ -29,6 +77,10 @@ function sanitizePromotion(
     title,
     description,
     discount,
+    discountType,
+    discountValue,
+    scope,
+    productIds: scope === "specific" ? productIds : [],
     couponCode: input.couponCode ?? existing?.couponCode,
     image: input.image ?? existing?.image,
     startDate,

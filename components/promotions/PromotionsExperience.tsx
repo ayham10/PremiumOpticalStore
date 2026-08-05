@@ -1,60 +1,63 @@
 "use client";
 
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
   Calendar,
   Gift,
-  Heart,
   Percent,
   ShieldCheck,
   Truck,
   BadgeCheck,
   RotateCcw,
 } from "lucide-react";
-import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product, Promotion } from "@/lib/types";
 
 const FALLBACK_HERO = "/images/store-hero.jpg";
+const AUTO_MS = 3500;
 
-type Countdown = {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
+export type PromoSlide = {
+  promotion: Promotion;
+  products: Product[];
 };
 
-function endOfDay(dateStr: string) {
-  const d = new Date(`${dateStr}T23:59:59`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+/** Compute discounted price from typed fields, with discount-string fallback. */
+export function computeDiscountedPrice(
+  sellingPrice: number,
+  promo: Promotion
+): number {
+  const type = promo.discountType;
+  const value = promo.discountValue;
 
-function useCountdown(endDate?: string): Countdown | null {
-  const [now, setNow] = useState(() => Date.now());
+  if (type === "percentage" && typeof value === "number" && !Number.isNaN(value)) {
+    return Math.max(0, sellingPrice * (1 - value / 100));
+  }
+  if (type === "fixed" && typeof value === "number" && !Number.isNaN(value)) {
+    return Math.max(0, sellingPrice - value);
+  }
 
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  return useMemo(() => {
-    if (!endDate) return null;
-    const end = endOfDay(endDate);
-    if (!end) return null;
-    const diff = Math.max(0, end.getTime() - now);
-    const totalSec = Math.floor(diff / 1000);
-    return {
-      days: Math.floor(totalSec / 86400),
-      hours: Math.floor((totalSec % 86400) / 3600),
-      minutes: Math.floor((totalSec % 3600) / 60),
-      seconds: totalSec % 60,
-    };
-  }, [endDate, now]);
+  const d = promo.discount || "";
+  const pct = d.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (pct) {
+    return Math.max(0, sellingPrice * (1 - parseFloat(pct[1]) / 100));
+  }
+  const fixed = d.match(/(?:₪|NIS|ILS)?\s*(\d+(?:\.\d+)?)/i);
+  if (fixed) {
+    return Math.max(0, sellingPrice - parseFloat(fixed[1]));
+  }
+  return sellingPrice;
 }
 
 function formatUntil(dateStr: string, locale: string) {
@@ -69,123 +72,246 @@ function formatUntil(dateStr: string, locale: string) {
   }
 }
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
 function promoIcon(discount: string) {
-  const lower = discount.toLowerCase();
-  if (lower.includes("free") || lower.includes("هدية") || lower.includes("%")) {
-    if (lower.includes("free") || lower.includes("هدية")) return "gift";
-  }
   if (/\d+\s*%/.test(discount) || discount.includes("%")) return "percent";
   return "gift";
 }
 
-function isRecent(createdAt: string) {
-  const created = new Date(createdAt).getTime();
-  if (Number.isNaN(created)) return false;
-  return Date.now() - created < 1000 * 60 * 60 * 24 * 21;
+function discountBadgeLabel(promo: Promotion): string {
+  if (
+    promo.discountType === "percentage" &&
+    typeof promo.discountValue === "number"
+  ) {
+    return `-${promo.discountValue}%`;
+  }
+  if (
+    promo.discountType === "fixed" &&
+    typeof promo.discountValue === "number"
+  ) {
+    return `-${formatPrice(promo.discountValue)}`;
+  }
+  return promo.discount;
 }
 
 export default function PromotionsExperience({
-  featured,
-  promotions,
-  products,
+  slides,
 }: {
-  featured: Promotion | null;
-  promotions: Promotion[];
-  products: Product[];
+  slides: PromoSlide[];
 }) {
   const { t, locale, rtl } = useLocale();
-  const countdown = useCountdown(featured?.endDate);
-  const heroImage = featured?.image || FALLBACK_HERO;
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const multi = slides.length > 1;
+
+  const goTo = useCallback(
+    (next: number) => {
+      if (!slides.length) return;
+      const len = slides.length;
+      setIndex(((next % len) + len) % len);
+    },
+    [slides.length]
+  );
+
+  const pause = useCallback(() => setPaused(true), []);
+
+  useEffect(() => {
+    if (!multi || paused) return;
+    const id = window.setInterval(() => {
+      setIndex((i) => (i + 1) % slides.length);
+    }, AUTO_MS);
+    return () => window.clearInterval(id);
+  }, [multi, paused, slides.length]);
+
+  function onTouchStart(e: ReactTouchEvent) {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+    pause();
+  }
+
+  function onTouchEnd(e: ReactTouchEvent) {
+    if (touchStartX.current == null || !multi) return;
+    const endX = e.changedTouches[0]?.clientX ?? touchStartX.current;
+    const delta = endX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 48) return;
+    const forward = rtl ? delta > 0 : delta < 0;
+    goTo(index + (forward ? 1 : -1));
+  }
+
+  function onPointerDown(e: ReactPointerEvent) {
+    if (e.pointerType === "touch") return;
+    touchStartX.current = e.clientX;
+    pause();
+  }
+
+  function onPointerUp(e: ReactPointerEvent) {
+    if (e.pointerType === "touch") return;
+    if (touchStartX.current == null || !multi) return;
+    const delta = e.clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 48) return;
+    const forward = rtl ? delta > 0 : delta < 0;
+    goTo(index + (forward ? 1 : -1));
+  }
+
+  if (slides.length === 0) {
+    return (
+      <div className="promo-page">
+        <ScrollRestore />
+        <section className="promo-section wrap">
+          <p className="promo-empty">{t("offersPage.empty")}</p>
+        </section>
+      </div>
+    );
+  }
+
+  const current = slides[index];
+  const promo = current.promotion;
 
   return (
     <div className="promo-page">
       <ScrollRestore />
 
-      <section className="promo-hero" aria-label={featured?.title || t("offersPage.title")}>
-        <Image
-          src={heroImage}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover promo-hero-image"
-        />
-        <span className="promo-hero-veil" aria-hidden />
-        <div className="promo-hero-copy wrap">
-          <p className="promo-hero-eyebrow">{t("offersPage.limitedTime")}</p>
-          <h1 className="promo-hero-title">
-            {featured?.discount || t("offersPage.title")}
-          </h1>
-          <p className="promo-hero-lead">
-            {featured?.title || t("offersPage.lead")}
-          </p>
-
-          {countdown ? (
-            <div className="promo-countdown" aria-live="polite">
-              <p className="promo-countdown-label">{t("offersPage.endsIn")}</p>
-              <div className="promo-countdown-grid">
-                {(
-                  [
-                    ["days", countdown.days],
-                    ["hours", countdown.hours],
-                    ["minutes", countdown.minutes],
-                    ["seconds", countdown.seconds],
-                  ] as const
-                ).map(([key, value]) => (
-                  <div key={key} className="promo-countdown-cell">
-                    <strong>{pad(value)}</strong>
-                    <span>{t(`offersPage.${key}`)}</span>
-                  </div>
-                ))}
+      <section
+        className="promo-carousel"
+        aria-roledescription="carousel"
+        aria-label={t("offersPage.activeOffers")}
+        onMouseEnter={pause}
+        onFocusCapture={pause}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+      >
+        <div
+          className="promo-carousel-track"
+          style={{ transform: `translateX(${-index * 100}%)` }}
+        >
+          {slides.map((slide) => (
+            <article
+              key={slide.promotion.id}
+              className="promo-carousel-slide"
+              aria-roledescription="slide"
+            >
+              <div className="promo-slide-hero">
+                <Image
+                  src={slide.promotion.image || FALLBACK_HERO}
+                  alt=""
+                  fill
+                  priority={slide.promotion.id === promo.id}
+                  sizes="100vw"
+                  className="object-cover promo-hero-image"
+                />
+                <span className="promo-hero-veil" aria-hidden />
+                <div className="promo-hero-copy wrap">
+                  <p className="promo-hero-eyebrow">
+                    {t("offersPage.limitedTime")}
+                  </p>
+                  <h1 className="promo-hero-title">
+                    {slide.promotion.discount || t("offersPage.title")}
+                  </h1>
+                  <p className="promo-hero-lead">
+                    {slide.promotion.title || t("offersPage.lead")}
+                  </p>
+                  {slide.promotion.description ? (
+                    <p className="promo-slide-desc">
+                      {slide.promotion.description}
+                    </p>
+                  ) : null}
+                  {slide.promotion.couponCode ? (
+                    <p className="promo-slide-code">
+                      {t("offersPage.code")}:{" "}
+                      <strong>{slide.promotion.couponCode}</strong>
+                    </p>
+                  ) : null}
+                  <p className="promo-card-until promo-slide-until">
+                    <Calendar size={13} strokeWidth={1.7} aria-hidden />
+                    <span>
+                      {t("offersPage.until")}{" "}
+                      {formatUntil(slide.promotion.endDate, locale)}
+                    </span>
+                  </p>
+                  <Link href="/shop" className="promo-hero-cta">
+                    <span>{t("offersPage.shopOffer")}</span>
+                    <ArrowLeft
+                      size={16}
+                      strokeWidth={1.8}
+                      className={rtl ? undefined : "promo-hero-cta-icon-ltr"}
+                    />
+                  </Link>
+                </div>
               </div>
-            </div>
-          ) : null}
 
-          <Link href="/shop" className="promo-hero-cta">
-            <span>{t("offersPage.shopOffer")}</span>
-            <ArrowLeft
-              size={16}
-              strokeWidth={1.8}
-              className={rtl ? undefined : "promo-hero-cta-icon-ltr"}
-            />
-          </Link>
+              {slide.products.length > 0 ? (
+                <div className="promo-slide-products wrap">
+                  <header className="promo-section-head">
+                    <span className="promo-section-rule" aria-hidden />
+                    <h2>{t("offersPage.offerProducts")}</h2>
+                    <span className="promo-section-rule" aria-hidden />
+                  </header>
+                  <div className="promo-product-rail" role="list">
+                    {slide.products.map((product) => (
+                      <PromoProductCard
+                        key={product.id}
+                        product={product}
+                        promo={slide.promotion}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </article>
+          ))}
         </div>
+
+        {multi ? (
+          <div className="promo-carousel-dots" role="tablist">
+            {slides.map((slide, i) => (
+              <button
+                key={slide.promotion.id}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={slide.promotion.title}
+                className={`promo-carousel-dot${i === index ? " is-active" : ""}`}
+                onClick={() => {
+                  pause();
+                  goTo(i);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
       </section>
 
-      <section className="promo-section wrap">
-        <header className="promo-section-head">
-          <span className="promo-section-rule" aria-hidden />
-          <h2>{t("offersPage.activeOffers")}</h2>
-          <span className="promo-section-rule" aria-hidden />
-        </header>
-
-        {promotions.length === 0 ? (
-          <p className="promo-empty">{t("offersPage.empty")}</p>
-        ) : (
+      {slides.length > 1 ? (
+        <section className="promo-section wrap">
+          <header className="promo-section-head">
+            <span className="promo-section-rule" aria-hidden />
+            <h2>{t("offersPage.activeOffers")}</h2>
+            <span className="promo-section-rule" aria-hidden />
+          </header>
           <div className="promo-card-rail">
-            {promotions.map((promo, index) => {
-              const icon = promoIcon(promo.discount);
-              const highlighted = featured?.id === promo.id || index === 0;
+            {slides.map((slide, i) => {
+              const icon = promoIcon(slide.promotion.discount);
               return (
-                <article
-                  key={promo.id}
-                  className={`promo-card${highlighted ? " is-featured" : ""}`}
+                <button
+                  key={slide.promotion.id}
+                  type="button"
+                  className={`promo-card${i === index ? " is-featured" : ""}`}
+                  onClick={() => {
+                    pause();
+                    goTo(i);
+                  }}
                 >
                   <div className="promo-card-media">
                     <Image
-                      src={promo.image || FALLBACK_HERO}
-                      alt={promo.title}
+                      src={slide.promotion.image || FALLBACK_HERO}
+                      alt={slide.promotion.title}
                       fill
                       sizes="(max-width: 767px) 70vw, 280px"
                       className="object-cover"
                     />
-                    {isRecent(promo.createdAt) ? (
-                      <span className="promo-card-new">{t("offersPage.newBadge")}</span>
-                    ) : null}
                     <span className="promo-card-badge" aria-hidden>
                       {icon === "percent" ? (
                         <Percent size={14} strokeWidth={1.8} />
@@ -195,39 +321,14 @@ export default function PromotionsExperience({
                     </span>
                   </div>
                   <div className="promo-card-body">
-                    <h3>{promo.title}</h3>
-                    <p className="promo-card-discount">{promo.discount}</p>
-                    {promo.couponCode ? (
-                      <p className="promo-card-code">
-                        {t("offersPage.code")}: <strong>{promo.couponCode}</strong>
-                      </p>
-                    ) : null}
-                    <p className="promo-card-until">
-                      <Calendar size={13} strokeWidth={1.7} aria-hidden />
-                      <span>
-                        {t("offersPage.until")} {formatUntil(promo.endDate, locale)}
-                      </span>
+                    <h3>{slide.promotion.title}</h3>
+                    <p className="promo-card-discount">
+                      {slide.promotion.discount}
                     </p>
                   </div>
-                </article>
+                </button>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      {products.length > 0 ? (
-        <section className="promo-section wrap">
-          <header className="promo-section-head">
-            <span className="promo-section-rule" aria-hidden />
-            <h2>{t("offersPage.offerProducts")}</h2>
-            <span className="promo-section-rule" aria-hidden />
-          </header>
-
-          <div className="promo-product-rail" role="list">
-            {products.map((product) => (
-              <PromoProductCard key={product.id} product={product} />
-            ))}
           </div>
         </section>
       ) : null}
@@ -254,41 +355,24 @@ export default function PromotionsExperience({
   );
 }
 
-function PromoProductCard({ product }: { product: Product }) {
+function PromoProductCard({
+  product,
+  promo,
+}: {
+  product: Product;
+  promo: Promotion;
+}) {
   const { t } = useLocale();
   const image = product.images[0] || "/images/placeholder-frame.svg";
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("oyon-wishlist");
-      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-      setSaved(ids.includes(product.id));
-    } catch {
-      /* ignore */
-    }
-  }, [product.id]);
-
-  function toggleWish(e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      const raw = localStorage.getItem("oyon-wishlist");
-      const ids: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-      const next = saved
-        ? ids.filter((id) => id !== product.id)
-        : [...ids, product.id];
-      localStorage.setItem("oyon-wishlist", JSON.stringify(next));
-      setSaved(!saved);
-    } catch {
-      setSaved((v) => !v);
-    }
-  }
+  const original = product.sellingPrice;
+  const discounted = computeDiscountedPrice(original, promo);
+  const hasDiscount = discounted < original - 0.001;
+  const badge = discountBadgeLabel(promo);
 
   return (
     <article className="promo-product-card" role="listitem">
       <div className="promo-product-media">
-        <SaveReturnLink
+        <Link
           href={`/product/${product.slug}`}
           className="promo-product-link"
           aria-label={product.name}
@@ -300,26 +384,30 @@ function PromoProductCard({ product }: { product: Product }) {
             sizes="(max-width: 767px) 42vw, 220px"
             className="object-cover"
           />
-        </SaveReturnLink>
-        {product.featured ? (
-          <span className="promo-product-tag">★</span>
+        </Link>
+        {hasDiscount ? (
+          <span className="promo-product-discount-badge">{badge}</span>
         ) : null}
-        <button
-          type="button"
-          className={`promo-product-wish${saved ? " is-active" : ""}`}
-          aria-label={t("shop.wishlist")}
-          aria-pressed={saved}
-          onClick={toggleWish}
-        >
-          <Heart size={14} strokeWidth={1.6} fill={saved ? "currentColor" : "none"} />
-        </button>
       </div>
-      <SaveReturnLink href={`/product/${product.slug}`} className="promo-product-name">
+      <Link href={`/product/${product.slug}`} className="promo-product-name">
         {product.name}
-      </SaveReturnLink>
-      <strong className="promo-product-price">
-        {formatPrice(product.sellingPrice)}
-      </strong>
+      </Link>
+      <div className="promo-product-prices">
+        {hasDiscount ? (
+          <>
+            <span className="promo-product-price-was" aria-label={t("offersPage.wasPrice")}>
+              {formatPrice(original)}
+            </span>
+            <strong className="promo-product-price promo-product-price-now">
+              {formatPrice(discounted)}
+            </strong>
+          </>
+        ) : (
+          <strong className="promo-product-price">
+            {formatPrice(original)}
+          </strong>
+        )}
+      </div>
     </article>
   );
 }
