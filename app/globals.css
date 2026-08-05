@@ -6102,6 +6102,140 @@ html[dir="rtl"] .promo-product-name {
   text-align: start;
 }
 
+/* ========== Promo carousel / product slider ========== */
+.promo-carousel {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.promo-carousel-track {
+  display: flex;
+  width: 100%;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.promo-carousel-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+}
+
+.promo-slide-hero {
+  position: relative;
+  min-height: min(72vh, 640px);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background: #0b0f14;
+}
+
+@media (min-width: 768px) {
+  .promo-slide-hero {
+    min-height: min(78vh, 720px);
+  }
+}
+
+.promo-slide-desc {
+  margin: 0.65rem 0 0;
+  max-width: 28rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.promo-slide-code {
+  margin: 0.75rem 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.9rem;
+}
+
+.promo-slide-code strong {
+  color: var(--accent, #d4af6a);
+  letter-spacing: 0.04em;
+}
+
+.promo-slide-until {
+  margin-top: 0.85rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.promo-slide-products {
+  padding-block: 1.75rem 0.5rem;
+}
+
+.promo-carousel-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 4;
+  display: flex;
+  gap: 0.45rem;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(11, 15, 20, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+.promo-carousel-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.35);
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.promo-carousel-dot.is-active {
+  width: 1.35rem;
+  background: var(--accent, #d4af6a);
+}
+
+.promo-product-prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.promo-product-price-was {
+  font-size: 0.82rem;
+  color: var(--muted, #8a9199);
+  text-decoration: line-through;
+}
+
+.promo-product-price-now {
+  color: var(--accent, #d4af6a);
+}
+
+.promo-product-discount-badge {
+  position: absolute;
+  top: 0.55rem;
+  inset-inline-start: 0.55rem;
+  z-index: 2;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(11, 15, 20, 0.82);
+  color: var(--accent, #d4af6a);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(212, 175, 106, 0.45);
+}
+
+button.promo-card {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
 /* ========== Admin Working Hours (availability) panel ========== */
 .admin-wh-shell {
   background: var(--admin-card, #131a22);
@@ -6266,6 +6400,14 @@ html[dir="rtl"] .promo-product-name {
 
 .admin-wh-day-dot.is-none {
   background: #77818a;
+}
+
+.admin-wh-day-dot.is-exception {
+  background: #d4af6a;
+}
+
+.admin-wh-day-cell.is-exception-day:not(.is-selected) {
+  border-color: rgba(212, 175, 106, 0.22);
 }
 
 .admin-wh-legend {
@@ -6459,9 +6601,48 @@ html[dir="rtl"] .promo-product-name {
   background: rgba(224, 122, 122, 0.1);
 }
 
+.admin-wh-action.is-primary {
+  border-color: rgba(212, 175, 106, 0.55);
+  background: rgba(212, 175, 106, 0.12);
+  color: var(--accent);
+}
+
+.admin-wh-action.is-primary.is-dirty {
+  border-color: rgba(212, 175, 106, 0.85);
+  background: rgba(212, 175, 106, 0.22);
+}
+
+.admin-wh-action.is-primary:hover:not(:disabled) {
+  border-color: rgba(212, 175, 106, 0.9);
+  background: rgba(212, 175, 106, 0.28);
+  color: var(--accent);
+}
+
 .admin-wh-action:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.admin-wh-day-heading-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.admin-wh-exception-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 106, 0.4);
+  background: rgba(212, 175, 106, 0.1);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .admin-wh-banner {
@@ -6745,6 +6926,223 @@ html[dir="rtl"] .promo-product-name {
   flex-shrink: 0;
   margin-top: 0.1rem;
   color: var(--accent);
+}
+
+.admin-wh-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.admin-wh-period-head {
+  display: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem 2.5rem;
+  gap: 0.55rem;
+  padding: 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-wh-period-head-action {
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .admin-wh-period-head {
+    display: grid;
+  }
+}
+
+.admin-wh-period-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  align-items: center;
+}
+
+@media (min-width: 640px) {
+  .admin-wh-period-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem 2.5rem;
+    gap: 0.55rem;
+    padding: 0.55rem 0.65rem;
+  }
+}
+
+.admin-wh-period-row.is-disabled {
+  opacity: 0.62;
+}
+
+.admin-wh-period-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.admin-wh-period-mobile-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (min-width: 640px) {
+  .admin-wh-period-mobile-label {
+    display: none;
+  }
+}
+
+.admin-wh-period-input {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-wh-period-input:focus {
+  outline: none;
+  border-color: rgba(212, 175, 106, 0.7);
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.25);
+}
+
+.admin-wh-period-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-wh-period-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+@media (min-width: 640px) {
+  .admin-wh-period-toggle {
+    justify-content: center;
+  }
+}
+
+.admin-wh-period-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.admin-wh-period-switch {
+  position: relative;
+  display: inline-block;
+  width: 2.4rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.admin-wh-period-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: #c5cdd6;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.admin-wh-period-toggle input:checked + .admin-wh-period-switch {
+  border-color: rgba(212, 175, 106, 0.65);
+  background: rgba(212, 175, 106, 0.28);
+}
+
+.admin-wh-period-toggle input:checked + .admin-wh-period-switch::after {
+  transform: translateX(1.05rem);
+  background: var(--accent);
+}
+
+html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch::after {
+  transform: translateX(-1.05rem);
+}
+
+.admin-wh-period-delete {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  justify-self: end;
+  border-radius: 9px;
+  border: 1px solid rgba(224, 122, 122, 0.35);
+  background: rgba(224, 122, 122, 0.08);
+  color: #e07a7a;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .admin-wh-period-delete {
+    justify-self: center;
+  }
+}
+
+.admin-wh-period-delete:hover:not(:disabled) {
+  border-color: rgba(224, 122, 122, 0.7);
+  background: rgba(224, 122, 122, 0.16);
+}
+
+.admin-wh-period-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-wh-periods-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 0.85rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(212, 175, 106, 0.35);
+  background: rgba(212, 175, 106, 0.04);
+}
+
+.admin-wh-periods-empty p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.admin-wh-booked-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: rgba(224, 122, 122, 0.92);
+}
+
+.admin-wh-booked-hint svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 
 @media (max-width: 959px) {

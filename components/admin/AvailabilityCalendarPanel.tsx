@@ -17,14 +17,14 @@ import {
   Ban,
   CalendarDays,
   CalendarPlus,
-  Check,
   ChevronLeft,
   ChevronRight,
   Clock,
   Copy,
   Info,
-  MoreHorizontal,
   Plus,
+  Save,
+  Trash2,
   X,
 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -40,12 +40,21 @@ export type AvailabilitySlot = {
   bookedId?: string;
 };
 
+export type AvailabilityPeriod = {
+  id: string;
+  start: string;
+  end: string;
+  enabled: boolean;
+};
+
 export type AvailabilityDay = {
   id: string;
   date: string;
   label: string;
   isOpen: boolean;
   slots: AvailabilitySlot[];
+  periods?: AvailabilityPeriod[];
+  isException?: boolean;
   services?: ClinicAppointmentType[];
 };
 
@@ -71,6 +80,13 @@ type Props = {
   onDeleteDay: (id: string) => Promise<void>;
 };
 
+type DraftPeriod = {
+  id: string;
+  start: string;
+  end: string;
+  enabled: boolean;
+};
+
 function ymd(d: Date) {
   return format(d, "yyyy-MM-dd");
 }
@@ -78,6 +94,62 @@ function ymd(d: Date) {
 function parseYmd(value: string) {
   const [y, m, d] = value.split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+function newPeriodId() {
+  return `period_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function clonePeriods(periods: AvailabilityPeriod[]): DraftPeriod[] {
+  return periods.map((p) => ({
+    id: p.id || newPeriodId(),
+    start: p.start,
+    end: p.end,
+    enabled: p.enabled !== false,
+  }));
+}
+
+function defaultPeriodFromTimes(defaultTimes: string[]): DraftPeriod {
+  const sorted = [...defaultTimes].sort();
+  const start = sorted[0] || "09:00";
+  const end = sorted[Math.min(sorted.length - 1, 8)] || "13:00";
+  return {
+    id: newPeriodId(),
+    start,
+    end: end > start ? end : "13:00",
+    enabled: true,
+  };
+}
+
+function periodsEqual(a: DraftPeriod[], b: DraftPeriod[]) {
+  if (a.length !== b.length) return false;
+  return a.every((row, i) => {
+    const other = b[i];
+    return (
+      row.start === other.start &&
+      row.end === other.end &&
+      row.enabled === other.enabled
+    );
+  });
+}
+
+function dayPeriods(day: AvailabilityDay | null | undefined): DraftPeriod[] {
+  if (!day) return [];
+  if (day.periods?.length) return clonePeriods(day.periods);
+  // Fallback: infer a single span from enabled slots when periods are missing
+  const enabled = day.slots
+    .filter((s) => s.isEnabled)
+    .map((s) => s.time)
+    .sort();
+  if (!enabled.length) return [];
+  return [
+    {
+      id: newPeriodId(),
+      start: enabled[0],
+      end: enabled[enabled.length - 1],
+      enabled: true,
+    },
+  ];
 }
 
 export default function AvailabilityCalendarPanel({
@@ -88,27 +160,16 @@ export default function AvailabilityCalendarPanel({
   onSelectDayId,
   onPatchDay,
   onCreateDay,
-  onDeleteDay,
 }: Props) {
   const { t, locale } = useLocale();
   const dateLocale = locale === "ar" ? ar : locale === "he" ? he : enUS;
 
   const [monthCursor, setMonthCursor] = useState(() => new Date());
   const [pickedDate, setPickedDate] = useState("");
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
-  const [addTimeOpen, setAddTimeOpen] = useState(false);
-  const [newTime, setNewTime] = useState("09:00");
-  const [activeSlotTime, setActiveSlotTime] = useState<string | null>(null);
-  const [bookedSlot, setBookedSlot] = useState<AvailabilitySlot | null>(null);
-
-  const [addDate, setAddDate] = useState("");
-  const [addCopyFrom, setAddCopyFrom] = useState("");
-  const [addServices, setAddServices] = useState<ClinicAppointmentType[]>([
-    ...ALL_SERVICES,
-  ]);
   const [copyFromDate, setCopyFromDate] = useState("");
+  const [draftPeriods, setDraftPeriods] = useState<DraftPeriod[]>([]);
+  const [creatingDate, setCreatingDate] = useState<string | null>(null);
 
   const dayByDate = useMemo(() => {
     const map = new Map<string, AvailabilityDay>();
@@ -125,16 +186,21 @@ export default function AvailabilityCalendarPanel({
     return null;
   }, [days, selectedId, pickedDate, dayByDate]);
 
+  const periodsSyncKey = selected
+    ? `${selected.id}|${selected.isOpen}|${(selected.periods || [])
+        .map((p) => `${p.id}:${p.start}-${p.end}:${p.enabled}`)
+        .join(",")}`
+    : "";
+
   useEffect(() => {
     if (selected) {
       setPickedDate(selected.date);
       setMonthCursor(parseYmd(selected.date));
+      setDraftPeriods(dayPeriods(selected));
+    } else {
+      setDraftPeriods([]);
     }
-  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    setActiveSlotTime(null);
-  }, [selected?.id]);
+  }, [periodsSyncKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 0 });
@@ -142,88 +208,76 @@ export default function AvailabilityCalendarPanel({
     return eachDayOfInterval({ start, end });
   }, [monthCursor]);
 
-  const activeServices = useMemo(() => {
-    if (!selected) return [...ALL_SERVICES];
-    if (!selected.services || selected.services.length === 0) {
-      return [...ALL_SERVICES];
-    }
-    return selected.services;
-  }, [selected]);
+  const dirty = useMemo(() => {
+    if (!selected) return false;
+    return !periodsEqual(draftPeriods, dayPeriods(selected));
+  }, [draftPeriods, selected]);
 
-  const isShared =
-    !selected?.services ||
-    selected.services.length === 0 ||
-    ALL_SERVICES.every((s) => activeServices.includes(s));
+  const bookedSlots = useMemo(
+    () => (selected?.slots || []).filter((s) => s.isBooked),
+    [selected],
+  );
 
-  function selectCalendarDate(day: Date) {
+  async function selectCalendarDate(day: Date) {
     const key = ymd(day);
     setPickedDate(key);
     const existing = dayByDate.get(key);
     if (existing) {
       onSelectDayId?.(existing.id);
-    } else {
-      onSelectDayId?.("");
-      setAddDate(key);
-      setAddOpen(true);
+      return;
     }
+    onSelectDayId?.("");
+    if (busy || creatingDate === key) return;
+    setCreatingDate(key);
+    try {
+      await onCreateDay({
+        date: key,
+        services: [...ALL_SERVICES],
+      });
+    } finally {
+      setCreatingDate(null);
+    }
+  }
+
+  function findPreviousDayWithPeriods(date: string): AvailabilityDay | null {
+    const earlier = days
+      .filter((d) => d.date < date)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    for (const day of earlier) {
+      const periods = dayPeriods(day);
+      if (periods.length > 0) return day;
+    }
+    return null;
+  }
+
+  async function handleCopyPreviousDay() {
+    if (!selected || busy) return;
+    const source = findPreviousDayWithPeriods(selected.date);
+    if (!source) {
+      window.alert(t("admin.availability.noPreviousDay"));
+      return;
+    }
+    if (
+      !window.confirm(
+        t("admin.availability.overwriteConfirm", {
+          target: selected.label,
+          source: source.label,
+        }),
+      )
+    ) {
+      return;
+    }
+    await onPatchDay({
+      id: selected.id,
+      copyFromDate: source.date,
+      isException: true,
+    });
   }
 
   function openCopyModal() {
-    if (!selected) {
-      setAddDate(pickedDate || "");
-      setAddOpen(true);
-      return;
-    }
+    if (!selected) return;
     setCopyFromDate("");
     setCopyOpen(true);
-  }
-
-  function openAddTimeModal() {
-    if (!selected) {
-      setAddDate(pickedDate || "");
-      setAddOpen(true);
-      return;
-    }
-    setNewTime("09:00");
-    setAddTimeOpen(true);
-  }
-
-  async function handleAddTimeConfirm() {
-    if (!selected || !newTime || busy) return;
-    const existing = selected.slots.find((s) => s.time === newTime);
-    if (existing) {
-      await onPatchDay({
-        toggleTime: { time: newTime, isEnabled: true },
-      });
-    } else {
-      await onPatchDay({
-        slots: [
-          ...selected.slots.map((s) => ({
-            time: s.time,
-            isEnabled: s.isEnabled,
-          })),
-          { time: newTime, isEnabled: true },
-        ],
-      });
-    }
-    setActiveSlotTime(newTime);
-    setAddTimeOpen(false);
-  }
-
-  async function toggleService(service: ClinicAppointmentType) {
-    if (!selected || busy) return;
-    const current = activeServices;
-    const next = current.includes(service)
-      ? current.filter((s) => s !== service)
-      : [...current, service];
-    if (next.length === 0) return;
-    const shared = ALL_SERVICES.every((s) => next.includes(s));
-    await onPatchDay({ services: shared ? null : next });
-  }
-
-  async function selectAllServices() {
-    if (!selected || busy) return;
-    await onPatchDay({ services: null });
   }
 
   async function handleCopyConfirm() {
@@ -241,43 +295,58 @@ export default function AvailabilityCalendarPanel({
       return;
     }
     await onPatchDay({
-      isOpen: source.isOpen,
-      services:
-        !source.services || source.services.length === 0
-          ? null
-          : source.services,
-      slots: source.slots.map((s) => ({
-        time: s.time,
-        isEnabled: s.isEnabled,
-      })),
+      id: selected.id,
+      copyFromDate: source.date,
+      isException: true,
     });
     setCopyOpen(false);
-    setMoreOpen(false);
   }
 
-  async function handleAddConfirm() {
-    if (!addDate || addServices.length === 0 || busy) return;
-    await onCreateDay({
-      date: addDate,
-      services: addServices,
-      copyFromDate: addCopyFrom || undefined,
+  function addPeriod() {
+    setDraftPeriods((prev) => [...prev, defaultPeriodFromTimes(defaultTimes)]);
+  }
+
+  function updatePeriod(
+    id: string,
+    patch: Partial<Pick<DraftPeriod, "start" | "end" | "enabled">>,
+  ) {
+    setDraftPeriods((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+  }
+
+  function removePeriod(id: string) {
+    setDraftPeriods((prev) => prev.filter((row) => row.id !== id));
+  }
+
+  async function handleSavePeriods() {
+    if (!selected || busy) return;
+    await onPatchDay({
+      id: selected.id,
+      periods: draftPeriods.map((p) => ({
+        id: p.id,
+        start: p.start,
+        end: p.end,
+        enabled: p.enabled,
+      })),
+      isException: true,
     });
-    setAddOpen(false);
-    setAddDate("");
-    setAddCopyFrom("");
-    setAddServices([...ALL_SERVICES]);
   }
 
-  function slotStatusLabel(booked: boolean, available: boolean) {
-    if (booked) return t("admin.availability.booked");
-    if (available) return t("admin.availability.available");
-    return t("admin.availability.unavailable");
+  async function handleToggleClosed() {
+    if (!selected || busy) return;
+    await onPatchDay({
+      id: selected.id,
+      isOpen: !selected.isOpen,
+      isException: true,
+    });
   }
 
   function dayDotClass(row: AvailabilityDay | undefined) {
     if (!row) return "is-none";
     if (!row.isOpen) return "is-closed";
     if (row.slots.some((s) => s.isBooked)) return "is-limited";
+    if (row.isException) return "is-exception";
     return "is-open";
   }
 
@@ -286,7 +355,6 @@ export default function AvailabilityCalendarPanel({
   return (
     <div className="admin-wh-shell">
       <div className="admin-wh-grid">
-        {/* Compact calendar */}
         <section className="admin-wh-calendar">
           <div className="admin-wh-calendar-head">
             <h3 className="admin-wh-calendar-title">
@@ -333,11 +401,13 @@ export default function AvailabilityCalendarPanel({
                 <button
                   key={key}
                   type="button"
-                  onClick={() => selectCalendarDate(day)}
+                  onClick={() => void selectCalendarDate(day)}
+                  disabled={busy && creatingDate === key}
                   className={cn(
                     "admin-wh-day-cell",
                     !inMonth && "is-outside",
                     selectedDay && "is-selected",
+                    row?.isException && "is-exception-day",
                   )}
                 >
                   <span className="admin-wh-day-num">{format(day, "d")}</span>
@@ -353,6 +423,10 @@ export default function AvailabilityCalendarPanel({
               {t("admin.availability.available")}
             </span>
             <span>
+              <i className="admin-wh-day-dot is-exception" />
+              {t("admin.availability.legendException")}
+            </span>
+            <span>
               <i className="admin-wh-day-dot is-limited" />
               {t("admin.availability.legendLimited")}
             </span>
@@ -360,24 +434,9 @@ export default function AvailabilityCalendarPanel({
               <i className="admin-wh-day-dot is-closed" />
               {t("admin.availability.closed")}
             </span>
-            <span>
-              <i className="admin-wh-day-dot is-none" />
-              {t("admin.availability.unavailable")}
-            </span>
           </div>
-
-          <button
-            type="button"
-            className="admin-wh-copy-footer"
-            disabled={busy}
-            onClick={openCopyModal}
-          >
-            <Copy size={15} />
-            {t("admin.availability.copyPrevious")}
-          </button>
         </section>
 
-        {/* Day / slots panel */}
         <section className="admin-wh-day">
           {!selected ? (
             <div className="admin-wh-empty">
@@ -394,68 +453,14 @@ export default function AvailabilityCalendarPanel({
               <div className="admin-wh-day-header">
                 <div className="admin-wh-day-heading">
                   <CalendarDays size={22} className="admin-wh-gold-icon" />
-                  <h2 className="admin-wh-day-label">{selected.label}</h2>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="admin-wh-more-btn"
-                    onClick={() => setMoreOpen((v) => !v)}
-                    aria-expanded={moreOpen}
-                    aria-label={t("admin.availability.more")}
-                  >
-                    <MoreHorizontal size={18} />
-                  </button>
-                  {moreOpen ? (
-                    <>
-                      <button
-                        type="button"
-                        className="fixed inset-0 z-20 cursor-default"
-                        aria-label={t("common.close")}
-                        onClick={() => setMoreOpen(false)}
-                      />
-                      <div className="admin-wh-more-menu">
-                        <MenuButton
-                          disabled={busy}
-                          onClick={() => {
-                            setMoreOpen(false);
-                            void onPatchDay({
-                              slots: defaultTimes.map((time) => ({
-                                time,
-                                isEnabled: true,
-                              })),
-                            });
-                          }}
-                        >
-                          {t("admin.availability.enableAll")}
-                        </MenuButton>
-                        <MenuButton
-                          disabled={busy}
-                          onClick={() => {
-                            setMoreOpen(false);
-                            void onPatchDay({
-                              slots: selected.slots.map((s) => ({
-                                time: s.time,
-                                isEnabled: false,
-                              })),
-                            });
-                          }}
-                        >
-                          {t("admin.availability.disableAll")}
-                        </MenuButton>
-                        <MenuButton
-                          danger
-                          disabled={busy}
-                          onClick={() => {
-                            setMoreOpen(false);
-                            void onDeleteDay(selected.id);
-                          }}
-                        >
-                          {t("admin.availability.deleteDate")}
-                        </MenuButton>
-                      </div>
-                    </>
-                  ) : null}
+                  <div className="admin-wh-day-heading-text">
+                    <h2 className="admin-wh-day-label">{selected.label}</h2>
+                    {selected.isException ? (
+                      <span className="admin-wh-exception-badge">
+                        {t("admin.availability.exceptionBadge")}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -464,16 +469,25 @@ export default function AvailabilityCalendarPanel({
                   type="button"
                   className="admin-wh-action"
                   disabled={busy}
-                  onClick={openCopyModal}
+                  onClick={() => void handleCopyPreviousDay()}
                 >
                   <Copy size={15} />
-                  {t("admin.availability.copyPrevious")}
+                  {t("admin.availability.copyPreviousDay")}
                 </button>
                 <button
                   type="button"
                   className="admin-wh-action"
                   disabled={busy}
-                  onClick={openAddTimeModal}
+                  onClick={openCopyModal}
+                >
+                  <Copy size={15} />
+                  {t("admin.availability.copyFromAnother")}
+                </button>
+                <button
+                  type="button"
+                  className="admin-wh-action"
+                  disabled={busy || !selected.isOpen}
+                  onClick={addPeriod}
                 >
                   <Plus size={15} />
                   {t("admin.availability.addTime")}
@@ -485,14 +499,21 @@ export default function AvailabilityCalendarPanel({
                     selected.isOpen && "is-danger",
                   )}
                   disabled={busy}
-                  onClick={() =>
-                    void onPatchDay({ isOpen: !selected.isOpen })
-                  }
+                  onClick={() => void handleToggleClosed()}
                 >
                   <Ban size={15} />
                   {selected.isOpen
                     ? t("admin.availability.markClosed")
                     : t("admin.availability.markOpen")}
+                </button>
+                <button
+                  type="button"
+                  className={cn("admin-wh-action", "is-primary", dirty && "is-dirty")}
+                  disabled={busy || !dirty || !selected.isOpen}
+                  onClick={() => void handleSavePeriods()}
+                >
+                  <Save size={15} />
+                  {t("admin.availability.saveChanges")}
                 </button>
               </div>
 
@@ -509,277 +530,135 @@ export default function AvailabilityCalendarPanel({
                 </strong>
                 <span>
                   {selected.isOpen
-                    ? t("admin.availability.dayOpenLead")
+                    ? t("admin.availability.scheduleLead")
                     : t("admin.availability.dayClosedLead")}
                 </span>
               </div>
 
-              <div className="admin-wh-services">
-                <div className="admin-wh-services-head">
-                  <span>{t("admin.availability.services")}</span>
-                  <button
-                    type="button"
-                    disabled={busy || isShared}
-                    onClick={() => void selectAllServices()}
-                  >
-                    {t("admin.availability.selectAllShared")}
-                  </button>
-                </div>
-                <div className="admin-wh-service-chips">
-                  {ALL_SERVICES.map((service) => {
-                    const active = activeServices.includes(service);
-                    return (
-                      <button
-                        key={service}
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void toggleService(service)}
-                        className={cn(
-                          "admin-wh-service-chip",
-                          active && "is-active",
-                        )}
-                      >
-                        {t(`clinicBooking.services.${service}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {selected.isOpen ? (
+                <>
+                  <div className="admin-wh-slots-head">
+                    <Clock size={16} className="admin-wh-gold-icon" />
+                    <h3>{t("admin.availability.scheduleTitle")}</h3>
+                  </div>
 
-              <div className="admin-wh-slots-head">
-                <Clock size={16} className="admin-wh-gold-icon" />
-                <h3>{t("admin.availability.availableTimes")}</h3>
-              </div>
-
-              <div className="admin-wh-slots">
-                {selected.slots.map((slot) => {
-                  const booked = Boolean(slot.isBooked);
-                  const available = slot.isEnabled && !booked;
-                  const closed = !slot.isEnabled && !booked;
-                  const status = slotStatusLabel(booked, available);
-                  const isActive = activeSlotTime === slot.time;
-                  return (
-                    <button
-                      key={slot.id}
-                      type="button"
-                      disabled={busy}
-                      title={`${slot.time} — ${status}${
-                        booked && slot.bookedBy ? ` · ${slot.bookedBy}` : ""
-                      }`}
-                      onClick={() => {
-                        setActiveSlotTime(slot.time);
-                        if (booked) {
-                          setBookedSlot(slot);
-                          return;
-                        }
-                        void onPatchDay({
-                          toggleTime: {
-                            time: slot.time,
-                            isEnabled: !slot.isEnabled,
-                          },
-                        });
-                      }}
-                      className={cn(
-                        "admin-wh-slot",
-                        available && "is-available",
-                        booked && "is-booked",
-                        closed && "is-closed",
-                        isActive && "is-active",
-                      )}
-                    >
-                      {isActive ? (
-                        <span className="admin-wh-slot-check">
-                          <Check size={11} strokeWidth={3} />
-                        </span>
-                      ) : null}
-                      <strong className="admin-wh-slot-time">{slot.time}</strong>
-                      <span className="admin-wh-slot-status">
-                        <i
-                          className={cn(
-                            "admin-wh-slot-dot",
-                            available && "is-available",
-                            booked && "is-booked",
-                            closed && "is-closed",
-                          )}
-                        />
-                        {status}
+                  <div className="admin-wh-periods">
+                    <div className="admin-wh-period-head" aria-hidden="true">
+                      <span>{t("admin.availability.startTime")}</span>
+                      <span>{t("admin.availability.endTime")}</span>
+                      <span>{t("admin.availability.enablePeriod")}</span>
+                      <span className="admin-wh-period-head-action">
+                        {t("admin.availability.deletePeriod")}
                       </span>
-                    </button>
-                  );
-                })}
+                    </div>
 
-                <button
-                  type="button"
-                  className="admin-wh-slot-add"
-                  disabled={busy}
-                  onClick={openAddTimeModal}
-                >
-                  <Plus size={16} />
-                  {t("admin.availability.addNew")}
-                </button>
-              </div>
+                    {draftPeriods.length === 0 ? (
+                      <div className="admin-wh-periods-empty">
+                        <p>{t("admin.availability.noPeriods")}</p>
+                        <button
+                          type="button"
+                          className="admin-wh-action"
+                          disabled={busy}
+                          onClick={addPeriod}
+                        >
+                          <Plus size={15} />
+                          {t("admin.availability.addTime")}
+                        </button>
+                      </div>
+                    ) : (
+                      draftPeriods.map((period) => (
+                        <div
+                          key={period.id}
+                          className={cn(
+                            "admin-wh-period-row",
+                            !period.enabled && "is-disabled",
+                          )}
+                        >
+                          <label className="admin-wh-period-field">
+                            <span className="admin-wh-period-mobile-label">
+                              {t("admin.availability.startTime")}
+                            </span>
+                            <input
+                              type="time"
+                              className="admin-wh-period-input"
+                              value={period.start}
+                              disabled={busy}
+                              onChange={(e) =>
+                                updatePeriod(period.id, {
+                                  start: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="admin-wh-period-field">
+                            <span className="admin-wh-period-mobile-label">
+                              {t("admin.availability.endTime")}
+                            </span>
+                            <input
+                              type="time"
+                              className="admin-wh-period-input"
+                              value={period.end}
+                              disabled={busy}
+                              onChange={(e) =>
+                                updatePeriod(period.id, {
+                                  end: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="admin-wh-period-toggle">
+                            <span className="admin-wh-period-mobile-label">
+                              {t("admin.availability.enablePeriod")}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={period.enabled}
+                              disabled={busy}
+                              onChange={(e) =>
+                                updatePeriod(period.id, {
+                                  enabled: e.target.checked,
+                                })
+                              }
+                            />
+                            <span className="admin-wh-period-switch" />
+                          </label>
+                          <button
+                            type="button"
+                            className="admin-wh-period-delete"
+                            disabled={busy}
+                            aria-label={t("admin.availability.deletePeriod")}
+                            onClick={() => removePeriod(period.id)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
 
-              <p className="admin-wh-tip">
-                <Info size={14} />
-                {t("admin.availability.slotTip")}
-              </p>
+                  {bookedSlots.length > 0 ? (
+                    <p className="admin-wh-booked-hint">
+                      <Info size={14} />
+                      <span>
+                        {t("admin.availability.bookedSummary", {
+                          n: String(bookedSlots.length),
+                          times: bookedSlots.map((s) => s.time).join(", "),
+                        })}
+                      </span>
+                    </p>
+                  ) : null}
+
+                  <p className="admin-wh-tip">
+                    <Info size={14} />
+                    {t("admin.availability.periodTip")}
+                  </p>
+                </>
+              ) : null}
             </>
           )}
         </section>
       </div>
 
-      {/* Booked slot details */}
-      {bookedSlot ? (
-        <ModalShell
-          title={t("admin.availability.bookedSlotTitle")}
-          onClose={() => setBookedSlot(null)}
-          closeLabel={t("common.close")}
-        >
-          <p className="admin-section-title">{bookedSlot.time}</p>
-          <p className="mt-2 text-sm font-semibold text-[var(--danger)]">
-            {t("admin.availability.booked")}
-          </p>
-          <p className="mt-2 text-[var(--ink)]">
-            {bookedSlot.bookedBy || t("admin.availability.customerBooking")}
-          </p>
-          <p className="admin-muted mt-2 text-sm">
-            {t("admin.availability.bookedSlotHint")}
-          </p>
-          <div className="mt-5 flex justify-end">
-            <button
-              type="button"
-              className="btn btn-accent"
-              onClick={() => setBookedSlot(null)}
-            >
-              {t("admin.availability.gotIt")}
-            </button>
-          </div>
-        </ModalShell>
-      ) : null}
-
-      {/* Add time modal */}
-      {addTimeOpen && selected ? (
-        <ModalShell
-          title={t("admin.availability.addTime")}
-          onClose={() => setAddTimeOpen(false)}
-          closeLabel={t("common.close")}
-        >
-          <div className="space-y-3">
-            <div>
-              <label className="label">{t("admin.availability.timeLabel")}</label>
-              <input
-                type="time"
-                className="input"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setAddTimeOpen(false)}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-accent"
-                disabled={busy || !newTime}
-                onClick={() => void handleAddTimeConfirm()}
-              >
-                {t("admin.availability.confirm")}
-              </button>
-            </div>
-          </div>
-        </ModalShell>
-      ) : null}
-
-      {/* Add date modal */}
-      {addOpen ? (
-        <ModalShell
-          title={t("admin.availability.addDate")}
-          onClose={() => setAddOpen(false)}
-          closeLabel={t("common.close")}
-        >
-          <div className="space-y-3">
-            <div>
-              <label className="label">{t("common.date")}</label>
-              <input
-                type="date"
-                className="input"
-                value={addDate}
-                onChange={(e) => setAddDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">
-                {t("admin.availability.copyFromOptional")}
-              </label>
-              <select
-                className="select"
-                value={addCopyFrom}
-                onChange={(e) => setAddCopyFrom(e.target.value)}
-              >
-                <option value="">{t("admin.availability.defaultSlots")}</option>
-                {days.map((d) => (
-                  <option key={d.id} value={d.date}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <p className="label">{t("admin.availability.services")}</p>
-              <div className="flex flex-wrap gap-2">
-                {ALL_SERVICES.map((service) => {
-                  const active = addServices.includes(service);
-                  return (
-                    <button
-                      key={service}
-                      type="button"
-                      onClick={() =>
-                        setAddServices((prev) =>
-                          active
-                            ? prev.filter((s) => s !== service)
-                            : [...prev, service],
-                        )
-                      }
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm font-semibold",
-                        active
-                          ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
-                          : "border-[var(--line)] text-[var(--slate)]",
-                      )}
-                    >
-                      {t(`clinicBooking.services.${service}`)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setAddOpen(false)}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-accent"
-                disabled={busy || !addDate || addServices.length === 0}
-                onClick={() => void handleAddConfirm()}
-              >
-                {t("admin.availability.confirm")}
-              </button>
-            </div>
-          </div>
-        </ModalShell>
-      ) : null}
-
-      {/* Copy schedule modal */}
       {copyOpen && selected ? (
         <ModalShell
           title={t("admin.availability.copySchedule")}
@@ -836,32 +715,6 @@ export default function AvailabilityCalendarPanel({
         </ModalShell>
       ) : null}
     </div>
-  );
-}
-
-function MenuButton({
-  children,
-  onClick,
-  disabled,
-  danger,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "block w-full px-3 py-2.5 text-start text-sm font-medium hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-50",
-        danger ? "text-[var(--danger)]" : "text-[var(--ink)]",
-      )}
-    >
-      {children}
-    </button>
   );
 }
 
