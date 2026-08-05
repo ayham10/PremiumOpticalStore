@@ -1,13 +1,22 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import SingleImageField from "@/components/admin/SingleImageField";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
-import type { AdminSession, Promotion } from "@/lib/types";
+import { cn, formatPrice } from "@/lib/format";
+import type {
+  AdminSession,
+  DiscountType,
+  Product,
+  Promotion,
+  PromotionScope,
+} from "@/lib/types";
 
 function unwrapList<T>(data: unknown, keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -23,8 +32,11 @@ function unwrapList<T>(data: unknown, keys: string[]): T[] {
 type PromoForm = {
   title: string;
   description: string;
-  discount: string;
   couponCode: string;
+  discountType: DiscountType;
+  discountValue: string;
+  scope: PromotionScope;
+  productIds: string[];
   image: string;
   startDate: string;
   endDate: string;
@@ -36,8 +48,11 @@ type PromoForm = {
 const emptyForm = (): PromoForm => ({
   title: "",
   description: "",
-  discount: "",
   couponCode: "",
+  discountType: "percentage",
+  discountValue: "",
+  scope: "all",
+  productIds: [],
   image: "",
   startDate: "",
   endDate: "",
@@ -47,11 +62,32 @@ const emptyForm = (): PromoForm => ({
 });
 
 function fromPromo(p: Promotion): PromoForm {
+  let discountType: DiscountType = p.discountType || "percentage";
+  let discountValue =
+    p.discountValue !== undefined && p.discountValue !== null
+      ? String(p.discountValue)
+      : "";
+
+  if (!discountValue && p.discount) {
+    const pct = p.discount.match(/(\d+(?:\.\d+)?)\s*%/);
+    const fixed = p.discount.match(/(\d+(?:\.\d+)?)/);
+    if (pct) {
+      discountType = "percentage";
+      discountValue = pct[1];
+    } else if (fixed) {
+      discountType = p.discountType || "fixed";
+      discountValue = fixed[1];
+    }
+  }
+
   return {
     title: p.title,
     description: p.description,
-    discount: p.discount,
     couponCode: p.couponCode || "",
+    discountType,
+    discountValue,
+    scope: p.scope || "all",
+    productIds: p.productIds || [],
     image: p.image || "",
     startDate: p.startDate,
     endDate: p.endDate,
@@ -61,8 +97,12 @@ function fromPromo(p: Promotion): PromoForm {
   };
 }
 
+const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
+
 export default function AdminPromotionsPage() {
+  const { t } = useLocale();
   const [items, setItems] = useState<Promotion[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [role, setRole] = useState<AdminSession["role"]>("admin");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,54 +111,102 @@ export default function AdminPromotionsPage() {
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [form, setForm] = useState<PromoForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [productQuery, setProductQuery] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [data, me] = await Promise.all([
+      const [data, me, productData] = await Promise.all([
         apiFetch<unknown>("/api/promotions"),
         apiFetch<{ user: AdminSession } | AdminSession>("/api/auth/me").catch(
           () => null
         ),
+        apiFetch<unknown>("/api/products?all=1").catch(() => null),
       ]);
       setItems(unwrapList<Promotion>(data, ["promotions", "items", "data"]));
+      if (productData) {
+        setProducts(
+          unwrapList<Product>(productData, ["products", "items", "data"])
+        );
+      }
       if (me) {
         const user = "user" in me ? me.user : me;
         setRole(user.role);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load promotions");
+      setError(
+        err instanceof Error ? err.message : t("admin.promotions.loadError")
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const filteredProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) =>
+      [p.name, p.brand, p.sku, p.category]
+        .filter(Boolean)
+        .some((f) => String(f).toLowerCase().includes(q))
+    );
+  }, [products, productQuery]);
+
   function openCreate() {
     setEditing(null);
     setForm(emptyForm());
+    setProductQuery("");
     setModalOpen(true);
   }
 
   function openEdit(p: Promotion) {
     setEditing(p);
     setForm(fromPromo(p));
+    setProductQuery("");
     setModalOpen(true);
+  }
+
+  function toggleProduct(id: string) {
+    setForm((f) => ({
+      ...f,
+      productIds: f.productIds.includes(id)
+        ? f.productIds.filter((x) => x !== id)
+        : [...f.productIds, id],
+    }));
+  }
+
+  function scopeLabel(scope?: PromotionScope) {
+    switch (scope) {
+      case "sunglasses":
+        return t("admin.promotions.scopeSunglasses");
+      case "frames":
+        return t("admin.promotions.scopeFrames");
+      case "specific":
+        return t("admin.promotions.scopeSpecific");
+      default:
+        return t("admin.promotions.scopeAll");
+    }
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setMessage("");
+    const value = Number(form.discountValue);
     const payload = {
       title: form.title,
       description: form.description,
-      discount: form.discount,
       couponCode: form.couponCode || undefined,
+      discountType: form.discountType,
+      discountValue: Number.isFinite(value) ? value : 0,
+      discount: "",
+      scope: form.scope,
+      productIds: form.scope === "specific" ? form.productIds : [],
       image: form.image || undefined,
       startDate: form.startDate,
       endDate: form.endDate,
@@ -139,7 +227,7 @@ export default function AdminPromotionsPage() {
         setItems((prev) =>
           prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p))
         );
-        setMessage("Promotion updated");
+        setMessage(t("admin.promotions.updated"));
       } else {
         const created = await apiFetch<Promotion | { promotion: Promotion }>(
           "/api/promotions",
@@ -150,11 +238,13 @@ export default function AdminPromotionsPage() {
             ? created.promotion
             : (created as Promotion);
         setItems((prev) => [row, ...prev]);
-        setMessage("Promotion created");
+        setMessage(t("admin.promotions.created"));
       }
       setModalOpen(false);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Save failed");
+      setMessage(
+        err instanceof Error ? err.message : t("admin.promotions.saveError")
+      );
     } finally {
       setSaving(false);
     }
@@ -162,30 +252,34 @@ export default function AdminPromotionsPage() {
 
   async function onDelete(p: Promotion) {
     if (!hasPermission(role, "delete")) {
-      setMessage("You do not have permission to delete");
+      setMessage(t("admin.promotions.deleteDenied"));
       return;
     }
-    if (!confirm(`Delete “${p.title}”?`)) return;
+    if (!confirm(t("admin.promotions.deleteConfirm", { title: p.title }))) {
+      return;
+    }
     try {
       await apiFetch(`/api/promotions?id=${encodeURIComponent(p.id)}`, {
         method: "DELETE",
       });
       setItems((prev) => prev.filter((x) => x.id !== p.id));
-      setMessage("Promotion deleted");
+      setMessage(t("admin.promotions.deleted"));
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Delete failed");
+      setMessage(
+        err instanceof Error ? err.message : t("admin.promotions.deleteError")
+      );
     }
   }
 
   return (
     <div className="space-y-5">
       <AdminPageHeader
-        kicker="Marketing"
-        title="Promotions"
-        description="Create and manage store offers shown on the website."
+        kicker={t("admin.promotions.kicker")}
+        title={t("admin.promotions.title")}
+        description={t("admin.promotions.description")}
         actions={
           <button type="button" className="btn btn-accent" onClick={openCreate}>
-            <Plus size={16} /> Add promotion
+            <Plus size={16} /> {t("admin.promotions.add")}
           </button>
         }
       />
@@ -206,27 +300,28 @@ export default function AdminPromotionsPage() {
           <table className="table table-mobile-cards">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Discount</th>
-                <th>Schedule</th>
-                <th>Coupon</th>
-                <th>Homepage</th>
-                <th>Priority</th>
-                <th>Active</th>
-                <th>Actions</th>
+                <th>{t("admin.promotions.colTitle")}</th>
+                <th>{t("admin.promotions.colDiscount")}</th>
+                <th>{t("admin.promotions.colScope")}</th>
+                <th>{t("admin.promotions.colSchedule")}</th>
+                <th>{t("admin.promotions.colCoupon")}</th>
+                <th>{t("admin.promotions.colHomepage")}</th>
+                <th>{t("admin.promotions.colPriority")}</th>
+                <th>{t("admin.promotions.colActive")}</th>
+                <th>{t("admin.promotions.colActions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-[var(--slate)]">
-                    Loading…
+                  <td colSpan={9} className="text-[var(--slate)]">
+                    {t("admin.promotions.loading")}
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-[var(--slate)]">
-                    No promotions yet
+                  <td colSpan={9} className="text-[var(--slate)]">
+                    {t("admin.promotions.empty")}
                   </td>
                 </tr>
               ) : (
@@ -235,25 +330,48 @@ export default function AdminPromotionsPage() {
                   .sort((a, b) => a.priority - b.priority)
                   .map((p) => (
                     <tr key={p.id}>
-                      <td data-label="Title">
-                        <div className="font-medium text-[var(--ink)]">{p.title}</div>
+                      <td data-label={t("admin.promotions.colTitle")}>
+                        <div className="font-medium text-[var(--ink)]">
+                          {p.title}
+                        </div>
                         <div className="max-w-none truncate text-xs text-[var(--slate)] md:max-w-[220px]">
                           {p.description}
                         </div>
                       </td>
-                      <td data-label="Discount">{p.discount}</td>
-                      <td data-label="Schedule" className="text-sm">
+                      <td data-label={t("admin.promotions.colDiscount")}>
+                        {p.discount}
+                      </td>
+                      <td data-label={t("admin.promotions.colScope")}>
+                        {scopeLabel(p.scope)}
+                      </td>
+                      <td
+                        data-label={t("admin.promotions.colSchedule")}
+                        className="text-sm"
+                      >
                         {p.startDate} → {p.endDate}
                       </td>
-                      <td data-label="Coupon">{p.couponCode || "—"}</td>
-                      <td data-label="Homepage">{p.homepageVisible ? "Yes" : "No"}</td>
-                      <td data-label="Priority">{p.priority}</td>
-                      <td data-label="Active">
+                      <td data-label={t("admin.promotions.colCoupon")}>
+                        {p.couponCode || "—"}
+                      </td>
+                      <td data-label={t("admin.promotions.colHomepage")}>
+                        {p.homepageVisible
+                          ? t("admin.promotions.yes")
+                          : t("admin.promotions.no")}
+                      </td>
+                      <td data-label={t("admin.promotions.colPriority")}>
+                        {p.priority}
+                      </td>
+                      <td data-label={t("admin.promotions.colActive")}>
                         <span className={`pill ${p.active ? "" : "opacity-60"}`}>
-                          {p.active ? "Active" : "Off"}
+                          {p.active
+                            ? t("admin.promotions.active")
+                            : t("admin.promotions.off")}
                         </span>
                       </td>
-                      <td data-label="Actions" className="actions-cell">
+                      <td
+                        data-label={t("admin.promotions.colActions")}
+                        className="actions-cell"
+                      >
                         <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
@@ -283,14 +401,16 @@ export default function AdminPromotionsPage() {
 
       <AdminModal
         open={modalOpen}
-        title={editing ? "Edit promotion" : "Add promotion"}
+        title={
+          editing ? t("admin.promotions.edit") : t("admin.promotions.create")
+        }
         onClose={() => setModalOpen(false)}
         wide
       >
         <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="label" htmlFor="pr-title">
-              Title
+              {t("admin.promotions.fieldTitle")}
             </label>
             <input
               id="pr-title"
@@ -302,7 +422,7 @@ export default function AdminPromotionsPage() {
           </div>
           <div className="sm:col-span-2">
             <label className="label" htmlFor="pr-desc">
-              Description
+              {t("admin.promotions.fieldDescription")}
             </label>
             <textarea
               id="pr-desc"
@@ -315,23 +435,8 @@ export default function AdminPromotionsPage() {
             />
           </div>
           <div>
-            <label className="label" htmlFor="pr-discount">
-              Discount
-            </label>
-            <input
-              id="pr-discount"
-              className="input"
-              placeholder="20% or ₪100 off"
-              value={form.discount}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, discount: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div>
             <label className="label" htmlFor="pr-coupon">
-              Coupon code
+              {t("admin.promotions.fieldCoupon")}
             </label>
             <input
               id="pr-coupon"
@@ -343,8 +448,140 @@ export default function AdminPromotionsPage() {
             />
           </div>
           <div>
+            <label className="label" htmlFor="pr-dtype">
+              {t("admin.promotions.fieldDiscountType")}
+            </label>
+            <select
+              id="pr-dtype"
+              className="input"
+              value={form.discountType}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  discountType: e.target.value as DiscountType,
+                }))
+              }
+            >
+              <option value="percentage">
+                {t("admin.promotions.typePercentage")}
+              </option>
+              <option value="fixed">{t("admin.promotions.typeFixed")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="pr-dval">
+              {t("admin.promotions.fieldDiscountValue")}
+            </label>
+            <input
+              id="pr-dval"
+              type="number"
+              min={0}
+              step="any"
+              className="input"
+              value={form.discountValue}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, discountValue: e.target.value }))
+              }
+              required
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <p className="label mb-2">{t("admin.promotions.fieldScope")}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {SCOPES.map((scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, scope }))}
+                  className={cn(
+                    "rounded-xl border px-3 py-2.5 text-start text-sm font-semibold transition",
+                    form.scope === scope
+                      ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
+                      : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--accent)]"
+                  )}
+                >
+                  {scopeLabel(scope)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {form.scope === "specific" ? (
+            <div className="sm:col-span-2 space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <label className="label mb-0" htmlFor="pr-product-q">
+                  {t("admin.promotions.searchProducts")}
+                </label>
+                <span className="text-xs text-[var(--accent)]">
+                  {t("admin.promotions.selectedCount", {
+                    n: form.productIds.length,
+                  })}
+                </span>
+              </div>
+              <input
+                id="pr-product-q"
+                className="input"
+                value={productQuery}
+                onChange={(e) => setProductQuery(e.target.value)}
+                placeholder={t("admin.promotions.searchProducts")}
+              />
+              <div className="max-h-56 space-y-2 overflow-y-auto pe-1">
+                {filteredProducts.length === 0 ? (
+                  <p className="admin-muted text-sm">
+                    {t("admin.promotions.noProducts")}
+                  </p>
+                ) : (
+                  filteredProducts.map((product) => {
+                    const selected = form.productIds.includes(product.id);
+                    const thumb =
+                      product.images[0] || "/images/placeholder-frame.svg";
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => toggleProduct(product.id)}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-start transition",
+                          selected
+                            ? "border-[var(--accent)] bg-[var(--accent-wash)]"
+                            : "border-[var(--line)] hover:border-[var(--accent)]"
+                        )}
+                      >
+                        <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--admin-elevated)]">
+                          <Image
+                            src={thumb}
+                            alt=""
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-[var(--ink)]">
+                            {product.name}
+                          </span>
+                          <span className="admin-muted block truncate text-xs">
+                            {product.brand} · {product.category} ·{" "}
+                            {formatPrice(product.sellingPrice)}
+                          </span>
+                        </span>
+                        {selected ? (
+                          <Check
+                            size={16}
+                            className="shrink-0 text-[var(--accent)]"
+                          />
+                        ) : null}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <div>
             <label className="label" htmlFor="pr-start">
-              Start date
+              {t("admin.promotions.fieldStart")}
             </label>
             <input
               id="pr-start"
@@ -359,7 +596,7 @@ export default function AdminPromotionsPage() {
           </div>
           <div>
             <label className="label" htmlFor="pr-end">
-              End date
+              {t("admin.promotions.fieldEnd")}
             </label>
             <input
               id="pr-end"
@@ -374,7 +611,7 @@ export default function AdminPromotionsPage() {
           </div>
           <div>
             <label className="label" htmlFor="pr-priority">
-              Priority
+              {t("admin.promotions.fieldPriority")}
             </label>
             <input
               id="pr-priority"
@@ -388,7 +625,7 @@ export default function AdminPromotionsPage() {
           </div>
           <div className="sm:col-span-2">
             <SingleImageField
-              label="Promotion image"
+              label={t("admin.promotions.fieldImage")}
               value={form.image}
               onChange={(image) => setForm((f) => ({ ...f, image }))}
               folder="promotions"
@@ -402,7 +639,7 @@ export default function AdminPromotionsPage() {
                 setForm((f) => ({ ...f, homepageVisible: e.target.checked }))
               }
             />
-            Show on homepage
+            {t("admin.promotions.showHomepage")}
           </label>
           <label className="flex items-center gap-2 text-sm font-medium text-[var(--ink)]">
             <input
@@ -412,7 +649,7 @@ export default function AdminPromotionsPage() {
                 setForm((f) => ({ ...f, active: e.target.checked }))
               }
             />
-            Active
+            {t("admin.promotions.fieldActive")}
           </label>
           <div className="flex justify-end gap-2 sm:col-span-2">
             <button
@@ -420,10 +657,12 @@ export default function AdminPromotionsPage() {
               className="btn btn-ghost"
               onClick={() => setModalOpen(false)}
             >
-              Cancel
+              {t("admin.promotions.cancel")}
             </button>
             <button type="submit" className="btn btn-accent" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving
+                ? t("admin.promotions.saving")
+                : t("admin.promotions.save")}
             </button>
           </div>
         </form>

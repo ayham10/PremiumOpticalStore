@@ -9,7 +9,6 @@ import {
   Package,
   Tag,
   ImageIcon,
-  UserCog,
   Settings,
   LogOut,
   Menu,
@@ -79,12 +78,6 @@ const NAV: Array<{
     labelKey: "admin.sidebar.settings",
     permission: "settings",
     icon: Settings,
-  },
-  {
-    href: "/admin/staff",
-    labelKey: "admin.sidebar.staff",
-    permission: "staff",
-    icon: UserCog,
   },
 ];
 

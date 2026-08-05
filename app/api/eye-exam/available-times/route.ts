@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, jsonError } from "@/lib/api/helpers";
-import { getStore } from "@/lib/db/store";
+import { getStore, updateStore } from "@/lib/db/store";
 import {
+  ensureFutureAvailability,
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
   isClinicAppointmentType,
@@ -35,6 +36,14 @@ export async function GET(request: Request) {
         appointmentType,
       });
     }
+
+    await updateStore((store) => {
+      store.eyeExamAvailability = ensureFutureAvailability(
+        store.eyeExamAvailability,
+        store.settings,
+      );
+      return store;
+    });
 
     const { data } = await getStore();
     const day = getOpenAvailabilityForDate(

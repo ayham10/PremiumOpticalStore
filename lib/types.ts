@@ -59,6 +59,14 @@ export interface WorkingHours {
   closed?: boolean;
 }
 
+/** One continuous working period on a calendar day (expanded to bookable slots). */
+export interface WorkingPeriod {
+  id: string;
+  start: string; // HH:mm
+  end: string; // HH:mm
+  enabled: boolean;
+}
+
 export interface Holiday {
   id: string;
   date: string; // YYYY-MM-DD
@@ -114,6 +122,13 @@ export interface EyeExamAvailability {
   date: string; // YYYY-MM-DD (business calendar date, Asia/Jerusalem)
   isOpen: boolean;
   slots: EyeExamTimeSlot[];
+  /** Editable working periods for this date (UI). Expanded into slots for booking. */
+  periods?: WorkingPeriod[];
+  /**
+   * When true, settings opening-hours sync will not overwrite this day.
+   * Manual close/reopen, period edits, and copy create exceptions.
+   */
+  isException?: boolean;
   /**
    * Which services may book this day.
    * Undefined / empty / both types = shared slots (any booking blocks the time).
@@ -178,11 +193,24 @@ export interface Supplier {
   notes?: string;
 }
 
+export type PromotionScope =
+  | "all"
+  | "sunglasses"
+  | "frames"
+  | "specific";
+
+export type DiscountType = "percentage" | "fixed";
+
 export interface Promotion {
   id: string;
   title: string;
   description: string;
+  /** Display badge text (e.g. "20%" or "₪50") — kept for backwards compatibility */
   discount: string;
+  discountType?: DiscountType;
+  discountValue?: number;
+  scope?: PromotionScope;
+  productIds?: string[];
   couponCode?: string;
   image?: string;
   startDate: string;
