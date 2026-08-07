@@ -1,7 +1,19 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Check, X } from "lucide-react";
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
+import { ar, enUS, he } from "date-fns/locale";
+import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { ClinicAppointmentType } from "@/lib/types";
@@ -14,7 +26,10 @@ const SERVICES: ClinicAppointmentType[] = [
   "sunglasses_consultation",
 ];
 
-function daySupports(day: { services?: ClinicAppointmentType[] }, type: ClinicAppointmentType) {
+function daySupports(
+  day: { services?: ClinicAppointmentType[] },
+  type: ClinicAppointmentType,
+) {
   const services = day.services || [];
   if (!services.length) return true;
   return services.includes(type);
@@ -24,6 +39,10 @@ function daySupports(day: { services?: ClinicAppointmentType[] }, type: ClinicAp
 function syntheticEmail(phone: string): string {
   const digits = phone.replace(/\D/g, "") || "guest";
   return `booking.${digits}@oyon.guest`;
+}
+
+function ymd(d: Date) {
+  return format(d, "yyyy-MM-dd");
 }
 
 type SlotRow = {
@@ -51,7 +70,8 @@ type Props = {
 };
 
 export default function ManualBookingModal({ open, onClose, onCreated }: Props) {
-  const { t, locale } = useLocale();
+  const { t, locale, rtl } = useLocale();
+  const dateLocale = locale === "ar" ? ar : locale === "he" ? he : enUS;
   const [days, setDays] = useState<DayRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +83,7 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [monthCursor, setMonthCursor] = useState(() => new Date());
 
   const reset = useCallback(() => {
     setService("eye_exam");
@@ -73,6 +94,7 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
     setPhone("");
     setNotes("");
     setError("");
+    setMonthCursor(new Date());
   }, []);
 
   const loadSchedule = useCallback(async () => {
@@ -84,7 +106,9 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
       );
       setDays(data.days || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("admin.bookings.loadError"));
+      setError(
+        err instanceof Error ? err.message : t("admin.bookings.loadError"),
+      );
     } finally {
       setLoading(false);
     }
@@ -109,6 +133,11 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
     return days.filter((d) => d.isOpen && daySupports(d, service));
   }, [days, service]);
 
+  const availableSet = useMemo(
+    () => new Set(serviceDays.map((d) => d.date)),
+    [serviceDays],
+  );
+
   const selectedDay = useMemo(
     () => serviceDays.find((d) => d.date === date) || null,
     [serviceDays, date],
@@ -118,6 +147,19 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
     if (!selectedDay) return [];
     return selectedDay.slots.filter((s) => s.isEnabled && !s.isBooked);
   }, [selectedDay]);
+
+  const calendarDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(monthCursor), { weekStartsOn: 0 });
+    return eachDayOfInterval({ start, end });
+  }, [monthCursor]);
+
+  const monthLabel = useMemo(
+    () => format(monthCursor, "MMMM yyyy", { locale: dateLocale }),
+    [monthCursor, dateLocale],
+  );
+
+  const todayIso = useMemo(() => ymd(new Date()), []);
 
   useEffect(() => {
     if (!date) return;
@@ -129,6 +171,13 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
 
   useEffect(() => {
     setTime("");
+  }, [date]);
+
+  useEffect(() => {
+    if (!date) return;
+    const [y, m] = date.split("-").map(Number);
+    if (!y || !m) return;
+    setMonthCursor(new Date(y, m - 1, 1));
   }, [date]);
 
   const serviceLabel = (type: ClinicAppointmentType) =>
@@ -149,31 +198,27 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          phone: phone.trim(),
           email: syntheticEmail(phone),
+          phone: phone.trim(),
           appointmentDate: date,
           appointmentTime: time,
           appointmentType: service,
-          language: locale === "ar" || locale === "he" ? locale : "en",
+          language: locale,
           notes: notes.trim() || undefined,
-          source: "admin",
+          fromAdmin: true,
         }),
       });
       onCreated();
       onClose();
     } catch (err) {
       const message =
-        err instanceof ApiError
+        err instanceof Error
           ? err.message
-          : err instanceof Error
-            ? err.message
-            : t("admin.bookings.updateError");
+          : t("admin.bookings.updateError");
       const conflict =
         /conflict|unavailable|already|taken|booked/i.test(message) ||
         (err instanceof ApiError && err.status === 409);
-      setError(
-        conflict ? t("admin.bookings.conflictError") : message,
-      );
+      setError(conflict ? t("admin.bookings.conflictError") : message);
       await loadSchedule();
       if (conflict) setTime("");
     } finally {
@@ -226,7 +271,9 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
         >
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pe-1 pb-2">
             <div>
-              <p className="admin-card-label mb-2">{t("admin.bookings.service")}</p>
+              <p className="admin-card-label mb-2">
+                {t("admin.bookings.service")}
+              </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {SERVICES.map((type) => (
                   <button
@@ -248,32 +295,83 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
 
             <div>
               <p className="admin-card-label mb-2">{t("admin.bookings.date")}</p>
-              <div className="max-h-40 space-y-1.5 overflow-y-auto pe-1">
+              <div className="rounded-xl border border-[var(--line)] bg-[rgba(12,16,22,0.55)] p-3">
+                <div className="mb-2.5 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-[rgba(212,175,106,0.3)] text-[#e6c58a] transition hover:border-[rgba(212,175,106,0.55)] hover:bg-[rgba(212,175,106,0.1)]"
+                    aria-label={t("clinicBooking.prevMonth")}
+                    onClick={() => setMonthCursor((d) => subMonths(d, 1))}
+                  >
+                    {rtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                  </button>
+                  <strong className="text-sm font-bold text-[var(--ink)]">
+                    {monthLabel}
+                  </strong>
+                  <button
+                    type="button"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-[rgba(212,175,106,0.3)] text-[#e6c58a] transition hover:border-[rgba(212,175,106,0.55)] hover:bg-[rgba(212,175,106,0.1)]"
+                    aria-label={t("clinicBooking.nextMonth")}
+                    onClick={() => setMonthCursor((d) => addMonths(d, 1))}
+                  >
+                    {rtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                  </button>
+                </div>
+
+                <div className="mb-1.5 grid grid-cols-7 gap-1">
+                  {[0, 1, 2, 3, 4, 5, 6].map((d) => {
+                    const label = t(`eyeExam.weekdays.${d}`);
+                    return (
+                      <span
+                        key={d}
+                        className="truncate text-center text-[0.62rem] font-semibold text-[rgba(212,175,106,0.8)]"
+                        title={label}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+
                 {loading ? (
-                  <p className="admin-muted text-sm">
+                  <p className="admin-muted py-6 text-center text-sm">
                     {t("admin.bookings.loadingDates")}
                   </p>
                 ) : serviceDays.length === 0 ? (
-                  <p className="admin-muted text-sm">
+                  <p className="admin-muted py-6 text-center text-sm">
                     {t("admin.bookings.noDates")}
                   </p>
                 ) : (
-                  serviceDays.map((d) => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setDate(d.date)}
-                      className={cn(
-                        "w-full rounded-xl border px-3 py-2.5 text-start text-sm transition",
-                        date === d.date
-                          ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
-                          : "border-[var(--line)] hover:border-[var(--accent)]",
-                      )}
-                    >
-                      <span className="block font-semibold">{d.label}</span>
-                      <span className="admin-muted text-xs">{d.date}</span>
-                    </button>
-                  ))
+                  <div className="grid grid-cols-7 gap-1">
+                    {calendarDays.map((day) => {
+                      const iso = ymd(day);
+                      const inMonth = isSameMonth(day, monthCursor);
+                      const available = availableSet.has(iso);
+                      const disabled =
+                        !inMonth || iso < todayIso || !available;
+                      const selected = date === iso;
+                      return (
+                        <button
+                          key={iso + String(inMonth)}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setDate(iso)}
+                          className={cn(
+                            "aspect-square max-h-10 rounded-[10px] text-sm font-semibold transition",
+                            !inMonth && "opacity-25",
+                            disabled && inMonth && "cursor-not-allowed opacity-30",
+                            !disabled &&
+                              !selected &&
+                              "border border-[var(--line)] bg-[rgba(21,25,31,0.9)] text-[var(--ink)] hover:border-[var(--accent)] hover:bg-[rgba(212,175,106,0.12)]",
+                            selected &&
+                              "border border-[#d4af6a] bg-[#d4af6a] text-[#1a140c] shadow-[0_0_0_1px_rgba(212,175,106,0.35)]",
+                          )}
+                        >
+                          {format(day, "d")}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
@@ -291,7 +389,7 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                   {t("admin.bookings.noAvailableTimes")}
                 </p>
               ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                <div className="grid max-h-40 grid-cols-3 gap-2 overflow-y-auto pe-1 sm:grid-cols-4">
                   {availableSlots.map((slot) => {
                     const selected = time === slot.time;
                     return (
@@ -300,10 +398,10 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                         type="button"
                         onClick={() => setTime(slot.time)}
                         className={cn(
-                          "rounded-xl border px-2 py-3 text-center text-sm font-bold transition",
+                          "rounded-[10px] border px-2 py-2.5 text-center text-sm font-bold tabular-nums transition",
                           selected
-                            ? "border-[#D4AF6A] bg-[rgba(212,175,106,0.2)] text-[#D4AF6A] ring-1 ring-[#D4AF6A]"
-                            : "border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.1)] text-[#5EC49A] hover:border-[#5EC49A]",
+                            ? "border-[#D4AF6A] bg-[#D4AF6A] text-[#1a140c] shadow-[0_0_0_1px_rgba(212,175,106,0.28)]"
+                            : "border-[var(--line)] bg-[rgba(21,25,31,0.9)] text-[var(--ink)] hover:border-[var(--accent)] hover:bg-[rgba(212,175,106,0.12)]",
                         )}
                       >
                         {slot.time}
