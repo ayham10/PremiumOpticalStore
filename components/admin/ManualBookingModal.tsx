@@ -198,23 +198,25 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          email: syntheticEmail(phone),
           phone: phone.trim(),
+          email: syntheticEmail(phone),
           appointmentDate: date,
           appointmentTime: time,
           appointmentType: service,
-          language: locale,
+          language: locale === "ar" || locale === "he" ? locale : "en",
           notes: notes.trim() || undefined,
-          fromAdmin: true,
+          source: "admin",
         }),
       });
       onCreated();
       onClose();
     } catch (err) {
       const message =
-        err instanceof Error
+        err instanceof ApiError
           ? err.message
-          : t("admin.bookings.updateError");
+          : err instanceof Error
+            ? err.message
+            : t("admin.bookings.updateError");
       const conflict =
         /conflict|unavailable|already|taken|booked/i.test(message) ||
         (err instanceof ApiError && err.status === 409);
