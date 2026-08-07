@@ -4677,6 +4677,13 @@ body.eye-exam-booking-open .whatsapp-fab {
   font-size: 0.62rem;
   font-weight: 650;
   color: rgba(212, 175, 106, 0.72);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+html[dir="rtl"] .clinic-cal-weekdays span {
+  font-size: 0.56rem;
+  letter-spacing: 0;
 }
 
 .clinic-cal-day {

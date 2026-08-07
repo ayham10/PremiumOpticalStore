@@ -14,6 +14,7 @@ import {
   isValidIsoDate,
   parseTimeToMinutes,
   periodsForDay,
+  publicBookingMaxDate,
   todayInJerusalem,
 } from "@/lib/eye-exam";
 import type {
@@ -109,8 +110,9 @@ export async function GET() {
     }
 
     const today = todayInJerusalem();
+    const maxDate = publicBookingMaxDate(today);
     const days = [...data.eyeExamAvailability]
-      .filter((d) => d.date >= today)
+      .filter((d) => d.date >= today && d.date <= maxDate)
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((day) => enrichDay(day, bookedByKey));
 
@@ -121,6 +123,7 @@ export async function GET() {
       defaultSlotTimes: buildDefaultSlots(
         data.settings.appointmentSlotMinutes || 30,
       ).map((s) => s.time),
+      maxDate,
     });
   } catch (error) {
     return handleRouteError(error);

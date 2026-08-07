@@ -543,11 +543,13 @@ export function resolvePublicAvailability(
 }
 
 /**
- * Persist availability rows for today..leadDays from weekly opening hours.
- * Non-exception days are always refreshed from the schedule so future weeks
- * open automatically. Manual exceptions (closed / custom hours) are preserved.
+ * Persist availability rows from today through the public booking horizon
+ * using the weekly opening hours. Non-exception days are always refreshed
+ * from the schedule so future weeks open automatically. Manual exceptions
+ * (closed / custom hours) are preserved.
  *
- * Public booking does not depend on these rows — see resolvePublicAvailability.
+ * Public booking reads via resolvePublicAvailability and does not depend on
+ * these rows alone; Admin calendar sync uses this to materialize the same window.
  */
 export function ensureFutureAvailability(
   availability: EyeExamAvailability[],
@@ -555,13 +557,12 @@ export function ensureFutureAvailability(
   _opts?: { forceRefreshDefaults?: boolean },
 ): EyeExamAvailability[] {
   const today = todayInJerusalem();
-  const lead = Math.max(1, Math.min(365, settings.bookingLeadDays || 45));
+  const maxDate = publicBookingMaxDate(today);
   const byDate = new Map(availability.map((d) => [d.date, d]));
   const now = new Date().toISOString();
   const next: EyeExamAvailability[] = [];
 
-  for (let i = 0; i <= lead; i++) {
-    const date = addDaysIso(today, i);
+  for (let date = today; date <= maxDate; date = addDaysIso(date, 1)) {
     const existing = byDate.get(date);
     byDate.delete(date);
 

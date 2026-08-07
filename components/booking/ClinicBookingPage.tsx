@@ -437,9 +437,19 @@ export default function ClinicBookingPage() {
                     </button>
                   </div>
                   <div className="clinic-cal-weekdays">
-                    {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-                      <span key={d}>{t(`eyeExam.weekdays.${d}`).slice(0, 2)}</span>
-                    ))}
+                    {[0, 1, 2, 3, 4, 5, 6].map((d) => {
+                      const label = t(`eyeExam.weekdays.${d}`);
+                      // Arabic/Hebrew need the full weekday name; Latin can stay compact
+                      const display =
+                        locale === "ar" || locale === "he"
+                          ? label
+                          : label.slice(0, 2);
+                      return (
+                        <span key={d} title={label}>
+                          {display}
+                        </span>
+                      );
+                    })}
                   </div>
                   <div
                     className={`clinic-cal-grid${loadingDates ? " is-loading" : ""}`}
