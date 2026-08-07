@@ -90,6 +90,7 @@ export async function GET() {
       store.eyeExamAvailability = ensureFutureAvailability(
         store.eyeExamAvailability,
         store.settings,
+        { forceRefreshDefaults: true },
       );
       return store;
     });

@@ -7,6 +7,7 @@ import {
   isClinicAppointmentType,
   listBookableTimes,
   normalizeAppointmentType,
+  resolvePublicAvailability,
   todayInJerusalem,
   weekdayUtc,
 } from "@/lib/eye-exam";
@@ -30,7 +31,10 @@ export async function GET(request: Request) {
       return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
     })();
 
-    const openDays = data.eyeExamAvailability
+    const openDays = resolvePublicAvailability(
+      data.eyeExamAvailability,
+      data.settings,
+    )
       .filter((day) => day.isOpen && day.date >= today && day.date <= maxDate)
       .filter((day) => daySupportsService(day, appointmentType))
       .sort((a, b) => a.date.localeCompare(b.date));

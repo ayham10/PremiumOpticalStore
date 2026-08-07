@@ -186,7 +186,7 @@ export default function ClinicBookingPage() {
     cachedJsonFetch<{ dates: DateOption[] }>(
       key,
       `/api/eye-exam/available-dates?type=${encodeURIComponent(appointmentType)}`,
-      { ttlMs: datesEpoch > 0 ? 0 : 8_000, revalidate: datesEpoch > 0 },
+      { ttlMs: 0, revalidate: true },
     )
       .then((data) => {
         if (cancelled) return;
@@ -234,7 +234,7 @@ export default function ClinicBookingPage() {
     cachedJsonFetch<{ times: string[] }>(
       key,
       `/api/eye-exam/available-times?date=${encodeURIComponent(date)}&type=${encodeURIComponent(appointmentType)}`,
-      { ttlMs: 8_000 },
+      { ttlMs: 0, revalidate: true },
     )
       .then((data) => {
         if (!cancelled) setTimes(data.times || []);

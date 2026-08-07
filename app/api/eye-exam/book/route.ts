@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/helpers";
 import { updateStore } from "@/lib/db/store";
 import {
+  ensureFutureAvailability,
   eyeExamSmsBody,
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
@@ -18,6 +19,7 @@ import {
   normalizeAppointmentType,
   normalizeIsraeliPhone,
   parseTimeToMinutes,
+  resolvePublicAvailability,
   sanitizeName,
   todayInJerusalem,
   withEyeExamLock,
@@ -102,8 +104,17 @@ export async function POST(request: Request) {
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
-        const day = getOpenAvailabilityForDate(
+        // Keep persisted days aligned with weekly schedule + exceptions
+        store.eyeExamAvailability = ensureFutureAvailability(
           store.eyeExamAvailability,
+          store.settings,
+        );
+        const availability = resolvePublicAvailability(
+          store.eyeExamAvailability,
+          store.settings,
+        );
+        const day = getOpenAvailabilityForDate(
+          availability,
           appointmentDate,
           appointmentType,
         );

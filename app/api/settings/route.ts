@@ -161,7 +161,7 @@ export async function PUT(request: Request) {
       store.eyeExamAvailability = ensureFutureAvailability(
         store.eyeExamAvailability,
         next,
-        { forceRefreshDefaults: Array.isArray(patch.openingHours) },
+        { forceRefreshDefaults: true },
       );
 
       pushActivity(store, {
