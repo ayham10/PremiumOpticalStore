@@ -4593,23 +4593,40 @@ body.eye-exam-booking-open .whatsapp-fab {
 
 .clinic-book-schedule {
   display: grid;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .clinic-book-schedule-panel {
   display: grid;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #0c1016;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 106, 0.18);
+  background:
+    linear-gradient(180deg, rgba(212, 175, 106, 0.05), transparent 42%),
+    #0c1016;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .clinic-book-schedule-panel {
-    grid-template-columns: 1.15fr 0.85fr;
-    align-items: start;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 1rem;
+    padding: 1rem;
+    align-items: stretch;
   }
+}
+
+.clinic-panel-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d4af6a;
+}
+
+.clinic-cal {
+  min-width: 0;
 }
 
 .clinic-cal-nav {
@@ -4617,48 +4634,61 @@ body.eye-exam-booking-open .whatsapp-fab {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.55rem;
+  gap: 0.5rem;
 }
 
 .clinic-cal-nav strong {
-  font-size: 0.86rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f5f5f5;
+  text-align: center;
 }
 
 .clinic-cal-nav button {
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(212, 175, 106, 0.28);
   background: #15191f;
-  color: #f5f5f5;
+  color: #e6c58a;
   display: grid;
   place-items: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.clinic-cal-nav button:hover {
+  border-color: rgba(212, 175, 106, 0.55);
+  background: rgba(212, 175, 106, 0.1);
 }
 
 .clinic-cal-weekdays,
 .clinic-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.28rem;
+  gap: 0.22rem;
 }
 
 .clinic-cal-weekdays {
-  margin-bottom: 0.28rem;
+  margin-bottom: 0.3rem;
 }
 
 .clinic-cal-weekdays span {
   text-align: center;
   font-size: 0.62rem;
-  color: #8b939c;
+  font-weight: 650;
+  color: rgba(212, 175, 106, 0.72);
 }
 
 .clinic-cal-day {
   aspect-ratio: 1;
-  border-radius: 999px;
+  max-height: 2.35rem;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   color: #f5f5f5;
   font-size: 0.78rem;
   font-weight: 650;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
 .clinic-cal-day.is-available {
@@ -4668,17 +4698,19 @@ body.eye-exam-booking-open .whatsapp-fab {
 
 .clinic-cal-day.is-available:hover {
   border-color: rgba(212, 175, 106, 0.55);
+  background: rgba(212, 175, 106, 0.12);
 }
 
 .clinic-cal-day.is-selected {
   background: #d4af6a;
   color: #1a140c;
   border-color: #d4af6a;
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.35);
 }
 
 .clinic-cal-day.is-disabled,
 .clinic-cal-empty {
-  opacity: 0.3;
+  opacity: 0.28;
   background: transparent;
   color: #6b7280;
 }
@@ -4720,49 +4752,15 @@ body.eye-exam-booking-open .whatsapp-fab {
 
 .clinic-time-skeleton span {
   flex: 0 0 calc(33.333% - 0.3rem);
-  height: 2rem;
+  height: 2.2rem;
   border-radius: 10px;
-}
-
-.product-skeleton-block {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(212, 175, 106, 0.12),
-    rgba(255, 255, 255, 0.05)
-  );
-  background-size: 200% 100%;
-  animation: product-skeleton-shimmer 1.2s ease-in-out infinite;
-  border-radius: 12px;
-  min-height: 12rem;
-}
-
-.product-skeleton-line {
-  display: block;
-  height: 0.85rem;
-  margin: 0.55rem 0;
-  border-radius: 8px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(212, 175, 106, 0.14),
-    rgba(255, 255, 255, 0.05)
-  );
-  background-size: 200% 100%;
-  animation: product-skeleton-shimmer 1.2s ease-in-out infinite;
-}
-
-@keyframes product-skeleton-shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
 }
 
 .clinic-book-times {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .clinic-time-label {
@@ -4778,36 +4776,81 @@ body.eye-exam-booking-open .whatsapp-fab {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.4rem;
-}
-
-.clinic-time-grid--compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-height: 14rem;
+  max-height: 15.5rem;
   overflow-y: auto;
-  padding-inline-end: 0.15rem;
+  padding-inline-end: 0.1rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 106, 0.35) transparent;
 }
 
-@media (min-width: 640px) {
-  .clinic-time-grid--compact {
-    grid-template-columns: 1fr;
+@media (min-width: 768px) {
+  .clinic-time-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 16.5rem;
   }
 }
 
 .clinic-time-chip {
-  min-height: 2.15rem;
-  border-radius: 999px;
+  min-height: 2.35rem;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: #15191f;
   color: #f5f5f5;
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease,
+    transform 0.18s ease;
 }
 
-.clinic-time-chip.is-active,
 .clinic-time-chip:hover {
+  border-color: rgba(212, 175, 106, 0.55);
+  background: rgba(212, 175, 106, 0.12);
+}
+
+.clinic-time-chip.is-active {
   border-color: #d4af6a;
-  background: rgba(212, 175, 106, 0.16);
+  background: #d4af6a;
+  color: #1a140c;
+  font-weight: 750;
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.28);
+}
+
+.clinic-book-pick-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 106, 0.28);
+  background: rgba(212, 175, 106, 0.08);
+}
+
+.clinic-book-pick-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   color: #f5f5f5;
+  font-size: 0.84rem;
+}
+
+.clinic-book-pick-summary strong {
+  font-weight: 700;
+  color: #fff;
+}
+
+.clinic-book-pick-summary svg {
+  color: #d4af6a;
+  flex-shrink: 0;
+}
+
+.clinic-book-pick-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(212, 175, 106, 0.7);
 }
 
 .clinic-book-form {
@@ -4838,7 +4881,7 @@ body.eye-exam-booking-open .whatsapp-fab {
 .clinic-book-form input,
 .clinic-book-country-control,
 .clinic-book-country select {
-  min-height: 2.25rem;
+  min-height: 2.35rem;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: #0c1016;
@@ -4849,6 +4892,12 @@ body.eye-exam-booking-open .whatsapp-fab {
 
 .clinic-book-form input {
   padding: 0.4rem 0.7rem;
+}
+
+.clinic-book-form input:focus,
+.clinic-book-country-control:focus-within {
+  outline: none;
+  border-color: rgba(212, 175, 106, 0.55);
 }
 
 .clinic-book-form input::placeholder {

@@ -408,6 +408,7 @@ export default function ClinicBookingPage() {
             <form className="clinic-book-schedule" onSubmit={(e) => void confirmBooking(e)} noValidate>
               <div className="clinic-book-schedule-panel">
                 <div className="clinic-cal">
+                  <p className="clinic-panel-label">{t("clinicBooking.selectDate")}</p>
                   <div className="clinic-cal-nav">
                     <button
                       type="button"
@@ -482,14 +483,16 @@ export default function ClinicBookingPage() {
                   {!loadingDates && availableDates.length === 0 ? (
                     <p className="clinic-book-muted">{t("clinicBooking.emptyDates")}</p>
                   ) : null}
-                  {fieldErrors.date ? <em className="clinic-book-field-error">{fieldErrors.date}</em> : null}
+                  {fieldErrors.date ? (
+                    <em className="clinic-book-field-error">{fieldErrors.date}</em>
+                  ) : null}
                 </div>
 
                 <div className="clinic-book-times">
-                  <p className="clinic-time-label">{t("clinicBooking.selectTime")}</p>
+                  <p className="clinic-panel-label">{t("clinicBooking.selectTime")}</p>
                   {loadingTimes ? (
                     <div className="clinic-time-skeleton" aria-hidden>
-                      {Array.from({ length: 6 }).map((_, i) => (
+                      {Array.from({ length: 8 }).map((_, i) => (
                         <span key={i} />
                       ))}
                     </div>
@@ -498,12 +501,12 @@ export default function ClinicBookingPage() {
                   ) : times.length === 0 ? (
                     <p className="clinic-book-muted">{t("clinicBooking.emptyTimes")}</p>
                   ) : (
-                    <div className="clinic-time-grid clinic-time-grid--compact">
+                    <div className="clinic-time-grid">
                       {times.map((slot) => (
                         <button
                           key={slot}
                           type="button"
-                          className={`clinic-time-chip ${time === slot ? "is-active" : ""}`}
+                          className={`clinic-time-chip${time === slot ? " is-active" : ""}`}
                           onClick={() => setTime(slot)}
                         >
                           {slot}
@@ -511,8 +514,25 @@ export default function ClinicBookingPage() {
                       ))}
                     </div>
                   )}
-                  {fieldErrors.time ? <em className="clinic-book-field-error">{fieldErrors.time}</em> : null}
+                  {fieldErrors.time ? (
+                    <em className="clinic-book-field-error">{fieldErrors.time}</em>
+                  ) : null}
                 </div>
+              </div>
+
+              <div
+                className="clinic-book-pick-summary"
+                aria-label={t("clinicBooking.reviewTitle")}
+              >
+                <span>
+                  <CalendarDays size={14} aria-hidden />
+                  <strong>{date ? formatClinicDateDisplay(date) : "—"}</strong>
+                </span>
+                <span className="clinic-book-pick-dot" aria-hidden />
+                <span>
+                  <Clock3 size={14} aria-hidden />
+                  <strong>{time || "—"}</strong>
+                </span>
               </div>
 
               <div className="clinic-book-form">
@@ -571,21 +591,6 @@ export default function ClinicBookingPage() {
                     {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
                   </label>
                 </div>
-              </div>
-
-              <div className="clinic-book-summary-bar" aria-label={t("clinicBooking.reviewTitle")}>
-                <span>
-                  <Eye size={14} aria-hidden />
-                  {serviceLabel}
-                </span>
-                <span>
-                  <CalendarDays size={14} aria-hidden />
-                  {date ? formatClinicDateDisplay(date) : "—"}
-                </span>
-                <span>
-                  <Clock3 size={14} aria-hidden />
-                  {time || "—"}
-                </span>
               </div>
 
               {error ? <p className="clinic-book-error">{error}</p> : null}
