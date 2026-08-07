@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, jsonError } from "@/lib/api/helpers";
-import { getStore } from "@/lib/db/store";
+import { getStore, invalidateStoreCache } from "@/lib/db/store";
 import {
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       });
     }
 
+    invalidateStoreCache();
     const { data } = await getStore();
     const availability = resolvePublicAvailability(
       data.eyeExamAvailability,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/helpers";
-import { getStore } from "@/lib/db/store";
+import { getStore, invalidateStoreCache } from "@/lib/db/store";
 import {
   daySupportsService,
   formatEyeExamDateDisplay,
@@ -21,6 +21,8 @@ export async function GET(request: Request) {
       ? typeParam
       : normalizeAppointmentType(typeParam);
 
+    // Fresh store so Admin Working Hours changes apply immediately
+    invalidateStoreCache();
     const { data } = await getStore();
     const availability = resolvePublicAvailability(
       data.eyeExamAvailability,

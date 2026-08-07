@@ -142,6 +142,8 @@ export type CategoryCatalogueProps = {
   lead: string;
   videoSrc: string;
   posterSrc: string;
+  /** When set, continuously loop only the last N seconds of the hero video. */
+  videoLoopTailSeconds?: number;
   /** Active category pill for shared catalogue navigation */
   activeFilter?: CatalogueFilterKey;
   bookHref?: string;
@@ -155,6 +157,7 @@ export default function CategoryCatalogue({
   lead,
   videoSrc,
   posterSrc,
+  videoLoopTailSeconds,
   activeFilter = "All",
   pageClass = "",
 }: CategoryCatalogueProps) {
@@ -168,6 +171,8 @@ export default function CategoryCatalogue({
   const [heroVideoReady, setHeroVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const categorySet = useMemo(() => new Set(categories), [cacheKey]);
+  const useTailLoop =
+    typeof videoLoopTailSeconds === "number" && videoLoopTailSeconds > 0;
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -183,13 +188,68 @@ export default function CategoryCatalogue({
     if (!video) return;
 
     let cancelled = false;
+
+    const tailStart = () => {
+      if (!useTailLoop || !Number.isFinite(video.duration) || video.duration <= 0) {
+        return 0;
+      }
+      return Math.max(0, video.duration - videoLoopTailSeconds!);
+    };
+
+    const seekToTail = () => {
+      const start = tailStart();
+      if (start > 0 && Math.abs(video.currentTime - start) > 0.08) {
+        try {
+          video.currentTime = start;
+        } catch {
+          /* ignore seek errors before ready */
+        }
+      }
+    };
+
+    const onLoadedMeta = () => {
+      if (cancelled) return;
+      seekToTail();
+      setHeroVideoReady(true);
+      void video.play().catch(() => {
+        /* autoplay can be blocked; poster remains */
+      });
+    };
+
+    const onTimeUpdate = () => {
+      if (!useTailLoop || cancelled) return;
+      const start = tailStart();
+      if (start <= 0) return;
+      // Keep playback inside the final N seconds
+      if (video.currentTime < start) {
+        video.currentTime = start;
+        return;
+      }
+      if (video.duration && video.currentTime >= video.duration - 0.05) {
+        video.currentTime = start;
+      }
+    };
+
+    const onEnded = () => {
+      if (!useTailLoop || cancelled) return;
+      seekToTail();
+      void video.play().catch(() => undefined);
+    };
+
+    video.addEventListener("loadedmetadata", onLoadedMeta);
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("ended", onEnded);
+
     const start = () => {
       if (cancelled) return;
       try {
         video.load();
-        void video.play().catch(() => {
-          /* autoplay can be blocked; poster remains */
-        });
+        if (video.readyState >= 1) onLoadedMeta();
+        else {
+          void video.play().catch(() => {
+            /* wait for metadata */
+          });
+        }
       } catch {
         /* ignore */
       }
@@ -203,12 +263,15 @@ export default function CategoryCatalogue({
 
     return () => {
       cancelled = true;
+      video.removeEventListener("loadedmetadata", onLoadedMeta);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("ended", onEnded);
       if (idleId != null && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idleId);
       }
       window.clearTimeout(timeoutId);
     };
-  }, [reduceMotion, videoSrc]);
+  }, [reduceMotion, videoSrc, useTailLoop, videoLoopTailSeconds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -279,7 +342,7 @@ export default function CategoryCatalogue({
               className="frames-hero-video"
               autoPlay
               muted
-              loop
+              loop={!useTailLoop}
               playsInline
               preload="none"
               poster={posterSrc}
