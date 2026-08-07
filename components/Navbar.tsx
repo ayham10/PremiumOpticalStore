@@ -25,6 +25,7 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
   cachedJsonFetch,
   productsCacheKey,
+  promotionsSlidesCacheKey,
 } from "@/lib/public-data-cache";
 
 const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
@@ -83,7 +84,14 @@ export default function Navbar() {
 
   // Prefetch common public destinations + catalogue product data (SPA, no full reload)
   useEffect(() => {
-    const routes = ["/frames", "/sunglasses", "/book", "/shop", "/eye-exams"];
+    const routes = [
+      "/frames",
+      "/sunglasses",
+      "/book",
+      "/shop",
+      "/eye-exams",
+      "/promotions",
+    ];
     for (const href of routes) {
       try {
         router.prefetch(href);
@@ -103,6 +111,10 @@ export default function Navbar() {
         productsCacheKey(["Sunglasses"]),
         "/api/products?category=Sunglasses",
       ).catch(() => undefined);
+      void cachedJsonFetch(
+        promotionsSlidesCacheKey(),
+        "/api/promotions?slides=1",
+      ).catch(() => undefined);
     };
 
     let idleId: number | null = null;
@@ -110,7 +122,7 @@ export default function Navbar() {
     if (typeof window.requestIdleCallback === "function") {
       idleId = window.requestIdleCallback(warm, { timeout: 2000 });
     } else {
-      timeoutId = window.setTimeout(warm, 500);
+      timeoutId = window.setTimeout(warm, 400);
     }
 
     return () => {

@@ -93,11 +93,26 @@ function sanitizePromotion(
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const wantSlides = searchParams.get("slides") === "1";
     const session = await getSession();
     const isAdmin = session && hasPermission(session.role, "promotions");
     const { data } = await getStore();
+
+    if (wantSlides) {
+      const { buildPromoSlides } = await import("@/lib/promotions");
+      const slides = buildPromoSlides(data.promotions, data.products);
+      return NextResponse.json(
+        { slides },
+        {
+          headers: {
+            "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+          },
+        },
+      );
+    }
 
     if (isAdmin) {
       const promotions = [...data.promotions].sort(
@@ -114,7 +129,14 @@ export async function GET() {
       )
       .sort((a, b) => a.priority - b.priority);
 
-    return NextResponse.json({ promotions });
+    return NextResponse.json(
+      { promotions },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch (error) {
     return handleRouteError(error);
   }

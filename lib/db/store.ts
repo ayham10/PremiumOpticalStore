@@ -11,6 +11,13 @@ const DATA_FILE = path.join(DATA_DIR, "store.json");
 const SUPABASE_TABLE = process.env.SUPABASE_STORE_TABLE || "lumina_store";
 const SUPABASE_ROW_ID = process.env.SUPABASE_STORE_ID || "default";
 
+/** Short in-process cache so public navigations don't re-hit Supabase every time. */
+const STORE_CACHE_TTL_MS = 8_000;
+let memoryStore: { at: number; data: AppData; storage: StorageMode } | null =
+  null;
+let storeInflight: Promise<{ data: AppData; storage: StorageMode }> | null =
+  null;
+
 export type StorageMode = "supabase" | "filesystem";
 
 export function supabaseConfig() {
@@ -149,6 +156,37 @@ function normalizeData(data: AppData): AppData {
 }
 
 export async function getStore(): Promise<{ data: AppData; storage: StorageMode }> {
+  const now = Date.now();
+  if (
+    memoryStore &&
+    now - memoryStore.at < STORE_CACHE_TTL_MS &&
+    !storeInflight
+  ) {
+    return { data: memoryStore.data, storage: memoryStore.storage };
+  }
+  if (storeInflight) return storeInflight;
+
+  storeInflight = (async () => {
+    const result = await readStoreUncached();
+    memoryStore = {
+      at: Date.now(),
+      data: result.data,
+      storage: result.storage,
+    };
+    return result;
+  })();
+
+  try {
+    return await storeInflight;
+  } finally {
+    storeInflight = null;
+  }
+}
+
+async function readStoreUncached(): Promise<{
+  data: AppData;
+  storage: StorageMode;
+}> {
   const config = supabaseConfig();
 
   if (config) {
@@ -179,6 +217,10 @@ export async function getStore(): Promise<{ data: AppData; storage: StorageMode 
   return { data: seed, storage: "filesystem" };
 }
 
+export function invalidateStoreCache() {
+  memoryStore = null;
+}
+
 export async function saveStore(data: AppData): Promise<{ storage: StorageMode }> {
   const next: AppData = {
     ...normalizeData(data),
@@ -191,6 +233,7 @@ export async function saveStore(data: AppData): Promise<{ storage: StorageMode }
       await writeSupabase(next);
       // Keep local mirror for resilience
       await writeFilesystem(next).catch(() => undefined);
+      memoryStore = { at: Date.now(), data: next, storage: "supabase" };
       return { storage: "supabase" };
     } catch (error) {
       console.error("Supabase write failed, using filesystem", error);
@@ -199,8 +242,10 @@ export async function saveStore(data: AppData): Promise<{ storage: StorageMode }
 
   try {
     await writeFilesystem(next);
+    memoryStore = { at: Date.now(), data: next, storage: "filesystem" };
     return { storage: "filesystem" };
   } catch (error) {
+    invalidateStoreCache();
     // Serverless/read-only runtimes cannot persist local JSON. Prefer failing
     // the mutation clearly rather than crashing with an opaque FS error.
     throw new Error(
@@ -214,7 +259,8 @@ export async function saveStore(data: AppData): Promise<{ storage: StorageMode }
 export async function updateStore(
   mutator: (data: AppData) => AppData | Promise<AppData>
 ): Promise<{ data: AppData; storage: StorageMode }> {
-  const { data } = await getStore();
+  // Bypass the read cache for mutations to avoid racing a stale in-flight read
+  const { data } = await readStoreUncached();
   const next = await mutator(structuredClone(data));
   const { storage } = await saveStore(next);
   return { data: next, storage };

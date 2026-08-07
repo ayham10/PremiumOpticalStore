@@ -58,7 +58,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ settings: data.settings });
     }
 
-    return NextResponse.json({ settings: toPublicSettings(data.settings) });
+    return NextResponse.json(
+      { settings: toPublicSettings(data.settings) },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch (error) {
     return handleRouteError(error);
   }

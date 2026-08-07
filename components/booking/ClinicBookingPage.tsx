@@ -141,6 +141,7 @@ export default function ClinicBookingPage() {
 
   const [viewYear, setViewYear] = useState(initialMonth.year);
   const [viewMonth, setViewMonth] = useState(initialMonth.month);
+  const [datesEpoch, setDatesEpoch] = useState(0);
 
   useEffect(() => {
     if (preset) {
@@ -149,11 +150,27 @@ export default function ClinicBookingPage() {
     }
   }, [preset]);
 
+  // Admin Working Hours / exceptions → refresh public calendar immediately
+  useEffect(() => {
+    function onScheduleChanged() {
+      invalidatePublicCache("booking-");
+      setDatesEpoch((n) => n + 1);
+    }
+    window.addEventListener("oyon:branding-saved", onScheduleChanged);
+    window.addEventListener("oyon:availability-saved", onScheduleChanged);
+    return () => {
+      window.removeEventListener("oyon:branding-saved", onScheduleChanged);
+      window.removeEventListener("oyon:availability-saved", onScheduleChanged);
+    };
+  }, []);
+
   useEffect(() => {
     if (!appointmentType || step !== "schedule") return;
     let cancelled = false;
     const key = bookingDatesCacheKey(appointmentType);
-    const cached = peekPublicCache<{ dates: DateOption[] }>(key, 8_000);
+    const cached = peekPublicCache<{ dates: DateOption[] }>(key, 8_000, {
+      allowStale: true,
+    });
     if (cached?.dates?.length) {
       setAvailableDates(cached.dates);
       setAvailableSet(new Set(cached.dates.map((d) => d.date)));
@@ -169,7 +186,7 @@ export default function ClinicBookingPage() {
     cachedJsonFetch<{ dates: DateOption[] }>(
       key,
       `/api/eye-exam/available-dates?type=${encodeURIComponent(appointmentType)}`,
-      { ttlMs: 8_000 },
+      { ttlMs: datesEpoch > 0 ? 0 : 8_000, revalidate: datesEpoch > 0 },
     )
       .then((data) => {
         if (cancelled) return;
@@ -195,7 +212,7 @@ export default function ClinicBookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [appointmentType, step, t]);
+  }, [appointmentType, step, t, datesEpoch]);
 
   useEffect(() => {
     if (!appointmentType || !date || step !== "schedule") {

@@ -217,6 +217,7 @@ function AdminEyeExamPageInner() {
         },
       );
       setMessage(t("admin.availability.dateAdded"));
+      window.dispatchEvent(new Event("oyon:availability-saved"));
       await loadAvailability();
       if (created.day?.id) setSelectedId(created.day.id);
     } catch (err) {
@@ -241,6 +242,7 @@ function AdminEyeExamPageInner() {
         body: JSON.stringify({ id: targetId, ...body }),
       });
       setMessage(t("admin.availability.updated"));
+      window.dispatchEvent(new Event("oyon:availability-saved"));
       await loadAvailability();
     } catch (err) {
       setError(
@@ -263,6 +265,7 @@ function AdminEyeExamPageInner() {
         method: "DELETE",
       });
       setMessage(t("admin.availability.dateRemoved"));
+      window.dispatchEvent(new Event("oyon:availability-saved"));
       await loadAvailability();
     } catch (err) {
       setError(
