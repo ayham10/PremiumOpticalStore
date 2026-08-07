@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/helpers";
-import { getStore, updateStore } from "@/lib/db/store";
+import { getStore } from "@/lib/db/store";
 import {
   daySupportsService,
-  ensureFutureAvailability,
   formatEyeExamDateDisplay,
   isClinicAppointmentType,
   listBookableTimes,
   normalizeAppointmentType,
+  resolvePublicAvailability,
   todayInJerusalem,
 } from "@/lib/eye-exam";
 
@@ -21,15 +21,11 @@ export async function GET(request: Request) {
       ? typeParam
       : normalizeAppointmentType(typeParam);
 
-    await updateStore((store) => {
-      store.eyeExamAvailability = ensureFutureAvailability(
-        store.eyeExamAvailability,
-        store.settings,
-      );
-      return store;
-    });
-
     const { data } = await getStore();
+    const availability = resolvePublicAvailability(
+      data.eyeExamAvailability,
+      data.settings,
+    );
     const today = todayInJerusalem();
     const leadDays = data.settings.bookingLeadDays || 45;
     const maxDate = (() => {
@@ -38,7 +34,7 @@ export async function GET(request: Request) {
       return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
     })();
 
-    const dates = data.eyeExamAvailability
+    const dates = availability
       .filter((day) => day.isOpen && day.date >= today && day.date <= maxDate)
       .filter((day) => daySupportsService(day, appointmentType))
       .filter(
@@ -53,7 +49,14 @@ export async function GET(request: Request) {
         label: formatEyeExamDateDisplay(day.date),
       }));
 
-    return NextResponse.json({ dates, appointmentType });
+    return NextResponse.json(
+      { dates, appointmentType },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+        },
+      },
+    );
   } catch (error) {
     return handleRouteError(error);
   }

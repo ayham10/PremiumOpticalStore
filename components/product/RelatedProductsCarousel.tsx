@@ -120,6 +120,7 @@ export default function RelatedProductsCarousel({
                   sizes="(max-width: 767px) 70vw, 260px"
                   className="object-cover"
                   loading="lazy"
+                  quality={70}
                 />
               </SaveReturnLink>
               <div className="product-related-body">

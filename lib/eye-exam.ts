@@ -449,8 +449,76 @@ export function buildDefaultSlotsFromOpeningHours(
 }
 
 /**
+ * Read-path availability for public booking.
+ * - Weekly opening hours decide open/closed for normal days
+ * - Manual exceptions (closed or custom hours) override the schedule
+ * Does not persist — Admin Working Hours changes apply on the next read.
+ */
+export function resolvePublicAvailability(
+  availability: EyeExamAvailability[],
+  settings: StoreSettings,
+): EyeExamAvailability[] {
+  const today = todayInJerusalem();
+  const lead = Math.max(1, Math.min(365, settings.bookingLeadDays || 45));
+  const interval = settings.appointmentSlotMinutes || 30;
+  const byDate = new Map(availability.map((d) => [d.date, d]));
+  const now = new Date().toISOString();
+  const next: EyeExamAvailability[] = [];
+
+  for (let i = 0; i <= lead; i++) {
+    const date = addDaysIso(today, i);
+    const existing = byDate.get(date);
+    byDate.delete(date);
+
+    if (existing?.isException) {
+      next.push(existing);
+      continue;
+    }
+
+    const generated = buildDefaultSlotsFromOpeningHours(
+      settings.openingHours || [],
+      date,
+      interval,
+    );
+
+    if (existing) {
+      next.push({
+        ...existing,
+        isOpen: generated.isOpen,
+        periods: generated.periods,
+        slots: generated.slots,
+        isException: false,
+        updatedAt: now,
+      });
+      continue;
+    }
+
+    // Include open weekdays from the weekly schedule; closed weekdays stay unavailable
+    if (generated.isOpen && generated.slots.length) {
+      next.push({
+        id: newId("exa"),
+        date,
+        isOpen: true,
+        periods: generated.periods,
+        slots: generated.slots,
+        isException: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+
+  for (const day of byDate.values()) {
+    next.push(day);
+  }
+
+  return next.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
  * Ensure availability rows exist for today..leadDays from settings opening hours.
- * Non-exception days are refreshed from opening hours so public booking stays in sync.
+ * Non-exception days are refreshed from opening hours when forceRefreshDefaults is set
+ * (e.g. after Admin Working Hours changes).
  */
 export function ensureFutureAvailability(
   availability: EyeExamAvailability[],
@@ -463,6 +531,7 @@ export function ensureFutureAvailability(
   const byDate = new Map(availability.map((d) => [d.date, d]));
   const now = new Date().toISOString();
   const next: EyeExamAvailability[] = [];
+  const refreshDefaults = Boolean(opts?.forceRefreshDefaults);
 
   for (let i = 0; i <= lead; i++) {
     const date = addDaysIso(today, i);
@@ -479,7 +548,7 @@ export function ensureFutureAvailability(
       continue;
     }
 
-    if (existing && !opts?.forceRefreshDefaults) {
+    if (existing && !refreshDefaults) {
       // Keep existing non-exception day but ensure slots exist if empty
       if (!existing.slots.length && generated.slots.length) {
         next.push({
@@ -511,24 +580,17 @@ export function ensureFutureAvailability(
         updatedAt: now,
       });
       byDate.delete(date);
-    } else if (generated.slots.length || generated.isOpen === false) {
-      // Create closed days too so admin can reopen exceptions
-      const hours = getOpeningHoursForWeekday(
-        settings.openingHours || [],
-        weekdayUtc(date),
-      );
-      if (hours && !hours.closed) {
-        next.push({
-          id: newId("exa"),
-          date,
-          isOpen: generated.isOpen,
-          periods: generated.periods,
-          slots: generated.slots,
-          isException: false,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+    } else if (generated.isOpen && generated.slots.length) {
+      next.push({
+        id: newId("exa"),
+        date,
+        isOpen: true,
+        periods: generated.periods,
+        slots: generated.slots,
+        isException: false,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
   }
 

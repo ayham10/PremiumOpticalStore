@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Menu,
@@ -22,6 +22,10 @@ import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import {
+  cachedJsonFetch,
+  productsCacheKey,
+} from "@/lib/public-data-cache";
 
 const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
 
@@ -38,6 +42,7 @@ export default function Navbar() {
   const { t } = useLocale();
   const { branding, settings } = useBranding();
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/";
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
@@ -75,6 +80,47 @@ export default function Navbar() {
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  // Prefetch common public destinations + catalogue product data (SPA, no full reload)
+  useEffect(() => {
+    const routes = ["/frames", "/sunglasses", "/book", "/shop", "/eye-exams"];
+    for (const href of routes) {
+      try {
+        router.prefetch(href);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    let cancelled = false;
+    const warm = () => {
+      if (cancelled) return;
+      void cachedJsonFetch(
+        productsCacheKey(["Frames", "Prescription Glasses"]),
+        "/api/products?category=Frames&category=Prescription%20Glasses",
+      ).catch(() => undefined);
+      void cachedJsonFetch(
+        productsCacheKey(["Sunglasses"]),
+        "/api/products?category=Sunglasses",
+      ).catch(() => undefined);
+    };
+
+    let idleId: number | null = null;
+    let timeoutId: number | null = null;
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(warm, { timeout: 2000 });
+    } else {
+      timeoutId = window.setTimeout(warm, 500);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+    };
+  }, [router]);
 
   useEffect(() => {
     document.body.classList.toggle("has-mobile-nav-open", open);

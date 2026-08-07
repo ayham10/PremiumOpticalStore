@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import Image from "next/image";
 import { Heart, ArrowUpDown } from "lucide-react";
 import {
@@ -11,6 +17,11 @@ import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
+import {
+  cachedJsonFetch,
+  peekPublicCache,
+  productsCacheKey,
+} from "@/lib/public-data-cache";
 import type { Product, ProductCategory } from "@/lib/types";
 
 export type CatalogueSort = "newest" | "price-asc" | "price-desc";
@@ -72,6 +83,7 @@ export function CatalogueProductCard({ product }: { product: Product }) {
           sizes="(max-width: 639px) 33vw, (max-width: 1023px) 33vw, 25vw"
           className="object-cover"
           loading="lazy"
+          quality={70}
         />
       </SaveReturnLink>
       <div className="frames-product-body">
@@ -147,11 +159,15 @@ export default function CategoryCatalogue({
   pageClass = "",
 }: CategoryCatalogueProps) {
   const { t } = useLocale();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = productsCacheKey(categories);
+  const cached = peekPublicCache<{ products: Product[] }>(cacheKey);
+  const [products, setProducts] = useState<Product[]>(cached?.products || []);
+  const [loading, setLoading] = useState(!cached);
   const [sort, setSort] = useState<CatalogueSort>("newest");
   const [reduceMotion, setReduceMotion] = useState(false);
-  const categorySet = useMemo(() => new Set(categories), [categories]);
+  const [heroVideoReady, setHeroVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const categorySet = useMemo(() => new Set(categories), [cacheKey]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -162,11 +178,53 @@ export default function CategoryCatalogue({
   }, []);
 
   useEffect(() => {
+    if (reduceMotion) return;
+    const video = videoRef.current;
+    if (!video) return;
+
     let cancelled = false;
+    const start = () => {
+      if (cancelled) return;
+      try {
+        video.load();
+        void video.play().catch(() => {
+          /* autoplay can be blocked; poster remains */
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const idleId =
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(start, { timeout: 1500 })
+        : null;
+    const timeoutId = window.setTimeout(start, 350);
+
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      window.clearTimeout(timeoutId);
+    };
+  }, [reduceMotion, videoSrc]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams();
+    for (const category of categories) {
+      params.append("category", category);
+    }
+    const url = `/api/products?${params.toString()}`;
+
     (async () => {
       try {
-        const res = await fetch("/api/products");
-        const data = (await res.json()) as { products: Product[] };
+        const data = await cachedJsonFetch<{ products: Product[] }>(
+          cacheKey,
+          url,
+          { ttlMs: 60_000 },
+        );
         if (!cancelled) setProducts(data.products || []);
       } catch {
         if (!cancelled) setProducts([]);
@@ -177,11 +235,13 @@ export default function CategoryCatalogue({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cacheKey]);
 
   const items = useMemo(() => {
     const filtered = products.filter(
-      (p) => p.status === "active" && categorySet.has(p.category),
+      (p) =>
+        (p.status === "active" || p.status === "out_of_stock") &&
+        categorySet.has(p.category),
     );
     return sortProducts(filtered, sort);
   }, [products, categorySet, sort]);
@@ -198,19 +258,37 @@ export default function CategoryCatalogue({
             priority
             sizes="100vw"
             className="object-cover"
+            quality={75}
           />
         ) : (
-          <video
-            className="frames-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            poster={posterSrc}
-          >
-            <source src={videoSrc} type="video/mp4" />
-          </video>
+          <>
+            {/* Poster paints immediately; video loads after idle so it never blocks LCP */}
+            {!heroVideoReady ? (
+              <Image
+                src={posterSrc}
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
+                quality={75}
+              />
+            ) : null}
+            <video
+              ref={videoRef}
+              className="frames-hero-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="none"
+              poster={posterSrc}
+              onLoadedData={() => setHeroVideoReady(true)}
+              style={heroVideoReady ? undefined : { opacity: 0 }}
+            >
+              <source src={videoSrc} type="video/mp4" />
+            </video>
+          </>
         )}
         <span className="frames-hero-veil" aria-hidden />
         <div className="catalogue-hero-copy">

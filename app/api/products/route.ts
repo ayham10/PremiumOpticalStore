@@ -69,9 +69,19 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get("featured");
-    const category = searchParams.get("category");
+    const slug = searchParams.get("slug")?.trim() || "";
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
     const all = searchParams.get("all") === "1";
+    const categoryParams = [
+      ...searchParams.getAll("category"),
+      ...(searchParams.get("categories")?.split(",") || []),
+    ]
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const categorySet = new Set(
+      categoryParams.filter(isProductCategory),
+    );
 
     const { data } = await getStore();
     let products = data.products;
@@ -91,8 +101,39 @@ export async function GET(request: Request) {
       products = products.filter((p) => p.featured);
     }
 
-    if (category) {
-      products = products.filter((p) => p.category === category);
+    if (slug) {
+      const product = products.find((p) => p.slug === slug) || null;
+      const related = product
+        ? products
+            .filter(
+              (p) =>
+                p.id !== product.id &&
+                p.category === product.category &&
+                (p.status === "active" || p.status === "out_of_stock"),
+            )
+            .slice(0, 8)
+        : [];
+      return NextResponse.json(
+        {
+          product,
+          related,
+          products: product ? [product] : [],
+          settings: {
+            whatsapp: data.settings.whatsapp,
+            currencySymbol: data.settings.currencySymbol,
+            currency: data.settings.currency,
+          },
+        },
+        {
+          headers: {
+            "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+          },
+        },
+      );
+    }
+
+    if (categorySet.size > 0) {
+      products = products.filter((p) => categorySet.has(p.category));
     }
 
     if (q) {
@@ -103,7 +144,14 @@ export async function GET(request: Request) {
       );
     }
 
-    return NextResponse.json({ products });
+    return NextResponse.json(
+      { products },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch (error) {
     return handleRouteError(error);
   }

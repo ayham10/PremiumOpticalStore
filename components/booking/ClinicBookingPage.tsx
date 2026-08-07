@@ -24,6 +24,13 @@ import {
   groupTimesOfDay,
   resolveClinicTypeFromQuery,
 } from "@/lib/clinic-booking";
+import {
+  bookingDatesCacheKey,
+  bookingTimesCacheKey,
+  cachedJsonFetch,
+  invalidatePublicCache,
+  peekPublicCache,
+} from "@/lib/public-data-cache";
 import type { ClinicAppointmentType } from "@/lib/types";
 
 type Step = "service" | "schedule" | "success";
@@ -145,19 +152,31 @@ export default function ClinicBookingPage() {
   useEffect(() => {
     if (!appointmentType || step !== "schedule") return;
     let cancelled = false;
-    setLoadingDates(true);
+    const key = bookingDatesCacheKey(appointmentType);
+    const cached = peekPublicCache<{ dates: DateOption[] }>(key, 8_000);
+    if (cached?.dates?.length) {
+      setAvailableDates(cached.dates);
+      setAvailableSet(new Set(cached.dates.map((d) => d.date)));
+      setLoadingDates(false);
+      const [y, m] = cached.dates[0].date.split("-").map(Number);
+      setViewYear(y);
+      setViewMonth(m - 1);
+    } else {
+      setLoadingDates(true);
+    }
     setError("");
-    fetch(
+
+    cachedJsonFetch<{ dates: DateOption[] }>(
+      key,
       `/api/eye-exam/available-dates?type=${encodeURIComponent(appointmentType)}`,
+      { ttlMs: 8_000 },
     )
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t("clinicBooking.errorLoad"));
+      .then((data) => {
         if (cancelled) return;
-        const dates = (data.dates || []) as DateOption[];
+        const dates = data.dates || [];
         setAvailableDates(dates);
         setAvailableSet(new Set(dates.map((d) => d.date)));
-        if (dates[0]) {
+        if (dates[0] && !cached?.dates?.length) {
           const [y, m] = dates[0].date.split("-").map(Number);
           setViewYear(y);
           setViewMonth(m - 1);
@@ -183,15 +202,24 @@ export default function ClinicBookingPage() {
       return;
     }
     let cancelled = false;
-    setLoadingTimes(true);
+    const key = bookingTimesCacheKey(appointmentType, date);
+    const cached = peekPublicCache<{ times: string[] }>(key, 8_000);
+    if (cached?.times) {
+      setTimes(cached.times);
+      setLoadingTimes(false);
+    } else {
+      setLoadingTimes(true);
+      setTimes([]);
+    }
     setTime("");
     setError("");
-    fetch(
+
+    cachedJsonFetch<{ times: string[] }>(
+      key,
       `/api/eye-exam/available-times?date=${encodeURIComponent(date)}&type=${encodeURIComponent(appointmentType)}`,
+      { ttlMs: 8_000 },
     )
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t("clinicBooking.errorLoad"));
+      .then((data) => {
         if (!cancelled) setTimes(data.times || []);
       })
       .catch((err) => {
@@ -274,6 +302,7 @@ export default function ClinicBookingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("clinicBooking.errorSubmit"));
+      invalidatePublicCache("booking-");
       setSuccessLabel(data.appointment?.dateLabel || formatClinicDateDisplay(date));
       setStep("success");
     } catch (err) {
@@ -394,36 +423,45 @@ export default function ClinicBookingPage() {
                       <span key={d}>{t(`eyeExam.weekdays.${d}`).slice(0, 2)}</span>
                     ))}
                   </div>
+                  <div
+                    className={`clinic-cal-grid${loadingDates ? " is-loading" : ""}`}
+                    role="grid"
+                    aria-busy={loadingDates}
+                  >
+                    {grid.map((cell, idx) => {
+                      if (!cell.iso || cell.day == null) {
+                        return <span key={`e-${idx}`} className="clinic-cal-empty" />;
+                      }
+                      const disabled =
+                        loadingDates ||
+                        cell.iso < today ||
+                        !availableSet.has(cell.iso);
+                      const selected = date === cell.iso;
+                      return (
+                        <button
+                          key={cell.iso}
+                          type="button"
+                          disabled={disabled}
+                          className={`clinic-cal-day ${selected ? "is-selected" : ""} ${
+                            disabled ? "is-disabled" : "is-available"
+                          }`}
+                          onClick={() => {
+                            setDate(cell.iso!);
+                            setTime("");
+                          }}
+                        >
+                          {cell.day}
+                        </button>
+                      );
+                    })}
+                  </div>
                   {loadingDates ? (
-                    <p className="clinic-book-muted">{t("common.loading")}</p>
-                  ) : (
-                    <div className="clinic-cal-grid" role="grid">
-                      {grid.map((cell, idx) => {
-                        if (!cell.iso || cell.day == null) {
-                          return <span key={`e-${idx}`} className="clinic-cal-empty" />;
-                        }
-                        const disabled =
-                          cell.iso < today || !availableSet.has(cell.iso);
-                        const selected = date === cell.iso;
-                        return (
-                          <button
-                            key={cell.iso}
-                            type="button"
-                            disabled={disabled}
-                            className={`clinic-cal-day ${selected ? "is-selected" : ""} ${
-                              disabled ? "is-disabled" : "is-available"
-                            }`}
-                            onClick={() => {
-                              setDate(cell.iso!);
-                              setTime("");
-                            }}
-                          >
-                            {cell.day}
-                          </button>
-                        );
-                      })}
+                    <div className="clinic-cal-skeleton" aria-hidden>
+                      <span />
+                      <span />
+                      <span />
                     </div>
-                  )}
+                  ) : null}
                   {!loadingDates && availableDates.length === 0 ? (
                     <p className="clinic-book-muted">{t("clinicBooking.emptyDates")}</p>
                   ) : null}
@@ -433,7 +471,11 @@ export default function ClinicBookingPage() {
                 <div className="clinic-book-times">
                   <p className="clinic-time-label">{t("clinicBooking.selectTime")}</p>
                   {loadingTimes ? (
-                    <p className="clinic-book-muted">{t("common.loading")}</p>
+                    <div className="clinic-time-skeleton" aria-hidden>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <span key={i} />
+                      ))}
+                    </div>
                   ) : !date ? (
                     <p className="clinic-book-muted">{t("eyeExam.pickDateFirst")}</p>
                   ) : times.length === 0 ? (
