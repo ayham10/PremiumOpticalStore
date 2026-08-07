@@ -4756,6 +4756,43 @@ body.eye-exam-booking-open .whatsapp-fab {
   border-radius: 10px;
 }
 
+.product-skeleton-block {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(212, 175, 106, 0.12),
+    rgba(255, 255, 255, 0.05)
+  );
+  background-size: 200% 100%;
+  animation: product-skeleton-shimmer 1.2s ease-in-out infinite;
+  border-radius: 12px;
+  min-height: 12rem;
+}
+
+.product-skeleton-line {
+  display: block;
+  height: 0.85rem;
+  margin: 0.55rem 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(212, 175, 106, 0.14),
+    rgba(255, 255, 255, 0.05)
+  );
+  background-size: 200% 100%;
+  animation: product-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes product-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .clinic-book-times {
   min-width: 0;
   display: flex;
