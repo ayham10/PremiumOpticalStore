@@ -7,6 +7,7 @@ import {
   isClinicAppointmentType,
   listBookableTimes,
   normalizeAppointmentType,
+  publicBookingMaxDate,
   resolvePublicAvailability,
   todayInJerusalem,
 } from "@/lib/eye-exam";
@@ -29,12 +30,7 @@ export async function GET(request: Request) {
       data.settings,
     );
     const today = todayInJerusalem();
-    const leadDays = data.settings.bookingLeadDays || 45;
-    const maxDate = (() => {
-      const [y, m, d] = today.split("-").map(Number);
-      const dt = new Date(Date.UTC(y, m - 1, d + leadDays));
-      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
-    })();
+    const maxDate = publicBookingMaxDate(today);
 
     const dates = availability
       .filter((day) => day.isOpen && day.date >= today && day.date <= maxDate)
@@ -52,7 +48,7 @@ export async function GET(request: Request) {
       }));
 
     return NextResponse.json(
-      { dates, appointmentType },
+      { dates, appointmentType, maxDate },
       {
         headers: {
           "Cache-Control": "no-store",

@@ -503,22 +503,30 @@ export function resolveAvailabilityDay(
   };
 }
 
+/** Public booking window ends on this inclusive calendar date (Asia/Jerusalem). */
+export const PUBLIC_BOOKING_HORIZON_END = "2027-12-31";
+
+/** Inclusive end date for the public booking calendar. */
+export function publicBookingMaxDate(today = todayInJerusalem()): string {
+  return today > PUBLIC_BOOKING_HORIZON_END ? today : PUBLIC_BOOKING_HORIZON_END;
+}
+
 /**
- * Read-path availability for public booking across today..leadDays.
- * Weekly schedule is the default for every future working day; exceptions override.
+ * Read-path availability for public booking from today through 31/12/2027.
+ * Driven by the weekly working schedule + manual exceptions — not by
+ * manually opened availability rows.
  */
 export function resolvePublicAvailability(
   availability: EyeExamAvailability[],
   settings: StoreSettings,
 ): EyeExamAvailability[] {
   const today = todayInJerusalem();
-  const lead = Math.max(1, Math.min(365, settings.bookingLeadDays || 45));
+  const maxDate = publicBookingMaxDate(today);
   const byDate = new Map(availability.map((d) => [d.date, d]));
   const now = new Date().toISOString();
   const next: EyeExamAvailability[] = [];
 
-  for (let i = 0; i <= lead; i++) {
-    const date = addDaysIso(today, i);
+  for (let date = today; date <= maxDate; date = addDaysIso(date, 1)) {
     const existing = byDate.get(date);
     byDate.delete(date);
 
@@ -538,6 +546,8 @@ export function resolvePublicAvailability(
  * Persist availability rows for today..leadDays from weekly opening hours.
  * Non-exception days are always refreshed from the schedule so future weeks
  * open automatically. Manual exceptions (closed / custom hours) are preserved.
+ *
+ * Public booking does not depend on these rows — see resolvePublicAvailability.
  */
 export function ensureFutureAvailability(
   availability: EyeExamAvailability[],

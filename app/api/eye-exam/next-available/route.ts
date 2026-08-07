@@ -7,6 +7,7 @@ import {
   isClinicAppointmentType,
   listBookableTimes,
   normalizeAppointmentType,
+  publicBookingMaxDate,
   resolvePublicAvailability,
   todayInJerusalem,
   weekdayUtc,
@@ -24,12 +25,7 @@ export async function GET(request: Request) {
 
     const { data } = await getStore();
     const today = todayInJerusalem();
-    const leadDays = data.settings.bookingLeadDays || 45;
-    const maxDate = (() => {
-      const [y, m, d] = today.split("-").map(Number);
-      const dt = new Date(Date.UTC(y, m - 1, d + leadDays));
-      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
-    })();
+    const maxDate = publicBookingMaxDate(today);
 
     const openDays = resolvePublicAvailability(
       data.eyeExamAvailability,

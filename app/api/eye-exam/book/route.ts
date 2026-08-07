@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/helpers";
 import { updateStore } from "@/lib/db/store";
 import {
+  daySupportsService,
   ensureFutureAvailability,
   eyeExamSmsBody,
   formatEyeExamDateDisplay,
@@ -19,7 +20,8 @@ import {
   normalizeAppointmentType,
   normalizeIsraeliPhone,
   parseTimeToMinutes,
-  resolvePublicAvailability,
+  publicBookingMaxDate,
+  resolveAvailabilityDay,
   sanitizeName,
   todayInJerusalem,
   withEyeExamLock,
@@ -99,26 +101,40 @@ export async function POST(request: Request) {
         field: "appointmentDate",
       });
     }
+    if (appointmentDate > publicBookingMaxDate()) {
+      return jsonError("Selected date is not available", 409, {
+        field: "appointmentDate",
+      });
+    }
 
     let created: EyeExamAppointment | null = null;
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
-        // Keep persisted days aligned with weekly schedule + exceptions
+        // Keep near-term persisted days aligned; public horizon is schedule-driven
         store.eyeExamAvailability = ensureFutureAvailability(
           store.eyeExamAvailability,
           store.settings,
         );
-        const availability = resolvePublicAvailability(
-          store.eyeExamAvailability,
+        const existing = store.eyeExamAvailability.find(
+          (d) => d.date === appointmentDate,
+        );
+        const resolved = resolveAvailabilityDay(
+          existing,
           store.settings,
-        );
-        const day = getOpenAvailabilityForDate(
-          availability,
           appointmentDate,
-          appointmentType,
         );
-        if (!day) throw new Error("DATE_UNAVAILABLE");
+        const day =
+          resolved && resolved.isOpen
+            ? getOpenAvailabilityForDate(
+                [resolved],
+                appointmentDate,
+                appointmentType,
+              )
+            : undefined;
+        if (!day || !daySupportsService(day, appointmentType)) {
+          throw new Error("DATE_UNAVAILABLE");
+        }
 
         const slot = day.slots.find(
           (s) => s.time === appointmentTime && s.isEnabled,

@@ -8,7 +8,8 @@ import {
   isValidIsoDate,
   listBookableTimes,
   normalizeAppointmentType,
-  resolvePublicAvailability,
+  publicBookingMaxDate,
+  resolveAvailabilityDay,
   todayInJerusalem,
 } from "@/lib/eye-exam";
 
@@ -28,7 +29,8 @@ export async function GET(request: Request) {
     }
 
     const today = todayInJerusalem();
-    if (date < today) {
+    const maxDate = publicBookingMaxDate(today);
+    if (date < today || date > maxDate) {
       return NextResponse.json({
         date,
         label: formatEyeExamDateDisplay(date),
@@ -39,15 +41,12 @@ export async function GET(request: Request) {
 
     invalidateStoreCache();
     const { data } = await getStore();
-    const availability = resolvePublicAvailability(
-      data.eyeExamAvailability,
-      data.settings,
-    );
-    const day = getOpenAvailabilityForDate(
-      availability,
-      date,
-      appointmentType,
-    );
+    const existing = data.eyeExamAvailability.find((d) => d.date === date);
+    const resolved = resolveAvailabilityDay(existing, data.settings, date);
+    const day =
+      resolved && resolved.isOpen
+        ? getOpenAvailabilityForDate([resolved], date, appointmentType)
+        : undefined;
     if (!day) {
       return NextResponse.json({
         date,
