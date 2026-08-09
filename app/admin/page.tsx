@@ -1,16 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
   CalendarRange,
-  Package,
   AlertTriangle,
   RefreshCw,
   Plus,
-  Tag,
-  Users,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import StatCard from "@/components/admin/StatCard";
@@ -35,21 +32,6 @@ function serviceLabel(t: (key: string) => string, service: string): string {
   return label === key ? service : label;
 }
 
-function statusLabel(t: (key: string) => string, status: string): string {
-  const map: Record<string, string> = {
-    pending: "admin.dashboard.statusPending",
-    confirmed: "admin.dashboard.statusConfirmed",
-    completed: "admin.dashboard.statusCompleted",
-    cancelled: "admin.dashboard.statusCancelled",
-    "no-show": "admin.dashboard.statusNoShow",
-    no_show: "admin.dashboard.statusNoShow",
-  };
-  const key = map[status];
-  if (!key) return status;
-  const label = t(key);
-  return label === key ? status : label;
-}
-
 function formatDateLabel(isoDate: string, locale: Locale): string {
   const d = new Date(`${isoDate}T12:00:00`);
   if (Number.isNaN(d.getTime())) return isoDate;
@@ -70,6 +52,26 @@ function formatTime(time: string, locale: Locale): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function todayIsoLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function moreAppointmentsLabel(count: number, locale: Locale): string {
+  if (locale === "ar") return `+${count} مواعيد أخرى`;
+  if (locale === "he") return `+${count} תורים נוספים`;
+  return `+${count} more appointments`;
+}
+
+function viewAllTodayLabel(locale: Locale): string {
+  if (locale === "ar") return "عرض كل مواعيد اليوم";
+  if (locale === "he") return "צפייה בכל תורי היום";
+  return "View all today's bookings";
 }
 
 export default function AdminDashboardPage() {
@@ -120,6 +122,11 @@ export default function AdminDashboardPage() {
     };
   }, [load]);
 
+  const todayHref = useMemo(
+    () => `/admin/eye-exam?tab=appointments&date=${todayIsoLocal()}`,
+    [],
+  );
+
   if (loading && !stats) {
     return <p className="admin-muted">{t("common.loading")}</p>;
   }
@@ -143,7 +150,9 @@ export default function AdminDashboardPage() {
   }
 
   const schedule = stats.todaysSchedule || [];
-  const recent = (stats.recentBookings || []).slice(0, 5);
+  const visibleSchedule = schedule.slice(0, 3);
+  const moreCount = Math.max(0, schedule.length - 3);
+  const recent = (stats.recentBookings || []).slice(0, 3);
   const todayLabel = new Date().toLocaleDateString(LOCALE_TAGS[locale], {
     weekday: "long",
     month: "short",
@@ -151,7 +160,7 @@ export default function AdminDashboardPage() {
   });
 
   return (
-    <div className="admin-dashboard space-y-5 md:space-y-6">
+    <div className="admin-dashboard space-y-4 md:space-y-5">
       <AdminPageHeader
         title={t("admin.dashboard.title")}
         description={t("admin.dashboard.description")}
@@ -163,12 +172,15 @@ export default function AdminDashboardPage() {
               className="btn btn-ghost inline-flex items-center gap-2"
               onClick={() => void load({ soft: true })}
               disabled={refreshing}
+              aria-label={t("admin.dashboard.refresh")}
             >
               <RefreshCw
                 size={16}
                 className={refreshing ? "animate-spin" : ""}
               />
-              {t("admin.dashboard.refresh")}
+              <span className="hidden sm:inline">
+                {t("admin.dashboard.refresh")}
+              </span>
             </button>
             <Link
               href="/admin/eye-exam?tab=appointments&book=1"
@@ -187,18 +199,13 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 sm:gap-4">
+      <div className="grid gap-3 grid-cols-2 sm:gap-4">
         <StatCard
           label={t("admin.dashboard.today")}
           value={stats.todayAppointments}
           hint={t("admin.dashboard.todayHint")}
-          href="/admin/eye-exam?tab=appointments"
+          href={todayHref}
           icon={CalendarDays}
-        />
-        <StatCard
-          label={t("admin.dashboard.customers")}
-          value={stats.totalCustomers}
-          icon={Users}
         />
         <StatCard
           label={t("admin.dashboard.lowStock")}
@@ -210,43 +217,54 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="admin-card admin-dashboard-panel">
-          <div className="admin-dashboard-panel-head">
-            <h2 className="admin-section-title">{t("admin.dashboard.today")}</h2>
-            {schedule.length ? (
-              <Link
-                href="/admin/eye-exam?tab=appointments"
-                className="admin-dashboard-link"
-              >
-                {t("admin.dashboard.viewAll")}
-              </Link>
-            ) : null}
+      <div className="grid gap-3 md:gap-4 xl:grid-cols-2">
+        <section className="admin-card admin-dashboard-panel !p-4 md:!p-5">
+          <div className="admin-dashboard-panel-head !mb-2">
+            <Link href={todayHref} className="no-underline">
+              <h2 className="admin-section-title">
+                {t("admin.dashboard.today")}
+              </h2>
+            </Link>
           </div>
 
-          {schedule.length ? (
-            <div className="admin-dashboard-list">
-              {schedule.map((a) => (
-                <div key={a.id} className="admin-schedule-row">
-                  <p className="admin-dashboard-time">
-                    {formatTime(a.startTime, locale)}
-                  </p>
-                  <div className="min-w-0">
-                    <p className="admin-cell-primary truncate">
+          {visibleSchedule.length ? (
+            <>
+              <div className="admin-dashboard-list">
+                {visibleSchedule.map((a) => (
+                  <div
+                    key={a.id}
+                    className="grid grid-cols-[4.25rem_minmax(0,1fr)_minmax(0,0.9fr)] items-center gap-x-3 gap-y-0.5 border-b border-white/[0.06] py-2.5 last:border-b-0"
+                  >
+                    <p className="admin-dashboard-time">
+                      {formatTime(a.startTime, locale)}
+                    </p>
+                    <p className="admin-cell-primary truncate min-w-0">
                       {a.customerName}
                     </p>
-                    <p className="admin-cell-secondary truncate">
+                    <p className="admin-cell-secondary truncate min-w-0 text-end">
                       {serviceLabel(t, a.service)}
                     </p>
                   </div>
-                  <span className={`status status-${a.status}`}>
-                    {statusLabel(t, a.status)}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+                {moreCount > 0 ? (
+                  <Link
+                    href={todayHref}
+                    className="text-sm font-semibold text-[var(--accent)] no-underline"
+                  >
+                    {moreAppointmentsLabel(moreCount, locale)}
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <Link href={todayHref} className="admin-dashboard-link">
+                  {viewAllTodayLabel(locale)}
+                </Link>
+              </div>
+            </>
           ) : (
-            <div className="admin-dashboard-empty">
+            <div className="admin-dashboard-empty !py-2">
               <p className="admin-dashboard-empty-title">
                 {t("admin.dashboard.emptyToday")}
               </p>
@@ -273,8 +291,8 @@ export default function AdminDashboardPage() {
           )}
         </section>
 
-        <section className="admin-card admin-dashboard-panel">
-          <div className="admin-dashboard-panel-head">
+        <section className="admin-card admin-dashboard-panel !p-4 md:!p-5">
+          <div className="admin-dashboard-panel-head !mb-2">
             <h2 className="admin-section-title">
               {t("admin.dashboard.recent")}
             </h2>
@@ -289,7 +307,10 @@ export default function AdminDashboardPage() {
           {recent.length ? (
             <div className="admin-dashboard-list">
               {recent.map((a) => (
-                <div key={a.id} className="admin-schedule-row admin-recent-row">
+                <div
+                  key={a.id}
+                  className="admin-schedule-row admin-recent-row !py-2.5"
+                >
                   <div className="min-w-0">
                     <p className="admin-cell-primary truncate">
                       {a.customerName}
@@ -306,9 +327,6 @@ export default function AdminDashboardPage() {
                       {formatTime(a.startTime, locale)}
                     </p>
                   </div>
-                  <span className={`status status-${a.status}`}>
-                    {statusLabel(t, a.status)}
-                  </span>
                 </div>
               ))}
             </div>
@@ -323,10 +341,10 @@ export default function AdminDashboardPage() {
       </div>
 
       <section>
-        <h2 className="admin-section-title mb-3">
+        <h2 className="admin-section-title mb-2.5">
           {t("admin.dashboard.quickActions")}
         </h2>
-        <div className="admin-quick-actions-grid">
+        <div className="admin-quick-actions-grid max-w-none sm:max-w-md">
           <Link
             href="/admin/eye-exam?tab=appointments&book=1"
             className="admin-quick-action"
@@ -347,22 +365,6 @@ export default function AdminDashboardPage() {
             </span>
             <span className="admin-quick-action-label">
               {t("admin.dashboard.manageAvailability")}
-            </span>
-          </Link>
-          <Link href="/admin/inventory" className="admin-quick-action">
-            <span className="admin-quick-action-icon">
-              <Package size={18} />
-            </span>
-            <span className="admin-quick-action-label">
-              {t("admin.dashboard.products")}
-            </span>
-          </Link>
-          <Link href="/admin/promotions" className="admin-quick-action">
-            <span className="admin-quick-action-icon">
-              <Tag size={18} />
-            </span>
-            <span className="admin-quick-action-label">
-              {t("admin.dashboard.offers")}
             </span>
           </Link>
         </div>

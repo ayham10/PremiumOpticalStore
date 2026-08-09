@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Lock, Mail } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import { motion } from "framer-motion";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const { t } = useLocale();
   const { branding } = useBranding();
-  const [email, setEmail] = useState("admin@oyon.optics");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -112,12 +112,6 @@ export default function AdminLoginPage() {
         >
           {loading ? t("admin.signingIn") : t("admin.signIn")}
         </button>
-
-        <div className="rounded-xl border border-dashed border-[var(--line-strong)] bg-[var(--mist)] px-3 py-3 text-xs text-[var(--slate)]">
-          <p className="mb-1 flex items-center gap-1.5 font-semibold text-[var(--ink-soft)]">
-            <Eye size={12} /> {t("admin.demoHint")}
-          </p>
-        </div>
       </form>
     </motion.div>
   );
