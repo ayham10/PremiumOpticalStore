@@ -560,11 +560,14 @@ export default function AdminDashboardPage() {
 
         {recent.length ? (
           <div>
-            {recent.map((a) => (
+            {recent.map((a, index) => (
               <div
                 key={a.id}
                 className="flex items-center justify-between gap-3 py-2.5"
-                style={{ borderBottom: `1px solid ${BORDER}` }}
+                style={{
+                  borderBottom:
+                    index < recent.length - 1 ? `1px solid ${BORDER}` : "none",
+                }}
               >
                 <div className="min-w-0">
                   <p
