@@ -3,15 +3,19 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
+  Bell,
   CalendarDays,
   CalendarRange,
-  AlertTriangle,
-  RefreshCw,
-  Plus,
+  ChevronDown,
   Clock3,
+  Menu,
+  Plus,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
-import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import BrandMark from "@/components/branding/BrandMark";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { apiFetch } from "@/lib/admin-api";
 import type { DashboardRecentBooking, DashboardStats } from "@/lib/types";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -22,7 +26,10 @@ type DashboardPayload = DashboardStats & {
 };
 
 const GOLD = "#D4AF6A";
-const MUTED = "#7A848E";
+const MUTED = "#8A929C";
+const PAGE_BG = "#0E1116";
+const CARD_BG = "#151A21";
+const BORDER = "rgba(255,255,255,0.08)";
 
 const LOCALE_TAGS: Record<Locale, string> = {
   en: "en-US",
@@ -72,95 +79,102 @@ function viewAllTodayLabel(locale: Locale): string {
   return "View All Today";
 }
 
+function colTime(locale: Locale) {
+  if (locale === "ar") return "الوقت";
+  if (locale === "he") return "שעה";
+  return "Time";
+}
+
+function colCustomer(locale: Locale) {
+  if (locale === "ar") return "العميل";
+  if (locale === "he") return "לקוח";
+  return "Customer";
+}
+
+function colService(locale: Locale) {
+  if (locale === "ar") return "الخدمة";
+  if (locale === "he") return "שירות";
+  return "Service";
+}
+
+function openShellMobileNav() {
+  const btn = document.querySelector(
+    ".admin-shell .sticky.top-0 button[aria-expanded]",
+  ) as HTMLButtonElement | null;
+  btn?.click();
+}
+
 function IconBox({
   icon: Icon,
-  tone = "gold",
+  size = 15,
 }: {
   icon: LucideIcon;
-  tone?: "gold" | "muted";
+  size?: number;
 }) {
-  const isGold = tone === "gold";
   return (
     <span
-      className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px]"
+      aria-hidden
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
       style={{
-        background: isGold ? "rgba(212,175,106,0.10)" : "rgba(255,255,255,0.04)",
-        border: isGold
-          ? "1px solid rgba(212,175,106,0.28)"
-          : "1px solid rgba(255,255,255,0.08)",
-        boxShadow: isGold ? "0 0 12px rgba(212,175,106,0.12)" : "none",
-        color: isGold ? GOLD : MUTED,
+        background: "rgba(212,175,106,0.08)",
+        border: "1px solid rgba(212,175,106,0.28)",
+        boxShadow: "0 0 10px rgba(212,175,106,0.10)",
+        color: GOLD,
       }}
     >
-      <Icon size={15} strokeWidth={1.6} />
+      <Icon size={size} strokeWidth={1.55} />
     </span>
   );
 }
 
-function DashCard({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+function Card({ children }: { children: ReactNode }) {
   return (
     <section
-      className={`rounded-2xl border border-white/[0.08] bg-[var(--admin-card,#131a22)] p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ${className}`}
+      style={{
+        background: CARD_BG,
+        border: `1px solid ${BORDER}`,
+        borderRadius: 16,
+        padding: 16,
+        boxShadow: "0 10px 28px rgba(0,0,0,0.22)",
+      }}
     >
       {children}
     </section>
   );
 }
 
-function PanelHead({
-  title,
-  href,
-  action,
-  icon,
+function ActionChip({
+  children,
+  onClick,
+  disabled,
+  ariaLabel,
 }: {
-  title: string;
-  href?: string;
-  action?: ReactNode;
-  icon: LucideIcon;
+  children: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  ariaLabel?: string;
 }) {
-  const titleNode = (
-    <div className="flex min-w-0 items-center gap-2">
-      <IconBox icon={icon} />
-      <h2 className="truncate text-[0.95rem] font-semibold tracking-[-0.02em] text-[#F3F4F5]">
-        {title}
-      </h2>
-    </div>
-  );
-
   return (
-    <div className="mb-2.5 flex items-center justify-between gap-2">
-      {href ? (
-        <Link href={href} className="min-w-0 no-underline">
-          {titleNode}
-        </Link>
-      ) : (
-        titleNode
-      )}
-      {action}
-    </div>
-  );
-}
-
-function TextLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="shrink-0 text-[0.78rem] font-semibold no-underline"
-      style={{ color: GOLD }}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[12px] px-3 text-[0.84rem] font-medium disabled:opacity-60"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: `1px solid ${BORDER}`,
+        color: "#E8EAED",
+      }}
     >
       {children}
-    </Link>
+    </button>
   );
 }
 
 export default function AdminDashboardPage() {
   const { t, locale } = useLocale();
+  const { branding } = useBranding();
   const [stats, setStats] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -178,7 +192,7 @@ export default function AdminDashboardPage() {
       setStats(next);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : t("admin.dashboard.loadError")
+        err instanceof Error ? err.message : t("admin.dashboard.loadError"),
       );
     } finally {
       setLoading(false);
@@ -207,166 +221,300 @@ export default function AdminDashboardPage() {
     };
   }, [load]);
 
+  // Reference header lives on this page — hide the shell sticky bar while mounted.
+  useEffect(() => {
+    const bar = document.querySelector(
+      ".admin-shell .sticky.top-0.md\\:hidden, .admin-shell .sticky.top-0",
+    ) as HTMLElement | null;
+    if (!bar || window.matchMedia("(min-width: 768px)").matches) return;
+    const prev = bar.style.display;
+    bar.style.display = "none";
+    return () => {
+      bar.style.display = prev;
+    };
+  }, []);
+
   const todayHref = useMemo(
     () => `/admin/eye-exam?tab=appointments&date=${todayIsoLocal()}`,
     [],
   );
 
+  const todayLabel = new Date().toLocaleDateString(LOCALE_TAGS[locale], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
   if (loading && !stats) {
-    return <p className="admin-muted">{t("common.loading")}</p>;
+    return (
+      <div style={{ background: PAGE_BG, padding: 16, color: MUTED }}>
+        {t("common.loading")}
+      </div>
+    );
   }
 
   if ((error && !stats) || !stats) {
     return (
-      <DashCard>
-        <p className="text-sm text-[var(--danger)]">
-          {error || t("admin.dashboard.loadError")}
-        </p>
-        <button
-          type="button"
-          className="btn btn-ghost mt-3 inline-flex items-center gap-2"
-          onClick={() => void load()}
-        >
-          <RefreshCw size={15} strokeWidth={1.6} />
-          {t("admin.dashboard.refresh")}
-        </button>
-      </DashCard>
+      <div style={{ background: PAGE_BG, padding: 16 }}>
+        <Card>
+          <p style={{ color: "var(--danger)", margin: 0 }}>
+            {error || t("admin.dashboard.loadError")}
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost mt-3 inline-flex items-center gap-2"
+            onClick={() => void load()}
+          >
+            <RefreshCw size={15} strokeWidth={1.55} />
+            {t("admin.dashboard.refresh")}
+          </button>
+        </Card>
+      </div>
     );
   }
 
-  const schedule = stats.todaysSchedule || [];
-  const visibleSchedule = schedule.slice(0, 3);
+  const schedule = (stats.todaysSchedule || []).slice(0, 3);
   const recent = (stats.recentBookings || []).slice(0, 3);
-  const todayLabel = new Date().toLocaleDateString(LOCALE_TAGS[locale], {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-  const lowStockWarn = stats.lowStockAlerts > 0;
 
   return (
-    <div className="admin-dashboard mx-auto max-w-3xl space-y-3 pb-2">
-      <AdminPageHeader
-        title={t("admin.dashboard.title")}
-        actions={
-          <>
-            <p
-              className="m-0 inline-flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[0.78rem] font-medium"
-              style={{ color: MUTED }}
-            >
-              <CalendarDays size={13} strokeWidth={1.6} color={GOLD} />
-              {todayLabel}
-            </p>
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition hover:border-[rgba(212,175,106,0.35)]"
-              onClick={() => void load({ soft: true })}
-              disabled={refreshing}
-              aria-label={t("admin.dashboard.refresh")}
-              style={{ color: MUTED }}
-            >
-              <RefreshCw
-                size={15}
-                strokeWidth={1.6}
-                className={refreshing ? "animate-spin" : ""}
-              />
-            </button>
-            <Link
-              href="/admin/eye-exam?tab=appointments&book=1"
-              className="btn btn-accent inline-flex h-9 items-center gap-1.5 px-3 text-[0.82rem]"
-            >
-              <Plus size={15} strokeWidth={1.7} />
-              {t("admin.dashboard.newAppointment")}
-            </Link>
-          </>
-        }
-      />
+    <div
+      className="admin-dashboard"
+      style={{
+        margin: "-1.15rem",
+        marginBottom: "calc(-1.5rem - env(safe-area-inset-bottom, 0px))",
+        minHeight: "100%",
+        background: PAGE_BG,
+        padding: 16,
+        paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+      }}
+    >
+      {/* HEADER — logo right, menu+bell left (RTL) */}
+      <header className="flex items-center justify-between gap-3">
+        <BrandMark branding={branding} href="/admin" size="sm" />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={locale === "ar" ? "الإشعارات" : "Notifications"}
+            className="grid h-10 w-10 place-items-center rounded-[10px]"
+            style={{
+              border: "1px solid rgba(212,175,106,0.45)",
+              background: "rgba(212,175,106,0.06)",
+              color: GOLD,
+            }}
+          >
+            <Bell size={16} strokeWidth={1.55} />
+          </button>
+          <button
+            type="button"
+            aria-label={t("nav.menu")}
+            onClick={openShellMobileNav}
+            className="grid h-10 w-10 place-items-center rounded-[10px]"
+            style={{
+              border: `1px solid ${BORDER}`,
+              background: "rgba(255,255,255,0.03)",
+              color: "#E8EAED",
+            }}
+          >
+            <Menu size={17} strokeWidth={1.55} />
+          </button>
+        </div>
+      </header>
+
+      <div>
+        <h1
+          className="m-0 text-[1.55rem] font-semibold tracking-[-0.03em]"
+          style={{ color: "#F5F6F7" }}
+        >
+          {t("admin.dashboard.title")}
+        </h1>
+        <p
+          className="mt-1 mb-0 text-[0.86rem] leading-relaxed"
+          style={{ color: MUTED }}
+        >
+          {t("admin.dashboard.description")}
+        </p>
+      </div>
 
       {error ? (
-        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+        <p
+          className="m-0 rounded-[14px] px-3 py-2 text-sm"
+          style={{
+            border: "1px solid rgba(224,122,122,0.35)",
+            background: "rgba(224,122,122,0.12)",
+            color: "var(--danger)",
+          }}
+        >
           {error}
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2.5">
-        <Link href={todayHref} className="no-underline">
-          <DashCard className="h-full !p-3 transition hover:border-[rgba(212,175,106,0.28)]">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="m-0 text-[0.72rem] font-medium" style={{ color: MUTED }}>
-                  {t("admin.dashboard.today")}
-                </p>
-                <p
-                  className="mt-1 text-[1.65rem] font-semibold leading-none tracking-[-0.03em]"
-                  style={{ color: GOLD }}
-                >
-                  {stats.todayAppointments}
-                </p>
-              </div>
-              <IconBox icon={CalendarDays} />
-            </div>
-          </DashCard>
-        </Link>
+      {/* TOP ACTIONS */}
+      <div className="flex items-center gap-2.5">
+        <ActionChip ariaLabel={t("admin.dashboard.today")}>
+          <CalendarDays size={15} strokeWidth={1.55} color={GOLD} />
+          <span className="max-w-[7.5rem] truncate">{todayLabel}</span>
+          <ChevronDown size={14} strokeWidth={1.55} color={MUTED} />
+        </ActionChip>
 
-        <Link href="/admin/inventory" className="no-underline">
-          <DashCard className="h-full !p-3 transition hover:border-[rgba(212,175,106,0.28)]">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="m-0 text-[0.72rem] font-medium" style={{ color: MUTED }}>
-                  {t("admin.dashboard.lowStock")}
-                </p>
-                <p
-                  className="mt-1 text-[1.65rem] font-semibold leading-none tracking-[-0.03em]"
-                  style={{ color: lowStockWarn ? GOLD : "#F3F4F5" }}
-                >
-                  {stats.lowStockAlerts}
-                </p>
-              </div>
-              <IconBox
-                icon={AlertTriangle}
-                tone={lowStockWarn ? "gold" : "muted"}
-              />
-            </div>
-          </DashCard>
+        <ActionChip
+          onClick={() => void load({ soft: true })}
+          disabled={refreshing}
+          ariaLabel={t("admin.dashboard.refresh")}
+        >
+          <RefreshCw
+            size={15}
+            strokeWidth={1.55}
+            color={MUTED}
+            className={refreshing ? "animate-spin" : ""}
+          />
+          <span>{t("admin.dashboard.refresh")}</span>
+        </ActionChip>
+
+        <Link
+          href="/admin/eye-exam?tab=appointments&book=1"
+          className="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[12px] px-3 text-[0.86rem] font-semibold no-underline"
+          style={{
+            background: "rgba(212,175,106,0.14)",
+            border: "1px solid rgba(212,175,106,0.55)",
+            color: GOLD,
+            boxShadow: "0 0 16px rgba(212,175,106,0.12)",
+          }}
+        >
+          <Plus size={15} strokeWidth={1.7} />
+          <span className="truncate">{t("admin.dashboard.newAppointment")}</span>
         </Link>
       </div>
 
-      <DashCard>
-        <PanelHead
-          title={t("admin.dashboard.today")}
-          href={todayHref}
-          icon={Clock3}
-          action={<TextLink href={todayHref}>{viewAllTodayLabel(locale)}</TextLink>}
-        />
-
-        {visibleSchedule.length ? (
-          <div className="overflow-hidden rounded-xl border border-white/[0.06]">
-            <div
-              className="grid grid-cols-[3.6rem_minmax(0,1.1fr)_minmax(0,1fr)] gap-2 border-b border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[0.68rem] font-medium uppercase tracking-[0.04em]"
-              style={{ color: MUTED }}
-            >
-              <span>{locale === "ar" ? "الوقت" : locale === "he" ? "שעה" : "Time"}</span>
-              <span>{locale === "ar" ? "العميل" : locale === "he" ? "לקוח" : "Customer"}</span>
-              <span className="text-end">
-                {locale === "ar" ? "الخدمة" : locale === "he" ? "שירות" : "Service"}
-              </span>
+      {/* SUMMARY — 2 equal cards */}
+      <div className="grid grid-cols-2 gap-[14px]">
+        <Link href={todayHref} className="no-underline">
+          <div
+            style={{
+              background: CARD_BG,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 16,
+              padding: 16,
+              height: "100%",
+              boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <IconBox icon={CalendarDays} />
             </div>
-            {visibleSchedule.map((a) => (
+            <p
+              className="mb-0 mt-3 text-[1.7rem] font-semibold leading-none tracking-[-0.03em]"
+              style={{ color: GOLD }}
+            >
+              {stats.todayAppointments}
+            </p>
+            <p
+              className="mb-0 mt-2 text-[0.82rem] font-medium"
+              style={{ color: "#F0F1F2" }}
+            >
+              {t("admin.dashboard.today")}
+            </p>
+            <p
+              className="mb-0 mt-1.5 text-[0.78rem] font-semibold"
+              style={{ color: GOLD }}
+            >
+              {t("admin.dashboard.todayHint")}
+            </p>
+          </div>
+        </Link>
+
+        <Link href="/admin/inventory" className="no-underline">
+          <div
+            style={{
+              background: CARD_BG,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 16,
+              padding: 16,
+              height: "100%",
+              boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <IconBox icon={AlertTriangle} />
+            </div>
+            <p
+              className="mb-0 mt-3 text-[1.7rem] font-semibold leading-none tracking-[-0.03em]"
+              style={{ color: GOLD }}
+            >
+              {stats.lowStockAlerts}
+            </p>
+            <p
+              className="mb-0 mt-2 text-[0.82rem] font-medium"
+              style={{ color: "#F0F1F2" }}
+            >
+              {t("admin.dashboard.lowStock")}
+            </p>
+            <p
+              className="mb-0 mt-1.5 text-[0.78rem] font-semibold"
+              style={{ color: GOLD }}
+            >
+              {t("admin.dashboard.lowStockHint")}
+            </p>
+          </div>
+        </Link>
+      </div>
+
+      {/* TODAY'S BOOKINGS */}
+      <Card>
+        <div className="mb-3.5 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <IconBox icon={Clock3} size={14} />
+            <h2
+              className="m-0 truncate text-[1rem] font-semibold tracking-[-0.02em]"
+              style={{ color: "#F5F6F7" }}
+            >
+              {t("admin.dashboard.today")}
+            </h2>
+          </div>
+          <Link
+            href={todayHref}
+            className="shrink-0 text-[0.78rem] font-semibold no-underline"
+            style={{ color: GOLD }}
+          >
+            {viewAllTodayLabel(locale)}
+          </Link>
+        </div>
+
+        {schedule.length ? (
+          <div>
+            <div
+              className="grid grid-cols-[4rem_minmax(0,1.15fr)_minmax(0,1fr)] gap-2 pb-2 text-[0.72rem] font-medium"
+              style={{ color: MUTED, borderBottom: `1px solid ${BORDER}` }}
+            >
+              <span>{colTime(locale)}</span>
+              <span>{colCustomer(locale)}</span>
+              <span className="text-end">{colService(locale)}</span>
+            </div>
+            {schedule.map((a, index) => (
               <div
                 key={a.id}
-                className="grid grid-cols-[3.6rem_minmax(0,1.1fr)_minmax(0,1fr)] items-center gap-2 border-b border-white/[0.05] px-2.5 py-2 last:border-b-0"
+                className="grid grid-cols-[4rem_minmax(0,1.15fr)_minmax(0,1fr)] items-center gap-2 py-2.5"
+                style={{
+                  borderBottom:
+                    index < schedule.length - 1 ? `1px solid ${BORDER}` : "none",
+                }}
               >
                 <p
-                  className="m-0 text-[0.82rem] font-semibold tabular-nums"
+                  className="m-0 text-[0.84rem] font-semibold tabular-nums"
                   style={{ color: GOLD }}
                 >
                   {formatTime(a.startTime, locale)}
                 </p>
-                <p className="m-0 truncate text-[0.84rem] font-medium text-[#F3F4F5]">
+                <p
+                  className="m-0 truncate text-[0.86rem] font-medium"
+                  style={{ color: "#F0F1F2" }}
+                >
                   {a.customerName}
                 </p>
                 <p
-                  className="m-0 truncate text-end text-[0.78rem]"
+                  className="m-0 truncate text-end text-[0.8rem]"
                   style={{ color: MUTED }}
                 >
                   {serviceLabel(t, a.service)}
@@ -375,49 +523,69 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-white/[0.08] px-3 py-4">
-            <p className="m-0 text-[0.9rem] font-semibold text-[#F3F4F5]">
+          <div
+            className="rounded-[12px] px-3 py-4"
+            style={{ border: `1px dashed ${BORDER}` }}
+          >
+            <p className="m-0 text-[0.9rem] font-semibold" style={{ color: "#F0F1F2" }}>
               {t("admin.dashboard.emptyToday")}
             </p>
-            <p className="mt-1 mb-0 text-[0.8rem] leading-relaxed" style={{ color: MUTED }}>
+            <p className="mb-0 mt-1 text-[0.8rem] leading-relaxed" style={{ color: MUTED }}>
               {t("admin.dashboard.emptyTodayLead")}
             </p>
           </div>
         )}
-      </DashCard>
+      </Card>
 
-      <DashCard>
-        <PanelHead
-          title={t("admin.dashboard.recent")}
-          icon={CalendarDays}
-          action={
-            <TextLink href="/admin/eye-exam?tab=appointments">
-              {t("admin.dashboard.viewAll")}
-            </TextLink>
-          }
-        />
+      {/* RECENT BOOKINGS */}
+      <Card>
+        <div className="mb-3.5 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <IconBox icon={CalendarDays} size={14} />
+            <h2
+              className="m-0 truncate text-[1rem] font-semibold tracking-[-0.02em]"
+              style={{ color: "#F5F6F7" }}
+            >
+              {t("admin.dashboard.recent")}
+            </h2>
+          </div>
+          <Link
+            href="/admin/eye-exam?tab=appointments"
+            className="shrink-0 text-[0.78rem] font-semibold no-underline"
+            style={{ color: GOLD }}
+          >
+            {t("admin.dashboard.viewAll")}
+          </Link>
+        </div>
 
         {recent.length ? (
-          <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+          <div>
             {recent.map((a) => (
               <div
                 key={a.id}
-                className="grid grid-cols-[minmax(0,1.3fr)_auto] items-center gap-3 border-b border-white/[0.05] px-2.5 py-2 last:border-b-0"
+                className="flex items-center justify-between gap-3 py-2.5"
+                style={{ borderBottom: `1px solid ${BORDER}` }}
               >
                 <div className="min-w-0">
-                  <p className="m-0 truncate text-[0.84rem] font-medium text-[#F3F4F5]">
+                  <p
+                    className="m-0 truncate text-[0.86rem] font-medium"
+                    style={{ color: "#F0F1F2" }}
+                  >
                     {a.customerName}
                   </p>
-                  <p className="m-0 truncate text-[0.76rem]" style={{ color: MUTED }}>
+                  <p className="m-0 truncate text-[0.78rem]" style={{ color: MUTED }}>
                     {serviceLabel(t, a.service)}
                   </p>
                 </div>
-                <div className="text-end">
-                  <p className="m-0 text-[0.78rem] font-medium text-[#E8EAED]">
+                <div className="shrink-0 text-end">
+                  <p
+                    className="m-0 text-[0.78rem] font-medium"
+                    style={{ color: "#E4E6E9" }}
+                  >
                     {formatDateLabel(a.date, locale)}
                   </p>
                   <p
-                    className="m-0 text-[0.76rem] font-semibold tabular-nums"
+                    className="m-0 text-[0.78rem] font-semibold tabular-nums"
                     style={{ color: GOLD }}
                   >
                     {formatTime(a.startTime, locale)}
@@ -427,39 +595,60 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-white/[0.08] px-3 py-3">
-            <p className="m-0 text-[0.86rem] font-semibold text-[#F3F4F5]">
+          <div
+            className="rounded-[12px] px-3 py-3"
+            style={{ border: `1px dashed ${BORDER}` }}
+          >
+            <p className="m-0 text-[0.86rem] font-semibold" style={{ color: "#F0F1F2" }}>
               {t("admin.common.noResults")}
             </p>
           </div>
         )}
-      </DashCard>
+      </Card>
 
-      <section>
-        <h2 className="mb-2 m-0 text-[0.95rem] font-semibold tracking-[-0.02em] text-[#F3F4F5]">
+      {/* QUICK ACTIONS */}
+      <Card>
+        <h2
+          className="mb-3.5 mt-0 text-[1rem] font-semibold tracking-[-0.02em]"
+          style={{ color: "#F5F6F7" }}
+        >
           {t("admin.dashboard.quickActions")}
         </h2>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-[12px]">
           <Link
             href="/admin/eye-exam?tab=appointments&book=1"
-            className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[var(--admin-card,#131a22)] px-3 py-2.5 no-underline shadow-[0_8px_24px_rgba(0,0,0,0.14)] transition hover:border-[rgba(212,175,106,0.35)]"
+            className="flex items-center gap-2.5 rounded-[14px] px-3 py-3 no-underline"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: `1px solid ${BORDER}`,
+            }}
           >
-            <IconBox icon={Plus} />
-            <span className="text-[0.84rem] font-semibold text-[#F3F4F5]">
+            <IconBox icon={Plus} size={14} />
+            <span
+              className="text-[0.84rem] font-semibold leading-snug"
+              style={{ color: "#F0F1F2" }}
+            >
               {t("admin.dashboard.newAppointment")}
             </span>
           </Link>
           <Link
             href="/admin/eye-exam?tab=availability"
-            className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[var(--admin-card,#131a22)] px-3 py-2.5 no-underline shadow-[0_8px_24px_rgba(0,0,0,0.14)] transition hover:border-[rgba(212,175,106,0.35)]"
+            className="flex items-center gap-2.5 rounded-[14px] px-3 py-3 no-underline"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: `1px solid ${BORDER}`,
+            }}
           >
-            <IconBox icon={CalendarRange} tone="muted" />
-            <span className="text-[0.84rem] font-semibold text-[#F3F4F5]">
+            <IconBox icon={CalendarRange} size={14} />
+            <span
+              className="text-[0.84rem] font-semibold leading-snug"
+              style={{ color: "#F0F1F2" }}
+            >
               {t("admin.dashboard.manageAvailability")}
             </span>
           </Link>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
