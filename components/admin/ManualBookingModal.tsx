@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   addMonths,
   eachDayOfInterval,
@@ -13,7 +20,7 @@ import {
   subMonths,
 } from "date-fns";
 import { ar, enUS, he } from "date-fns/locale";
-import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { ClinicAppointmentType } from "@/lib/types";
@@ -25,6 +32,13 @@ const SERVICES: ClinicAppointmentType[] = [
   "frame_consultation",
   "sunglasses_consultation",
 ];
+
+const GOLD = "#D4AF6A";
+const PAGE_BG = "#0E1116";
+const FIELD_BG = "#151A21";
+const BORDER = "#2A2F36";
+const MUTED = "#8A929C";
+const VISIBLE_SLOTS = 8;
 
 function daySupports(
   day: { services?: ClinicAppointmentType[] },
@@ -43,6 +57,18 @@ function syntheticEmail(phone: string): string {
 
 function ymd(d: Date) {
   return format(d, "yyyy-MM-dd");
+}
+
+function showMoreLabel(locale: string) {
+  if (locale === "ar") return "عرض المزيد";
+  if (locale === "he") return "הצג עוד";
+  return "Show more";
+}
+
+function showLessLabel(locale: string) {
+  if (locale === "ar") return "عرض أقل";
+  if (locale === "he") return "הצג פחות";
+  return "Show less";
 }
 
 type SlotRow = {
@@ -84,6 +110,7 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [monthCursor, setMonthCursor] = useState(() => new Date());
+  const [showAllSlots, setShowAllSlots] = useState(false);
 
   const reset = useCallback(() => {
     setService("eye_exam");
@@ -95,6 +122,7 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
     setNotes("");
     setError("");
     setMonthCursor(new Date());
+    setShowAllSlots(false);
   }, []);
 
   const loadSchedule = useCallback(async () => {
@@ -148,6 +176,13 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
     return selectedDay.slots.filter((s) => s.isEnabled && !s.isBooked);
   }, [selectedDay]);
 
+  const visibleSlots = useMemo(() => {
+    if (showAllSlots || availableSlots.length <= VISIBLE_SLOTS) {
+      return availableSlots;
+    }
+    return availableSlots.slice(0, VISIBLE_SLOTS);
+  }, [availableSlots, showAllSlots]);
+
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 0 });
     const end = endOfWeek(endOfMonth(monthCursor), { weekStartsOn: 0 });
@@ -171,6 +206,7 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
 
   useEffect(() => {
     setTime("");
+    setShowAllSlots(false);
   }, [date]);
 
   useEffect(() => {
@@ -230,103 +266,193 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
 
   if (!open) return null;
 
+  const fieldStyle: CSSProperties = {
+    width: "100%",
+    minHeight: 42,
+    borderRadius: 12,
+    border: `1px solid ${BORDER}`,
+    background: FIELD_BG,
+    color: "#F3F4F5",
+    padding: "0.55rem 0.75rem",
+    font: "inherit",
+    outline: "none",
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end justify-center p-0 sm:items-center sm:p-4"
-      style={{ background: "rgba(11, 15, 20, 0.78)" }}
+      className="fixed inset-0 z-[110] flex items-end justify-center sm:items-center sm:p-4"
+      style={{ background: "rgba(11, 15, 20, 0.72)" }}
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="admin-card flex max-h-[94svh] w-full max-w-lg flex-col overflow-hidden rounded-b-none sm:rounded-[18px]"
+        className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-[18px] sm:rounded-[18px]"
+        style={{
+          maxHeight: "92svh",
+          background: PAGE_BG,
+          border: `1px solid ${BORDER}`,
+          boxShadow: "0 -8px 40px rgba(0,0,0,0.45)",
+        }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={t("admin.bookings.manualTitle")}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] pb-4">
-          <div>
-            <p className="admin-kicker">{t("admin.bookings.manualKicker")}</p>
-            <h2 className="admin-section-title mt-1">
+        {/* Header */}
+        <div
+          className="flex items-start justify-between gap-3 px-4 pb-3 pt-4"
+          style={{ borderBottom: `1px solid ${BORDER}` }}
+        >
+          <div className="min-w-0">
+            <h2
+              className="m-0 text-[1.15rem] font-semibold tracking-[-0.02em]"
+              style={{ color: "#F5F6F7", lineHeight: 1.35 }}
+            >
               {t("admin.bookings.manualTitle")}
             </h2>
+            <p
+              className="mb-0 mt-0.5 text-[0.78rem]"
+              style={{ color: MUTED, lineHeight: 1.4 }}
+            >
+              {t("admin.bookings.manualKicker")}
+            </p>
           </div>
           <button
             type="button"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[var(--line)] text-[var(--muted)]"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
+            style={{
+              border: `1px solid ${BORDER}`,
+              background: FIELD_BG,
+              color: MUTED,
+            }}
             onClick={onClose}
             aria-label={t("admin.bookings.close")}
           >
-            <X size={18} />
+            <X size={16} strokeWidth={1.6} />
           </button>
         </div>
 
         {error ? (
-          <p className="mt-4 rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+          <p
+            className="mx-4 mt-3 mb-0 rounded-[12px] px-3 py-2 text-sm"
+            style={{
+              border: "1px solid rgba(224,122,122,0.35)",
+              background: "rgba(224,122,122,0.12)",
+              color: "var(--danger)",
+            }}
+          >
             {error}
           </p>
         ) : null}
 
         <form
           onSubmit={(e) => void confirmBooking(e)}
-          className="mt-4 flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pe-1 pb-2">
-            <div>
-              <p className="admin-card-label mb-2">
+          <div
+            className="min-h-0 flex-1 overflow-y-auto px-4 py-3"
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            {/* Service */}
+            <section>
+              <p
+                className="mb-2 mt-0 text-[0.78rem] font-medium"
+                style={{ color: MUTED }}
+              >
                 {t("admin.bookings.service")}
               </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {SERVICES.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setService(type)}
-                    className={cn(
-                      "rounded-xl border px-3 py-3 text-start text-sm font-semibold transition",
-                      service === type
-                        ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
-                        : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--accent)]",
-                    )}
-                  >
-                    {serviceLabel(type)}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-2">
+                {SERVICES.map((type) => {
+                  const selected = service === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setService(type)}
+                      className="rounded-[12px] px-2.5 py-2.5 text-start text-[0.8rem] font-semibold transition"
+                      style={{
+                        border: selected
+                          ? "1px solid rgba(212,175,106,0.65)"
+                          : `1px solid ${BORDER}`,
+                        background: selected
+                          ? "rgba(212,175,106,0.12)"
+                          : FIELD_BG,
+                        color: selected ? GOLD : "#F0F1F2",
+                      }}
+                    >
+                      {serviceLabel(type)}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
+            </section>
 
-            <div>
-              <p className="admin-card-label mb-2">{t("admin.bookings.date")}</p>
-              <div className="rounded-xl border border-[var(--line)] bg-[rgba(12,16,22,0.55)] p-3">
-                <div className="mb-2.5 flex items-center justify-between gap-2">
+            {/* Date & Time */}
+            <section>
+              <p
+                className="mb-2 mt-0 text-[0.78rem] font-medium"
+                style={{ color: MUTED }}
+              >
+                {t("admin.bookings.date")}
+              </p>
+              <div
+                className="rounded-[14px] p-3"
+                style={{
+                  background: FIELD_BG,
+                  border: `1px solid ${BORDER}`,
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    className="grid h-9 w-9 place-items-center rounded-full border border-[rgba(212,175,106,0.3)] text-[#e6c58a] transition hover:border-[rgba(212,175,106,0.55)] hover:bg-[rgba(212,175,106,0.1)]"
+                    className="grid h-8 w-8 place-items-center rounded-[9px]"
+                    style={{
+                      border: "1px solid rgba(212,175,106,0.35)",
+                      color: GOLD,
+                      background: "rgba(212,175,106,0.06)",
+                    }}
                     aria-label={t("clinicBooking.prevMonth")}
                     onClick={() => setMonthCursor((d) => subMonths(d, 1))}
                   >
-                    {rtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                    {rtl ? (
+                      <ChevronRight size={15} strokeWidth={1.6} />
+                    ) : (
+                      <ChevronLeft size={15} strokeWidth={1.6} />
+                    )}
                   </button>
-                  <strong className="text-sm font-bold text-[var(--ink)]">
+                  <strong
+                    className="text-[0.86rem] font-semibold"
+                    style={{ color: "#F3F4F5" }}
+                  >
                     {monthLabel}
                   </strong>
                   <button
                     type="button"
-                    className="grid h-9 w-9 place-items-center rounded-full border border-[rgba(212,175,106,0.3)] text-[#e6c58a] transition hover:border-[rgba(212,175,106,0.55)] hover:bg-[rgba(212,175,106,0.1)]"
+                    className="grid h-8 w-8 place-items-center rounded-[9px]"
+                    style={{
+                      border: "1px solid rgba(212,175,106,0.35)",
+                      color: GOLD,
+                      background: "rgba(212,175,106,0.06)",
+                    }}
                     aria-label={t("clinicBooking.nextMonth")}
                     onClick={() => setMonthCursor((d) => addMonths(d, 1))}
                   >
-                    {rtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                    {rtl ? (
+                      <ChevronLeft size={15} strokeWidth={1.6} />
+                    ) : (
+                      <ChevronRight size={15} strokeWidth={1.6} />
+                    )}
                   </button>
                 </div>
 
-                <div className="mb-1.5 grid grid-cols-7 gap-1">
+                <div className="mb-1 grid grid-cols-7 gap-1">
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const label = t(`eyeExam.weekdays.${d}`);
                     return (
                       <span
                         key={d}
-                        className="truncate text-center text-[0.62rem] font-semibold text-[rgba(212,175,106,0.8)]"
+                        className="truncate text-center text-[0.62rem] font-semibold"
+                        style={{ color: "rgba(212,175,106,0.85)" }}
                         title={label}
                       >
                         {label}
@@ -336,11 +462,17 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                 </div>
 
                 {loading ? (
-                  <p className="admin-muted py-6 text-center text-sm">
+                  <p
+                    className="py-5 text-center text-sm"
+                    style={{ color: MUTED }}
+                  >
                     {t("admin.bookings.loadingDates")}
                   </p>
                 ) : serviceDays.length === 0 ? (
-                  <p className="admin-muted py-6 text-center text-sm">
+                  <p
+                    className="py-5 text-center text-sm"
+                    style={{ color: MUTED }}
+                  >
                     {t("admin.bookings.noDates")}
                   </p>
                 ) : (
@@ -359,15 +491,29 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                           disabled={disabled}
                           onClick={() => setDate(iso)}
                           className={cn(
-                            "aspect-square max-h-10 rounded-[10px] text-sm font-semibold transition",
-                            !inMonth && "opacity-25",
+                            "aspect-square max-h-9 rounded-[9px] text-[0.8rem] font-semibold transition",
+                            !inMonth && "opacity-20",
                             disabled && inMonth && "cursor-not-allowed opacity-30",
-                            !disabled &&
-                              !selected &&
-                              "border border-[var(--line)] bg-[rgba(21,25,31,0.9)] text-[var(--ink)] hover:border-[var(--accent)] hover:bg-[rgba(212,175,106,0.12)]",
-                            selected &&
-                              "border border-[#d4af6a] bg-[#d4af6a] text-[#1a140c] shadow-[0_0_0_1px_rgba(212,175,106,0.35)]",
                           )}
+                          style={
+                            selected
+                              ? {
+                                  border: `1px solid ${GOLD}`,
+                                  background: GOLD,
+                                  color: "#1A140C",
+                                }
+                              : disabled
+                                ? {
+                                    border: "1px solid transparent",
+                                    background: "transparent",
+                                    color: MUTED,
+                                  }
+                                : {
+                                    border: `1px solid ${BORDER}`,
+                                    background: PAGE_BG,
+                                    color: "#F0F1F2",
+                                  }
+                          }
                         >
                           {format(day, "d")}
                         </button>
@@ -375,79 +521,134 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                     })}
                   </div>
                 )}
-              </div>
-            </div>
 
-            <div>
-              <p className="admin-card-label mb-2">
-                {t("admin.bookings.availableTime")}
-              </p>
-              {!date ? (
-                <p className="admin-muted rounded-xl border border-dashed border-[var(--line)] px-3 py-6 text-center text-sm">
-                  {t("admin.bookings.selectDateFirst")}
-                </p>
-              ) : availableSlots.length === 0 ? (
-                <p className="admin-muted rounded-xl border border-dashed border-[var(--line)] px-3 py-6 text-center text-sm">
-                  {t("admin.bookings.noAvailableTimes")}
-                </p>
-              ) : (
-                <div className="grid max-h-40 grid-cols-3 gap-2 overflow-y-auto pe-1 sm:grid-cols-4">
-                  {availableSlots.map((slot) => {
-                    const selected = time === slot.time;
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        onClick={() => setTime(slot.time)}
-                        className={cn(
-                          "rounded-[10px] border px-2 py-2.5 text-center text-sm font-bold tabular-nums transition",
-                          selected
-                            ? "border-[#D4AF6A] bg-[#D4AF6A] text-[#1a140c] shadow-[0_0_0_1px_rgba(212,175,106,0.28)]"
-                            : "border-[var(--line)] bg-[rgba(21,25,31,0.9)] text-[var(--ink)] hover:border-[var(--accent)] hover:bg-[rgba(212,175,106,0.12)]",
-                        )}
+                {/* Times directly under calendar */}
+                {date ? (
+                  <div
+                    className="mt-3 pt-3"
+                    style={{ borderTop: `1px solid ${BORDER}` }}
+                  >
+                    <p
+                      className="mb-2 mt-0 text-[0.78rem] font-medium"
+                      style={{ color: MUTED }}
+                    >
+                      {t("admin.bookings.availableTime")}
+                    </p>
+                    {availableSlots.length === 0 ? (
+                      <p
+                        className="mb-0 rounded-[10px] px-2.5 py-3 text-center text-[0.8rem]"
+                        style={{
+                          color: MUTED,
+                          border: `1px dashed ${BORDER}`,
+                        }}
                       >
-                        {slot.time}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                        {t("admin.bookings.noAvailableTimes")}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                          {visibleSlots.map((slot) => {
+                            const selected = time === slot.time;
+                            return (
+                              <button
+                                key={slot.id}
+                                type="button"
+                                onClick={() => setTime(slot.time)}
+                                className="rounded-[10px] px-1.5 py-2 text-center text-[0.8rem] font-bold tabular-nums transition"
+                                style={
+                                  selected
+                                    ? {
+                                        border: `1px solid ${GOLD}`,
+                                        background: GOLD,
+                                        color: "#1A140C",
+                                      }
+                                    : {
+                                        border: `1px solid ${BORDER}`,
+                                        background: PAGE_BG,
+                                        color: "#F0F1F2",
+                                      }
+                                }
+                              >
+                                {slot.time}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {availableSlots.length > VISIBLE_SLOTS ? (
+                          <button
+                            type="button"
+                            className="mt-2 w-full text-center text-[0.78rem] font-semibold"
+                            style={{
+                              color: GOLD,
+                              background: "transparent",
+                              border: "none",
+                              padding: "0.35rem 0",
+                            }}
+                            onClick={() => setShowAllSlots((v) => !v)}
+                          >
+                            {showAllSlots
+                              ? showLessLabel(locale)
+                              : showMoreLabel(locale)}
+                          </button>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </section>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="label" htmlFor="mb-first">
-                  {t("admin.bookings.firstName")}
-                </label>
-                <input
-                  id="mb-first"
-                  className="input"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  autoComplete="given-name"
-                />
+            {/* Customer */}
+            <section
+              style={{ display: "flex", flexDirection: "column", gap: 10 }}
+            >
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label
+                    className="mb-1.5 block text-[0.78rem] font-medium"
+                    style={{ color: MUTED }}
+                    htmlFor="mb-first"
+                  >
+                    {t("admin.bookings.firstName")}
+                  </label>
+                  <input
+                    id="mb-first"
+                    style={fieldStyle}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div>
+                  <label
+                    className="mb-1.5 block text-[0.78rem] font-medium"
+                    style={{ color: MUTED }}
+                    htmlFor="mb-last"
+                  >
+                    {t("admin.bookings.lastName")}
+                  </label>
+                  <input
+                    id="mb-last"
+                    style={fieldStyle}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    autoComplete="family-name"
+                  />
+                </div>
               </div>
               <div>
-                <label className="label" htmlFor="mb-last">
-                  {t("admin.bookings.lastName")}
-                </label>
-                <input
-                  id="mb-last"
-                  className="input"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  autoComplete="family-name"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="label" htmlFor="mb-phone">
+                <label
+                  className="mb-1.5 block text-[0.78rem] font-medium"
+                  style={{ color: MUTED }}
+                  htmlFor="mb-phone"
+                >
                   {t("admin.bookings.phone")}
                 </label>
                 <input
                   id="mb-phone"
-                  className="input"
+                  style={fieldStyle}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="05X-XXX-XXXX"
@@ -456,35 +657,61 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                   autoComplete="tel"
                 />
               </div>
-              <div className="sm:col-span-2">
-                <label className="label" htmlFor="mb-notes">
+              <div>
+                <label
+                  className="mb-1.5 block text-[0.78rem] font-medium"
+                  style={{ color: MUTED }}
+                  htmlFor="mb-notes"
+                >
                   {t("admin.bookings.notes")}
                 </label>
                 <textarea
                   id="mb-notes"
-                  className="textarea"
+                  style={{
+                    ...fieldStyle,
+                    minHeight: 64,
+                    resize: "vertical",
+                  }}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={t("admin.bookings.notesPlaceholder")}
                   rows={2}
                 />
               </div>
-            </div>
+            </section>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] pt-4">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
-              {t("admin.bookings.cancel")}
-            </button>
+          {/* Actions */}
+          <div
+            className="flex items-center gap-2.5 px-4 py-3"
+            style={{ borderTop: `1px solid ${BORDER}`, background: PAGE_BG }}
+          >
             <button
               type="submit"
-              className="btn btn-accent"
               disabled={!canSubmit}
+              className="inline-flex h-11 min-w-0 flex-1 items-center justify-center rounded-[12px] text-[0.9rem] font-semibold disabled:opacity-50"
+              style={{
+                background: "rgba(212,175,106,0.16)",
+                border: "1px solid rgba(212,175,106,0.6)",
+                color: GOLD,
+                boxShadow: "0 0 16px rgba(212,175,106,0.12)",
+              }}
             >
-              <Check size={16} />
               {saving
                 ? t("admin.bookings.confirming")
                 : t("admin.bookings.confirmBooking")}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 shrink-0 items-center justify-center rounded-[12px] px-4 text-[0.84rem] font-semibold"
+              style={{
+                background: FIELD_BG,
+                border: `1px solid ${BORDER}`,
+                color: "#E8EAED",
+              }}
+            >
+              {t("admin.bookings.cancel")}
             </button>
           </div>
         </form>

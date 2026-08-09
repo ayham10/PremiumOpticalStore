@@ -172,6 +172,7 @@ function SectionHeader({
     <div
       className="flex items-center justify-between gap-3"
       style={{
+        paddingTop: 2,
         paddingBottom: 14,
         marginBottom: 0,
         borderBottom: `1px solid ${BORDER}`,
@@ -180,8 +181,13 @@ function SectionHeader({
       <div className="flex min-w-0 items-center gap-2.5">
         <IconBox icon={icon} size={14} />
         <h2
-          className="m-0 truncate text-[1rem] font-semibold tracking-[-0.02em]"
-          style={{ color: "#F5F6F7" }}
+          className="m-0 text-[1rem] font-semibold tracking-[-0.02em]"
+          style={{
+            color: "#F5F6F7",
+            lineHeight: 1.45,
+            paddingBlock: 2,
+            overflow: "visible",
+          }}
         >
           {title}
         </h2>
@@ -650,7 +656,12 @@ export default function AdminDashboardPage() {
         >
           <h2
             className="m-0 text-[1rem] font-semibold tracking-[-0.02em]"
-            style={{ color: "#F5F6F7" }}
+            style={{
+              color: "#F5F6F7",
+              lineHeight: 1.45,
+              paddingBlock: 2,
+              overflow: "visible",
+            }}
           >
             {t("admin.dashboard.quickActions")}
           </h2>
