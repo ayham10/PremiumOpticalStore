@@ -5,15 +5,20 @@ import {
   GripVertical,
   ImagePlus,
   Loader2,
+  Plus,
   Star,
   Trash2,
-  Upload,
 } from "lucide-react";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_GALLERY = 5;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+const GOLD = "#D4AF6A";
+const FIELD_BG = "#151A21";
+const BORDER = "#2A2F36";
+const MUTED = "#8A929C";
 
 type Props = {
   images: string[];
@@ -22,10 +27,10 @@ type Props = {
 
 async function uploadFile(file: File, onProgress: (pct: number) => void): Promise<string> {
   if (!ALLOWED.has(file.type)) {
-    throw new Error("Use JPG, PNG, or WebP only");
+    throw new Error("استخدم JPG أو PNG أو WebP فقط");
   }
   if (file.size > MAX_BYTES) {
-    throw new Error("Image must be 10 MB or smaller");
+    throw new Error("يجب أن تكون الصورة أصغر من 10 ميغابايت");
   }
 
   const body = new FormData();
@@ -33,7 +38,6 @@ async function uploadFile(file: File, onProgress: (pct: number) => void): Promis
   body.append("folder", "products");
   body.append("alt", file.name.replace(/\.[^.]+$/, ""));
 
-  // XHR for upload progress
   const url = await new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/storage/upload");
@@ -48,13 +52,13 @@ async function uploadFile(file: File, onProgress: (pct: number) => void): Promis
         if (xhr.status >= 200 && xhr.status < 300 && data.url) {
           resolve(data.url);
         } else {
-          reject(new Error(data.error || "Upload failed"));
+          reject(new Error(data.error || "فشل الرفع"));
         }
       } catch {
-        reject(new Error("Upload failed"));
+        reject(new Error("فشل الرفع"));
       }
     };
-    xhr.onerror = () => reject(new Error("Upload failed"));
+    xhr.onerror = () => reject(new Error("فشل الرفع"));
     xhr.send(body);
   });
 
@@ -63,7 +67,6 @@ async function uploadFile(file: File, onProgress: (pct: number) => void): Promis
 
 export default function ProductImagesField({ images, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -84,11 +87,11 @@ export default function ProductImagesField({ images, onChange }: Props) {
     if (!fileList?.length) return;
     const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
     if (!files.length) {
-      setError("Drop image files only (JPG, PNG, WebP)");
+      setError("أسقط ملفات صور فقط (JPG, PNG, WebP)");
       return;
     }
     if (!canAddMore) {
-      setError("Maximum 1 main + 5 gallery images");
+      setError("الحد الأقصى صورة رئيسية + 5 صور للمعرض");
       return;
     }
 
@@ -110,7 +113,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
       addUrls(uploaded);
       setProgress(100);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "فشل الرفع");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -144,150 +147,183 @@ export default function ProductImagesField({ images, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-4 sm:col-span-2">
-      <div>
-        <p className="label">Product images</p>
-        <p className="text-sm text-[var(--slate)]">
-          Upload a main image and up to 5 gallery photos. No URLs needed.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(e) => void handleFiles(e.target.files)}
+      />
 
       {error ? (
-        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+        <p
+          className="rounded-[12px] px-3 py-2 text-sm"
+          style={{
+            border: "1px solid rgba(224,122,122,0.35)",
+            background: "rgba(224,122,122,0.12)",
+            color: "var(--danger)",
+          }}
+        >
           {error}
         </p>
       ) : null}
 
-      <div
-        className={`rounded-2xl border border-dashed p-5 transition ${
-          dragOver
-            ? "border-[var(--accent)] bg-[var(--accent-wash)]"
-            : "border-[var(--line-strong)] bg-[var(--admin-elevated,#181F26)]"
-        }`}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragOver={(e) => e.preventDefault()}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          void handleFiles(e.dataTransfer.files);
-        }}
-      >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-xl bg-[rgba(212,175,55,0.12)] text-[var(--accent)]">
-            {uploading ? <Loader2 size={22} className="animate-spin" /> : <Upload size={22} />}
+      {main ? (
+        <div
+          className="relative overflow-hidden"
+          style={{
+            borderRadius: 12,
+            border: `1px solid ${BORDER}`,
+            background: FIELD_BG,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={main}
+            alt=""
+            className="w-full object-cover"
+            style={{ height: 220 }}
+          />
+          <span
+            className="absolute start-2.5 top-2.5 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.7rem] font-bold"
+            style={{ background: GOLD, color: "#0B0F14" }}
+          >
+            <Star size={11} strokeWidth={1.6} />
+            رئيسية
           </span>
-          <div>
-            <p className="font-semibold text-[var(--ink)]">
-              {uploading ? `Uploading… ${progress}%` : "Drag & drop images here"}
-            </p>
-            <p className="mt-1 text-sm text-[var(--slate)]">
-              JPG, PNG, WebP · max 10 MB each
-            </p>
-          </div>
           <button
             type="button"
-            className="btn btn-accent !min-h-11"
-            disabled={uploading || !canAddMore}
-            onClick={() => inputRef.current?.click()}
+            aria-label="حذف"
+            className="absolute end-2.5 top-2.5 grid place-items-center rounded-[10px]"
+            style={{
+              width: 34,
+              height: 34,
+              background: "rgba(0,0,0,0.55)",
+              border: `1px solid ${BORDER}`,
+              color: "#F07178",
+            }}
+            onClick={() => removeAt(0)}
           >
-            <ImagePlus size={16} />
-            Upload image
+            <Trash2 size={15} strokeWidth={1.55} />
           </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ACCEPT}
-            multiple
-            className="hidden"
-            onChange={(e) => void handleFiles(e.target.files)}
-          />
         </div>
-        {uploading ? (
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+      ) : (
+        <button
+          type="button"
+          disabled={uploading || !canAddMore}
+          onClick={() => inputRef.current?.click()}
+          className="flex w-full flex-col items-center justify-center gap-2"
+          style={{
+            height: 220,
+            borderRadius: 12,
+            border: `1px dashed ${BORDER}`,
+            background: FIELD_BG,
+            color: MUTED,
+          }}
+        >
+          {uploading ? (
+            <Loader2 size={22} className="animate-spin" color={GOLD} />
+          ) : (
+            <ImagePlus size={22} strokeWidth={1.55} color={GOLD} />
+          )}
+          <span className="text-[0.86rem] font-semibold" style={{ color: "#F3F4F5" }}>
+            {uploading ? `جارٍ الرفع… ${progress}%` : "إضافة صورة رئيسية"}
+          </span>
+        </button>
+      )}
+
+      <div className="grid grid-cols-3 gap-2.5">
+        {gallery.map((url, gi) => {
+          const index = gi + 1;
+          return (
             <div
-              className="h-full rounded-full bg-[var(--accent)] transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+              key={`${url}-${index}`}
+              draggable
+              onDragStart={() => onDragStart(index)}
+              onDragOver={(e) => onDragOverItem(e, index)}
+              onDragEnd={() => setDragIndex(null)}
+              className="relative overflow-hidden"
+              style={{
+                borderRadius: 12,
+                border: `1px solid ${BORDER}`,
+                background: FIELD_BG,
+                aspectRatio: "1 / 1",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="h-full w-full object-cover" />
+              <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1.5">
+                <span
+                  className="grid place-items-center rounded-lg"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    background: "rgba(0,0,0,0.5)",
+                    color: "#fff",
+                  }}
+                >
+                  <GripVertical size={13} />
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    title="تعيين كرئيسية"
+                    className="grid place-items-center rounded-lg"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      background: "rgba(0,0,0,0.5)",
+                      color: GOLD,
+                    }}
+                    onClick={() => makeMain(index)}
+                  >
+                    <Star size={13} strokeWidth={1.55} />
+                  </button>
+                  <button
+                    type="button"
+                    title="حذف"
+                    className="grid place-items-center rounded-lg"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      background: "rgba(0,0,0,0.5)",
+                      color: "#F07178",
+                    }}
+                    onClick={() => removeAt(index)}
+                  >
+                    <Trash2 size={13} strokeWidth={1.55} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {canAddMore ? (
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="grid place-items-center"
+            style={{
+              aspectRatio: "1 / 1",
+              borderRadius: 12,
+              border: `1px dashed ${BORDER}`,
+              background: FIELD_BG,
+              color: GOLD,
+            }}
+            aria-label="إضافة صورة"
+          >
+            {uploading ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <Plus size={22} strokeWidth={1.55} />
+            )}
+          </button>
         ) : null}
       </div>
-
-      {main ? (
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--slate)]">
-            Main image
-          </p>
-          <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--admin-card)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={main} alt="Main product" className="h-48 w-full object-cover" />
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-2.5 py-1 text-xs font-bold text-[#0B0F14]">
-                <Star size={12} /> Main
-              </span>
-              <button
-                type="button"
-                className="btn btn-ghost !min-h-9 !px-3 !text-xs text-white"
-                onClick={() => removeAt(0)}
-              >
-                <Trash2 size={14} /> Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {gallery.length ? (
-        <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--slate)]">
-            Gallery · drag to reorder
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {gallery.map((url, gi) => {
-              const index = gi + 1;
-              return (
-                <div
-                  key={`${url}-${index}`}
-                  draggable
-                  onDragStart={() => onDragStart(index)}
-                  onDragOver={(e) => onDragOverItem(e, index)}
-                  onDragEnd={() => setDragIndex(null)}
-                  className="group relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--admin-card)]"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="aspect-square w-full object-cover" />
-                  <div className="absolute inset-x-0 top-0 flex items-center justify-between p-2">
-                    <span className="grid h-8 w-8 cursor-grab place-items-center rounded-lg bg-black/50 text-white">
-                      <GripVertical size={14} />
-                    </span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        title="Set as main"
-                        className="grid h-8 w-8 place-items-center rounded-lg bg-black/50 text-[var(--accent)]"
-                        onClick={() => makeMain(index)}
-                      >
-                        <Star size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        title="Delete"
-                        className="grid h-8 w-8 place-items-center rounded-lg bg-black/50 text-[var(--danger)]"
-                        onClick={() => removeAt(index)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
