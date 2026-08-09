@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -8,9 +8,10 @@ import {
   AlertTriangle,
   RefreshCw,
   Plus,
+  Clock3,
+  type LucideIcon,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
-import StatCard from "@/components/admin/StatCard";
 import { apiFetch } from "@/lib/admin-api";
 import type { DashboardRecentBooking, DashboardStats } from "@/lib/types";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -19,6 +20,9 @@ import type { Locale } from "@/lib/i18n/config";
 type DashboardPayload = DashboardStats & {
   todaysSchedule?: DashboardRecentBooking[];
 };
+
+const GOLD = "#D4AF6A";
+const MUTED = "#7A848E";
 
 const LOCALE_TAGS: Record<Locale, string> = {
   en: "en-US",
@@ -62,16 +66,97 @@ function todayIsoLocal(): string {
   return `${y}-${m}-${day}`;
 }
 
-function moreAppointmentsLabel(count: number, locale: Locale): string {
-  if (locale === "ar") return `+${count} مواعيد أخرى`;
-  if (locale === "he") return `+${count} תורים נוספים`;
-  return `+${count} more appointments`;
-}
-
 function viewAllTodayLabel(locale: Locale): string {
   if (locale === "ar") return "عرض كل مواعيد اليوم";
   if (locale === "he") return "צפייה בכל תורי היום";
-  return "View all today's bookings";
+  return "View All Today";
+}
+
+function IconBox({
+  icon: Icon,
+  tone = "gold",
+}: {
+  icon: LucideIcon;
+  tone?: "gold" | "muted";
+}) {
+  const isGold = tone === "gold";
+  return (
+    <span
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px]"
+      style={{
+        background: isGold ? "rgba(212,175,106,0.10)" : "rgba(255,255,255,0.04)",
+        border: isGold
+          ? "1px solid rgba(212,175,106,0.28)"
+          : "1px solid rgba(255,255,255,0.08)",
+        boxShadow: isGold ? "0 0 12px rgba(212,175,106,0.12)" : "none",
+        color: isGold ? GOLD : MUTED,
+      }}
+    >
+      <Icon size={15} strokeWidth={1.6} />
+    </span>
+  );
+}
+
+function DashCard({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-2xl border border-white/[0.08] bg-[var(--admin-card,#131a22)] p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function PanelHead({
+  title,
+  href,
+  action,
+  icon,
+}: {
+  title: string;
+  href?: string;
+  action?: ReactNode;
+  icon: LucideIcon;
+}) {
+  const titleNode = (
+    <div className="flex min-w-0 items-center gap-2">
+      <IconBox icon={icon} />
+      <h2 className="truncate text-[0.95rem] font-semibold tracking-[-0.02em] text-[#F3F4F5]">
+        {title}
+      </h2>
+    </div>
+  );
+
+  return (
+    <div className="mb-2.5 flex items-center justify-between gap-2">
+      {href ? (
+        <Link href={href} className="min-w-0 no-underline">
+          {titleNode}
+        </Link>
+      ) : (
+        titleNode
+      )}
+      {action}
+    </div>
+  );
+}
+
+function TextLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="shrink-0 text-[0.78rem] font-semibold no-underline"
+      style={{ color: GOLD }}
+    >
+      {children}
+    </Link>
+  );
 }
 
 export default function AdminDashboardPage() {
@@ -133,60 +218,64 @@ export default function AdminDashboardPage() {
 
   if ((error && !stats) || !stats) {
     return (
-      <div className="admin-card space-y-3">
-        <p className="text-[var(--danger)]">
+      <DashCard>
+        <p className="text-sm text-[var(--danger)]">
           {error || t("admin.dashboard.loadError")}
         </p>
         <button
           type="button"
-          className="btn btn-ghost inline-flex items-center gap-2"
+          className="btn btn-ghost mt-3 inline-flex items-center gap-2"
           onClick={() => void load()}
         >
-          <RefreshCw size={16} />
+          <RefreshCw size={15} strokeWidth={1.6} />
           {t("admin.dashboard.refresh")}
         </button>
-      </div>
+      </DashCard>
     );
   }
 
   const schedule = stats.todaysSchedule || [];
   const visibleSchedule = schedule.slice(0, 3);
-  const moreCount = Math.max(0, schedule.length - 3);
   const recent = (stats.recentBookings || []).slice(0, 3);
   const todayLabel = new Date().toLocaleDateString(LOCALE_TAGS[locale], {
     weekday: "long",
     month: "short",
     day: "numeric",
   });
+  const lowStockWarn = stats.lowStockAlerts > 0;
 
   return (
-    <div className="admin-dashboard space-y-4 md:space-y-5">
+    <div className="admin-dashboard mx-auto max-w-3xl space-y-3 pb-2">
       <AdminPageHeader
         title={t("admin.dashboard.title")}
-        description={t("admin.dashboard.description")}
         actions={
           <>
-            <p className="admin-dashboard-date">{todayLabel}</p>
+            <p
+              className="m-0 inline-flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[0.78rem] font-medium"
+              style={{ color: MUTED }}
+            >
+              <CalendarDays size={13} strokeWidth={1.6} color={GOLD} />
+              {todayLabel}
+            </p>
             <button
               type="button"
-              className="btn btn-ghost inline-flex items-center gap-2"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] transition hover:border-[rgba(212,175,106,0.35)]"
               onClick={() => void load({ soft: true })}
               disabled={refreshing}
               aria-label={t("admin.dashboard.refresh")}
+              style={{ color: MUTED }}
             >
               <RefreshCw
-                size={16}
+                size={15}
+                strokeWidth={1.6}
                 className={refreshing ? "animate-spin" : ""}
               />
-              <span className="hidden sm:inline">
-                {t("admin.dashboard.refresh")}
-              </span>
             </button>
             <Link
               href="/admin/eye-exam?tab=appointments&book=1"
-              className="btn btn-accent inline-flex items-center gap-2"
+              className="btn btn-accent inline-flex h-9 items-center gap-1.5 px-3 text-[0.82rem]"
             >
-              <Plus size={16} />
+              <Plus size={15} strokeWidth={1.7} />
               {t("admin.dashboard.newAppointment")}
             </Link>
           </>
@@ -199,171 +288,173 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 grid-cols-2 sm:gap-4">
-        <StatCard
-          label={t("admin.dashboard.today")}
-          value={stats.todayAppointments}
-          hint={t("admin.dashboard.todayHint")}
+      <div className="grid grid-cols-2 gap-2.5">
+        <Link href={todayHref} className="no-underline">
+          <DashCard className="h-full !p-3 transition hover:border-[rgba(212,175,106,0.28)]">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="m-0 text-[0.72rem] font-medium" style={{ color: MUTED }}>
+                  {t("admin.dashboard.today")}
+                </p>
+                <p
+                  className="mt-1 text-[1.65rem] font-semibold leading-none tracking-[-0.03em]"
+                  style={{ color: GOLD }}
+                >
+                  {stats.todayAppointments}
+                </p>
+              </div>
+              <IconBox icon={CalendarDays} />
+            </div>
+          </DashCard>
+        </Link>
+
+        <Link href="/admin/inventory" className="no-underline">
+          <DashCard className="h-full !p-3 transition hover:border-[rgba(212,175,106,0.28)]">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="m-0 text-[0.72rem] font-medium" style={{ color: MUTED }}>
+                  {t("admin.dashboard.lowStock")}
+                </p>
+                <p
+                  className="mt-1 text-[1.65rem] font-semibold leading-none tracking-[-0.03em]"
+                  style={{ color: lowStockWarn ? GOLD : "#F3F4F5" }}
+                >
+                  {stats.lowStockAlerts}
+                </p>
+              </div>
+              <IconBox
+                icon={AlertTriangle}
+                tone={lowStockWarn ? "gold" : "muted"}
+              />
+            </div>
+          </DashCard>
+        </Link>
+      </div>
+
+      <DashCard>
+        <PanelHead
+          title={t("admin.dashboard.today")}
           href={todayHref}
-          icon={CalendarDays}
+          icon={Clock3}
+          action={<TextLink href={todayHref}>{viewAllTodayLabel(locale)}</TextLink>}
         />
-        <StatCard
-          label={t("admin.dashboard.lowStock")}
-          value={stats.lowStockAlerts}
-          hint={t("admin.dashboard.lowStockHint")}
-          href="/admin/inventory"
-          icon={AlertTriangle}
-          tone={stats.lowStockAlerts > 0 ? "warning" : "default"}
-        />
-      </div>
 
-      <div className="grid gap-3 md:gap-4 xl:grid-cols-2">
-        <section className="admin-card admin-dashboard-panel !p-4 md:!p-5">
-          <div className="admin-dashboard-panel-head !mb-2">
-            <Link href={todayHref} className="no-underline">
-              <h2 className="admin-section-title">
-                {t("admin.dashboard.today")}
-              </h2>
-            </Link>
-          </div>
-
-          {visibleSchedule.length ? (
-            <>
-              <div className="admin-dashboard-list">
-                {visibleSchedule.map((a) => (
-                  <div
-                    key={a.id}
-                    className="grid grid-cols-[4.25rem_minmax(0,1fr)_minmax(0,0.9fr)] items-center gap-x-3 gap-y-0.5 border-b border-white/[0.06] py-2.5 last:border-b-0"
-                  >
-                    <p className="admin-dashboard-time">
-                      {formatTime(a.startTime, locale)}
-                    </p>
-                    <p className="admin-cell-primary truncate min-w-0">
-                      {a.customerName}
-                    </p>
-                    <p className="admin-cell-secondary truncate min-w-0 text-end">
-                      {serviceLabel(t, a.service)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-                {moreCount > 0 ? (
-                  <Link
-                    href={todayHref}
-                    className="text-sm font-semibold text-[var(--accent)] no-underline"
-                  >
-                    {moreAppointmentsLabel(moreCount, locale)}
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <Link href={todayHref} className="admin-dashboard-link">
-                  {viewAllTodayLabel(locale)}
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="admin-dashboard-empty !py-2">
-              <p className="admin-dashboard-empty-title">
-                {t("admin.dashboard.emptyToday")}
-              </p>
-              <p className="admin-dashboard-empty-lead">
-                {t("admin.dashboard.emptyTodayLead")}
-              </p>
-              <div className="admin-dashboard-empty-actions">
-                <Link
-                  href="/admin/eye-exam?tab=appointments&book=1"
-                  className="btn btn-accent inline-flex items-center gap-2"
-                >
-                  <Plus size={16} />
-                  {t("admin.dashboard.newAppointment")}
-                </Link>
-                <Link
-                  href="/admin/eye-exam?tab=availability"
-                  className="btn btn-ghost inline-flex items-center gap-2"
-                >
-                  <CalendarRange size={16} />
-                  {t("admin.dashboard.manageAvailability")}
-                </Link>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="admin-card admin-dashboard-panel !p-4 md:!p-5">
-          <div className="admin-dashboard-panel-head !mb-2">
-            <h2 className="admin-section-title">
-              {t("admin.dashboard.recent")}
-            </h2>
-            <Link
-              href="/admin/eye-exam?tab=appointments"
-              className="admin-dashboard-link"
+        {visibleSchedule.length ? (
+          <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+            <div
+              className="grid grid-cols-[3.6rem_minmax(0,1.1fr)_minmax(0,1fr)] gap-2 border-b border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[0.68rem] font-medium uppercase tracking-[0.04em]"
+              style={{ color: MUTED }}
             >
-              {t("admin.dashboard.viewAll")}
-            </Link>
-          </div>
-
-          {recent.length ? (
-            <div className="admin-dashboard-list">
-              {recent.map((a) => (
-                <div
-                  key={a.id}
-                  className="admin-schedule-row admin-recent-row !py-2.5"
+              <span>{locale === "ar" ? "الوقت" : locale === "he" ? "שעה" : "Time"}</span>
+              <span>{locale === "ar" ? "العميل" : locale === "he" ? "לקוח" : "Customer"}</span>
+              <span className="text-end">
+                {locale === "ar" ? "الخدمة" : locale === "he" ? "שירות" : "Service"}
+              </span>
+            </div>
+            {visibleSchedule.map((a) => (
+              <div
+                key={a.id}
+                className="grid grid-cols-[3.6rem_minmax(0,1.1fr)_minmax(0,1fr)] items-center gap-2 border-b border-white/[0.05] px-2.5 py-2 last:border-b-0"
+              >
+                <p
+                  className="m-0 text-[0.82rem] font-semibold tabular-nums"
+                  style={{ color: GOLD }}
                 >
-                  <div className="min-w-0">
-                    <p className="admin-cell-primary truncate">
-                      {a.customerName}
-                    </p>
-                    <p className="admin-cell-secondary truncate">
-                      {serviceLabel(t, a.service)}
-                    </p>
-                  </div>
-                  <div className="admin-dashboard-meta">
-                    <p className="admin-cell-primary text-sm font-semibold">
-                      {formatDateLabel(a.date, locale)}
-                    </p>
-                    <p className="admin-cell-secondary">
-                      {formatTime(a.startTime, locale)}
-                    </p>
-                  </div>
+                  {formatTime(a.startTime, locale)}
+                </p>
+                <p className="m-0 truncate text-[0.84rem] font-medium text-[#F3F4F5]">
+                  {a.customerName}
+                </p>
+                <p
+                  className="m-0 truncate text-end text-[0.78rem]"
+                  style={{ color: MUTED }}
+                >
+                  {serviceLabel(t, a.service)}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-white/[0.08] px-3 py-4">
+            <p className="m-0 text-[0.9rem] font-semibold text-[#F3F4F5]">
+              {t("admin.dashboard.emptyToday")}
+            </p>
+            <p className="mt-1 mb-0 text-[0.8rem] leading-relaxed" style={{ color: MUTED }}>
+              {t("admin.dashboard.emptyTodayLead")}
+            </p>
+          </div>
+        )}
+      </DashCard>
+
+      <DashCard>
+        <PanelHead
+          title={t("admin.dashboard.recent")}
+          icon={CalendarDays}
+          action={
+            <TextLink href="/admin/eye-exam?tab=appointments">
+              {t("admin.dashboard.viewAll")}
+            </TextLink>
+          }
+        />
+
+        {recent.length ? (
+          <div className="overflow-hidden rounded-xl border border-white/[0.06]">
+            {recent.map((a) => (
+              <div
+                key={a.id}
+                className="grid grid-cols-[minmax(0,1.3fr)_auto] items-center gap-3 border-b border-white/[0.05] px-2.5 py-2 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="m-0 truncate text-[0.84rem] font-medium text-[#F3F4F5]">
+                    {a.customerName}
+                  </p>
+                  <p className="m-0 truncate text-[0.76rem]" style={{ color: MUTED }}>
+                    {serviceLabel(t, a.service)}
+                  </p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="admin-dashboard-empty admin-dashboard-empty--compact">
-              <p className="admin-dashboard-empty-title">
-                {t("admin.common.noResults")}
-              </p>
-            </div>
-          )}
-        </section>
-      </div>
+                <div className="text-end">
+                  <p className="m-0 text-[0.78rem] font-medium text-[#E8EAED]">
+                    {formatDateLabel(a.date, locale)}
+                  </p>
+                  <p
+                    className="m-0 text-[0.76rem] font-semibold tabular-nums"
+                    style={{ color: GOLD }}
+                  >
+                    {formatTime(a.startTime, locale)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-white/[0.08] px-3 py-3">
+            <p className="m-0 text-[0.86rem] font-semibold text-[#F3F4F5]">
+              {t("admin.common.noResults")}
+            </p>
+          </div>
+        )}
+      </DashCard>
 
       <section>
-        <h2 className="admin-section-title mb-2.5">
+        <h2 className="mb-2 m-0 text-[0.95rem] font-semibold tracking-[-0.02em] text-[#F3F4F5]">
           {t("admin.dashboard.quickActions")}
         </h2>
-        <div className="admin-quick-actions-grid max-w-none sm:max-w-md">
+        <div className="grid grid-cols-2 gap-2.5">
           <Link
             href="/admin/eye-exam?tab=appointments&book=1"
-            className="admin-quick-action"
+            className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[var(--admin-card,#131a22)] px-3 py-2.5 no-underline shadow-[0_8px_24px_rgba(0,0,0,0.14)] transition hover:border-[rgba(212,175,106,0.35)]"
           >
-            <span className="admin-quick-action-icon">
-              <Plus size={18} />
-            </span>
-            <span className="admin-quick-action-label">
+            <IconBox icon={Plus} />
+            <span className="text-[0.84rem] font-semibold text-[#F3F4F5]">
               {t("admin.dashboard.newAppointment")}
             </span>
           </Link>
           <Link
             href="/admin/eye-exam?tab=availability"
-            className="admin-quick-action"
+            className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-[var(--admin-card,#131a22)] px-3 py-2.5 no-underline shadow-[0_8px_24px_rgba(0,0,0,0.14)] transition hover:border-[rgba(212,175,106,0.35)]"
           >
-            <span className="admin-quick-action-icon">
-              <CalendarRange size={18} />
-            </span>
-            <span className="admin-quick-action-label">
+            <IconBox icon={CalendarRange} tone="muted" />
+            <span className="text-[0.84rem] font-semibold text-[#F3F4F5]">
               {t("admin.dashboard.manageAvailability")}
             </span>
           </Link>
