@@ -1,22 +1,15 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import {
-  GripVertical,
-  ImagePlus,
-  Loader2,
-  Plus,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { Camera, Loader2, Star, Trash2 } from "lucide-react";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_GALLERY = 5;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const GOLD = "#D4AF6A";
-const FIELD_BG = "#151A21";
+const GOLD = "#D4AF37";
+const FIELD_BG = "#12161D";
 const BORDER = "#2A2F36";
 const MUTED = "#8A929C";
 
@@ -72,8 +65,6 @@ export default function ProductImagesField({ images, onChange }: Props) {
   const [error, setError] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  const main = images[0] || "";
-  const gallery = images.slice(1, 1 + MAX_GALLERY);
   const canAddMore = images.length < 1 + MAX_GALLERY;
 
   const addUrls = useCallback(
@@ -147,7 +138,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <input
         ref={inputRef}
         type="file"
@@ -170,160 +161,142 @@ export default function ProductImagesField({ images, onChange }: Props) {
         </p>
       ) : null}
 
-      {main ? (
-        <div
-          className="relative overflow-hidden"
-          style={{
-            borderRadius: 12,
-            border: `1px solid ${BORDER}`,
-            background: FIELD_BG,
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={main}
-            alt=""
-            className="w-full object-cover"
-            style={{ height: 220 }}
-          />
-          <span
-            className="absolute start-2.5 top-2.5 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.7rem] font-bold"
-            style={{ background: GOLD, color: "#0B0F14" }}
-          >
-            <Star size={11} strokeWidth={1.6} />
-            رئيسية
-          </span>
-          <button
-            type="button"
-            aria-label="حذف"
-            className="absolute end-2.5 top-2.5 grid place-items-center rounded-[10px]"
-            style={{
-              width: 34,
-              height: 34,
-              background: "rgba(0,0,0,0.55)",
-              border: `1px solid ${BORDER}`,
-              color: "#F07178",
-            }}
-            onClick={() => removeAt(0)}
-          >
-            <Trash2 size={15} strokeWidth={1.55} />
-          </button>
-        </div>
-      ) : (
+      {canAddMore ? (
         <button
           type="button"
-          disabled={uploading || !canAddMore}
+          disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex w-full flex-col items-center justify-center gap-2"
+          className="flex w-full flex-col items-center justify-center gap-1.5 disabled:opacity-60"
           style={{
-            height: 220,
+            minHeight: 118,
             borderRadius: 12,
-            border: `1px dashed ${BORDER}`,
+            border: `1.5px dashed ${GOLD}`,
             background: FIELD_BG,
-            color: MUTED,
+            padding: "18px 12px",
           }}
         >
           {uploading ? (
             <Loader2 size={22} className="animate-spin" color={GOLD} />
           ) : (
-            <ImagePlus size={22} strokeWidth={1.55} color={GOLD} />
+            <Camera size={22} strokeWidth={1.5} color={GOLD} />
           )}
-          <span className="text-[0.86rem] font-semibold" style={{ color: "#F3F4F5" }}>
-            {uploading ? `جارٍ الرفع… ${progress}%` : "إضافة صورة رئيسية"}
+          <span className="text-[0.88rem] font-semibold" style={{ color: GOLD }}>
+            {uploading ? `جارٍ الرفع… ${progress}%` : "إضافة صورة"}
+          </span>
+          <span className="text-center text-[0.68rem] leading-snug" style={{ color: MUTED }}>
+            حتى 5MB · PNG / JPG · نسبة 1:1 مفضّلة
           </span>
         </button>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-3 gap-2.5">
-        {gallery.map((url, gi) => {
-          const index = gi + 1;
-          return (
-            <div
-              key={`${url}-${index}`}
-              draggable
-              onDragStart={() => onDragStart(index)}
-              onDragOver={(e) => onDragOverItem(e, index)}
-              onDragEnd={() => setDragIndex(null)}
-              className="relative overflow-hidden"
-              style={{
-                borderRadius: 12,
-                border: `1px solid ${BORDER}`,
-                background: FIELD_BG,
-                aspectRatio: "1 / 1",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="h-full w-full object-cover" />
-              <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1.5">
-                <span
-                  className="grid place-items-center rounded-lg"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    background: "rgba(0,0,0,0.5)",
-                    color: "#fff",
-                  }}
-                >
-                  <GripVertical size={13} />
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    title="تعيين كرئيسية"
-                    className="grid place-items-center rounded-lg"
-                    style={{
-                      width: 28,
-                      height: 28,
-                      background: "rgba(0,0,0,0.5)",
-                      color: GOLD,
-                    }}
-                    onClick={() => makeMain(index)}
-                  >
-                    <Star size={13} strokeWidth={1.55} />
-                  </button>
-                  <button
-                    type="button"
-                    title="حذف"
-                    className="grid place-items-center rounded-lg"
-                    style={{
-                      width: 28,
-                      height: 28,
-                      background: "rgba(0,0,0,0.5)",
-                      color: "#F07178",
-                    }}
-                    onClick={() => removeAt(index)}
-                  >
-                    <Trash2 size={13} strokeWidth={1.55} />
-                  </button>
-                </div>
+      {images.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3">
+          {images.map((url, index) => {
+            const isMain = index === 0;
+            return (
+              <div
+                key={`${url}-${index}`}
+                draggable
+                onDragStart={() => onDragStart(index)}
+                onDragOver={(e) => onDragOverItem(e, index)}
+                onDragEnd={() => setDragIndex(null)}
+                className="relative overflow-hidden"
+                style={{
+                  borderRadius: 12,
+                  border: isMain ? `1px solid rgba(212,175,55,0.45)` : `1px solid ${BORDER}`,
+                  background: FIELD_BG,
+                  aspectRatio: "1 / 1",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" className="h-full w-full object-cover" />
+
+                {isMain ? (
+                  <>
+                    <span
+                      className="absolute end-2 top-2 grid place-items-center rounded-full"
+                      style={{
+                        width: 26,
+                        height: 26,
+                        background: GOLD,
+                        color: "#0B0F14",
+                      }}
+                    >
+                      <Star size={12} strokeWidth={1.7} fill="currentColor" />
+                    </span>
+                    <span
+                      className="absolute inset-x-0 bottom-0 px-2 py-1.5 text-center text-[0.72rem] font-bold"
+                      style={{
+                        background: "rgba(11,14,20,0.72)",
+                        color: GOLD,
+                      }}
+                    >
+                      رئيسية
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="حذف"
+                      className="absolute start-2 top-2 grid place-items-center rounded-[8px]"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        background: "rgba(0,0,0,0.55)",
+                        border: "none",
+                        color: "#F07178",
+                      }}
+                      onClick={() => removeAt(0)}
+                    >
+                      <Trash2 size={13} strokeWidth={1.55} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="حذف"
+                      className="absolute end-2 top-2 grid place-items-center rounded-[8px]"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        background: "rgba(0,0,0,0.55)",
+                        border: "none",
+                        color: "#F07178",
+                      }}
+                      onClick={() => removeAt(index)}
+                    >
+                      <Trash2 size={13} strokeWidth={1.55} />
+                    </button>
+                    <button
+                      type="button"
+                      title="تعيين كرئيسية"
+                      className="absolute start-2 top-2 grid place-items-center rounded-[8px]"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        background: "rgba(0,0,0,0.55)",
+                        border: "none",
+                        color: GOLD,
+                      }}
+                      onClick={() => makeMain(index)}
+                    >
+                      <Star size={13} strokeWidth={1.55} />
+                    </button>
+                  </>
+                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+      ) : null}
 
-        {canAddMore ? (
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => inputRef.current?.click()}
-            className="grid place-items-center"
-            style={{
-              aspectRatio: "1 / 1",
-              borderRadius: 12,
-              border: `1px dashed ${BORDER}`,
-              background: FIELD_BG,
-              color: GOLD,
-            }}
-            aria-label="إضافة صورة"
-          >
-            {uploading ? (
-              <Loader2 size={20} className="animate-spin" />
-            ) : (
-              <Plus size={22} strokeWidth={1.55} />
-            )}
-          </button>
-        ) : null}
-      </div>
+      {images.length > 1 ? (
+        <p
+          className="mb-0 mt-1 text-center text-[0.72rem]"
+          style={{ color: MUTED }}
+        >
+          اسحب الصور لتغيير الترتيب ←
+        </p>
+      ) : null}
     </div>
   );
 }
