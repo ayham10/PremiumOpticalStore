@@ -7146,6 +7146,8 @@ button.promo-card {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  width: fit-content;
+  max-width: 100%;
   margin-bottom: 0.9rem;
   padding: 0.7rem 0.85rem;
   border-radius: 11px;
@@ -7498,9 +7500,10 @@ button.promo-card {
 }
 
 .admin-wh-period-input {
-  width: 100%;
+  width: 6.75rem;
+  max-width: 100%;
   min-height: 2.35rem;
-  padding: 0.35rem 0.55rem;
+  padding: 0.35rem 0.4rem;
   border-radius: 9px;
   border: 1px solid var(--line-strong);
   background: rgba(0, 0, 0, 0.22);
