@@ -521,7 +521,11 @@ export default function BookingsPanel({
         </p>
 
         <section
-          className="overflow-hidden rounded-[16px]"
+          className={`overflow-hidden rounded-[16px] ${
+            viewMode === "list"
+              ? "max-lg:w-[113%] max-lg:max-w-none max-lg:-mx-[6.5%]"
+              : ""
+          }`}
           style={{
             background: CARD_BG,
             border: `1px solid ${BORDER}`,
@@ -629,46 +633,51 @@ export default function BookingsPanel({
                           <ChevronLeft size={18} strokeWidth={1.55} color={GOLD} />
                         </div>
 
-                        {/* Mobile — list: date | hour | name/phone; weekly: hour | name | phone */}
+                        {/* Mobile — list: date | time | name | phone */}
                         {showDate ? (
-                          <div className="flex items-center gap-3 px-3.5 py-2.5 lg:hidden">
+                          <div
+                            className="flex items-center lg:hidden"
+                            style={{
+                              gap: 12,
+                              padding: "10px 10px",
+                              width: "100%",
+                            }}
+                          >
                             <span
-                              className="w-[3.55rem] shrink-0 whitespace-nowrap text-center text-[0.74rem] font-semibold tabular-nums"
-                              style={{ color: MUTED, minWidth: "3.55rem" }}
+                              className="shrink-0 whitespace-nowrap text-[0.74rem] font-semibold tabular-nums leading-none"
+                              style={{
+                                color: MUTED,
+                                width: "3.7rem",
+                                minWidth: "3.7rem",
+                              }}
                               dir="ltr"
                             >
                               {compactListDate(row.appointmentDate)}
                             </span>
                             <span
-                              className="w-[3.15rem] shrink-0 whitespace-nowrap text-center text-[0.86rem] font-bold tabular-nums"
-                              style={{ color: GOLD, minWidth: "3.15rem" }}
+                              className="shrink-0 whitespace-nowrap text-[0.86rem] font-bold tabular-nums leading-none"
+                              style={{
+                                color: GOLD,
+                                width: "3.25rem",
+                                minWidth: "3.25rem",
+                              }}
                               dir="ltr"
                             >
                               {clock}
                             </span>
-                            <div className="min-w-0 flex-1 overflow-hidden">
-                              <p
-                                className="m-0 truncate text-[0.86rem] font-semibold leading-tight"
-                                style={{ color: INK }}
-                              >
-                                {row.fullName}
-                              </p>
-                              <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                                <Phone
-                                  size={12}
-                                  strokeWidth={1.45}
-                                  color={GOLD}
-                                  className="shrink-0"
-                                />
-                                <span
-                                  className="truncate text-[0.72rem] tabular-nums"
-                                  style={{ color: MUTED }}
-                                  dir="ltr"
-                                >
-                                  {row.phone || "—"}
-                                </span>
-                              </div>
-                            </div>
+                            <span
+                              className="min-w-0 flex-1 truncate text-[0.86rem] font-semibold leading-none"
+                              style={{ color: INK }}
+                            >
+                              {row.fullName}
+                            </span>
+                            <span
+                              className="shrink-0 whitespace-nowrap text-[0.74rem] tabular-nums leading-none"
+                              style={{ color: MUTED }}
+                              dir="ltr"
+                            >
+                              {row.phone || "—"}
+                            </span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-3 px-3.5 py-3 lg:hidden">
