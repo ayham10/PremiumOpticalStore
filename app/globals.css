@@ -3088,6 +3088,16 @@ main.frames-main {
   }
 }
 
+/* Desktop/web: bias crop upward so eyes + sunglasses stay in frame
+   (wide 21:9 hero otherwise centers too low on the face). Mobile unchanged. */
+@media (min-width: 768px) {
+  .sunglasses-page .frames-hero-video,
+  .sunglasses-page .frames-hero img {
+    object-fit: cover;
+    object-position: center 28%;
+  }
+}
+
 .frames-hero-veil {
   position: absolute;
   inset: 0;
