@@ -10,7 +10,6 @@ import {
 } from "react";
 import Link from "next/link";
 import {
-  Bell,
   CalendarClock,
   CalendarDays,
   CalendarRange,
@@ -39,7 +38,7 @@ type DashboardPayload = DashboardStats & {
   todaysSchedule?: DashboardRecentBooking[];
 };
 
-const GOLD = "#D4AF6A";
+const GOLD = "#D4AF37";
 const MUTED = "#8B93A0";
 const PAGE_BG = "#0B0F14";
 const CARD_BG = "#12171E";
@@ -114,7 +113,7 @@ function openShellMobileNav() {
 
 function GoldIcon({
   icon: Icon,
-  size = 20,
+  size = 23,
   className = "",
 }: {
   icon: LucideIcon;
@@ -288,7 +287,6 @@ export default function AdminDashboardPage() {
   }
 
   const schedule = stats.todaysSchedule || [];
-  const notifCount = schedule.length;
 
   const quickActions: Array<{
     href: string;
@@ -332,7 +330,7 @@ export default function AdminDashboardPage() {
       {/* ── HEADER ── */}
       <header className="admin-home-header relative flex items-center">
         <div
-          className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2 lg:gap-3"
+          className="absolute top-1/2 flex -translate-y-1/2 items-center"
           style={{ insetInlineStart: 0 }}
         >
           <button
@@ -342,20 +340,7 @@ export default function AdminDashboardPage() {
             className="admin-home-icon-btn grid place-items-center"
             style={{ background: "transparent", border: "none", color: "#F2F4F6" }}
           >
-            <Menu className="size-[22px] lg:size-[24px]" strokeWidth={1.55} />
-          </button>
-          <button
-            type="button"
-            aria-label="الإشعارات"
-            className="admin-home-icon-btn relative hidden place-items-center lg:grid"
-            style={{ background: "transparent", border: "none", color: GOLD }}
-          >
-            <Bell className="size-[22px]" strokeWidth={1.45} />
-            {notifCount > 0 ? (
-              <span className="admin-home-badge absolute grid place-items-center rounded-full font-bold">
-                {notifCount > 9 ? "9+" : notifCount}
-              </span>
-            ) : null}
+            <Menu size={25} strokeWidth={1.55} />
           </button>
         </div>
 
@@ -366,23 +351,9 @@ export default function AdminDashboardPage() {
         </div>
 
         <div
-          className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2.5"
+          className="absolute top-1/2 flex -translate-y-1/2 items-center gap-1.5"
           style={{ insetInlineEnd: 0 }}
         >
-          <button
-            type="button"
-            aria-label="الإشعارات"
-            className="admin-home-icon-btn relative grid place-items-center lg:hidden"
-            style={{ background: "transparent", border: "none", color: GOLD }}
-          >
-            <Bell className="size-[21px]" strokeWidth={1.45} />
-            {notifCount > 0 ? (
-              <span className="admin-home-badge absolute grid place-items-center rounded-full font-bold">
-                {notifCount > 9 ? "9+" : notifCount}
-              </span>
-            ) : null}
-          </button>
-
           <button
             type="button"
             className="flex items-center gap-1.5"
@@ -398,7 +369,7 @@ export default function AdminDashboardPage() {
               {profileInitials}
             </span>
             <ChevronDown
-              size={15}
+              size={17}
               strokeWidth={1.65}
               className="hidden lg:block"
               color={GOLD}
@@ -409,10 +380,12 @@ export default function AdminDashboardPage() {
 
       {/* ── DATE + GREETING ── */}
       <div className="admin-home-hero-mobile flex flex-col items-center text-center lg:hidden">
-        <button type="button" className="admin-home-date-btn inline-flex w-full items-center justify-center gap-2.5 font-medium">
-          <GoldIcon icon={CalendarDays} size={18} />
+        <button
+          type="button"
+          className="admin-home-date-btn inline-flex w-full items-center justify-center gap-2.5 font-medium"
+        >
+          <GoldIcon icon={CalendarDays} size={21} />
           <span className="truncate">{todayLabel}</span>
-          <ChevronDown size={15} strokeWidth={1.55} color={GOLD} />
         </button>
         <div className="admin-home-greeting">
           <h1 className="admin-home-greeting-title m-0 font-semibold tracking-[-0.02em]">
@@ -433,10 +406,12 @@ export default function AdminDashboardPage() {
             {greetingSub}
           </p>
         </div>
-        <button type="button" className="admin-home-date-btn inline-flex shrink-0 items-center gap-2.5 font-medium">
-          <GoldIcon icon={CalendarDays} size={18} />
+        <button
+          type="button"
+          className="admin-home-date-btn inline-flex shrink-0 items-center gap-2.5 font-medium"
+        >
+          <GoldIcon icon={CalendarDays} size={21} />
           <span>{todayLabel}</span>
-          <ChevronDown size={15} strokeWidth={1.55} color={GOLD} />
         </button>
       </div>
 
@@ -456,8 +431,7 @@ export default function AdminDashboardPage() {
       {/* ── TODAY'S BOOKINGS ── */}
       <Panel className="admin-home-bookings">
         <div className="admin-home-section-title flex items-center gap-2.5">
-          <GoldIcon icon={CalendarDays} size={20} className="lg:hidden" />
-          <GoldIcon icon={CalendarDays} size={22} className="hidden lg:block" />
+          <GoldIcon icon={CalendarDays} size={23} />
           <h2 className="m-0 font-semibold" style={{ color: INK, lineHeight: 1.35 }}>
             مواعيد اليوم
           </h2>
@@ -506,7 +480,7 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div className="flex min-w-0 items-center gap-2.5">
-                          <GoldIcon icon={User} size={17} />
+                          <GoldIcon icon={User} size={20} />
                           <p
                             className="m-0 truncate text-[0.95rem] font-semibold"
                             style={{ color: INK }}
@@ -515,7 +489,7 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div className="flex min-w-0 items-center gap-2.5">
-                          <GoldIcon icon={Phone} size={17} />
+                          <GoldIcon icon={Phone} size={20} />
                           <p
                             className="m-0 truncate text-[0.9rem] tabular-nums"
                             style={{ color: MUTED }}
@@ -525,7 +499,7 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div className="flex min-w-0 items-center gap-2.5">
-                          <GoldIcon icon={ReasonIcon} size={17} />
+                          <GoldIcon icon={ReasonIcon} size={20} />
                           <p
                             className="m-0 truncate text-[0.9rem] font-medium"
                             style={{ color: "#E8EAED" }}
@@ -553,7 +527,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-2">
-                            <GoldIcon icon={User} size={16} />
+                            <GoldIcon icon={User} size={18} />
                             <p
                               className="m-0 truncate text-[0.92rem] font-semibold"
                               style={{ color: INK }}
@@ -562,7 +536,7 @@ export default function AdminDashboardPage() {
                             </p>
                           </div>
                           <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                            <GoldIcon icon={Phone} size={15} />
+                            <GoldIcon icon={Phone} size={17} />
                             <p
                               className="m-0 truncate text-[0.8rem] tabular-nums"
                               style={{ color: MUTED }}
@@ -600,8 +574,7 @@ export default function AdminDashboardPage() {
       {/* ── QUICK SERVICES ── */}
       <Panel className="admin-home-services">
         <div className="admin-home-services-title flex items-center gap-2.5">
-          <GoldIcon icon={Zap} size={20} className="lg:hidden" />
-          <GoldIcon icon={Zap} size={22} className="hidden lg:block" />
+          <GoldIcon icon={Zap} size={23} />
           <h2 className="m-0 font-semibold" style={{ color: INK, lineHeight: 1.35 }}>
             خدمات سريعة
           </h2>
@@ -612,22 +585,13 @@ export default function AdminDashboardPage() {
             <Link
               key={action.href + action.label}
               href={action.href}
-              className="admin-home-service-btn flex h-full flex-col items-center justify-center text-center no-underline transition hover:border-[rgba(212,175,106,0.45)] hover:bg-[rgba(212,175,106,0.05)] active:scale-[0.99]"
+              className="admin-home-service-btn flex h-full flex-col items-center justify-center text-center no-underline transition hover:border-[rgba(212,175,55,0.45)] hover:bg-[rgba(212,175,55,0.05)] active:scale-[0.99]"
               style={{
                 background: PAGE_BG,
                 border: `1px solid ${BORDER}`,
               }}
             >
-              <GoldIcon
-                icon={action.icon}
-                size={26}
-                className="lg:hidden"
-              />
-              <GoldIcon
-                icon={action.icon}
-                size={30}
-                className="hidden lg:block"
-              />
+              <GoldIcon icon={action.icon} size={30} />
               <span
                 className="admin-home-service-label font-semibold leading-snug"
                 style={{ color: INK }}

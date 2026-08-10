@@ -546,7 +546,7 @@ body.admin-home-active .admin-main {
   padding-inline: 0.2rem;
   font-size: 0.58rem;
   line-height: 1;
-  background: #d4af6a;
+  background: #d4af37;
   color: #1a1408;
 }
 
@@ -554,9 +554,9 @@ body.admin-home-active .admin-main {
   width: 2.35rem;
   height: 2.35rem;
   font-size: 0.74rem;
-  background: rgba(212, 175, 106, 0.12);
-  border: 1.5px solid rgba(212, 175, 106, 0.65);
-  color: #d4af6a;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1.5px solid rgba(212, 175, 55, 0.7);
+  color: #d4af37;
 }
 
 .admin-home-hero-mobile {
@@ -669,13 +669,17 @@ body.admin-home-active .admin-main {
 
   body.admin-home-active .admin-main {
     padding: 1.35rem 1.75rem;
-    padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
+    /* Physical right margin for desktop rail; bottom nav gone on md+ */
+    padding-right: calc(88px + 1.35rem);
+    padding-bottom: 1.75rem;
   }
 
   .admin-home {
     gap: 1.35rem;
     padding-inline: 1.25rem;
     padding-top: 1rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: -1.5rem;
   }
 
   .admin-home-services-grid {
@@ -697,7 +701,9 @@ body.admin-home-active .admin-main {
   .admin-home {
     gap: 1.55rem;
     padding-inline: 1.75rem;
+    padding-inline-end: 1.25rem;
     padding-top: 1.15rem;
+    padding-bottom: 0.75rem;
   }
 
   .admin-home-header {

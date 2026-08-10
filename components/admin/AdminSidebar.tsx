@@ -27,9 +27,10 @@ import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
-const GOLD = "#D4AF6A";
+const GOLD = "#D4AF37";
 const BORDER = "#2A2F36";
 const CARD_BG = "#151A21";
+const RAIL_W = 88;
 
 const NAV: Array<{
   href: string;
@@ -195,11 +196,9 @@ function SidebarNav({
 function MobileBottomNav({
   onMore,
   moreOpen,
-  alwaysVisible,
 }: {
   onMore: () => void;
   moreOpen: boolean;
-  alwaysVisible?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -207,10 +206,7 @@ function MobileBottomNav({
 
   return (
     <nav
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-40 border-t",
-        !alwaysVisible && "md:hidden",
-      )}
+      className="fixed inset-x-0 bottom-0 z-40 border-t md:hidden"
       style={{
         background: "rgba(11,15,20,0.97)",
         borderColor: BORDER,
@@ -219,12 +215,7 @@ function MobileBottomNav({
       }}
       aria-label="التنقل السفلي"
     >
-      <div
-        className={cn(
-          "mx-auto grid grid-cols-5 px-1.5 pt-1.5 pb-1",
-          alwaysVisible ? "max-w-[1120px]" : "max-w-[430px]",
-        )}
-      >
+      <div className="mx-auto grid max-w-[430px] grid-cols-5 px-1.5 pt-1.5 pb-1">
         {BOTTOM_NAV.map((item) => {
           const active = !moreOpen && item.match(pathname, tab);
           const Icon = item.icon;
@@ -243,13 +234,13 @@ function MobileBottomNav({
                         width: 36,
                         height: 36,
                         background:
-                          "radial-gradient(circle, rgba(212,175,106,0.28) 0%, rgba(212,175,106,0.08) 55%, transparent 70%)",
+                          "radial-gradient(circle, rgba(212,175,55,0.28) 0%, rgba(212,175,55,0.08) 55%, transparent 70%)",
                       }
                     : undefined
                 }
               >
                 <Icon
-                  size={19}
+                  size={22}
                   strokeWidth={1.45}
                   color={active ? GOLD : "#C8CDD4"}
                 />
@@ -275,12 +266,99 @@ function MobileBottomNav({
           }}
         >
           <MoreHorizontal
-            size={19}
+            size={22}
             strokeWidth={1.45}
             color={moreOpen ? GOLD : "#C8CDD4"}
           />
           <span
             className="text-[0.64rem] font-semibold leading-none"
+            style={{ color: moreOpen ? GOLD : "#C8CDD4" }}
+          >
+            المزيد
+          </span>
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+/** Desktop-only vertical rail — physical RIGHT side (dashboard home) */
+function DashboardDesktopRail({
+  onMore,
+  moreOpen,
+}: {
+  onMore: () => void;
+  moreOpen: boolean;
+}) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
+
+  return (
+    <nav
+      className="admin-home-desktop-rail fixed top-0 bottom-0 z-40 hidden border-s md:flex md:flex-col"
+      style={{
+        right: 0,
+        width: RAIL_W,
+        background: "rgba(11,15,20,0.97)",
+        borderColor: BORDER,
+        backdropFilter: "blur(14px)",
+        paddingTop: 18,
+        paddingBottom: 18,
+      }}
+      aria-label="التنقل الجانبي"
+    >
+      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-1">
+        {BOTTOM_NAV.map((item) => {
+          const active = !moreOpen && item.match(pathname, tab);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex w-full flex-col items-center justify-center gap-1.5 rounded-[14px] px-1 py-2.5 no-underline"
+              style={
+                active
+                  ? {
+                      background:
+                        "radial-gradient(circle at 50% 35%, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.06) 55%, transparent 75%)",
+                    }
+                  : undefined
+              }
+            >
+              <Icon
+                size={22}
+                strokeWidth={1.45}
+                color={active ? GOLD : "#C8CDD4"}
+              />
+              <span
+                className="text-center text-[0.58rem] font-semibold leading-tight"
+                style={{ color: active ? GOLD : "#C8CDD4" }}
+              >
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onMore}
+          className="flex w-full flex-col items-center justify-center gap-1.5 rounded-[14px] px-1 py-2.5"
+          style={{
+            background: moreOpen
+              ? "radial-gradient(circle at 50% 35%, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.06) 55%, transparent 75%)"
+              : "transparent",
+            border: "none",
+            paddingInline: 4,
+          }}
+        >
+          <MoreHorizontal
+            size={22}
+            strokeWidth={1.45}
+            color={moreOpen ? GOLD : "#C8CDD4"}
+          />
+          <span
+            className="text-center text-[0.58rem] font-semibold leading-tight"
             style={{ color: moreOpen ? GOLD : "#C8CDD4" }}
           >
             المزيد
@@ -358,12 +436,17 @@ export default function AdminSidebar({
       ) : null}
 
       <Suspense fallback={null}>
-        <MobileBottomNav
-          onMore={() => setOpen(true)}
-          moreOpen={open}
-          alwaysVisible={isDashboard}
-        />
+        <MobileBottomNav onMore={() => setOpen(true)} moreOpen={open} />
       </Suspense>
+
+      {isDashboard ? (
+        <Suspense fallback={null}>
+          <DashboardDesktopRail
+            onMore={() => setOpen(true)}
+            moreOpen={open}
+          />
+        </Suspense>
+      ) : null}
 
       {open ? (
         <div className="fixed inset-0 z-50">
