@@ -523,7 +523,7 @@ export default function BookingsPanel({
         <section
           className={`overflow-hidden rounded-[16px] ${
             viewMode === "list"
-              ? "max-lg:w-[113%] max-lg:max-w-none max-lg:-mx-[6.5%]"
+              ? "max-lg:w-[114%] max-lg:max-w-none max-lg:-mx-[7%]"
               : ""
           }`}
           style={{
@@ -636,43 +636,36 @@ export default function BookingsPanel({
                         {/* Mobile — list: date | time | name | phone */}
                         {showDate ? (
                           <div
-                            className="flex items-center lg:hidden"
+                            className="grid items-center lg:hidden"
                             style={{
-                              gap: 12,
-                              padding: "10px 10px",
+                              gridTemplateColumns: "20% 18% 32% 30%",
+                              columnGap: 0,
+                              padding: "14px 10px",
                               width: "100%",
                             }}
                           >
                             <span
-                              className="shrink-0 whitespace-nowrap text-[0.74rem] font-semibold tabular-nums leading-none"
-                              style={{
-                                color: MUTED,
-                                width: "3.7rem",
-                                minWidth: "3.7rem",
-                              }}
+                              className="min-w-0 truncate whitespace-nowrap pe-2 text-start text-[0.74rem] font-semibold tabular-nums leading-none"
+                              style={{ color: MUTED }}
                               dir="ltr"
                             >
                               {compactListDate(row.appointmentDate)}
                             </span>
                             <span
-                              className="shrink-0 whitespace-nowrap text-[0.86rem] font-bold tabular-nums leading-none"
-                              style={{
-                                color: GOLD,
-                                width: "3.25rem",
-                                minWidth: "3.25rem",
-                              }}
+                              className="min-w-0 truncate whitespace-nowrap pe-2 text-start text-[0.86rem] font-bold tabular-nums leading-none"
+                              style={{ color: GOLD }}
                               dir="ltr"
                             >
                               {clock}
                             </span>
                             <span
-                              className="min-w-0 flex-1 truncate text-[0.86rem] font-semibold leading-none"
+                              className="min-w-0 truncate whitespace-nowrap pe-2 text-start text-[0.86rem] font-semibold leading-none"
                               style={{ color: INK }}
                             >
                               {row.fullName}
                             </span>
                             <span
-                              className="shrink-0 whitespace-nowrap text-[0.74rem] tabular-nums leading-none"
+                              className="min-w-0 truncate whitespace-nowrap text-start text-[0.74rem] tabular-nums leading-none"
                               style={{ color: MUTED }}
                               dir="ltr"
                             >
