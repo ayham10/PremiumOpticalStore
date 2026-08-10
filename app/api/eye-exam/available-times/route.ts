@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, jsonError } from "@/lib/api/helpers";
-import { getStore, invalidateStoreCache } from "@/lib/db/store";
+import { getStore } from "@/lib/db/store";
 import {
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
@@ -8,7 +8,7 @@ import {
   isValidIsoDate,
   listBookableTimes,
   normalizeAppointmentType,
-  publicBookingMaxDate,
+  publicBookingCalendarMaxDate,
   resolveAvailabilityDay,
   todayInJerusalem,
 } from "@/lib/eye-exam";
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     }
 
     const today = todayInJerusalem();
-    const maxDate = publicBookingMaxDate(today);
+    const maxDate = publicBookingCalendarMaxDate(today);
     if (date < today || date > maxDate) {
       return NextResponse.json({
         date,
@@ -39,7 +39,6 @@ export async function GET(request: Request) {
       });
     }
 
-    invalidateStoreCache();
     const { data } = await getStore();
     const existing = data.eyeExamAvailability.find((d) => d.date === date);
     const resolved = resolveAvailabilityDay(existing, data.settings, date);

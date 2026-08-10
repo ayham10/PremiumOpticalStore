@@ -168,7 +168,7 @@ export default function ClinicBookingPage() {
     if (!appointmentType || step !== "schedule") return;
     let cancelled = false;
     const key = bookingDatesCacheKey(appointmentType);
-    const cached = peekPublicCache<{ dates: DateOption[] }>(key, 8_000, {
+    const cached = peekPublicCache<{ dates: DateOption[] }>(key, 45_000, {
       allowStale: true,
     });
     if (cached?.dates?.length) {
@@ -186,7 +186,7 @@ export default function ClinicBookingPage() {
     cachedJsonFetch<{ dates: DateOption[] }>(
       key,
       `/api/eye-exam/available-dates?type=${encodeURIComponent(appointmentType)}`,
-      { ttlMs: 0, revalidate: true },
+      { ttlMs: 45_000 },
     )
       .then((data) => {
         if (cancelled) return;
@@ -220,7 +220,7 @@ export default function ClinicBookingPage() {
     }
     let cancelled = false;
     const key = bookingTimesCacheKey(appointmentType, date);
-    const cached = peekPublicCache<{ times: string[] }>(key, 8_000);
+    const cached = peekPublicCache<{ times: string[] }>(key, 45_000);
     if (cached?.times) {
       setTimes(cached.times);
       setLoadingTimes(false);
@@ -234,7 +234,7 @@ export default function ClinicBookingPage() {
     cachedJsonFetch<{ times: string[] }>(
       key,
       `/api/eye-exam/available-times?date=${encodeURIComponent(date)}&type=${encodeURIComponent(appointmentType)}`,
-      { ttlMs: 0, revalidate: true },
+      { ttlMs: 45_000 },
     )
       .then((data) => {
         if (!cancelled) setTimes(data.times || []);

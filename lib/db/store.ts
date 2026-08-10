@@ -12,7 +12,8 @@ const SUPABASE_TABLE = process.env.SUPABASE_STORE_TABLE || "lumina_store";
 const SUPABASE_ROW_ID = process.env.SUPABASE_STORE_ID || "default";
 
 /** Short in-process cache so public navigations don't re-hit Supabase every time. */
-const STORE_CACHE_TTL_MS = 8_000;
+/** Short in-process TTL so public booking reads reuse the store blob. */
+const STORE_CACHE_TTL_MS = 45_000;
 let memoryStore: { at: number; data: AppData; storage: StorageMode } | null =
   null;
 let storeInflight: Promise<{ data: AppData; storage: StorageMode }> | null =

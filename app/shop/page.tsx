@@ -15,6 +15,7 @@ import {
 } from "@/components/catalogue/CatalogueFilters";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { Product, ProductCategory } from "@/lib/types";
 
 const FILTER_CATEGORIES: Record<
@@ -67,8 +68,11 @@ function ShopContent() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/products");
-        const data = (await res.json()) as { products: Product[] };
+        const data = await cachedJsonFetch<{ products: Product[] }>(
+          productsCacheKey(["__all__"]),
+          "/api/products",
+          { ttlMs: 60_000 },
+        );
         if (!cancelled) setProducts(data.products || []);
       } catch {
         if (!cancelled) setProducts([]);

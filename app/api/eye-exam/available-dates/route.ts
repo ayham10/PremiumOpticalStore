@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { handleRouteError } from "@/lib/api/helpers";
-import { getStore, invalidateStoreCache } from "@/lib/db/store";
+import { getStore } from "@/lib/db/store";
 import {
   daySupportsService,
   formatEyeExamDateDisplay,
   isClinicAppointmentType,
   listBookableTimes,
   normalizeAppointmentType,
-  publicBookingMaxDate,
+  publicBookingCalendarMaxDate,
   resolvePublicAvailability,
   todayInJerusalem,
 } from "@/lib/eye-exam";
@@ -22,15 +22,13 @@ export async function GET(request: Request) {
       ? typeParam
       : normalizeAppointmentType(typeParam);
 
-    // Fresh store so Admin Working Hours changes apply immediately
-    invalidateStoreCache();
     const { data } = await getStore();
     const availability = resolvePublicAvailability(
       data.eyeExamAvailability,
       data.settings,
     );
     const today = todayInJerusalem();
-    const maxDate = publicBookingMaxDate(today);
+    const maxDate = publicBookingCalendarMaxDate(today);
 
     const dates = availability
       .filter((day) => day.isOpen && day.date >= today && day.date <= maxDate)

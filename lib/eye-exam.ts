@@ -506,13 +506,25 @@ export function resolveAvailabilityDay(
 /** Public booking window ends on this inclusive calendar date (Asia/Jerusalem). */
 export const PUBLIC_BOOKING_HORIZON_END = "2027-12-31";
 
-/** Inclusive end date for the public booking calendar. */
+/** Days loaded for normal public booking calendar reads (not the hard book limit). */
+export const PUBLIC_BOOKING_CALENDAR_DAYS = 90;
+
+/** Inclusive end date for booking rules / admin materialization (full horizon). */
 export function publicBookingMaxDate(today = todayInJerusalem()): string {
   return today > PUBLIC_BOOKING_HORIZON_END ? today : PUBLIC_BOOKING_HORIZON_END;
 }
 
+/** Inclusive end date for public calendar / dates-list reads (~60–90 days). */
+export function publicBookingCalendarMaxDate(
+  today = todayInJerusalem(),
+): string {
+  const end = addDaysIso(today, PUBLIC_BOOKING_CALENDAR_DAYS);
+  const hard = publicBookingMaxDate(today);
+  return end < hard ? end : hard;
+}
+
 /**
- * Read-path availability for public booking from today through 31/12/2027.
+ * Read-path availability for public booking calendar (next ~90 days).
  * Driven by the weekly working schedule + manual exceptions — not by
  * manually opened availability rows.
  */
@@ -521,7 +533,7 @@ export function resolvePublicAvailability(
   settings: StoreSettings,
 ): EyeExamAvailability[] {
   const today = todayInJerusalem();
-  const maxDate = publicBookingMaxDate(today);
+  const maxDate = publicBookingCalendarMaxDate(today);
   const byDate = new Map(availability.map((d) => [d.date, d]));
   const now = new Date().toISOString();
   const next: EyeExamAvailability[] = [];

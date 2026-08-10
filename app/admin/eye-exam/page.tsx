@@ -249,7 +249,11 @@ function AdminEyeExamPageInner() {
     try {
       await apiFetch("/api/admin/eye-exam/availability", {
         method: "PATCH",
-        body: JSON.stringify({ id: targetId, ...body }),
+        body: JSON.stringify({
+          id: targetId,
+          date: selected?.date,
+          ...body,
+        }),
       });
       setMessage(t("admin.availability.updated"));
       window.dispatchEvent(new Event("oyon:availability-saved"));

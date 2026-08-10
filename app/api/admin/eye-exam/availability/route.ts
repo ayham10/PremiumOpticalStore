@@ -15,6 +15,7 @@ import {
   parseTimeToMinutes,
   periodsForDay,
   publicBookingMaxDate,
+  resolveAvailabilityDay,
   todayInJerusalem,
 } from "@/lib/eye-exam";
 import type {
@@ -87,16 +88,13 @@ export async function GET() {
   try {
     await requireSession("appointments");
 
-    await updateStore((store) => {
-      store.eyeExamAvailability = ensureFutureAvailability(
-        store.eyeExamAvailability,
-        store.settings,
-        { forceRefreshDefaults: true },
-      );
-      return store;
-    });
-
+    // Read-only: materialize schedule in memory for the picker/calendar.
+    // Persist via settings save, booking, or explicit availability mutations.
     const { data } = await getStore();
+    const availability = ensureFutureAvailability(
+      data.eyeExamAvailability,
+      data.settings,
+    );
     const bookedByKey = new Map<string, { name: string; id: string }>();
     for (const a of data.eyeExamAppointments) {
       if (a.status === "cancelled") continue;
@@ -111,7 +109,7 @@ export async function GET() {
 
     const today = todayInJerusalem();
     const maxDate = publicBookingMaxDate(today);
-    const days = [...data.eyeExamAvailability]
+    const days = [...availability]
       .filter((d) => d.date >= today && d.date <= maxDate)
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((day) => enrichDay(day, bookedByKey));
@@ -235,6 +233,7 @@ export async function PATCH(request: Request) {
     const session = await requireSession("appointments");
     const body = (await request.json()) as {
       id?: string;
+      date?: string;
       isOpen?: boolean;
       slots?: Array<{ id?: string; time: string; isEnabled: boolean }>;
       periods?: Array<Partial<WorkingPeriod>>;
@@ -252,7 +251,28 @@ export async function PATCH(request: Request) {
     let updated: EyeExamAvailability | null = null;
 
     await updateStore(async (store) => {
-      const index = store.eyeExamAvailability.findIndex((d) => d.id === id);
+      let index = store.eyeExamAvailability.findIndex((d) => d.id === id);
+      // Read-only GET may return in-memory days; upsert on first edit.
+      if (index < 0) {
+        const date = body.date?.trim() || "";
+        if (date && isValidIsoDate(date)) {
+          index = store.eyeExamAvailability.findIndex((d) => d.date === date);
+          if (index < 0) {
+            const resolved = resolveAvailabilityDay(
+              undefined,
+              store.settings,
+              date,
+            );
+            if (resolved) {
+              store.eyeExamAvailability.push({ ...resolved, id });
+              store.eyeExamAvailability.sort((a, b) =>
+                a.date.localeCompare(b.date),
+              );
+              index = store.eyeExamAvailability.findIndex((d) => d.id === id);
+            }
+          }
+        }
+      }
       if (index < 0) throw new Error("NOT_FOUND");
 
       const current = store.eyeExamAvailability[index];

@@ -11,6 +11,23 @@ import type { Product, ProductCategory, ProductStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/** Card/list DTO — omit gallery, costs, and inventory fields. */
+function toListProduct(p: Product) {
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    brand: p.brand,
+    sellingPrice: p.sellingPrice,
+    status: p.status,
+    category: p.category,
+    createdAt: p.createdAt,
+    featured: p.featured,
+    images: p.images?.[0] ? [p.images[0]] : [],
+    ...(p.lensType ? { lensType: p.lensType } : {}),
+  };
+}
+
 function isProductCategory(value: string): value is ProductCategory {
   return [
     "Prescription Glasses",
@@ -85,6 +102,7 @@ export async function GET(request: Request) {
 
     const { data } = await getStore();
     let products = data.products;
+    let fullRecords = all;
 
     // Public listing defaults to active products; admins with inventory can request all
     if (!all) {
@@ -94,6 +112,7 @@ export async function GET(request: Request) {
         await requireSession("inventory");
       } catch {
         products = products.filter((p) => p.status === "active" || p.status === "out_of_stock");
+        fullRecords = false;
       }
     }
 
@@ -112,6 +131,7 @@ export async function GET(request: Request) {
                 (p.status === "active" || p.status === "out_of_stock"),
             )
             .slice(0, 8)
+            .map(toListProduct)
         : [];
       return NextResponse.json(
         {
@@ -144,8 +164,11 @@ export async function GET(request: Request) {
       );
     }
 
+    // Admin inventory (`all=1` + session) needs full product records; public lists get cards only.
+    const payload = fullRecords ? products : products.map(toListProduct);
+
     return NextResponse.json(
-      { products },
+      { products: payload },
       {
         headers: {
           "Cache-Control": "public, max-age=30, stale-while-revalidate=60",

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
+import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { Product } from "@/lib/types";
 
 function ContactLensCard({ product }: { product: Product }) {
@@ -73,8 +74,11 @@ export default function ContactLensesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/products?category=Contact%20Lenses");
-        const data = (await res.json()) as { products: Product[] };
+        const data = await cachedJsonFetch<{ products: Product[] }>(
+          productsCacheKey(["Contact Lenses"]),
+          "/api/products?category=Contact%20Lenses",
+          { ttlMs: 60_000 },
+        );
         if (!cancelled) setProducts(data.products || []);
       } catch {
         if (!cancelled) setProducts([]);

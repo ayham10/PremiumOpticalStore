@@ -3,6 +3,12 @@
 import { FormEvent, useEffect, useId, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import {
+  bookingDatesCacheKey,
+  bookingTimesCacheKey,
+  cachedJsonFetch,
+  invalidatePublicCache,
+} from "@/lib/public-data-cache";
 import type { ClinicAppointmentType } from "@/lib/types";
 
 type DateOption = { date: string; label: string };
@@ -96,25 +102,33 @@ export default function EyeExamBookingModal({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setSuccess(null);
     setError("");
     setFieldErrors({});
     setDate("");
     setTime("");
     setLoadingDates(true);
-    fetch(
+    cachedJsonFetch<{ dates: DateOption[] }>(
+      bookingDatesCacheKey(appointmentType),
       `/api/eye-exam/available-dates?type=${encodeURIComponent(appointmentType)}`,
+      { ttlMs: 45_000 },
     )
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || copy.errorLoad);
-        setDates(data.dates || []);
+      .then((data) => {
+        if (!cancelled) setDates(data.dates || []);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : copy.errorLoad);
-        setDates([]);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : copy.errorLoad);
+          setDates([]);
+        }
       })
-      .finally(() => setLoadingDates(false));
+      .finally(() => {
+        if (!cancelled) setLoadingDates(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, t, appointmentType, copy.errorLoad]);
 
   useEffect(() => {
@@ -123,22 +137,30 @@ export default function EyeExamBookingModal({
       setTime("");
       return;
     }
+    let cancelled = false;
     setLoadingTimes(true);
     setTime("");
     setError("");
-    fetch(
+    cachedJsonFetch<{ times: string[] }>(
+      bookingTimesCacheKey(appointmentType, date),
       `/api/eye-exam/available-times?date=${encodeURIComponent(date)}&type=${encodeURIComponent(appointmentType)}`,
+      { ttlMs: 45_000 },
     )
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || copy.errorLoad);
-        setTimes(data.times || []);
+      .then((data) => {
+        if (!cancelled) setTimes(data.times || []);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : copy.errorLoad);
-        setTimes([]);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : copy.errorLoad);
+          setTimes([]);
+        }
       })
-      .finally(() => setLoadingTimes(false));
+      .finally(() => {
+        if (!cancelled) setLoadingTimes(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date, open, t, appointmentType, copy.errorLoad]);
 
   function validateClient(): boolean {
@@ -186,6 +208,7 @@ export default function EyeExamBookingModal({
         }
         throw new Error(data.error || copy.errorSubmit);
       }
+      invalidatePublicCache("booking-");
       setSuccess({
         firstName: data.appointment.firstName,
         lastName: data.appointment.lastName,
