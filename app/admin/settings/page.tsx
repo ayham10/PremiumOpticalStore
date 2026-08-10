@@ -85,6 +85,14 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
 }
 
 export default function AdminSettingsPage() {
+  return (
+    <Suspense fallback={<p className="admin-muted">…</p>}>
+      <AdminSettingsPageInner />
+    </Suspense>
+  );
+}
+
+function AdminSettingsPageInner() {
   const { t } = useLocale();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<StoreSettings>(EMPTY_SETTINGS);
