@@ -192,7 +192,13 @@ function SidebarNav({
   );
 }
 
-function MobileBottomNav({ onMore }: { onMore: () => void }) {
+function MobileBottomNav({
+  onMore,
+  moreOpen,
+}: {
+  onMore: () => void;
+  moreOpen: boolean;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
@@ -201,31 +207,31 @@ function MobileBottomNav({ onMore }: { onMore: () => void }) {
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t md:hidden"
       style={{
-        background: "rgba(14,17,22,0.96)",
+        background: "rgba(14,17,22,0.97)",
         borderColor: BORDER,
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        backdropFilter: "blur(12px)",
+        paddingBottom: "max(0.35rem, env(safe-area-inset-bottom, 0px))",
+        backdropFilter: "blur(14px)",
       }}
       aria-label="التنقل السفلي"
     >
-      <div className="grid grid-cols-5 px-1 pt-1.5 pb-1.5">
+      <div className="mx-auto grid max-w-[430px] grid-cols-5 px-1.5 pt-1.5 pb-1">
         {BOTTOM_NAV.map((item) => {
-          const active = item.match(pathname, tab);
+          const active = !moreOpen && item.match(pathname, tab);
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
               className="flex flex-col items-center justify-center gap-1 no-underline"
-              style={{ minHeight: 52 }}
+              style={{ minHeight: 50 }}
             >
               <Icon
-                size={18}
+                size={17}
                 strokeWidth={1.55}
                 color={active ? GOLD : MUTED}
               />
               <span
-                className="text-[0.62rem] font-semibold"
+                className="text-[0.6rem] font-semibold leading-none"
                 style={{ color: active ? GOLD : MUTED }}
               >
                 {item.label}
@@ -237,10 +243,22 @@ function MobileBottomNav({ onMore }: { onMore: () => void }) {
           type="button"
           onClick={onMore}
           className="flex flex-col items-center justify-center gap-1"
-          style={{ minHeight: 52, background: "transparent", border: "none" }}
+          style={{
+            minHeight: 50,
+            background: "transparent",
+            border: "none",
+            padding: 0,
+          }}
         >
-          <MoreHorizontal size={18} strokeWidth={1.55} color={MUTED} />
-          <span className="text-[0.62rem] font-semibold" style={{ color: MUTED }}>
+          <MoreHorizontal
+            size={17}
+            strokeWidth={1.55}
+            color={moreOpen ? GOLD : MUTED}
+          />
+          <span
+            className="text-[0.6rem] font-semibold leading-none"
+            style={{ color: moreOpen ? GOLD : MUTED }}
+          >
             المزيد
           </span>
         </button>
@@ -313,7 +331,7 @@ export default function AdminSidebar({
       </div>
 
       <Suspense fallback={null}>
-        <MobileBottomNav onMore={() => setOpen(true)} />
+        <MobileBottomNav onMore={() => setOpen(true)} moreOpen={open} />
       </Suspense>
 
       {open ? (

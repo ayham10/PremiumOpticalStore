@@ -153,7 +153,8 @@ function Panel({
         background: CARD_BG,
         border: `1px solid ${BORDER}`,
         borderRadius: 16,
-        padding: 16,
+        padding: 14,
+        height: "fit-content",
         ...style,
       }}
     >
@@ -320,7 +321,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div
-      className="admin-dashboard mx-auto w-full max-w-[1440px] pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-6"
+      className="admin-dashboard mx-auto w-full max-w-[1440px] pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-2"
       style={{
         marginTop: "-1.15rem",
         marginInline: "auto",
@@ -328,19 +329,19 @@ export default function AdminDashboardPage() {
         minHeight: "100%",
         background: PAGE_BG,
         paddingInline: 16,
-        paddingTop: 16,
+        paddingTop: 14,
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: 14,
       }}
     >
-      {/* MOBILE HEADER */}
+      {/* MOBILE HEADER — hamburger | centered logo | bell + profile */}
       <header className="relative flex h-11 items-center md:hidden">
         <button
           type="button"
           aria-label={t("nav.menu")}
           onClick={openShellMobileNav}
-          className="absolute start-0 top-1/2 grid -translate-y-1/2 place-items-center rounded-[11px]"
+          className="absolute top-1/2 grid -translate-y-1/2 place-items-center rounded-[11px]"
           style={{
             insetInlineStart: 0,
             width: 40,
@@ -353,12 +354,14 @@ export default function AdminDashboardPage() {
           <Menu size={17} strokeWidth={1.55} />
         </button>
 
-        <div className="mx-auto">
-          <BrandMark branding={branding} href="/admin" size="sm" />
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+          <div className="pointer-events-auto">
+            <BrandMark branding={branding} href="/admin" size="sm" />
+          </div>
         </div>
 
         <div
-          className="absolute end-0 top-1/2 flex -translate-y-1/2 items-center gap-2"
+          className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2"
           style={{ insetInlineEnd: 0 }}
         >
           <button
@@ -392,22 +395,25 @@ export default function AdminDashboardPage() {
       </header>
 
       {/* DESKTOP HEADER */}
-      <header className="hidden items-center justify-between gap-4 md:flex">
+      <header className="hidden items-center justify-between gap-4 md:flex md:pt-1">
         <div className="flex min-w-0 items-center gap-4">
           <BrandMark branding={branding} href="/admin" size="md" />
           <div className="min-w-0">
-            <p className="mb-0.5 mt-0 text-[0.8rem] font-medium" style={{ color: MUTED }}>
+            <p
+              className="mb-0.5 mt-0 text-[0.8rem] font-medium"
+              style={{ color: MUTED }}
+            >
               {greetingFor(locale)}
             </p>
             <h1
-              className="m-0 text-[1.7rem] font-semibold tracking-[-0.03em]"
+              className="m-0 text-[1.65rem] font-semibold tracking-[-0.03em]"
               style={{ color: "#F5F6F7", lineHeight: 1.3 }}
             >
               {t("admin.dashboard.title")}
             </h1>
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2.5">
           <div
             className="inline-flex h-10 items-center gap-2 rounded-[12px] px-3 text-[0.82rem] font-medium"
             style={{
@@ -468,25 +474,28 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      {/* MOBILE date + greeting */}
-      <div className="space-y-2.5 md:hidden">
+      {/* MOBILE date then RTL greeting */}
+      <div className="space-y-2 md:hidden">
         <div
-          className="inline-flex h-10 max-w-full items-center gap-2 rounded-[12px] px-3 text-[0.8rem] font-medium"
+          className="inline-flex h-9 max-w-full items-center gap-2 rounded-[12px] px-3 text-[0.78rem] font-medium"
           style={{
             background: CARD_BG,
             border: `1px solid ${BORDER}`,
             color: "#E8EAED",
           }}
         >
-          <GoldIcon icon={CalendarDays} size={15} />
+          <GoldIcon icon={CalendarDays} size={14} />
           <span className="truncate">{todayLabel}</span>
         </div>
         <div>
-          <p className="mb-0.5 mt-0 text-[0.8rem] font-medium" style={{ color: MUTED }}>
+          <p
+            className="mb-0.5 mt-0 text-[0.78rem] font-medium"
+            style={{ color: MUTED }}
+          >
             {greetingFor(locale)}
           </p>
           <h1
-            className="m-0 text-[1.45rem] font-semibold tracking-[-0.03em]"
+            className="m-0 text-[1.35rem] font-semibold tracking-[-0.03em]"
             style={{ color: "#F5F6F7", lineHeight: 1.35 }}
           >
             {t("admin.dashboard.title")}
@@ -507,14 +516,15 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-5 lg:items-start">
-        {/* Today's bookings */}
-        <Panel style={{ padding: 14, height: "fit-content" }}>
+      {/* Main sections — stacked on mobile/tablet, side-by-side on desktop */}
+      <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:items-start xl:gap-5">
+        {/* مواعيد اليوم */}
+        <Panel>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <GoldIcon icon={CalendarDays} size={18} />
               <h2
-                className="m-0 text-[1rem] font-semibold"
+                className="m-0 text-[0.98rem] font-semibold"
                 style={{ color: "#F5F6F7", lineHeight: 1.4 }}
               >
                 مواعيد اليوم
@@ -522,7 +532,7 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href={bookingsHref}
-              className="shrink-0 text-[0.78rem] font-semibold no-underline"
+              className="shrink-0 text-[0.76rem] font-semibold no-underline"
               style={{ color: GOLD }}
             >
               عرض كل المواعيد
@@ -531,8 +541,9 @@ export default function AdminDashboardPage() {
 
           {schedule.length ? (
             <div className="flex flex-col gap-2.5">
+              {/* Desktop column headers */}
               <div
-                className="hidden grid-cols-[5rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.15fr)] gap-3 px-3 text-[0.72rem] font-medium lg:grid"
+                className="hidden grid-cols-[4.75rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 px-3.5 text-[0.7rem] font-medium xl:grid"
                 style={{ color: MUTED }}
               >
                 <span>وقت</span>
@@ -547,50 +558,65 @@ export default function AdminDashboardPage() {
                   href={todayHref}
                   className="block no-underline transition hover:border-[rgba(212,175,106,0.35)]"
                 >
-                  {/* Desktop */}
+                  {/* Desktop row — time | customer | phone | reason */}
                   <div
-                    className="hidden grid-cols-[5rem_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.15fr)] items-center gap-3 px-3 py-3 lg:grid"
+                    className="hidden grid-cols-[4.75rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3 px-3.5 py-3 xl:grid"
                     style={{
                       background: PAGE_BG,
                       border: `1px solid ${BORDER}`,
                       borderRadius: 12,
                     }}
                   >
-                    <p className="m-0 text-[0.9rem] font-bold tabular-nums" style={{ color: GOLD }}>
+                    <p
+                      className="m-0 text-[0.88rem] font-bold tabular-nums"
+                      style={{ color: GOLD }}
+                    >
                       {formatTime(a.startTime, locale)}
                     </p>
-                    <p className="m-0 truncate text-[0.9rem] font-semibold" style={{ color: "#F3F4F5" }}>
+                    <p
+                      className="m-0 truncate text-[0.88rem] font-semibold"
+                      style={{ color: "#F3F4F5" }}
+                    >
                       {a.customerName}
                     </p>
                     <p
-                      className="m-0 truncate text-[0.84rem] tabular-nums"
+                      className="m-0 truncate text-[0.82rem] tabular-nums"
                       style={{ color: MUTED }}
                       dir="ltr"
                     >
                       {formatPhone(a.customerPhone)}
                     </p>
-                    <p className="m-0 truncate text-[0.84rem] font-medium" style={{ color: "#E8EAED" }}>
+                    <p
+                      className="m-0 truncate text-[0.82rem] font-medium"
+                      style={{ color: "#E8EAED" }}
+                    >
                       {serviceLabel(t, a.service)}
                     </p>
                   </div>
 
-                  {/* Mobile — time | name | phone */}
+                  {/* Mobile/tablet — time | name | phone only */}
                   <div
-                    className="grid grid-cols-[4.1rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 lg:hidden"
+                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 xl:hidden"
                     style={{
                       background: PAGE_BG,
                       border: `1px solid ${BORDER}`,
                       borderRadius: 12,
                     }}
                   >
-                    <p className="m-0 text-[0.84rem] font-bold tabular-nums" style={{ color: GOLD }}>
+                    <p
+                      className="m-0 whitespace-nowrap text-[0.82rem] font-bold tabular-nums"
+                      style={{ color: GOLD, minWidth: "3.4rem" }}
+                    >
                       {formatTime(a.startTime, locale)}
                     </p>
-                    <p className="m-0 truncate text-[0.86rem] font-semibold" style={{ color: "#F3F4F5" }}>
+                    <p
+                      className="m-0 min-w-0 truncate text-[0.84rem] font-semibold"
+                      style={{ color: "#F3F4F5" }}
+                    >
                       {a.customerName}
                     </p>
                     <p
-                      className="m-0 max-w-[6.75rem] truncate text-[0.74rem] tabular-nums"
+                      className="m-0 max-w-[7.5rem] truncate text-[0.72rem] tabular-nums sm:max-w-[9rem]"
                       style={{ color: MUTED }}
                       dir="ltr"
                     >
@@ -602,36 +628,42 @@ export default function AdminDashboardPage() {
             </div>
           ) : (
             <div
-              className="rounded-[12px] px-3 py-4"
+              className="rounded-[12px] px-3 py-3.5"
               style={{ border: `1px dashed ${BORDER}`, background: PAGE_BG }}
             >
-              <p className="m-0 text-[0.9rem] font-semibold" style={{ color: "#F0F1F2" }}>
+              <p
+                className="m-0 text-[0.88rem] font-semibold"
+                style={{ color: "#F0F1F2" }}
+              >
                 {t("admin.dashboard.emptyToday")}
               </p>
-              <p className="mb-0 mt-1 text-[0.8rem] leading-relaxed" style={{ color: MUTED }}>
+              <p
+                className="mb-0 mt-1 text-[0.78rem] leading-relaxed"
+                style={{ color: MUTED }}
+              >
                 {t("admin.dashboard.emptyTodayLead")}
               </p>
             </div>
           )}
         </Panel>
 
-        {/* Quick services */}
-        <Panel style={{ padding: 14, height: "fit-content" }}>
+        {/* خدمات سريعة */}
+        <Panel>
           <div className="mb-3.5 flex items-center gap-2">
             <GoldIcon icon={Zap} size={18} />
             <h2
-              className="m-0 text-[1rem] font-semibold"
+              className="m-0 text-[0.98rem] font-semibold"
               style={{ color: "#F5F6F7", lineHeight: 1.4 }}
             >
               خدمات سريعة
             </h2>
           </div>
-          <div className="grid grid-cols-2 gap-3.5 md:gap-4">
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
             {quickActions.map((action) => (
               <Link
                 key={action.href + action.label}
                 href={action.href}
-                className="flex min-h-[92px] flex-col justify-between gap-3 rounded-[14px] px-3 py-3.5 no-underline transition hover:border-[rgba(212,175,106,0.45)] hover:bg-[rgba(212,175,106,0.06)] active:scale-[0.99] md:min-h-[100px] md:px-3.5"
+                className="flex h-full flex-col justify-between gap-3 rounded-[14px] px-3 py-3.5 no-underline transition hover:border-[rgba(212,175,106,0.45)] hover:bg-[rgba(212,175,106,0.06)] active:scale-[0.99]"
                 style={{
                   background: PAGE_BG,
                   border: `1px solid ${BORDER}`,
@@ -640,16 +672,16 @@ export default function AdminDashboardPage() {
                 <span
                   className="grid place-items-center rounded-[10px]"
                   style={{
-                    width: 34,
-                    height: 34,
+                    width: 32,
+                    height: 32,
                     background: "rgba(212,175,106,0.08)",
                     border: "1px solid rgba(212,175,106,0.3)",
                   }}
                 >
-                  <GoldIcon icon={action.icon} size={16} />
+                  <GoldIcon icon={action.icon} size={15} />
                 </span>
                 <span
-                  className="text-[0.84rem] font-semibold leading-snug md:text-[0.88rem]"
+                  className="text-[0.82rem] font-semibold leading-snug"
                   style={{ color: "#F3F4F5" }}
                 >
                   {action.label}
@@ -660,25 +692,31 @@ export default function AdminDashboardPage() {
         </Panel>
       </div>
 
-      {/* Tip */}
-      <Panel style={{ padding: "12px 14px", height: "fit-content" }}>
+      {/* نصيحة اليوم — compact */}
+      <Panel style={{ padding: "11px 14px" }}>
         <div className="flex items-start gap-3">
           <span
             className="grid shrink-0 place-items-center rounded-[10px]"
             style={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               background: "rgba(212,175,106,0.08)",
               border: "1px solid rgba(212,175,106,0.3)",
             }}
           >
-            <GoldIcon icon={Lightbulb} size={16} />
+            <GoldIcon icon={Lightbulb} size={15} />
           </span>
           <div className="min-w-0">
-            <h2 className="m-0 text-[0.9rem] font-semibold" style={{ color: GOLD, lineHeight: 1.35 }}>
+            <h2
+              className="m-0 text-[0.86rem] font-semibold"
+              style={{ color: GOLD, lineHeight: 1.35 }}
+            >
               نصيحة اليوم
             </h2>
-            <p className="mb-0 mt-1 text-[0.82rem] leading-relaxed" style={{ color: "#E8EAED" }}>
+            <p
+              className="mb-0 mt-1 text-[0.8rem] leading-relaxed"
+              style={{ color: "#E8EAED" }}
+            >
               {tip}
             </p>
           </div>
