@@ -875,37 +875,38 @@ export default function AdminInventoryPage() {
         </div>
       </header>
 
-      {/* MOBILE toolbar: Add full-width, then Search | Category only */}
-      <section className="mb-4 space-y-3 md:hidden">
+      {/* MOBILE toolbar: Add, Search | Category, count */}
+      <section className="mb-3.5 space-y-2.5 md:hidden">
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-[12px] text-[0.9rem] font-bold"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-[12px] text-[0.88rem] font-bold"
           style={{
-            height: 44,
+            height: 42,
             background: "transparent",
             color: GOLD,
-            border: `1px solid rgba(212,175,55,0.7)`,
+            border: `1px solid rgba(212,175,55,0.75)`,
           }}
         >
+          <Plus size={15} strokeWidth={1.7} />
           إضافة منتج
-          <Plus size={16} strokeWidth={1.7} />
         </button>
-        <div className="flex items-center gap-2.5">
-          <div className="relative min-w-0 flex-[1.4]">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-[1.35]">
             <Search
-              size={15}
+              size={14}
               strokeWidth={1.55}
               className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-              style={{ insetInlineStart: 11, color: MUTED }}
+              style={{ insetInlineStart: 10, color: MUTED }}
             />
             <input
               style={{
                 ...compactSelect,
                 width: "100%",
-                height: 42,
-                paddingInlineStart: 32,
+                height: 40,
+                paddingInlineStart: 30,
                 fontWeight: 500,
+                border: `1px solid rgba(212,175,55,0.55)`,
               }}
               placeholder="ابحث…"
               value={query}
@@ -915,10 +916,11 @@ export default function AdminInventoryPage() {
           <select
             style={{
               ...compactSelect,
-              height: 42,
+              height: 40,
               width: "auto",
-              minWidth: "7.25rem",
-              flex: "0.9",
+              minWidth: "6.75rem",
+              flex: "0.85",
+              border: `1px solid rgba(212,175,55,0.55)`,
             }}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -931,6 +933,12 @@ export default function AdminInventoryPage() {
             ))}
           </select>
         </div>
+        <p
+          className="mb-0 text-start text-[0.8rem] font-semibold tabular-nums"
+          style={{ color: MUTED }}
+        >
+          {filtered.length} منتج
+        </p>
       </section>
 
       {/* DESKTOP toolbar — compact row */}
@@ -1055,7 +1063,7 @@ export default function AdminInventoryPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-[15px] md:grid-cols-4 md:gap-[18px]">
+          <div className="grid grid-cols-1 gap-[15px] md:grid-cols-4 md:gap-[18px] md:items-stretch">
             {paged.map((p) => (
               <AdminProductCard
                 key={p.id}
@@ -1068,23 +1076,23 @@ export default function AdminInventoryPage() {
           </div>
 
           {totalPages > 1 ? (
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 pb-1 md:justify-between">
-              <div className="flex items-center gap-2">
+            <div className="mt-5 flex flex-col items-center gap-3 pb-1 md:flex-row md:flex-wrap md:justify-between">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   aria-label="السابق"
                   disabled={safePage <= 1}
                   onClick={() => setListPage((p) => Math.max(1, p - 1))}
-                  className="grid place-items-center rounded-[10px] disabled:opacity-35"
+                  className="grid place-items-center rounded-[9px] disabled:opacity-35"
                   style={{
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     background: CARD_BG,
                     border: `1px solid ${BORDER}`,
-                    color: GOLD,
+                    color: "#FFFFFF",
                   }}
                 >
-                  <ChevronRight size={15} strokeWidth={1.6} />
+                  <ChevronRight size={14} strokeWidth={1.6} />
                 </button>
                 {(() => {
                   const windowSize = Math.min(5, totalPages);
@@ -1100,10 +1108,10 @@ export default function AdminInventoryPage() {
                         key={page}
                         type="button"
                         onClick={() => setListPage(page)}
-                        className="grid place-items-center rounded-[9px] text-[0.8rem] font-bold"
+                        className="grid place-items-center rounded-[8px] text-[0.78rem] font-bold"
                         style={{
-                          width: 34,
-                          height: 34,
+                          width: 32,
+                          height: 32,
                           background: active ? GOLD : CARD_BG,
                           border: active
                             ? `1px solid ${GOLD}`
@@ -1121,24 +1129,30 @@ export default function AdminInventoryPage() {
                   aria-label="التالي"
                   disabled={safePage >= totalPages}
                   onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
-                  className="grid place-items-center rounded-[10px] disabled:opacity-35"
+                  className="grid place-items-center rounded-[9px] disabled:opacity-35"
                   style={{
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     background: CARD_BG,
                     border: `1px solid ${BORDER}`,
-                    color: GOLD,
+                    color: "#FFFFFF",
                   }}
                 >
-                  <ChevronLeft size={15} strokeWidth={1.6} />
+                  <ChevronLeft size={14} strokeWidth={1.6} />
                 </button>
               </div>
-              <span
-                className="hidden text-[0.78rem] font-semibold md:inline"
-                style={{ color: MUTED }}
+              <div
+                className="flex w-full items-center justify-center rounded-[11px] px-3 text-[0.8rem] font-semibold md:w-auto md:justify-start"
+                style={{
+                  height: 40,
+                  color: GOLD,
+                  border: `1px solid rgba(212,175,55,0.65)`,
+                  background: "transparent",
+                }}
+                aria-label={`${PAGE_SIZE} لكل صفحة`}
               >
                 {PAGE_SIZE} لكل صفحة
-              </span>
+              </div>
             </div>
           ) : null}
         </>

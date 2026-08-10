@@ -77,11 +77,11 @@ export default function AdminProductCard({
 
   const badge = isActive ? (
     <span
-      className="rounded-full px-2 py-0.5 text-[0.62rem] font-bold"
+      className="shrink-0 rounded-[6px] px-1.5 py-0.5 text-[0.6rem] font-bold"
       style={{
-        background: "rgba(46, 204, 113, 0.92)",
-        color: "#0B1A12",
-        lineHeight: 1.35,
+        background: "#0F3D2E",
+        color: "#FFFFFF",
+        lineHeight: 1.3,
       }}
     >
       نشط
@@ -90,22 +90,21 @@ export default function AdminProductCard({
 
   return (
     <article
-      className="admin-product-card overflow-hidden"
+      className="admin-product-card overflow-hidden md:h-full"
       style={{
         background: CARD_BG,
         border: `1px solid ${BORDER}`,
-        borderRadius: 16,
-        height: "100%",
+        borderRadius: 14,
       }}
     >
-      {/* MOBILE — image RIGHT (RTL start), details LEFT */}
-      <div className="flex items-stretch gap-3.5 p-3 md:hidden">
+      {/* MOBILE — compact: image RIGHT, details LEFT */}
+      <div className="flex items-start gap-3 p-2.5 md:hidden">
         <div
           className="relative shrink-0 overflow-hidden"
           style={{
-            width: 108,
-            height: 108,
-            borderRadius: 12,
+            width: 100,
+            height: 100,
+            borderRadius: 11,
             background: PAGE_BG,
             border: `1px solid ${BORDER}`,
           }}
@@ -121,35 +120,36 @@ export default function AdminProductCard({
               —
             </div>
           )}
-          {badge ? (
-            <div className="absolute end-1.5 top-1.5">{badge}</div>
-          ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-          <div className="min-w-0">
+        <div
+          className="flex min-w-0 flex-1 flex-col"
+          style={{ minHeight: 100 }}
+        >
+          <div className="flex items-start gap-2">
             <h2
-              className="m-0 line-clamp-2 text-[0.9rem] font-semibold leading-snug"
+              className="m-0 min-w-0 flex-1 truncate text-[0.88rem] font-semibold leading-snug"
               style={{ color: "#FFFFFF" }}
             >
               {product.name}
             </h2>
-            <p
-              className="mb-0 mt-1.5 text-[0.95rem] font-bold tabular-nums"
-              style={{ color: GOLD }}
-            >
-              {formatPrice(product.sellingPrice)}
-            </p>
-            <p
-              className="mb-0 mt-1.5 text-[0.78rem] font-semibold"
-              style={{ color: "#FFFFFF" }}
-            >
-              المخزون: {product.stockQuantity}
-            </p>
+            {badge}
           </div>
-          <div className="mt-2.5 self-start">
+          <p
+            className="mb-0 mt-1.5 text-[0.92rem] font-bold tabular-nums leading-none"
+            style={{ color: GOLD }}
+          >
+            {formatPrice(product.sellingPrice)}
+          </p>
+          <p
+            className="mb-0 mt-1.5 text-[0.74rem] font-medium leading-none"
+            style={{ color: MUTED }}
+          >
+            المخزون: {product.stockQuantity}
+          </p>
+          <div className="mt-auto self-end pt-2">
             <ActionButtons
-              size={34}
+              size={32}
               canDelete={canDelete}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -158,7 +158,7 @@ export default function AdminProductCard({
         </div>
       </div>
 
-      {/* DESKTOP — image top, equal card body */}
+      {/* DESKTOP — unchanged structure */}
       <div className="hidden h-full flex-col md:flex">
         <div
           className="relative w-full shrink-0 overflow-hidden"
@@ -182,8 +182,19 @@ export default function AdminProductCard({
               —
             </div>
           )}
-          {badge ? (
-            <div className="absolute end-2.5 top-2.5">{badge}</div>
+          {isActive ? (
+            <div className="absolute end-2.5 top-2.5">
+              <span
+                className="rounded-full px-2 py-0.5 text-[0.62rem] font-bold"
+                style={{
+                  background: "rgba(46, 204, 113, 0.92)",
+                  color: "#0B1A12",
+                  lineHeight: 1.35,
+                }}
+              >
+                نشط
+              </span>
+            </div>
           ) : null}
         </div>
 
