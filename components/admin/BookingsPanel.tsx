@@ -114,6 +114,14 @@ function shortDateAr(iso: string): string {
   });
 }
 
+/** Compact single-line date for mobile list rows, e.g. 10/08/26 */
+function compactListDate(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return shortDateAr(iso);
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
 const fieldStyle: CSSProperties = {
   height: 42,
   borderRadius: 12,
@@ -596,35 +604,49 @@ export default function BookingsPanel({
                         </div>
 
                         {/* Mobile — list: date+time | name | phone; weekly: time | name | phone */}
-                        <div className="flex items-center gap-3 px-3.5 py-3 lg:hidden">
-                          <div className="w-[4.6rem] shrink-0">
+                        <div
+                          className={`flex items-center px-3.5 py-3 lg:hidden ${
+                            showDate ? "gap-4" : "gap-3"
+                          }`}
+                        >
+                          <div
+                            className="shrink-0"
+                            style={{
+                              width: showDate ? "5.1rem" : "4.6rem",
+                              minWidth: showDate ? "5.1rem" : "4.6rem",
+                            }}
+                          >
                             {showDate ? (
                               <p
-                                className="m-0 text-[0.68rem] font-semibold leading-tight"
+                                className="m-0 whitespace-nowrap text-[0.78rem] font-semibold tabular-nums leading-none tracking-wide"
                                 style={{ color: MUTED }}
+                                dir="ltr"
                               >
-                                {shortDateAr(row.appointmentDate)}
+                                {compactListDate(row.appointmentDate)}
                               </p>
                             ) : null}
                             <p
-                              className="m-0 text-[0.9rem] font-bold tabular-nums leading-tight"
+                              className="m-0 whitespace-nowrap text-[0.9rem] font-bold tabular-nums leading-tight"
                               style={{
                                 color: GOLD,
-                                marginTop: showDate ? 3 : 0,
+                                marginTop: showDate ? 6 : 0,
                               }}
+                              dir="ltr"
                             >
                               {clock}
-                            </p>
-                            <p
-                              className="mb-0 mt-0.5 text-[0.68rem] font-medium leading-tight"
-                              style={{ color: GOLD }}
-                            >
-                              {period}
+                              <span className="ms-1 text-[0.72rem] font-semibold">
+                                {period}
+                              </span>
                             </p>
                           </div>
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex min-w-0 items-center gap-1.5">
-                              <User size={14} strokeWidth={1.45} color={GOLD} />
+                              <User
+                                size={14}
+                                strokeWidth={1.45}
+                                color={GOLD}
+                                className="shrink-0"
+                              />
                               <span
                                 className="truncate text-[0.86rem] font-semibold"
                                 style={{ color: INK }}
@@ -633,9 +655,14 @@ export default function BookingsPanel({
                               </span>
                             </div>
                             <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                              <Phone size={13} strokeWidth={1.45} color={GOLD} />
+                              <Phone
+                                size={13}
+                                strokeWidth={1.45}
+                                color={GOLD}
+                                className="shrink-0"
+                              />
                               <span
-                                className="truncate text-[0.76rem] tabular-nums"
+                                className="truncate text-[0.74rem] tabular-nums"
                                 style={{ color: MUTED }}
                                 dir="ltr"
                               >
