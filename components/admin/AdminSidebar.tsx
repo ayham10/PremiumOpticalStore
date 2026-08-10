@@ -28,7 +28,6 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 
 const GOLD = "#D4AF6A";
-const MUTED = "#8A929C";
 const BORDER = "#2A2F36";
 const CARD_BG = "#151A21";
 
