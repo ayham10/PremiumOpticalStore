@@ -521,7 +521,11 @@ export default function BookingsPanel({
         </p>
 
         <section
-          className="overflow-hidden rounded-[16px]"
+          className={`overflow-hidden rounded-[16px] ${
+            viewMode === "list"
+              ? "max-lg:w-[calc(100%+12px)] max-lg:max-w-none max-lg:-mx-1.5"
+              : ""
+          }`}
           style={{
             background: CARD_BG,
             border: `1px solid ${BORDER}`,
@@ -632,12 +636,18 @@ export default function BookingsPanel({
                         {/* Mobile — list: date+hour | name | phone */}
                         {showDate ? (
                           <div
-                            className="flex items-center gap-3 px-3.5 py-3 lg:hidden"
-                            style={{ width: "100%", boxSizing: "border-box" }}
+                            className="flex items-center gap-3.5 px-3.5 lg:hidden"
+                            style={{
+                              width: "100%",
+                              boxSizing: "border-box",
+                              minHeight: 76,
+                              paddingTop: 18,
+                              paddingBottom: 18,
+                            }}
                           >
                             <div
                               className="shrink-0"
-                              style={{ width: "3.7rem", minWidth: "3.7rem" }}
+                              style={{ width: "3.85rem", minWidth: "3.85rem" }}
                             >
                               <p
                                 className="m-0 whitespace-nowrap text-[0.74rem] font-semibold tabular-nums leading-none"
@@ -647,20 +657,20 @@ export default function BookingsPanel({
                                 {compactListDate(row.appointmentDate)}
                               </p>
                               <p
-                                className="m-0 mt-1.5 whitespace-nowrap text-[0.88rem] font-bold tabular-nums leading-none"
-                                style={{ color: GOLD }}
+                                className="m-0 whitespace-nowrap text-[0.9rem] font-bold tabular-nums leading-none"
+                                style={{ color: GOLD, marginTop: 11 }}
                                 dir="ltr"
                               >
                                 {clock}
                               </p>
                             </div>
                             <span
-                              className="min-w-0 flex-[1.35] truncate text-[0.88rem] font-semibold leading-snug"
+                              className="min-w-0 flex-[1.45] truncate self-center text-[0.9rem] font-semibold leading-snug"
                               style={{ color: INK }}
                             >
                               {row.fullName}
                             </span>
-                            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                            <div className="flex min-w-0 flex-1 items-center gap-1.5 self-center">
                               <Phone
                                 size={13}
                                 strokeWidth={1.45}
