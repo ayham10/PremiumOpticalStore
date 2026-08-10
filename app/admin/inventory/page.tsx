@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   ArrowRight,
+  Box,
   ChevronLeft,
   ChevronRight,
   ImageIcon,
@@ -42,10 +43,10 @@ const CATEGORIES: ProductCategory[] = [
 
 const STATUSES: ProductStatus[] = ["active", "draft", "archived", "out_of_stock"];
 
-const PAGE_BG = "#0E1116";
+const PAGE_BG = "#0B0E14";
 const CARD_BG = "#151A21";
 const BORDER = "#2A2F36";
-const GOLD = "#D4AF6A";
+const GOLD = "#D4AF37";
 const MUTED = "#8A929C";
 
 type ProductForm = {
@@ -843,7 +844,7 @@ export default function AdminInventoryPage() {
     border: `1px solid ${BORDER}`,
     background: CARD_BG,
     color: "#FFFFFF",
-    padding: "0 0.6rem",
+    padding: "0 0.65rem",
     font: "inherit",
     fontSize: "0.78rem",
     fontWeight: 600,
@@ -853,91 +854,120 @@ export default function AdminInventoryPage() {
 
   return (
     <div style={{ ...pageWrap, overflowX: "hidden" }}>
-      <header className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* Header — ONE cube icon */}
+      <header className="mb-4 md:mb-5">
+        <div className="flex flex-col items-center text-center md:items-start md:text-start">
           <div className="flex items-center gap-2.5">
-            <Package
-              className="hidden shrink-0 md:block"
-              size={32}
-              strokeWidth={1.45}
-              color={GOLD}
-            />
-            <Package
-              className="shrink-0 md:hidden"
-              size={26}
-              strokeWidth={1.45}
-              color={GOLD}
-            />
             <h1
-              className="m-0 text-[1.4rem] font-semibold tracking-[-0.02em] md:text-[1.5rem]"
-              style={{ color: "#FFFFFF", lineHeight: 1.4 }}
+              className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em] md:text-[1.65rem]"
+              style={{ color: "#FFFFFF", lineHeight: 1.35 }}
             >
               المنتجات
             </h1>
+            <Box size={26} strokeWidth={1.45} color={GOLD} aria-hidden />
           </div>
           <p
-            className="mb-0 mt-1 text-[0.86rem] leading-relaxed"
+            className="mb-0 mt-1.5 max-w-[28rem] text-[0.84rem] leading-relaxed md:text-[0.88rem]"
             style={{ color: MUTED }}
           >
             إدارة المنتجات والمخزون والأسعار والصور
           </p>
-          <p className="mb-0 mt-1.5 text-[0.82rem] font-semibold" style={{ color: MUTED }}>
-            <span style={{ color: GOLD }}>{filtered.length}</span> منتج
-          </p>
         </div>
+      </header>
+
+      {/* MOBILE toolbar: Add full-width, then Search | Category only */}
+      <section className="mb-4 space-y-3 md:hidden">
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[12px] px-3.5 text-[0.84rem] font-bold"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-[12px] text-[0.9rem] font-bold"
           style={{
-            height: 40,
-            background: "rgba(212,175,106,0.12)",
+            height: 44,
+            background: "transparent",
             color: GOLD,
-            border: "1px solid rgba(212,175,106,0.55)",
+            border: `1px solid rgba(212,175,55,0.7)`,
           }}
         >
           إضافة منتج
-          <Plus size={15} strokeWidth={1.7} />
+          <Plus size={16} strokeWidth={1.7} />
         </button>
-      </header>
-
-      <section className="mb-[18px] flex flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap md:overflow-visible">
-        <div className="relative shrink-0" style={{ width: "10.75rem" }}>
-          <Search
-            size={14}
-            strokeWidth={1.55}
-            className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-            style={{ insetInlineStart: 10, color: MUTED }}
-          />
-          <input
+        <div className="flex items-center gap-2.5">
+          <div className="relative min-w-0 flex-[1.4]">
+            <Search
+              size={15}
+              strokeWidth={1.55}
+              className="pointer-events-none absolute top-1/2 -translate-y-1/2"
+              style={{ insetInlineStart: 11, color: MUTED }}
+            />
+            <input
+              style={{
+                ...compactSelect,
+                width: "100%",
+                height: 42,
+                paddingInlineStart: 32,
+                fontWeight: 500,
+              }}
+              placeholder="ابحث…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <select
             style={{
               ...compactSelect,
-              width: "100%",
-              paddingInlineStart: 30,
-              fontWeight: 500,
+              height: 42,
+              width: "auto",
+              minWidth: "7.25rem",
+              flex: "0.9",
             }}
-            placeholder="ابحث بالاسم…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="all">كل الفئات</option>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
+      </section>
+
+      {/* DESKTOP toolbar — compact row */}
+      <section className="mb-5 hidden flex-wrap items-center gap-2.5 md:flex">
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[11px] px-3 text-[0.8rem] font-bold"
+          style={{
+            height: 38,
+            background: "transparent",
+            color: GOLD,
+            border: `1px solid rgba(212,175,55,0.7)`,
+          }}
+        >
+          إضافة منتج
+          <Plus size={14} strokeWidth={1.7} />
+        </button>
+
+        <span
+          className="shrink-0 text-[0.8rem] font-semibold tabular-nums"
+          style={{ color: MUTED }}
+        >
+          <span style={{ color: GOLD }}>{filtered.length}</span> منتج
+        </span>
 
         <select
-          style={{ ...compactSelect, width: "auto", minWidth: "7rem" }}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          style={{ ...compactSelect, height: 38, width: "auto", minWidth: "7.5rem" }}
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as SortMode)}
         >
-          <option value="all">كل الفئات</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
+          <option value="newest">الأحدث أولاً</option>
+          <option value="name">حسب الاسم</option>
         </select>
 
         <select
-          className="hidden md:block"
-          style={{ ...compactSelect, width: "auto", minWidth: "7rem" }}
+          style={{ ...compactSelect, height: 38, width: "auto", minWidth: "7rem" }}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -950,22 +980,46 @@ export default function AdminInventoryPage() {
         </select>
 
         <select
-          className="hidden md:block"
-          style={{ ...compactSelect, width: "auto", minWidth: "7.25rem" }}
-          value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortMode)}
+          style={{ ...compactSelect, height: 38, width: "auto", minWidth: "7rem" }}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="newest">الأحدث أولاً</option>
-          <option value="name">حسب الاسم</option>
+          <option value="all">كل الفئات</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
+
+        <div className="relative ms-auto min-w-[12rem] max-w-[16rem] flex-1">
+          <Search
+            size={14}
+            strokeWidth={1.55}
+            className="pointer-events-none absolute top-1/2 -translate-y-1/2"
+            style={{ insetInlineStart: 10, color: MUTED }}
+          />
+          <input
+            style={{
+              ...compactSelect,
+              height: 38,
+              width: "100%",
+              paddingInlineStart: 30,
+              fontWeight: 500,
+            }}
+            placeholder="ابحث بالاسم…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
       </section>
 
       {message ? (
         <p
           className="mb-4 rounded-[12px] px-3 py-2 text-sm"
           style={{
-            background: "rgba(212,175,106,0.12)",
-            border: "1px solid rgba(212,175,106,0.35)",
+            background: "rgba(212,175,55,0.12)",
+            border: "1px solid rgba(212,175,55,0.35)",
             color: GOLD,
           }}
         >
@@ -1001,7 +1055,7 @@ export default function AdminInventoryPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-5">
+          <div className="grid grid-cols-1 gap-[15px] md:grid-cols-4 md:gap-[18px]">
             {paged.map((p) => (
               <AdminProductCard
                 key={p.id}
@@ -1014,55 +1068,77 @@ export default function AdminInventoryPage() {
           </div>
 
           {totalPages > 1 ? (
-            <div
-              className="mt-5 flex items-center justify-center gap-2"
-              style={{ paddingBottom: 4 }}
-            >
-              <button
-                type="button"
-                aria-label="السابق"
-                disabled={safePage <= 1}
-                onClick={() => setListPage((p) => Math.max(1, p - 1))}
-                className="grid place-items-center rounded-[11px] disabled:opacity-35"
-                style={{
-                  width: 38,
-                  height: 38,
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  color: GOLD,
-                }}
-              >
-                <ChevronRight size={16} strokeWidth={1.6} />
-              </button>
-              <div
-                className="inline-flex items-center gap-1.5 rounded-[11px] px-3 text-[0.8rem] font-semibold"
-                style={{
-                  height: 38,
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  color: MUTED,
-                }}
-              >
-                <span style={{ color: GOLD }}>{safePage}</span>
-                <span>/</span>
-                <span>{totalPages}</span>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 pb-1 md:justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="السابق"
+                  disabled={safePage <= 1}
+                  onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                  className="grid place-items-center rounded-[10px] disabled:opacity-35"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    background: CARD_BG,
+                    border: `1px solid ${BORDER}`,
+                    color: GOLD,
+                  }}
+                >
+                  <ChevronRight size={15} strokeWidth={1.6} />
+                </button>
+                {(() => {
+                  const windowSize = Math.min(5, totalPages);
+                  let start = Math.max(1, safePage - Math.floor(windowSize / 2));
+                  const end = Math.min(totalPages, start + windowSize - 1);
+                  start = Math.max(1, end - windowSize + 1);
+                  const pages: number[] = [];
+                  for (let p = start; p <= end; p += 1) pages.push(p);
+                  return pages.map((page) => {
+                    const active = page === safePage;
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => setListPage(page)}
+                        className="grid place-items-center rounded-[9px] text-[0.8rem] font-bold"
+                        style={{
+                          width: 34,
+                          height: 34,
+                          background: active ? GOLD : CARD_BG,
+                          border: active
+                            ? `1px solid ${GOLD}`
+                            : `1px solid ${BORDER}`,
+                          color: active ? "#0B0E14" : MUTED,
+                        }}
+                      >
+                        {page}
+                      </button>
+                    );
+                  });
+                })()}
+                <button
+                  type="button"
+                  aria-label="التالي"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
+                  className="grid place-items-center rounded-[10px] disabled:opacity-35"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    background: CARD_BG,
+                    border: `1px solid ${BORDER}`,
+                    color: GOLD,
+                  }}
+                >
+                  <ChevronLeft size={15} strokeWidth={1.6} />
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label="التالي"
-                disabled={safePage >= totalPages}
-                onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
-                className="grid place-items-center rounded-[11px] disabled:opacity-35"
-                style={{
-                  width: 38,
-                  height: 38,
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  color: GOLD,
-                }}
+              <span
+                className="hidden text-[0.78rem] font-semibold md:inline"
+                style={{ color: MUTED }}
               >
-                <ChevronLeft size={16} strokeWidth={1.6} />
-              </button>
+                {PAGE_SIZE} لكل صفحة
+              </span>
             </div>
           ) : null}
         </>
