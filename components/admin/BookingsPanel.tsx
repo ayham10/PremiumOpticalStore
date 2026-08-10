@@ -604,44 +604,46 @@ export default function BookingsPanel({
                           <ChevronLeft size={18} strokeWidth={1.55} color={GOLD} />
                         </div>
 
-                        {/* Mobile — weekly: hour | name | phone; list: phone | name | hour | date */}
+                        {/* Mobile — list: date | hour | name/phone; weekly: hour | name | phone */}
                         {showDate ? (
-                          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.35fr)_3.15rem_3.35rem] items-center gap-2 px-3 py-2.5 lg:hidden">
-                            <div className="flex min-w-0 items-center gap-1">
-                              <Phone
-                                size={12}
-                                strokeWidth={1.45}
-                                color={GOLD}
-                                className="shrink-0"
-                              />
-                              <span
-                                className="truncate text-[0.7rem] tabular-nums"
-                                style={{ color: MUTED }}
-                                dir="ltr"
-                              >
-                                {row.phone || "—"}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-3 px-3.5 py-2.5 lg:hidden">
                             <span
-                              className="min-w-0 truncate text-[0.82rem] font-semibold"
-                              style={{ color: INK }}
-                            >
-                              {row.fullName}
-                            </span>
-                            <span
-                              className="text-center text-[0.82rem] font-bold tabular-nums"
-                              style={{ color: GOLD }}
-                              dir="ltr"
-                            >
-                              {clock}
-                            </span>
-                            <span
-                              className="text-center text-[0.72rem] font-semibold tabular-nums"
-                              style={{ color: MUTED }}
+                              className="w-[3.55rem] shrink-0 whitespace-nowrap text-center text-[0.74rem] font-semibold tabular-nums"
+                              style={{ color: MUTED, minWidth: "3.55rem" }}
                               dir="ltr"
                             >
                               {compactListDate(row.appointmentDate)}
                             </span>
+                            <span
+                              className="w-[3.15rem] shrink-0 whitespace-nowrap text-center text-[0.86rem] font-bold tabular-nums"
+                              style={{ color: GOLD, minWidth: "3.15rem" }}
+                              dir="ltr"
+                            >
+                              {clock}
+                            </span>
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <p
+                                className="m-0 truncate text-[0.86rem] font-semibold leading-tight"
+                                style={{ color: INK }}
+                              >
+                                {row.fullName}
+                              </p>
+                              <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                                <Phone
+                                  size={12}
+                                  strokeWidth={1.45}
+                                  color={GOLD}
+                                  className="shrink-0"
+                                />
+                                <span
+                                  className="truncate text-[0.72rem] tabular-nums"
+                                  style={{ color: MUTED }}
+                                  dir="ltr"
+                                >
+                                  {row.phone || "—"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-3 px-3.5 py-3 lg:hidden">
