@@ -502,15 +502,35 @@ html.admin-dark[lang="he"] .admin-auth {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Dashboard home: full-bleed chrome (no desktop sidebar column) */
+body.admin-home-active .admin-shell {
+  display: block;
+}
+
+body.admin-home-active .admin-main {
+  padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
+  min-height: 100dvh;
+  background: #0b0f14;
+}
+
 @media (min-width: 768px) {
   .admin-shell {
     display: grid;
     grid-template-columns: 260px 1fr;
   }
 
+  body.admin-home-active .admin-shell {
+    display: block;
+  }
+
   .admin-main {
     padding: 1.75rem 1.85rem;
     padding-bottom: 1.85rem;
+  }
+
+  body.admin-home-active .admin-main {
+    padding: 1.25rem 1.5rem;
+    padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

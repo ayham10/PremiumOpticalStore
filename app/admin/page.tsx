@@ -14,13 +14,17 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  ChevronDown,
   Clock3,
+  Contact,
+  Eye,
   Glasses,
-  Lightbulb,
   List,
   Menu,
-  Plus,
+  Phone,
+  PlusCircle,
   RefreshCw,
+  User,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -37,9 +41,10 @@ type DashboardPayload = DashboardStats & {
 
 const GOLD = "#D4AF6A";
 const MUTED = "#8A929C";
-const PAGE_BG = "#0E1116";
-const CARD_BG = "#151A21";
+const PAGE_BG = "#0B0F14";
+const CARD_BG = "#12171E";
 const BORDER = "#2A2F36";
+const ROW_LINE = "rgba(42,47,54,0.95)";
 
 const LOCALE_TAGS: Record<Locale, string> = {
   en: "en-US",
@@ -47,32 +52,36 @@ const LOCALE_TAGS: Record<Locale, string> = {
   he: "he",
 };
 
-const TIPS_AR = [
-  "راجع مواعيد اليوم في الصباح ورتّب أولوية الحالات الطارئة قبل فتح العيادة.",
-  "تأكد من جاهزية غرفة الفحص والعدسات التجريبية قبل أول موعد.",
-  "حدّث ساعات العمل والاستثناءات مبكراً لتجنب تعارض الحجوزات.",
-  "تابع مخزون الإطارات الأكثر طلباً قبل نهاية الأسبوع.",
-  "أرسل تذكيراً ودياً للعملاء ذوي المواعيد المسائية لتقليل الغياب.",
-  "راجع ملاحظات الحجوزات قبل استقبال كل عميل لتقديم خدمة أدق.",
-  "حافظ على توازن الجدول بين فحوصات النظر واستشارات الإطارات.",
-];
-
 function serviceLabel(t: (key: string) => string, service: string): string {
   const key = `clinicBooking.services.${service}`;
   const label = t(key);
   return label === key ? service : label;
 }
 
-function formatTime(time: string, locale: Locale): string {
+function serviceIcon(service: string): LucideIcon {
+  const s = (service || "").toLowerCase();
+  if (s.includes("contact") || s.includes("عدسات")) return Contact;
+  if (s.includes("glass") || s.includes("frame") || s.includes("نظارات")) {
+    return Glasses;
+  }
+  return Eye;
+}
+
+/** e.g. 09:00 صباحاً / 16:00 مساءً */
+function formatTimeRich(time: string, locale: Locale): string {
   if (!time) return "";
   const [h, m] = time.split(":").map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString(LOCALE_TAGS[locale], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  const clock = `${hh}:${mm}`;
+  if (locale === "ar") {
+    return h < 12 ? `${clock} صباحاً` : `${clock} مساءً`;
+  }
+  if (locale === "he") {
+    return h < 12 ? `${clock} בוקר` : `${clock} ערב`;
+  }
+  return h < 12 ? `${clock} AM` : `${clock} PM`;
 }
 
 function formatPhone(phone: string): string {
@@ -88,28 +97,9 @@ function todayIsoLocal(): string {
   return `${y}-${m}-${day}`;
 }
 
-function greetingFor(locale: Locale): string {
-  const hour = new Date().getHours();
-  if (locale === "ar") {
-    if (hour < 12) return "صباح الخير";
-    return "مساء الخير";
-  }
-  if (locale === "he") {
-    if (hour < 12) return "בוקר טוב";
-    return "ערב טוב";
-  }
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-function tipOfTheDay(locale: Locale): string {
-  const idx = Math.floor(Date.now() / 86_400_000) % TIPS_AR.length;
-  if (locale === "ar") return TIPS_AR[idx];
-  if (locale === "he") {
-    return "בדקו את יומן היום בבוקר וסדרו את הבדיקות הדחופות לפני פתיחת המרפאה.";
-  }
-  return "Review today's schedule each morning and prioritize urgent cases before opening.";
+function firstNameFrom(name?: string): string {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  return parts[0] || "Ayham";
 }
 
 function initialsFromName(name?: string): string {
@@ -122,7 +112,7 @@ function initialsFromName(name?: string): string {
 function openShellMobileNav() {
   window.dispatchEvent(new CustomEvent("admin-open-nav"));
   const btn = document.querySelector(
-    ".admin-shell .sticky.top-0 button[aria-expanded], [data-admin-open-nav]",
+    "[data-admin-open-nav]",
   ) as HTMLButtonElement | null;
   btn?.click();
 }
@@ -134,7 +124,7 @@ function GoldIcon({
   icon: LucideIcon;
   size?: number;
 }) {
-  return <Icon size={size} strokeWidth={1.55} color={GOLD} />;
+  return <Icon size={size} strokeWidth={1.5} color={GOLD} />;
 }
 
 function Panel({
@@ -152,8 +142,8 @@ function Panel({
       style={{
         background: CARD_BG,
         border: `1px solid ${BORDER}`,
-        borderRadius: 16,
-        padding: 14,
+        borderRadius: 18,
+        padding: 16,
         height: "fit-content",
         ...style,
       }}
@@ -169,12 +159,11 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [profileName, setProfileName] = useState("");
   const [profileInitials, setProfileInitials] = useState("AH");
 
-  const load = useCallback(async (opts?: { soft?: boolean }) => {
-    if (opts?.soft) setRefreshing(true);
-    else setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     setError("");
     try {
       const data = await apiFetch<
@@ -188,7 +177,6 @@ export default function AdminDashboardPage() {
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [t]);
 
@@ -203,21 +191,20 @@ export default function AdminDashboardPage() {
           "/api/auth/me",
         );
         const user = "user" in data ? data.user : data;
+        setProfileName(user.name || "");
         setProfileInitials(initialsFromName(user.name));
       } catch {
-        /* keep AH */
+        /* keep defaults */
       }
     })();
   }, []);
 
   useEffect(() => {
     function onFocus() {
-      void load({ soft: true });
+      void load();
     }
     function onVisibility() {
-      if (document.visibilityState === "visible") {
-        void load({ soft: true });
-      }
+      if (document.visibilityState === "visible") void load();
     }
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
@@ -227,15 +214,17 @@ export default function AdminDashboardPage() {
     };
   }, [load]);
 
+  /* Dashboard uses its own chrome — hide shell sticky bar */
   useEffect(() => {
+    document.body.classList.add("admin-home-active");
     const bar = document.querySelector(
-      ".admin-shell .sticky.top-0.md\\:hidden, .admin-shell .sticky.top-0",
+      ".admin-shell .sticky.top-0",
     ) as HTMLElement | null;
-    if (!bar || window.matchMedia("(min-width: 768px)").matches) return;
-    const prev = bar.style.display;
-    bar.style.display = "none";
+    const prev = bar?.style.display;
+    if (bar) bar.style.display = "none";
     return () => {
-      bar.style.display = prev;
+      document.body.classList.remove("admin-home-active");
+      if (bar) bar.style.display = prev || "";
     };
   }, []);
 
@@ -249,7 +238,22 @@ export default function AdminDashboardPage() {
     weekday: "long",
     day: "numeric",
     month: "long",
+    year: "numeric",
   });
+
+  const firstName = firstNameFrom(profileName);
+  const greetingTitle =
+    locale === "ar"
+      ? `أهلاً ${firstName} 👋`
+      : locale === "he"
+        ? `שלום ${firstName} 👋`
+        : `Hello ${firstName} 👋`;
+  const greetingSub =
+    locale === "ar"
+      ? "مرحباً بك في لوحة التحكم الخاصة بعيون"
+      : locale === "he"
+        ? "ברוך הבא ללוח הבקרה של עيون"
+        : "Welcome to the OYON control panel";
 
   if (loading && !stats) {
     return (
@@ -271,7 +275,7 @@ export default function AdminDashboardPage() {
             className="btn btn-ghost mt-3 inline-flex items-center gap-2"
             onClick={() => void load()}
           >
-            <RefreshCw size={15} strokeWidth={1.55} />
+            <RefreshCw size={15} strokeWidth={1.5} />
             {t("admin.dashboard.refresh")}
           </button>
         </Panel>
@@ -280,7 +284,7 @@ export default function AdminDashboardPage() {
   }
 
   const schedule = stats.todaysSchedule || [];
-  const tip = tipOfTheDay(locale);
+  const notifCount = schedule.length;
 
   const quickActions: Array<{
     href: string;
@@ -290,7 +294,7 @@ export default function AdminDashboardPage() {
     {
       href: "/admin/eye-exam?tab=appointments&book=1",
       label: "إضافة موعد",
-      icon: Plus,
+      icon: PlusCircle,
     },
     {
       href: "/admin/calendar",
@@ -321,7 +325,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div
-      className="admin-dashboard mx-auto w-full max-w-[1440px] pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-2"
+      className="admin-dashboard mx-auto w-full max-w-[1120px] pb-[calc(5.85rem+env(safe-area-inset-bottom,0px))]"
       style={{
         marginTop: "-1.15rem",
         marginInline: "auto",
@@ -329,37 +333,75 @@ export default function AdminDashboardPage() {
         minHeight: "100%",
         background: PAGE_BG,
         paddingInline: 16,
-        paddingTop: 14,
+        paddingTop: 12,
         display: "flex",
         flexDirection: "column",
-        gap: 14,
+        gap: 18,
       }}
     >
-      {/* MOBILE HEADER — hamburger | centered logo | bell + profile */}
-      <header className="relative flex h-11 items-center md:hidden">
-        <button
-          type="button"
-          aria-label={t("nav.menu")}
-          onClick={openShellMobileNav}
-          className="absolute top-1/2 grid -translate-y-1/2 place-items-center rounded-[11px]"
-          style={{
-            insetInlineStart: 0,
-            width: 40,
-            height: 40,
-            border: `1px solid ${BORDER}`,
-            background: CARD_BG,
-            color: "#E8EAED",
-          }}
+      {/* ── HEADER (same structure both breakpoints; spacing differs) ── */}
+      <header className="relative flex h-12 items-center lg:h-14">
+        {/* Start: hamburger (+ bell on desktop) */}
+        <div
+          className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2.5"
+          style={{ insetInlineStart: 0 }}
         >
-          <Menu size={17} strokeWidth={1.55} />
-        </button>
+          <button
+            type="button"
+            aria-label={t("nav.menu")}
+            onClick={openShellMobileNav}
+            className="grid place-items-center"
+            style={{
+              width: 40,
+              height: 40,
+              background: "transparent",
+              border: "none",
+              color: GOLD,
+            }}
+          >
+            <Menu size={22} strokeWidth={1.6} />
+          </button>
+          <button
+            type="button"
+            aria-label="الإشعارات"
+            className="relative hidden place-items-center lg:grid"
+            style={{
+              width: 40,
+              height: 40,
+              background: "transparent",
+              border: "none",
+              color: GOLD,
+            }}
+          >
+            <Bell size={20} strokeWidth={1.55} />
+            {notifCount > 0 ? (
+              <span
+                className="absolute grid place-items-center rounded-full text-[0.62rem] font-bold"
+                style={{
+                  top: 4,
+                  insetInlineEnd: 4,
+                  minWidth: 16,
+                  height: 16,
+                  paddingInline: 3,
+                  background: GOLD,
+                  color: "#1A1408",
+                  lineHeight: 1,
+                }}
+              >
+                {notifCount > 9 ? "9+" : notifCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
 
+        {/* Center logo */}
         <div className="pointer-events-none absolute inset-x-0 flex justify-center">
           <div className="pointer-events-auto">
-            <BrandMark branding={branding} href="/admin" size="sm" />
+            <BrandMark branding={branding} href="/admin" size="md" />
           </div>
         </div>
 
+        {/* End: bell (mobile) + profile */}
         <div
           className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2"
           style={{ insetInlineEnd: 0 }}
@@ -367,140 +409,129 @@ export default function AdminDashboardPage() {
           <button
             type="button"
             aria-label="الإشعارات"
-            className="grid place-items-center rounded-[11px]"
+            className="relative grid place-items-center lg:hidden"
             style={{
               width: 40,
               height: 40,
-              border: "1px solid rgba(212,175,106,0.45)",
-              background: "rgba(212,175,106,0.06)",
+              background: "transparent",
+              border: "none",
               color: GOLD,
             }}
           >
-            <Bell size={16} strokeWidth={1.55} />
+            <Bell size={19} strokeWidth={1.55} />
+            {notifCount > 0 ? (
+              <span
+                className="absolute grid place-items-center rounded-full text-[0.58rem] font-bold"
+                style={{
+                  top: 5,
+                  insetInlineEnd: 5,
+                  minWidth: 15,
+                  height: 15,
+                  paddingInline: 3,
+                  background: GOLD,
+                  color: "#1A1408",
+                  lineHeight: 1,
+                }}
+              >
+                {notifCount > 9 ? "9+" : notifCount}
+              </span>
+            ) : null}
           </button>
-          <div
-            className="grid place-items-center rounded-full text-[0.72rem] font-bold"
+
+          <button
+            type="button"
+            className="flex items-center gap-1.5"
             style={{
-              width: 36,
-              height: 36,
-              background: "rgba(212,175,106,0.12)",
-              border: "1px solid rgba(212,175,106,0.4)",
+              background: "transparent",
+              border: "none",
+              padding: 0,
               color: GOLD,
             }}
             aria-label={profileInitials}
           >
-            {profileInitials}
-          </div>
-        </div>
-      </header>
-
-      {/* DESKTOP HEADER */}
-      <header className="hidden items-center justify-between gap-4 md:flex md:pt-1">
-        <div className="flex min-w-0 items-center gap-4">
-          <BrandMark branding={branding} href="/admin" size="md" />
-          <div className="min-w-0">
-            <p
-              className="mb-0.5 mt-0 text-[0.8rem] font-medium"
-              style={{ color: MUTED }}
+            <span
+              className="grid place-items-center rounded-full text-[0.72rem] font-bold"
+              style={{
+                width: 36,
+                height: 36,
+                background: "rgba(212,175,106,0.12)",
+                border: "1px solid rgba(212,175,106,0.55)",
+                color: GOLD,
+              }}
             >
-              {greetingFor(locale)}
-            </p>
-            <h1
-              className="m-0 text-[1.65rem] font-semibold tracking-[-0.03em]"
-              style={{ color: "#F5F6F7", lineHeight: 1.3 }}
-            >
-              {t("admin.dashboard.title")}
-            </h1>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2.5">
-          <div
-            className="inline-flex h-10 items-center gap-2 rounded-[12px] px-3 text-[0.82rem] font-medium"
-            style={{
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              color: "#E8EAED",
-            }}
-          >
-            <GoldIcon icon={CalendarDays} size={15} />
-            <span className="max-w-[16rem] truncate">{todayLabel}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => void load({ soft: true })}
-            disabled={refreshing}
-            aria-label={t("admin.dashboard.refresh")}
-            className="grid place-items-center rounded-[11px]"
-            style={{
-              width: 40,
-              height: 40,
-              border: `1px solid ${BORDER}`,
-              background: CARD_BG,
-              color: MUTED,
-            }}
-          >
-            <RefreshCw
-              size={15}
-              strokeWidth={1.55}
-              className={refreshing ? "animate-spin" : ""}
+              {profileInitials}
+            </span>
+            <ChevronDown
+              size={14}
+              strokeWidth={1.7}
+              className="hidden lg:block"
+              color={GOLD}
             />
           </button>
-          <button
-            type="button"
-            aria-label="الإشعارات"
-            className="grid place-items-center rounded-[11px]"
-            style={{
-              width: 40,
-              height: 40,
-              border: "1px solid rgba(212,175,106,0.45)",
-              background: "rgba(212,175,106,0.06)",
-              color: GOLD,
-            }}
-          >
-            <Bell size={16} strokeWidth={1.55} />
-          </button>
-          <div
-            className="grid place-items-center rounded-full text-[0.72rem] font-bold"
-            style={{
-              width: 38,
-              height: 38,
-              background: "rgba(212,175,106,0.12)",
-              border: "1px solid rgba(212,175,106,0.4)",
-              color: GOLD,
-            }}
-          >
-            {profileInitials}
-          </div>
         </div>
       </header>
 
-      {/* MOBILE date then RTL greeting */}
-      <div className="space-y-2 md:hidden">
-        <div
-          className="inline-flex h-9 max-w-full items-center gap-2 rounded-[12px] px-3 text-[0.78rem] font-medium"
+      {/* ── DATE + GREETING ── */}
+      {/* Mobile: stacked & centered */}
+      <div className="flex flex-col items-center gap-3 text-center lg:hidden">
+        <button
+          type="button"
+          className="inline-flex h-11 w-full max-w-[22rem] items-center justify-center gap-2 rounded-[14px] px-4 text-[0.84rem] font-medium"
           style={{
             background: CARD_BG,
             border: `1px solid ${BORDER}`,
             color: "#E8EAED",
           }}
         >
-          <GoldIcon icon={CalendarDays} size={14} />
+          <GoldIcon icon={CalendarDays} size={16} />
           <span className="truncate">{todayLabel}</span>
-        </div>
+          <ChevronDown size={14} strokeWidth={1.6} color={GOLD} />
+        </button>
         <div>
-          <p
-            className="mb-0.5 mt-0 text-[0.78rem] font-medium"
-            style={{ color: MUTED }}
-          >
-            {greetingFor(locale)}
-          </p>
           <h1
-            className="m-0 text-[1.35rem] font-semibold tracking-[-0.03em]"
+            className="m-0 text-[1.55rem] font-semibold tracking-[-0.02em]"
             style={{ color: "#F5F6F7", lineHeight: 1.35 }}
           >
-            {t("admin.dashboard.title")}
+            {greetingTitle}
           </h1>
+          <p
+            className="mb-0 mt-1 text-[0.82rem] leading-relaxed"
+            style={{ color: MUTED }}
+          >
+            {greetingSub}
+          </p>
         </div>
+      </div>
+
+      {/* Desktop: greeting on visual right (RTL start), date on visual left */}
+      <div className="hidden items-end justify-between gap-6 lg:flex">
+        <div className="min-w-0">
+          <h1
+            className="m-0 text-[1.85rem] font-semibold tracking-[-0.03em]"
+            style={{ color: "#F5F6F7", lineHeight: 1.3 }}
+          >
+            {greetingTitle}
+          </h1>
+          <p
+            className="mb-0 mt-1.5 text-[0.9rem] leading-relaxed"
+            style={{ color: MUTED }}
+          >
+            {greetingSub}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[14px] px-4 text-[0.88rem] font-medium"
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${BORDER}`,
+            color: "#E8EAED",
+          }}
+        >
+          <GoldIcon icon={CalendarDays} size={16} />
+          <span>{todayLabel}</span>
+          <ChevronDown size={14} strokeWidth={1.6} color={GOLD} />
+        </button>
       </div>
 
       {error ? (
@@ -516,210 +547,172 @@ export default function AdminDashboardPage() {
         </p>
       ) : null}
 
-      {/* Main sections — stacked on mobile/tablet, side-by-side on desktop */}
-      <div className="grid gap-3.5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:items-start xl:gap-5">
-        {/* مواعيد اليوم */}
-        <Panel>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <GoldIcon icon={CalendarDays} size={18} />
-              <h2
-                className="m-0 text-[0.98rem] font-semibold"
-                style={{ color: "#F5F6F7", lineHeight: 1.4 }}
-              >
-                مواعيد اليوم
-              </h2>
-            </div>
-            <Link
-              href={bookingsHref}
-              className="shrink-0 text-[0.76rem] font-semibold no-underline"
-              style={{ color: GOLD }}
-            >
-              عرض كل المواعيد
-            </Link>
-          </div>
-
-          {schedule.length ? (
-            <div className="flex flex-col gap-2.5">
-              {/* Desktop column headers */}
-              <div
-                className="hidden grid-cols-[4.75rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 px-3.5 text-[0.7rem] font-medium xl:grid"
-                style={{ color: MUTED }}
-              >
-                <span>وقت</span>
-                <span>العميل</span>
-                <span>الهاتف</span>
-                <span>سبب الموعد</span>
-              </div>
-
-              {schedule.map((a) => (
-                <Link
-                  key={a.id}
-                  href={todayHref}
-                  className="block no-underline transition hover:border-[rgba(212,175,106,0.35)]"
-                >
-                  {/* Desktop row — time | customer | phone | reason */}
-                  <div
-                    className="hidden grid-cols-[4.75rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3 px-3.5 py-3 xl:grid"
-                    style={{
-                      background: PAGE_BG,
-                      border: `1px solid ${BORDER}`,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <p
-                      className="m-0 text-[0.88rem] font-bold tabular-nums"
-                      style={{ color: GOLD }}
-                    >
-                      {formatTime(a.startTime, locale)}
-                    </p>
-                    <p
-                      className="m-0 truncate text-[0.88rem] font-semibold"
-                      style={{ color: "#F3F4F5" }}
-                    >
-                      {a.customerName}
-                    </p>
-                    <p
-                      className="m-0 truncate text-[0.82rem] tabular-nums"
-                      style={{ color: MUTED }}
-                      dir="ltr"
-                    >
-                      {formatPhone(a.customerPhone)}
-                    </p>
-                    <p
-                      className="m-0 truncate text-[0.82rem] font-medium"
-                      style={{ color: "#E8EAED" }}
-                    >
-                      {serviceLabel(t, a.service)}
-                    </p>
-                  </div>
-
-                  {/* Mobile/tablet — time | name | phone only */}
-                  <div
-                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 xl:hidden"
-                    style={{
-                      background: PAGE_BG,
-                      border: `1px solid ${BORDER}`,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <p
-                      className="m-0 whitespace-nowrap text-[0.82rem] font-bold tabular-nums"
-                      style={{ color: GOLD, minWidth: "3.4rem" }}
-                    >
-                      {formatTime(a.startTime, locale)}
-                    </p>
-                    <p
-                      className="m-0 min-w-0 truncate text-[0.84rem] font-semibold"
-                      style={{ color: "#F3F4F5" }}
-                    >
-                      {a.customerName}
-                    </p>
-                    <p
-                      className="m-0 max-w-[7.5rem] truncate text-[0.72rem] tabular-nums sm:max-w-[9rem]"
-                      style={{ color: MUTED }}
-                      dir="ltr"
-                    >
-                      {formatPhone(a.customerPhone)}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div
-              className="rounded-[12px] px-3 py-3.5"
-              style={{ border: `1px dashed ${BORDER}`, background: PAGE_BG }}
-            >
-              <p
-                className="m-0 text-[0.88rem] font-semibold"
-                style={{ color: "#F0F1F2" }}
-              >
-                {t("admin.dashboard.emptyToday")}
-              </p>
-              <p
-                className="mb-0 mt-1 text-[0.78rem] leading-relaxed"
-                style={{ color: MUTED }}
-              >
-                {t("admin.dashboard.emptyTodayLead")}
-              </p>
-            </div>
-          )}
-        </Panel>
-
-        {/* خدمات سريعة */}
-        <Panel>
-          <div className="mb-3.5 flex items-center gap-2">
-            <GoldIcon icon={Zap} size={18} />
-            <h2
-              className="m-0 text-[0.98rem] font-semibold"
-              style={{ color: "#F5F6F7", lineHeight: 1.4 }}
-            >
-              خدمات سريعة
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
-            {quickActions.map((action) => (
-              <Link
-                key={action.href + action.label}
-                href={action.href}
-                className="flex h-full flex-col justify-between gap-3 rounded-[14px] px-3 py-3.5 no-underline transition hover:border-[rgba(212,175,106,0.45)] hover:bg-[rgba(212,175,106,0.06)] active:scale-[0.99]"
-                style={{
-                  background: PAGE_BG,
-                  border: `1px solid ${BORDER}`,
-                }}
-              >
-                <span
-                  className="grid place-items-center rounded-[10px]"
-                  style={{
-                    width: 32,
-                    height: 32,
-                    background: "rgba(212,175,106,0.08)",
-                    border: "1px solid rgba(212,175,106,0.3)",
-                  }}
-                >
-                  <GoldIcon icon={action.icon} size={15} />
-                </span>
-                <span
-                  className="text-[0.82rem] font-semibold leading-snug"
-                  style={{ color: "#F3F4F5" }}
-                >
-                  {action.label}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      {/* نصيحة اليوم — compact */}
-      <Panel style={{ padding: "11px 14px" }}>
-        <div className="flex items-start gap-3">
-          <span
-            className="grid shrink-0 place-items-center rounded-[10px]"
-            style={{
-              width: 32,
-              height: 32,
-              background: "rgba(212,175,106,0.08)",
-              border: "1px solid rgba(212,175,106,0.3)",
-            }}
+      {/* ── TODAY'S BOOKINGS ── */}
+      <Panel style={{ padding: "14px 16px 10px" }}>
+        <div className="mb-2 flex items-center gap-2.5 px-1">
+          <GoldIcon icon={CalendarDays} size={18} />
+          <h2
+            className="m-0 text-[1.02rem] font-semibold"
+            style={{ color: "#F5F6F7", lineHeight: 1.35 }}
           >
-            <GoldIcon icon={Lightbulb} size={15} />
-          </span>
-          <div className="min-w-0">
-            <h2
-              className="m-0 text-[0.86rem] font-semibold"
-              style={{ color: GOLD, lineHeight: 1.35 }}
+            مواعيد اليوم
+          </h2>
+        </div>
+
+        {schedule.length ? (
+          <div>
+            {/* Desktop headers */}
+            <div
+              className="hidden grid-cols-[7.5rem_minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,1.2fr)] gap-3 px-2 pb-2 pt-1 text-[0.72rem] font-medium lg:grid"
+              style={{ color: MUTED }}
             >
-              نصيحة اليوم
-            </h2>
+              <span>وقت</span>
+              <span>العميل</span>
+              <span>رقم الهاتف</span>
+              <span>سبب الموعد</span>
+            </div>
+
+            <ul className="m-0 list-none p-0">
+              {schedule.map((a, idx) => {
+                const ReasonIcon = serviceIcon(a.service);
+                return (
+                  <li key={a.id}>
+                    <Link
+                      href={todayHref}
+                      className="block no-underline"
+                      style={{
+                        borderTop: idx === 0 ? `1px solid ${ROW_LINE}` : undefined,
+                        borderBottom: `1px solid ${ROW_LINE}`,
+                      }}
+                    >
+                      {/* Desktop row */}
+                      <div className="hidden grid-cols-[7.5rem_minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,1.2fr)] items-center gap-3 px-2 py-3.5 lg:grid">
+                        <p
+                          className="m-0 whitespace-nowrap text-[0.92rem] font-bold tabular-nums"
+                          style={{ color: GOLD }}
+                        >
+                          {formatTimeRich(a.startTime, locale)}
+                        </p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <GoldIcon icon={User} size={15} />
+                          <p
+                            className="m-0 truncate text-[0.9rem] font-semibold"
+                            style={{ color: "#F3F4F5" }}
+                          >
+                            {a.customerName}
+                          </p>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <GoldIcon icon={Phone} size={15} />
+                          <p
+                            className="m-0 truncate text-[0.86rem] tabular-nums"
+                            style={{ color: "#E8EAED" }}
+                            dir="ltr"
+                          >
+                            {formatPhone(a.customerPhone)}
+                          </p>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <GoldIcon icon={ReasonIcon} size={15} />
+                          <p
+                            className="m-0 truncate text-[0.86rem] font-medium"
+                            style={{ color: "#E8EAED" }}
+                          >
+                            {serviceLabel(t, a.service)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Mobile row: time | name+phone stacked */}
+                      <div className="flex items-center gap-3 px-1 py-3.5 lg:hidden">
+                        <p
+                          className="m-0 w-[5.75rem] shrink-0 whitespace-nowrap text-[0.88rem] font-bold tabular-nums"
+                          style={{ color: GOLD }}
+                        >
+                          {formatTimeRich(a.startTime, locale)}
+                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <GoldIcon icon={User} size={14} />
+                            <p
+                              className="m-0 truncate text-[0.88rem] font-semibold"
+                              style={{ color: "#F3F4F5" }}
+                            >
+                              {a.customerName}
+                            </p>
+                          </div>
+                          <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                            <GoldIcon icon={Phone} size={13} />
+                            <p
+                              className="m-0 truncate text-[0.78rem] tabular-nums"
+                              style={{ color: MUTED }}
+                              dir="ltr"
+                            >
+                              {formatPhone(a.customerPhone)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <div
+            className="mt-1 rounded-[12px] px-3 py-3.5"
+            style={{ border: `1px dashed ${BORDER}`, background: PAGE_BG }}
+          >
             <p
-              className="mb-0 mt-1 text-[0.8rem] leading-relaxed"
-              style={{ color: "#E8EAED" }}
+              className="m-0 text-[0.88rem] font-semibold"
+              style={{ color: "#F0F1F2" }}
             >
-              {tip}
+              {t("admin.dashboard.emptyToday")}
+            </p>
+            <p
+              className="mb-0 mt-1 text-[0.78rem] leading-relaxed"
+              style={{ color: MUTED }}
+            >
+              {t("admin.dashboard.emptyTodayLead")}
             </p>
           </div>
+        )}
+      </Panel>
+
+      {/* ── QUICK SERVICES ── */}
+      <Panel style={{ padding: 16 }}>
+        <div className="mb-4 flex items-center gap-2.5 px-0.5">
+          <GoldIcon icon={Zap} size={18} />
+          <h2
+            className="m-0 text-[1.02rem] font-semibold"
+            style={{ color: "#F5F6F7", lineHeight: 1.35 }}
+          >
+            خدمات سريعة
+          </h2>
+        </div>
+
+        {/* Mobile: 2 cols × 3 rows | Desktop: 3 cols × 2 rows */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-3 lg:gap-4">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href + action.label}
+              href={action.href}
+              className="flex flex-col items-center justify-center gap-2.5 rounded-[16px] px-3 py-5 text-center no-underline transition hover:border-[rgba(212,175,106,0.45)] hover:bg-[rgba(212,175,106,0.05)] active:scale-[0.99] lg:py-6"
+              style={{
+                background: PAGE_BG,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <GoldIcon icon={action.icon} size={22} />
+              <span
+                className="text-[0.84rem] font-semibold leading-snug lg:text-[0.9rem]"
+                style={{ color: "#F3F4F5" }}
+              >
+                {action.label}
+              </span>
+            </Link>
+          ))}
         </div>
       </Panel>
     </div>

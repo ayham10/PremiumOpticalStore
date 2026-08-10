@@ -13,6 +13,8 @@ import {
   LogOut,
   Menu,
   MoreHorizontal,
+  Home,
+  Glasses,
   X,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
@@ -91,8 +93,7 @@ const BOTTOM_NAV = [
   {
     href: "/admin",
     label: "الرئيسية",
-    icon: LayoutDashboard,
-    exact: true,
+    icon: Home,
     match: (pathname: string) => pathname === "/admin",
   },
   {
@@ -105,7 +106,7 @@ const BOTTOM_NAV = [
   {
     href: "/admin/inventory",
     label: "المنتجات",
-    icon: Package,
+    icon: Glasses,
     match: (pathname: string) => pathname.startsWith("/admin/inventory"),
   },
   {
@@ -195,9 +196,11 @@ function SidebarNav({
 function MobileBottomNav({
   onMore,
   moreOpen,
+  alwaysVisible,
 }: {
   onMore: () => void;
   moreOpen: boolean;
+  alwaysVisible?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -205,16 +208,24 @@ function MobileBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t md:hidden"
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-40 border-t",
+        !alwaysVisible && "md:hidden",
+      )}
       style={{
-        background: "rgba(14,17,22,0.97)",
+        background: "rgba(11,15,20,0.97)",
         borderColor: BORDER,
-        paddingBottom: "max(0.35rem, env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "max(0.4rem, env(safe-area-inset-bottom, 0px))",
         backdropFilter: "blur(14px)",
       }}
       aria-label="التنقل السفلي"
     >
-      <div className="mx-auto grid max-w-[430px] grid-cols-5 px-1.5 pt-1.5 pb-1">
+      <div
+        className={cn(
+          "mx-auto grid grid-cols-5 px-1.5 pt-1.5 pb-1",
+          alwaysVisible ? "max-w-[1120px]" : "max-w-[430px]",
+        )}
+      >
         {BOTTOM_NAV.map((item) => {
           const active = !moreOpen && item.match(pathname, tab);
           const Icon = item.icon;
@@ -222,20 +233,30 @@ function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center gap-1 no-underline"
-              style={{ minHeight: 50 }}
+              className="relative flex flex-col items-center justify-center gap-1 no-underline"
+              style={{ minHeight: 52 }}
             >
               <Icon
-                size={17}
-                strokeWidth={1.55}
+                size={18}
+                strokeWidth={1.5}
                 color={active ? GOLD : MUTED}
               />
               <span
-                className="text-[0.6rem] font-semibold leading-none"
+                className="text-[0.62rem] font-semibold leading-none"
                 style={{ color: active ? GOLD : MUTED }}
               >
                 {item.label}
               </span>
+              {active ? (
+                <span
+                  aria-hidden
+                  className="absolute bottom-0 h-[2px] w-6 rounded-full"
+                  style={{
+                    background: GOLD,
+                    boxShadow: "0 0 10px rgba(212,175,106,0.55)",
+                  }}
+                />
+              ) : null}
             </Link>
           );
         })}
@@ -244,19 +265,19 @@ function MobileBottomNav({
           onClick={onMore}
           className="flex flex-col items-center justify-center gap-1"
           style={{
-            minHeight: 50,
+            minHeight: 52,
             background: "transparent",
             border: "none",
             padding: 0,
           }}
         >
           <MoreHorizontal
-            size={17}
-            strokeWidth={1.55}
+            size={18}
+            strokeWidth={1.5}
             color={moreOpen ? GOLD : MUTED}
           />
           <span
-            className="text-[0.6rem] font-semibold leading-none"
+            className="text-[0.62rem] font-semibold leading-none"
             style={{ color: moreOpen ? GOLD : MUTED }}
           >
             المزيد
@@ -297,7 +318,7 @@ export default function AdminSidebar({
   }, []);
 
   return (
-    <div className="relative z-40 md:contents">
+    <div className={cn("relative z-40", isDashboard ? "" : "md:contents")}>
       {/* Top sticky — hide on dashboard (has its own header) */}
       {!isDashboard ? (
         <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[rgba(11,15,20,0.92)] px-4 py-3 backdrop-blur md:hidden">
@@ -324,18 +345,25 @@ export default function AdminSidebar({
         />
       )}
 
-      <div className="hidden h-full md:block">
-        <Suspense fallback={null}>
-          <SidebarNav role={role} />
-        </Suspense>
-      </div>
+      {/* Desktop sidebar — hidden on dashboard home (reference is full-bleed) */}
+      {!isDashboard ? (
+        <div className="hidden h-full md:block">
+          <Suspense fallback={null}>
+            <SidebarNav role={role} />
+          </Suspense>
+        </div>
+      ) : null}
 
       <Suspense fallback={null}>
-        <MobileBottomNav onMore={() => setOpen(true)} moreOpen={open} />
+        <MobileBottomNav
+          onMore={() => setOpen(true)}
+          moreOpen={open}
+          alwaysVisible={isDashboard}
+        />
       </Suspense>
 
       {open ? (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-50">
           <button
             type="button"
             className="absolute inset-0 bg-[rgba(0,0,0,0.55)] backdrop-blur-[2px]"
