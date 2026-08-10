@@ -329,6 +329,7 @@ export default function BookingsPanel({
               />
               <input
                 type="date"
+                className="admin-bookings-date-input"
                 value={dateFilter}
                 onChange={(e) => {
                   onDateFilterChange(e.target.value);

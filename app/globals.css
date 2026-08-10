@@ -826,6 +826,17 @@ body.admin-home-active .admin-main {
   margin-inline: auto;
 }
 
+/* Hide native date indicator; keep gold CalendarDays icon (clicks still open picker). */
+.admin-bookings-date-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-bookings-date-input::-moz-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
 @media (min-width: 1024px) {
   .admin-bookings-panel {
     gap: 22px !important;
