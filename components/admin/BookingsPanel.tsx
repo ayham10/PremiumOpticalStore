@@ -105,6 +105,15 @@ function longDayAr(iso: string): string {
   });
 }
 
+function shortDateAr(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("ar", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 const fieldStyle: CSSProperties = {
   height: 42,
   borderRadius: 12,
@@ -200,16 +209,19 @@ export default function BookingsPanel({
           <button
             type="button"
             onClick={onAdd}
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-[12px] px-4 text-[0.88rem] font-bold lg:flex-none"
+            className="inline-flex items-center justify-center gap-1 rounded-[12px] text-[0.84rem] font-bold"
             style={{
               height: 44,
+              width: "42%",
+              maxWidth: 148,
               background: GOLD,
               color: "#0B0E14",
               border: "none",
+              paddingInline: 10,
             }}
           >
             موعد جديد
-            <Plus size={16} strokeWidth={1.7} />
+            <Plus size={15} strokeWidth={1.7} />
           </button>
           <button
             type="button"
@@ -272,7 +284,7 @@ export default function BookingsPanel({
         </button>
       </div>
 
-      {/* Search + filters */}
+      {/* Search — weekly: search only | list: search + date + service */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
         <div className="relative min-w-0 flex-1">
           <Search
@@ -295,62 +307,66 @@ export default function BookingsPanel({
           />
         </div>
 
-        <label className="relative block lg:w-[12rem]">
-          <CalendarDays
-            size={15}
-            strokeWidth={1.5}
-            className="pointer-events-none absolute top-1/2 z-[1] -translate-y-1/2"
-            style={{ insetInlineStart: 12, color: GOLD }}
-          />
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => {
-              onDateFilterChange(e.target.value);
-              if (e.target.value) {
-                const d = new Date(`${e.target.value}T12:00:00`);
-                setWeekAnchor(startOfWeekMonday(d));
-                setSelectedDay(e.target.value);
-              }
-            }}
-            style={{
-              ...fieldStyle,
-              height: 44,
-              paddingInlineStart: 36,
-            }}
-          />
-        </label>
+        {viewMode === "list" ? (
+          <>
+            <label className="relative block lg:w-[12rem]">
+              <CalendarDays
+                size={15}
+                strokeWidth={1.5}
+                className="pointer-events-none absolute top-1/2 z-[1] -translate-y-1/2"
+                style={{ insetInlineStart: 12, color: GOLD }}
+              />
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => {
+                  onDateFilterChange(e.target.value);
+                  if (e.target.value) {
+                    const d = new Date(`${e.target.value}T12:00:00`);
+                    setWeekAnchor(startOfWeekMonday(d));
+                    setSelectedDay(e.target.value);
+                  }
+                }}
+                style={{
+                  ...fieldStyle,
+                  height: 44,
+                  paddingInlineStart: 36,
+                }}
+              />
+            </label>
 
-        <label className="relative block lg:w-[12.5rem]">
-          <Filter
-            size={15}
-            strokeWidth={1.5}
-            className="pointer-events-none absolute top-1/2 z-[1] -translate-y-1/2"
-            style={{ insetInlineStart: 12, color: GOLD }}
-          />
-          <select
-            value={typeFilter}
-            onChange={(e) => onTypeFilterChange(e.target.value)}
-            style={{
-              ...fieldStyle,
-              height: 44,
-              paddingInlineStart: 36,
-              appearance: "none",
-            }}
-          >
-            <option value="all">كل الخدمات</option>
-            <option value="eye_exam">{serviceLabel("eye_exam")}</option>
-            <option value="contact_lens_fitting">
-              {serviceLabel("contact_lens_fitting")}
-            </option>
-            <option value="frame_consultation">
-              {serviceLabel("frame_consultation")}
-            </option>
-            <option value="sunglasses_consultation">
-              {serviceLabel("sunglasses_consultation")}
-            </option>
-          </select>
-        </label>
+            <label className="relative block lg:w-[12.5rem]">
+              <Filter
+                size={15}
+                strokeWidth={1.5}
+                className="pointer-events-none absolute top-1/2 z-[1] -translate-y-1/2"
+                style={{ insetInlineStart: 12, color: GOLD }}
+              />
+              <select
+                value={typeFilter}
+                onChange={(e) => onTypeFilterChange(e.target.value)}
+                style={{
+                  ...fieldStyle,
+                  height: 44,
+                  paddingInlineStart: 36,
+                  appearance: "none",
+                }}
+              >
+                <option value="all">كل الخدمات</option>
+                <option value="eye_exam">{serviceLabel("eye_exam")}</option>
+                <option value="contact_lens_fitting">
+                  {serviceLabel("contact_lens_fitting")}
+                </option>
+                <option value="frame_consultation">
+                  {serviceLabel("frame_consultation")}
+                </option>
+                <option value="sunglasses_consultation">
+                  {serviceLabel("sunglasses_consultation")}
+                </option>
+              </select>
+            </label>
+          </>
+        ) : null}
       </div>
 
       {/* Weekly strip */}
@@ -411,7 +427,7 @@ export default function BookingsPanel({
             </div>
           </div>
 
-          <div className="flex gap-2.5 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-7 lg:gap-3 lg:overflow-visible">
+          <div className="flex gap-3 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-7 lg:gap-3.5 lg:overflow-visible">
             {weekDays.map((day) => {
               const active = day.iso === selectedDay;
               return (
@@ -422,7 +438,7 @@ export default function BookingsPanel({
                     setSelectedDay(day.iso);
                     onDateFilterChange(day.iso);
                   }}
-                  className="flex min-w-[5.1rem] flex-1 flex-col items-center gap-1 rounded-[14px] px-2 py-3.5 lg:min-w-0 lg:py-4"
+                  className="flex min-w-[5.6rem] flex-1 flex-col items-center rounded-[14px] px-2.5 lg:min-w-0"
                   style={{
                     background: active ? GOLD : PAGE_BG,
                     border: active
@@ -432,16 +448,18 @@ export default function BookingsPanel({
                     boxShadow: active
                       ? "0 0 0 1px rgba(212,175,55,0.35)"
                       : "none",
+                    paddingBlock: 16,
+                    gap: 8,
                   }}
                 >
-                  <span className="text-[0.72rem] font-semibold leading-tight lg:text-[0.76rem]">
+                  <span className="text-[0.78rem] font-semibold leading-snug lg:text-[0.82rem]">
                     {weekdayShortAr(day.date)}
                   </span>
-                  <span className="text-[0.84rem] font-bold tabular-nums leading-tight lg:text-[0.9rem]">
+                  <span className="text-[0.95rem] font-bold tabular-nums leading-none lg:text-[1.02rem]">
                     {dayMonthAr(day.date)}
                   </span>
                   <span
-                    className="mt-0.5 text-[0.72rem] font-bold tabular-nums lg:text-[0.78rem]"
+                    className="text-[0.74rem] font-bold tabular-nums lg:text-[0.8rem]"
                     style={{ color: active ? "#0B0E14" : GOLD }}
                   >
                     {day.count}
@@ -486,12 +504,12 @@ export default function BookingsPanel({
             </p>
           ) : (
             <>
-              {/* Desktop headers: time | customer | phone | service | notes */}
+              {/* Desktop headers */}
               <div
-                className="hidden grid-cols-[7rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] gap-4 px-5 pb-2.5 pt-4 text-[0.74rem] font-medium lg:grid"
+                className="hidden grid-cols-[7.75rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] gap-4 px-5 pb-2.5 pt-4 text-[0.74rem] font-medium lg:grid"
                 style={{ color: MUTED }}
               >
-                <span>الوقت</span>
+                <span>{viewMode === "list" ? "التاريخ / الوقت" : "الوقت"}</span>
                 <span>العميل</span>
                 <span>رقم الهاتف</span>
                 <span>الخدمة</span>
@@ -502,6 +520,7 @@ export default function BookingsPanel({
               <ul className="m-0 list-none p-0">
                 {visible.map((row) => {
                   const { clock, period } = splitTime(row.appointmentTime);
+                  const showDate = viewMode === "list";
                   return (
                     <li key={row.id}>
                       <button
@@ -516,16 +535,27 @@ export default function BookingsPanel({
                         }}
                       >
                         {/* Desktop row */}
-                        <div className="hidden grid-cols-[7rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] items-center gap-4 px-5 py-4 lg:grid">
+                        <div className="hidden grid-cols-[7.75rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] items-center gap-4 px-5 py-3.5 lg:grid">
                           <div>
+                            {showDate ? (
+                              <p
+                                className="m-0 text-[0.72rem] font-semibold leading-tight"
+                                style={{ color: MUTED }}
+                              >
+                                {shortDateAr(row.appointmentDate)}
+                              </p>
+                            ) : null}
                             <p
-                              className="m-0 text-[1.02rem] font-bold tabular-nums leading-tight"
-                              style={{ color: GOLD }}
+                              className="m-0 text-[1rem] font-bold tabular-nums leading-tight"
+                              style={{
+                                color: GOLD,
+                                marginTop: showDate ? 4 : 0,
+                              }}
                             >
                               {clock}
                             </p>
                             <p
-                              className="mb-0 mt-1 text-[0.74rem] font-medium leading-tight"
+                              className="mb-0 mt-0.5 text-[0.72rem] font-medium leading-tight"
                               style={{ color: GOLD }}
                             >
                               {period}
@@ -565,36 +595,47 @@ export default function BookingsPanel({
                           <ChevronLeft size={18} strokeWidth={1.55} color={GOLD} />
                         </div>
 
-                        {/* Mobile — time | name | phone only */}
-                        <div className="flex items-center gap-3.5 px-3.5 py-4 lg:hidden">
-                          <div className="w-[4.4rem] shrink-0">
+                        {/* Mobile — list: date+time | name | phone; weekly: time | name | phone */}
+                        <div className="flex items-center gap-3 px-3.5 py-3 lg:hidden">
+                          <div className="w-[4.6rem] shrink-0">
+                            {showDate ? (
+                              <p
+                                className="m-0 text-[0.68rem] font-semibold leading-tight"
+                                style={{ color: MUTED }}
+                              >
+                                {shortDateAr(row.appointmentDate)}
+                              </p>
+                            ) : null}
                             <p
-                              className="m-0 text-[0.95rem] font-bold tabular-nums leading-tight"
-                              style={{ color: GOLD }}
+                              className="m-0 text-[0.9rem] font-bold tabular-nums leading-tight"
+                              style={{
+                                color: GOLD,
+                                marginTop: showDate ? 3 : 0,
+                              }}
                             >
                               {clock}
                             </p>
                             <p
-                              className="mb-0 mt-1 text-[0.7rem] font-medium leading-tight"
+                              className="mb-0 mt-0.5 text-[0.68rem] font-medium leading-tight"
                               style={{ color: GOLD }}
                             >
                               {period}
                             </p>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <User size={15} strokeWidth={1.45} color={GOLD} />
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <User size={14} strokeWidth={1.45} color={GOLD} />
                               <span
-                                className="truncate text-[0.9rem] font-semibold"
+                                className="truncate text-[0.86rem] font-semibold"
                                 style={{ color: INK }}
                               >
                                 {row.fullName}
                               </span>
                             </div>
-                            <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                              <Phone size={14} strokeWidth={1.45} color={GOLD} />
+                            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                              <Phone size={13} strokeWidth={1.45} color={GOLD} />
                               <span
-                                className="truncate text-[0.8rem] tabular-nums"
+                                className="truncate text-[0.76rem] tabular-nums"
                                 style={{ color: MUTED }}
                                 dir="ltr"
                               >
@@ -603,7 +644,7 @@ export default function BookingsPanel({
                             </div>
                           </div>
                           <ChevronLeft
-                            size={18}
+                            size={17}
                             strokeWidth={1.55}
                             color={GOLD}
                             className="shrink-0"
