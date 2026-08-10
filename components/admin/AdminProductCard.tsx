@@ -37,36 +37,29 @@ export default function AdminProductCard({
         borderRadius: 16,
       }}
     >
-      {/* Image — dominant visual */}
+      {/* Image — main visual (~55–60% of card) */}
       <div
-        className="relative w-full overflow-hidden"
+        className="relative w-full shrink-0 overflow-hidden"
         style={{
           background: PAGE_BG,
-          aspectRatio: "1 / 1",
-          maxHeight: "none",
+          aspectRatio: "5 / 4",
         }}
       >
-        <div
-          className="h-full w-full"
-          style={{ minHeight: 160 }}
-        >
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumb}
-              alt=""
-              className="h-full w-full object-cover"
-              style={{ minHeight: 160 }}
-            />
-          ) : (
-            <div
-              className="grid h-full min-h-[160px] place-items-center text-[0.75rem]"
-              style={{ color: MUTED }}
-            >
-              —
-            </div>
-          )}
-        </div>
+        {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumb}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className="grid h-full place-items-center text-[0.75rem]"
+            style={{ color: MUTED }}
+          >
+            —
+          </div>
+        )}
 
         <span
           className="absolute end-2.5 top-2.5 rounded-full px-2 py-0.5 text-[0.68rem] font-bold"
@@ -98,7 +91,10 @@ export default function AdminProductCard({
         </h2>
 
         <div className="mt-2.5 flex items-end justify-between gap-2">
-          <p className="m-0 text-[1rem] font-bold tabular-nums" style={{ color: GOLD }}>
+          <p
+            className="m-0 text-[1rem] font-bold tabular-nums"
+            style={{ color: GOLD }}
+          >
             {formatPrice(product.sellingPrice)}
           </p>
           <p className="m-0 text-[0.8rem] font-semibold" style={{ color: MUTED }}>
