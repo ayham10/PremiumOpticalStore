@@ -1,10 +1,16 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import Image from "next/image";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
-import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import SingleImageField from "@/components/admin/SingleImageField";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
@@ -17,6 +23,13 @@ import type {
   Promotion,
   PromotionScope,
 } from "@/lib/types";
+
+const PAGE_BG = "#0B0E14";
+const CARD_BG = "#151A21";
+const BORDER = "#2A2F36";
+const GOLD = "#D4AF37";
+const MUTED = "#8A929C";
+const DANGER = "#F07178";
 
 function unwrapList<T>(data: unknown, keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -97,7 +110,25 @@ function fromPromo(p: Promotion): PromoForm {
   };
 }
 
+function discountLabel(p: Promotion): string {
+  if (p.discountValue !== undefined && p.discountValue !== null) {
+    if (p.discountType === "fixed") return formatPrice(p.discountValue);
+    return `${p.discountValue}%`;
+  }
+  return p.discount || "—";
+}
+
 const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
+
+const pageWrap: CSSProperties = {
+  margin: "-1.15rem",
+  marginBottom: "calc(-1.5rem - env(safe-area-inset-bottom, 0px))",
+  minHeight: "100%",
+  background: PAGE_BG,
+  padding: 16,
+  paddingBottom: "calc(5.85rem + env(safe-area-inset-bottom, 0px))",
+  overflowX: "hidden",
+};
 
 export default function AdminPromotionsPage() {
   const { t } = useLocale();
@@ -156,6 +187,11 @@ export default function AdminPromotionsPage() {
         .some((f) => String(f).toLowerCase().includes(q))
     );
   }, [products, productQuery]);
+
+  const sorted = useMemo(
+    () => items.slice().sort((a, b) => a.priority - b.priority),
+    [items]
+  );
 
   function openCreate() {
     setEditing(null);
@@ -271,132 +307,208 @@ export default function AdminPromotionsPage() {
     }
   }
 
+  const addBtnStyle: CSSProperties = {
+    height: 42,
+    background: "transparent",
+    color: GOLD,
+    border: `1px solid rgba(212,175,55,0.75)`,
+  };
+
   return (
-    <div className="space-y-5">
-      <AdminPageHeader
-        kicker={t("admin.promotions.kicker")}
-        title={t("admin.promotions.title")}
-        description={t("admin.promotions.description")}
-        actions={
-          <button type="button" className="btn btn-accent" onClick={openCreate}>
-            <Plus size={16} /> {t("admin.promotions.add")}
-          </button>
-        }
-      />
+    <div style={pageWrap}>
+      <div className="mx-auto w-full" style={{ maxWidth: 1180 }}>
+        <header className="mb-4 md:mb-5">
+          <p
+            className="mb-1.5 text-[0.72rem] font-semibold tracking-wide"
+            style={{ color: MUTED }}
+          >
+            {t("admin.promotions.kicker")}
+          </p>
+          <h1
+            className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em] md:text-[1.65rem]"
+            style={{ color: "#FFFFFF", lineHeight: 1.35 }}
+          >
+            {t("admin.promotions.title")}
+          </h1>
+          <p
+            className="mb-0 mt-1.5 max-w-[32rem] text-[0.84rem] leading-relaxed md:text-[0.88rem]"
+            style={{ color: MUTED }}
+          >
+            {t("admin.promotions.description")}
+          </p>
+        </header>
 
-      {message ? (
-        <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
-          {message}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
-          {error}
-        </p>
-      ) : null}
+        <button
+          type="button"
+          onClick={openCreate}
+          className="mb-4 inline-flex w-full items-center justify-center gap-1.5 rounded-[12px] text-[0.88rem] font-bold md:mb-5 md:w-auto md:px-4"
+          style={addBtnStyle}
+        >
+          <Plus size={15} strokeWidth={1.7} />
+          {t("admin.promotions.add")}
+        </button>
 
-      <div className="admin-card overflow-hidden">
-        <div className="md:overflow-x-auto">
-          <table className="table table-mobile-cards">
-            <thead>
-              <tr>
-                <th>{t("admin.promotions.colTitle")}</th>
-                <th>{t("admin.promotions.colDiscount")}</th>
-                <th>{t("admin.promotions.colScope")}</th>
-                <th>{t("admin.promotions.colSchedule")}</th>
-                <th>{t("admin.promotions.colCoupon")}</th>
-                <th>{t("admin.promotions.colHomepage")}</th>
-                <th>{t("admin.promotions.colPriority")}</th>
-                <th>{t("admin.promotions.colActive")}</th>
-                <th>{t("admin.promotions.colActions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="text-[var(--slate)]">
-                    {t("admin.promotions.loading")}
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="text-[var(--slate)]">
-                    {t("admin.promotions.empty")}
-                  </td>
-                </tr>
-              ) : (
-                items
-                  .slice()
-                  .sort((a, b) => a.priority - b.priority)
-                  .map((p) => (
-                    <tr key={p.id}>
-                      <td data-label={t("admin.promotions.colTitle")}>
-                        <div className="font-medium text-[var(--ink)]">
-                          {p.title}
-                        </div>
-                        <div className="max-w-none truncate text-xs text-[var(--slate)] md:max-w-[220px]">
-                          {p.description}
-                        </div>
-                      </td>
-                      <td data-label={t("admin.promotions.colDiscount")}>
-                        {p.discount}
-                      </td>
-                      <td data-label={t("admin.promotions.colScope")}>
+        {message ? (
+          <p
+            className="mb-3.5 rounded-[12px] px-3 py-2 text-sm"
+            style={{
+              background: "rgba(212,175,55,0.12)",
+              border: "1px solid rgba(212,175,55,0.35)",
+              color: GOLD,
+            }}
+          >
+            {message}
+          </p>
+        ) : null}
+        {error ? (
+          <p
+            className="mb-3.5 rounded-[12px] px-3 py-2 text-sm"
+            style={{
+              background: "rgba(224,122,122,0.12)",
+              border: "1px solid rgba(224,122,122,0.35)",
+              color: DANGER,
+            }}
+          >
+            {error}
+          </p>
+        ) : null}
+
+        {loading ? (
+          <p className="m-0 text-sm" style={{ color: MUTED }}>
+            {t("admin.promotions.loading")}
+          </p>
+        ) : sorted.length === 0 ? (
+          <p className="m-0 text-sm" style={{ color: MUTED }}>
+            {t("admin.promotions.empty")}
+          </p>
+        ) : (
+          <ul
+            className="m-0 grid list-none p-0 md:grid-cols-2 xl:grid-cols-3"
+            style={{ gap: 15 }}
+          >
+            {sorted.map((p) => (
+              <li key={p.id}>
+                <article
+                  className="flex h-full flex-col"
+                  style={{
+                    background: CARD_BG,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 12,
+                    padding: 14,
+                    gap: 12,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h2
+                        className="m-0 truncate text-[0.98rem] font-semibold leading-snug"
+                        style={{ color: "#FFFFFF" }}
+                      >
+                        {p.title}
+                      </h2>
+                      <p
+                        className="mb-0 mt-1 line-clamp-2 text-[0.78rem] leading-relaxed"
+                        style={{ color: MUTED }}
+                      >
+                        {p.description}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 rounded-[6px] px-2 py-0.5 text-[0.68rem] font-bold"
+                      style={{
+                        background: p.active ? "#0F3D2E" : "#6B2A2E",
+                        color: "#FFFFFF",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {p.active
+                        ? t("admin.promotions.active")
+                        : t("admin.promotions.off")}
+                    </span>
+                  </div>
+
+                  <div
+                    className="flex flex-col gap-2 rounded-[10px] px-3 py-2.5"
+                    style={{
+                      background: PAGE_BG,
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-[0.78rem]">
+                      <span style={{ color: MUTED }}>
+                        {t("admin.promotions.colDiscount")}
+                      </span>
+                      <span
+                        className="font-semibold tabular-nums"
+                        style={{ color: "#FFFFFF" }}
+                      >
+                        {discountLabel(p)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[0.78rem]">
+                      <span style={{ color: MUTED }}>
+                        {t("admin.promotions.colScope")}
+                      </span>
+                      <span
+                        className="truncate font-medium"
+                        style={{ color: "#FFFFFF" }}
+                      >
                         {scopeLabel(p.scope)}
-                      </td>
-                      <td
-                        data-label={t("admin.promotions.colSchedule")}
-                        className="text-sm"
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[0.78rem]">
+                      <span style={{ color: MUTED }}>
+                        {t("admin.promotions.colSchedule")}
+                      </span>
+                      <span
+                        className="truncate font-medium tabular-nums"
+                        style={{ color: "#FFFFFF" }}
+                        dir="ltr"
                       >
                         {p.startDate} → {p.endDate}
-                      </td>
-                      <td data-label={t("admin.promotions.colCoupon")}>
-                        {p.couponCode || "—"}
-                      </td>
-                      <td data-label={t("admin.promotions.colHomepage")}>
-                        {p.homepageVisible
-                          ? t("admin.promotions.yes")
-                          : t("admin.promotions.no")}
-                      </td>
-                      <td data-label={t("admin.promotions.colPriority")}>
-                        {p.priority}
-                      </td>
-                      <td data-label={t("admin.promotions.colActive")}>
-                        <span className={`pill ${p.active ? "" : "opacity-60"}`}>
-                          {p.active
-                            ? t("admin.promotions.active")
-                            : t("admin.promotions.off")}
-                        </span>
-                      </td>
-                      <td
-                        data-label={t("admin.promotions.colActions")}
-                        className="actions-cell"
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex items-center justify-end gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(p)}
+                      aria-label={t("admin.promotions.edit")}
+                      className="grid place-items-center rounded-[8px] transition hover:brightness-110"
+                      style={{
+                        width: 36,
+                        height: 36,
+                        color: GOLD,
+                        background: "transparent",
+                        border: `1px solid rgba(212,175,55,0.7)`,
+                      }}
+                    >
+                      <Pencil size={14} strokeWidth={1.55} />
+                    </button>
+                    {hasPermission(role, "delete") ? (
+                      <button
+                        type="button"
+                        onClick={() => void onDelete(p)}
+                        aria-label="حذف"
+                        className="grid place-items-center rounded-[8px] transition hover:brightness-110"
+                        style={{
+                          width: 36,
+                          height: 36,
+                          color: DANGER,
+                          background: "transparent",
+                          border: `1px solid rgba(240,113,120,0.55)`,
+                        }}
                       >
-                        <div className="flex flex-wrap gap-1.5">
-                          <button
-                            type="button"
-                            className="btn btn-ghost !min-h-11 !px-3 !text-xs"
-                            onClick={() => openEdit(p)}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          {hasPermission(role, "delete") ? (
-                            <button
-                              type="button"
-                              className="btn btn-ghost !min-h-11 !px-3 !text-xs text-[var(--danger)]"
-                              onClick={() => void onDelete(p)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <Trash2 size={14} strokeWidth={1.55} />
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <AdminModal

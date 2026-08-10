@@ -865,7 +865,7 @@ const ar: Dictionary = {
       yes: "نعم",
       no: "لا",
       active: "نشط",
-      off: "متوقف",
+      off: "غير نشط",
       fieldTitle: "العنوان",
       fieldDescription: "الوصف",
       fieldCoupon: "رمز الكوبون",
