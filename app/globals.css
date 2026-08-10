@@ -7445,8 +7445,8 @@ button.promo-card {
 
 .admin-wh-period-head {
   display: none;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem 2.5rem;
-  gap: 0.55rem;
+  grid-template-columns: auto auto auto auto;
+  gap: 0.45rem;
   padding: 0 0.35rem;
   font-size: 0.68rem;
   font-weight: 700;
@@ -7459,27 +7459,23 @@ button.promo-card {
   text-align: center;
 }
 
-@media (min-width: 640px) {
-  .admin-wh-period-head {
-    display: grid;
-  }
-}
-
 .admin-wh-period-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.55rem;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  width: max-content;
+  max-width: 100%;
   padding: 0.7rem 0.75rem;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.02);
-  align-items: center;
 }
 
 @media (min-width: 640px) {
   .admin-wh-period-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem 2.5rem;
-    gap: 0.55rem;
+    gap: 0.5rem;
     padding: 0.55rem 0.65rem;
   }
 }
@@ -7492,21 +7488,19 @@ button.promo-card {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  width: max-content;
   min-width: 0;
+  flex: 0 0 auto;
 }
 
 .admin-wh-period-mobile-label {
+  display: block;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--muted);
-}
-
-@media (min-width: 640px) {
-  .admin-wh-period-mobile-label {
-    display: none;
-  }
+  white-space: nowrap;
 }
 
 .admin-wh-period-input {
@@ -7536,17 +7530,14 @@ button.promo-card {
 
 .admin-wh-period-toggle {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  min-height: 100%;
   cursor: pointer;
   user-select: none;
-}
-
-@media (min-width: 640px) {
-  .admin-wh-period-toggle {
-    justify-content: center;
-  }
 }
 
 .admin-wh-period-toggle input {
@@ -7598,19 +7589,13 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
-  justify-self: end;
+  flex: 0 0 auto;
   border-radius: 9px;
   border: 1px solid rgba(224, 122, 122, 0.35);
   background: rgba(224, 122, 122, 0.08);
   color: #e07a7a;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-@media (min-width: 640px) {
-  .admin-wh-period-delete {
-    justify-self: center;
-  }
 }
 
 .admin-wh-period-delete:hover:not(:disabled) {
