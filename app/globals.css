@@ -3088,13 +3088,42 @@ main.frames-main {
   }
 }
 
-/* Desktop/web: place eyes + sunglasses at vertical center of the wide hero.
-   Mobile unchanged. */
+/* Desktop/web: keep sunglasses/eyes near the vertical center of the wide
+   hero. Portrait source + short 21:9 crop needs width-tuned object-position.
+   Mobile framing (below) is unchanged. */
 @media (min-width: 768px) {
   .sunglasses-page .frames-hero-video,
   .sunglasses-page .frames-hero img {
     object-fit: cover;
+    object-position: center 24%;
+  }
+}
+
+@media (min-width: 1100px) {
+  .sunglasses-page .frames-hero-video,
+  .sunglasses-page .frames-hero img {
+    object-position: center 24.5%;
+  }
+}
+
+@media (min-width: 1400px) {
+  .sunglasses-page .frames-hero-video,
+  .sunglasses-page .frames-hero img {
+    object-position: center 25.5%;
+  }
+}
+
+@media (min-width: 1800px) {
+  .sunglasses-page .frames-hero-video,
+  .sunglasses-page .frames-hero img {
     object-position: center 26%;
+  }
+}
+
+@media (min-width: 2400px) {
+  .sunglasses-page .frames-hero-video,
+  .sunglasses-page .frames-hero img {
+    object-position: center 27%;
   }
 }
 
