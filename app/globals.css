@@ -499,7 +499,7 @@ html.admin-dark[lang="he"] .admin-auth {
   padding: 1.15rem;
   width: 100%;
   min-width: 0;
-  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
