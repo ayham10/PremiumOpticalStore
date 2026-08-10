@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -156,6 +156,22 @@ export default function BookingsPanel({
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeekSunday(new Date()));
   const [selectedDay, setSelectedDay] = useState(() => isoLocal(new Date()));
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  function openDatePicker() {
+    const input = dateInputRef.current;
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === "function") {
+        void input.showPicker();
+        return;
+      }
+    } catch {
+      /* showPicker can throw if not triggered by a user gesture in some browsers */
+    }
+    input.focus();
+    input.click();
+  }
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
@@ -321,13 +337,21 @@ export default function BookingsPanel({
         {viewMode === "list" ? (
           <>
             <label className="relative block lg:w-[12rem]">
-              <CalendarDays
-                size={15}
-                strokeWidth={1.5}
-                className="pointer-events-none absolute top-1/2 z-[1] -translate-y-1/2"
-                style={{ insetInlineStart: 12, color: GOLD }}
-              />
+              <button
+                type="button"
+                aria-label="فتح التقويم"
+                onClick={openDatePicker}
+                className="absolute top-1/2 z-[2] -translate-y-1/2 border-0 bg-transparent p-0 leading-none"
+                style={{
+                  insetInlineStart: 12,
+                  color: GOLD,
+                  cursor: "pointer",
+                }}
+              >
+                <CalendarDays size={15} strokeWidth={1.5} aria-hidden />
+              </button>
               <input
+                ref={dateInputRef}
                 type="date"
                 className="admin-bookings-date-input"
                 value={dateFilter}
