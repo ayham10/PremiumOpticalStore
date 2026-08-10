@@ -323,6 +323,7 @@ export type Dictionary = {
     signingIn: string;
     demoHint: string;
     sidebar: Record<string, string>;
+    account: Record<string, string>;
     dashboard: Record<string, string>;
     bookings: Record<string, string>;
     availability: Record<string, string>;
@@ -1102,6 +1103,26 @@ const en: Dictionary = {
       groupSystem: "System",
       adminLabel: "Admin",
       loading: "Loading admin…",
+      account: "Account",
+    },
+    account: {
+      title: "Account settings",
+      name: "Name",
+      email: "Email / username",
+      currentPassword: "Current password",
+      newPassword: "New password",
+      confirmPassword: "Confirm new password",
+      save: "Save changes",
+      saving: "Saving…",
+      loading: "Loading…",
+      saved: "Changes saved successfully",
+      loadError: "Failed to load account",
+      saveError: "Failed to save account",
+      nameRequired: "Name is required",
+      emailRequired: "Email is required",
+      currentRequired: "Enter your current password",
+      passwordShort: "New password must be at least 6 characters",
+      passwordMismatch: "Password confirmation does not match",
     },
     dashboard: {
       title: "Home",

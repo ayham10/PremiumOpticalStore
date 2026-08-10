@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   Home,
   Glasses,
+  UserRound,
   X,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
@@ -26,6 +27,7 @@ import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import AccountSettingsModal from "@/components/admin/AccountSettingsModal";
 
 const GOLD = "#D4AF37";
 const BORDER = "#2A2F36";
@@ -131,6 +133,7 @@ function SidebarNav({
   const { t } = useLocale();
   const { branding } = useBranding();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const tab = searchParams.get("tab");
 
   async function logout() {
@@ -181,6 +184,14 @@ function SidebarNav({
         </div>
         <button
           type="button"
+          onClick={() => setAccountOpen(true)}
+          className="admin-nav-link w-full"
+        >
+          <UserRound size={18} />
+          {t("admin.sidebar.account")}
+        </button>
+        <button
+          type="button"
           onClick={logout}
           disabled={loggingOut}
           className="admin-nav-link w-full text-[var(--danger)] hover:bg-[rgba(224,122,122,0.12)]"
@@ -189,6 +200,11 @@ function SidebarNav({
           {t("admin.logout")}
         </button>
       </div>
+
+      <AccountSettingsModal
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+      />
     </aside>
   );
 }

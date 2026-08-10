@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return jsonError("Email and password are required", 400);
     }
 
-    const user = authenticateUser(email, password);
+    const user = await authenticateUser(email, password);
     if (!user) {
       return jsonError("Invalid email or password", 401);
     }

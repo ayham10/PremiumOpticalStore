@@ -187,7 +187,7 @@ export default function AdminDashboardPage() {
   }, [load]);
 
   useEffect(() => {
-    void (async () => {
+    async function refreshProfile() {
       try {
         const data = await apiFetch<{ user: AdminSession } | AdminSession>(
           "/api/auth/me",
@@ -198,7 +198,15 @@ export default function AdminDashboardPage() {
       } catch {
         /* keep defaults */
       }
-    })();
+    }
+    void refreshProfile();
+    function onAccountUpdated() {
+      void refreshProfile();
+    }
+    window.addEventListener("oyon:account-updated", onAccountUpdated);
+    return () => {
+      window.removeEventListener("oyon:account-updated", onAccountUpdated);
+    };
   }, []);
 
   useEffect(() => {
