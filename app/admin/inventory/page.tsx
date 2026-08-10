@@ -11,21 +11,18 @@ import {
 import {
   ArrowRight,
   ChevronRight,
-  Copy,
-  Filter,
   ImageIcon,
   Package,
-  Pencil,
   Plus,
   Search,
-  SlidersHorizontal,
   Trash2,
   Wallet,
 } from "lucide-react";
+import AdminProductCard from "@/components/admin/AdminProductCard";
 import ProductImagesField from "@/components/admin/ProductImagesField";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
-import { formatPrice, slugify } from "@/lib/format";
+import { slugify } from "@/lib/format";
 import type {
   AdminSession,
   Product,
@@ -826,22 +823,39 @@ export default function AdminInventoryPage() {
   }
 
   /* ───────────── Products list ───────────── */
+  const compactSelect: CSSProperties = {
+    height: 42,
+    borderRadius: 12,
+    border: `1px solid ${BORDER}`,
+    background: CARD_BG,
+    color: "#FFFFFF",
+    padding: "0 0.65rem",
+    font: "inherit",
+    fontSize: "0.8rem",
+    fontWeight: 600,
+    outline: "none",
+    maxWidth: "100%",
+  };
+
   return (
-    <div style={pageWrap} className="space-y-[18px]">
-      <header>
+    <div style={pageWrap}>
+      <header className="mb-[18px]">
         <h1
           className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em]"
           style={{ color: "#FFFFFF", lineHeight: 1.4 }}
         >
           المنتجات
         </h1>
-        <p className="mb-0 mt-1 text-[0.86rem] leading-relaxed" style={{ color: MUTED }}>
+        <p
+          className="mb-0 mt-1 text-[0.86rem] leading-relaxed"
+          style={{ color: MUTED }}
+        >
           إدارة المنتجات والمخزون والأسعار والصور
         </p>
         <button
           type="button"
           onClick={openCreate}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] text-[0.95rem] font-bold"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] text-[0.95rem] font-bold md:w-auto md:px-5"
           style={{
             height: 48,
             background: GOLD,
@@ -854,89 +868,73 @@ export default function AdminInventoryPage() {
         </button>
       </header>
 
-      <section className="space-y-2.5">
-        <div className="relative">
+      <section className="mb-[18px] flex flex-wrap items-center gap-2.5">
+        <div className="relative shrink-0" style={{ width: "min(11.5rem, 46%)" }}>
           <Search
-            size={16}
+            size={15}
             strokeWidth={1.55}
             className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-            style={{ insetInlineStart: 12, color: MUTED }}
+            style={{ insetInlineStart: 10, color: MUTED }}
           />
           <input
             style={{
-              ...fieldStyle,
-              height: 46,
-              paddingInlineStart: 38,
-              background: CARD_BG,
+              ...compactSelect,
+              width: "100%",
+              paddingInlineStart: 32,
+              fontWeight: 500,
             }}
-            placeholder="ابحث بالاسم، الماركة أو SKU..."
+            placeholder="ابحث بالاسم…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <select
-            style={{ ...fieldStyle, height: 44, flex: 1 }}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="all">كل الفئات</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            style={{ ...fieldStyle, height: 44, flex: 1 }}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">كل الحالات</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {statusLabel(s)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            aria-label="تصفية"
-            className="grid shrink-0 place-items-center rounded-[12px]"
-            style={{
-              width: 44,
-              height: 44,
-              border: `1px solid ${BORDER}`,
-              background: CARD_BG,
-              color: GOLD,
-            }}
-          >
-            <Filter size={16} strokeWidth={1.55} />
-          </button>
-        </div>
+        <select
+          style={{ ...compactSelect, width: "auto", minWidth: "7.5rem" }}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="all">كل الفئات</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
 
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <p className="m-0 text-[0.8rem]" style={{ color: MUTED }}>
-            {filtered.length} منتج
-          </p>
-          <button
-            type="button"
-            onClick={() =>
-              setSortMode((m) => (m === "newest" ? "name" : "newest"))
-            }
-            className="inline-flex items-center gap-1.5 text-[0.78rem] font-semibold"
-            style={{ color: GOLD, background: "none", border: "none" }}
-          >
-            <SlidersHorizontal size={14} strokeWidth={1.55} />
-            {sortMode === "newest" ? "الأحدث أولاً" : "حسب الاسم"}
-          </button>
-        </div>
+        <select
+          style={{ ...compactSelect, width: "auto", minWidth: "7.25rem" }}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">كل الحالات</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {statusLabel(s)}
+            </option>
+          ))}
+        </select>
+
+        <select
+          style={{ ...compactSelect, width: "auto", minWidth: "7.5rem" }}
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as SortMode)}
+        >
+          <option value="newest">الأحدث أولاً</option>
+          <option value="name">حسب الاسم</option>
+        </select>
+
+        <p
+          className="m-0 w-full text-[0.8rem] sm:ms-auto sm:w-auto"
+          style={{ color: MUTED }}
+        >
+          {filtered.length} منتج
+        </p>
       </section>
 
       {message ? (
         <p
-          className="rounded-[12px] px-3 py-2 text-sm"
+          className="mb-4 rounded-[12px] px-3 py-2 text-sm"
           style={{
             background: "rgba(212,175,106,0.12)",
             border: "1px solid rgba(212,175,106,0.35)",
@@ -948,7 +946,7 @@ export default function AdminInventoryPage() {
       ) : null}
       {error ? (
         <p
-          className="rounded-[12px] px-3 py-2 text-sm"
+          className="mb-4 rounded-[12px] px-3 py-2 text-sm"
           style={{
             border: "1px solid rgba(224,122,122,0.35)",
             background: "rgba(224,122,122,0.12)",
@@ -959,166 +957,36 @@ export default function AdminInventoryPage() {
         </p>
       ) : null}
 
-      <div className="space-y-3.5">
-        {loading ? (
-          <p style={{ color: MUTED }}>جارٍ التحميل…</p>
-        ) : filtered.length === 0 ? (
-          <div
-            className="px-4 py-8 text-center"
-            style={{
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 16,
-              color: MUTED,
-            }}
-          >
-            لا توجد منتجات
-          </div>
-        ) : (
-          filtered.map((p) => {
-            const thumb = p.images?.[0];
-            const low = p.stockQuantity <= p.minimumStock;
-            return (
-              <article
-                key={p.id}
-                style={{
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  maxHeight: 220,
-                }}
-              >
-                <div className="flex gap-3 p-3">
-                  <div
-                    className="shrink-0 overflow-hidden"
-                    style={{
-                      width: 112,
-                      height: 112,
-                      borderRadius: 12,
-                      background: PAGE_BG,
-                      border: `1px solid ${BORDER}`,
-                    }}
-                  >
-                    {thumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={thumb}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="grid h-full place-items-center text-[0.7rem]"
-                        style={{ color: MUTED }}
-                      >
-                        —
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h2
-                        className="m-0 line-clamp-2 text-[0.95rem] font-semibold leading-snug"
-                        style={{ color: "#FFFFFF" }}
-                      >
-                        {p.name}
-                      </h2>
-                      {p.status === "active" ? (
-                        <span
-                          className="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] font-bold"
-                          style={{
-                            background: "rgba(94,196,154,0.16)",
-                            color: "#5EC49A",
-                          }}
-                        >
-                          نشط
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mb-0 mt-1 truncate text-[0.78rem]" style={{ color: MUTED }}>
-                      {[p.brand, p.category].filter(Boolean).join(" • ")}
-                    </p>
-                    <span
-                      className="mt-1.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[0.68rem]"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        color: MUTED,
-                        border: `1px solid ${BORDER}`,
-                      }}
-                    >
-                      {p.sku}
-                    </span>
-                    <div className="mt-2 flex items-end justify-between gap-2">
-                      <p
-                        className="m-0 text-[0.95rem] font-bold"
-                        style={{ color: GOLD }}
-                      >
-                        {formatPrice(p.sellingPrice)}
-                      </p>
-                      <p
-                        className="m-0 text-[0.78rem] font-semibold"
-                        style={{ color: low ? "#E6C58A" : "#FFFFFF" }}
-                      >
-                        المخزون: {p.stockQuantity}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className="grid grid-cols-3"
-                  style={{ borderTop: `1px solid ${BORDER}` }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => openEdit(p)}
-                    className="inline-flex items-center justify-center gap-1.5 py-2.5 text-[0.8rem] font-semibold"
-                    style={{
-                      color: GOLD,
-                      background: "transparent",
-                      border: "none",
-                      borderInlineEnd: `1px solid ${BORDER}`,
-                    }}
-                  >
-                    <Pencil size={14} strokeWidth={1.55} />
-                    تعديل
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void onDuplicate(p)}
-                    className="inline-flex items-center justify-center gap-1.5 py-2.5 text-[0.8rem] font-semibold"
-                    style={{
-                      color: MUTED,
-                      background: "transparent",
-                      border: "none",
-                      borderInlineEnd: `1px solid ${BORDER}`,
-                    }}
-                  >
-                    <Copy size={14} strokeWidth={1.55} />
-                    نسخ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void onDelete(p)}
-                    disabled={!hasPermission(role, "delete")}
-                    className="inline-flex items-center justify-center gap-1.5 py-2.5 text-[0.8rem] font-semibold disabled:opacity-40"
-                    style={{
-                      color: "#F07178",
-                      background: "transparent",
-                      border: "none",
-                    }}
-                  >
-                    <Trash2 size={14} strokeWidth={1.55} />
-                    حذف
-                  </button>
-                </div>
-              </article>
-            );
-          })
-        )}
-      </div>
+      {loading ? (
+        <p style={{ color: MUTED }}>جارٍ التحميل…</p>
+      ) : filtered.length === 0 ? (
+        <div
+          className="px-4 py-8 text-center"
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 16,
+            color: MUTED,
+          }}
+        >
+          لا توجد منتجات
+        </div>
+      ) : (
+        <div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4"
+        >
+          {filtered.map((p) => (
+            <AdminProductCard
+              key={p.id}
+              product={p}
+              canDelete={hasPermission(role, "delete")}
+              onEdit={() => openEdit(p)}
+              onDuplicate={() => void onDuplicate(p)}
+              onDelete={() => void onDelete(p)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
