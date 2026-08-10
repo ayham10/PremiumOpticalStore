@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Eye, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
@@ -85,12 +86,24 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
 
 export default function AdminSettingsPage() {
   const { t } = useLocale();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<StoreSettings>(EMPTY_SETTINGS);
-  const [tab, setTab] = useState<SettingsTab>("general");
+  const [tab, setTab] = useState<SettingsTab>(() => {
+    const raw = searchParams.get("tab");
+    const allowed = TABS.map((item) => item.id);
+    return allowed.includes(raw as SettingsTab) ? (raw as SettingsTab) : "general";
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw && TABS.some((item) => item.id === raw)) {
+      setTab(raw as SettingsTab);
+    }
+  }, [searchParams]);
 
   const load = useCallback(async () => {
     setLoading(true);

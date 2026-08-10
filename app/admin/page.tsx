@@ -10,9 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import {
-  CalendarClock,
   CalendarDays,
-  CalendarRange,
   ChevronDown,
   Clock3,
   Contact,
@@ -20,6 +18,7 @@ import {
   Glasses,
   List,
   Menu,
+  Percent,
   Phone,
   PlusCircle,
   RefreshCw,
@@ -299,19 +298,19 @@ export default function AdminDashboardPage() {
       icon: PlusCircle,
     },
     {
-      href: "/admin/calendar",
-      label: "تعديل التواريخ",
-      icon: CalendarRange,
+      href: bookingsHref,
+      label: "عرض كل المواعيد",
+      icon: List,
     },
     {
       href: "/admin/eye-exam?tab=availability",
-      label: "تعديل ساعات العمل",
+      label: "تعديل ساعات العمل للحجز",
       icon: Clock3,
     },
     {
-      href: "/admin/settings",
-      label: "تعديل أوقات الدوام",
-      icon: CalendarClock,
+      href: "/admin/settings?tab=hours",
+      label: "تعديل أيام العمل",
+      icon: CalendarDays,
     },
     {
       href: "/admin/inventory",
@@ -319,9 +318,9 @@ export default function AdminDashboardPage() {
       icon: Glasses,
     },
     {
-      href: bookingsHref,
-      label: "عرض كل المواعيد",
-      icon: List,
+      href: "/admin/promotions",
+      label: "تعديل العروض",
+      icon: Percent,
     },
   ];
 
