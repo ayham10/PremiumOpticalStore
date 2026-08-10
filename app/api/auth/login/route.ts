@@ -18,9 +18,19 @@ export async function POST(request: Request) {
       return jsonError("Email and password are required", 400);
     }
 
-    const user = await authenticateUser(email, password);
+    const user = authenticateUser(email, password);
     if (!user) {
       return jsonError("Invalid email or password", 401);
+    }
+
+    // Apply saved display-name override without changing login credentials
+    try {
+      const { getStore } = await import("@/lib/db/store");
+      const { data } = await getStore();
+      const saved = data.settings.adminDisplayNames?.[user.id]?.trim();
+      if (saved) user.name = saved;
+    } catch {
+      /* keep hard-coded name */
     }
 
     await createSession(user);

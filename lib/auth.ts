@@ -1,11 +1,6 @@
 import { cookies } from "next/headers";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import type { AdminSession, UserRole } from "@/lib/types";
-import {
-  findAdminByEmail,
-  toSessionUser,
-  verifyPassword,
-} from "@/lib/admin-accounts";
 
 const SESSION_COOKIE = "lumina_admin_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -77,14 +72,52 @@ function decodeSession(token: string): (AdminSession & { exp: number }) | null {
   }
 }
 
-export async function authenticateUser(
+function getAdminUsers(): Array<AdminSession & { password: string }> {
+  const pass = process.env.ADMIN_PASSWORD || "oyon2024";
+  return [
+    {
+      id: "staff-maya",
+      name: "Maya Cohen",
+      email: process.env.ADMIN_EMAIL || "admin@oyon.optics",
+      role: "admin",
+      password: pass,
+    },
+    {
+      id: "staff-noah",
+      name: "Noah Levi",
+      email: "employee@oyon.optics",
+      role: "employee",
+      password: process.env.EMPLOYEE_PASSWORD || "employee2024",
+    },
+    {
+      id: "staff-lina",
+      name: "Lina Haddad",
+      email: "receptionist@oyon.optics",
+      role: "receptionist",
+      password: process.env.RECEPTIONIST_PASSWORD || "reception2024",
+    },
+  ];
+}
+
+export function authenticateUser(
   email: string,
   password: string
-): Promise<AdminSession | null> {
-  const user = await findAdminByEmail(email);
+): AdminSession | null {
+  const user = getAdminUsers().find(
+    (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+  );
   if (!user) return null;
-  if (!verifyPassword(password, user.passwordHash)) return null;
-  return toSessionUser(user);
+
+  const a = Buffer.from(user.password);
+  const b = Buffer.from(password);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
 }
 
 export async function createSession(user: AdminSession): Promise<string> {

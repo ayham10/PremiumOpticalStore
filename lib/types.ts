@@ -373,6 +373,8 @@ export interface StoreSettings {
   bookingLeadDays: number;
   currency: string;
   currencySymbol: string;
+  /** Optional per-admin display name overrides (account settings) */
+  adminDisplayNames?: Record<string, string>;
 }
 
 export interface AdminSession {
