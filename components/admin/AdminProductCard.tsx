@@ -30,28 +30,28 @@ function ActionButtons({
   size?: number;
 }) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={onEdit}
         aria-label="تعديل"
-        className="grid place-items-center rounded-[10px] transition hover:brightness-110"
+        className="grid place-items-center rounded-[8px] transition hover:brightness-110"
         style={{
           width: size,
           height: size,
           color: GOLD,
           background: "transparent",
-          border: `1px solid rgba(212,175,55,0.65)`,
+          border: `1px solid rgba(212,175,55,0.7)`,
         }}
       >
-        <Pencil size={15} strokeWidth={1.55} />
+        <Pencil size={14} strokeWidth={1.55} />
       </button>
       <button
         type="button"
         onClick={onDelete}
         disabled={!canDelete}
         aria-label="حذف"
-        className="grid place-items-center rounded-[10px] transition hover:brightness-110 disabled:opacity-40"
+        className="grid place-items-center rounded-[8px] transition hover:brightness-110 disabled:opacity-40"
         style={{
           width: size,
           height: size,
@@ -60,7 +60,7 @@ function ActionButtons({
           border: `1px solid rgba(240,113,120,0.55)`,
         }}
       >
-        <Trash2 size={15} strokeWidth={1.55} />
+        <Trash2 size={14} strokeWidth={1.55} />
       </button>
     </div>
   );
@@ -75,36 +75,41 @@ export default function AdminProductCard({
   const thumb = product.images?.[0];
   const isActive = product.status === "active";
 
-  const badge = isActive ? (
-    <span
-      className="shrink-0 rounded-[6px] px-1.5 py-0.5 text-[0.6rem] font-bold"
-      style={{
-        background: "#0F3D2E",
-        color: "#FFFFFF",
-        lineHeight: 1.3,
-      }}
-    >
-      نشط
-    </span>
-  ) : null;
-
   return (
     <article
-      className="admin-product-card overflow-hidden md:h-full"
+      className="admin-product-card relative overflow-hidden md:h-full"
       style={{
         background: CARD_BG,
         border: `1px solid ${BORDER}`,
-        borderRadius: 14,
+        borderRadius: 12,
       }}
     >
-      {/* MOBILE — compact: image RIGHT, details LEFT */}
-      <div className="flex items-start gap-3 p-2.5 md:hidden">
+      {/* MOBILE — compact ~122px, image RIGHT, details LEFT */}
+      <div
+        className="relative flex items-center md:hidden"
+        style={{ height: 122, padding: 10, gap: 12 }}
+      >
+        {isActive ? (
+          <span
+            className="absolute z-[1] rounded-[5px] px-1.5 py-0.5 text-[0.58rem] font-bold"
+            style={{
+              top: 8,
+              insetInlineEnd: 8,
+              background: "#0F3D2E",
+              color: "#FFFFFF",
+              lineHeight: 1.25,
+            }}
+          >
+            نشط
+          </span>
+        ) : null}
+
         <div
           className="relative shrink-0 overflow-hidden"
           style={{
-            width: 100,
-            height: 100,
-            borderRadius: 11,
+            width: 98,
+            height: 98,
+            borderRadius: 10,
             background: PAGE_BG,
             border: `1px solid ${BORDER}`,
           }}
@@ -122,34 +127,31 @@ export default function AdminProductCard({
           )}
         </div>
 
-        <div
-          className="flex min-w-0 flex-1 flex-col"
-          style={{ minHeight: 100 }}
-        >
-          <div className="flex items-start gap-2">
-            <h2
-              className="m-0 min-w-0 flex-1 truncate text-[0.88rem] font-semibold leading-snug"
-              style={{ color: "#FFFFFF" }}
-            >
-              {product.name}
-            </h2>
-            {badge}
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 pe-1">
+          <h2
+            className="m-0 truncate text-[0.86rem] font-semibold leading-snug"
+            style={{
+              color: "#FFFFFF",
+              paddingInlineEnd: isActive ? 42 : 0,
+            }}
+          >
+            {product.name}
+          </h2>
           <p
-            className="mb-0 mt-1.5 text-[0.92rem] font-bold tabular-nums leading-none"
+            className="m-0 text-[0.9rem] font-bold tabular-nums leading-none"
             style={{ color: GOLD }}
           >
             {formatPrice(product.sellingPrice)}
           </p>
           <p
-            className="mb-0 mt-1.5 text-[0.74rem] font-medium leading-none"
+            className="m-0 text-[0.72rem] font-medium leading-none"
             style={{ color: MUTED }}
           >
             المخزون: {product.stockQuantity}
           </p>
-          <div className="mt-auto self-end pt-2">
+          <div className="self-end pt-0.5">
             <ActionButtons
-              size={32}
+              size={30}
               canDelete={canDelete}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -158,7 +160,7 @@ export default function AdminProductCard({
         </div>
       </div>
 
-      {/* DESKTOP — unchanged structure */}
+      {/* DESKTOP — unchanged */}
       <div className="hidden h-full flex-col md:flex">
         <div
           className="relative w-full shrink-0 overflow-hidden"
