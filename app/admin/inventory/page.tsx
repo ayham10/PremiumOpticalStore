@@ -599,8 +599,12 @@ export default function AdminInventoryPage() {
         ) : (
           <>
             <div
-              className="mb-4 flex justify-center gap-1 overflow-x-auto"
-              style={{ borderBottom: `1px solid ${BORDER}` }}
+              className="grid grid-cols-3"
+              style={{
+                gap: 11,
+                marginBottom: 10,
+                borderBottom: `1px solid ${BORDER}`,
+              }}
             >
               {tabs.map(({ id, label }) => {
                 const active = tab === id;
@@ -609,16 +613,29 @@ export default function AdminInventoryPage() {
                     key={id}
                     type="button"
                     onClick={() => setTab(id)}
-                    className="shrink-0 px-3.5 pb-2.5 pt-1 text-[0.82rem] font-semibold"
+                    className="relative flex min-w-0 flex-col items-center justify-center px-1 pb-2.5 pt-1"
                     style={{
                       color: active ? GOLD : MUTED,
                       background: "transparent",
                       border: "none",
-                      borderBottom: active ? `2px solid ${GOLD}` : "2px solid transparent",
                       marginBottom: -1,
                     }}
                   >
-                    {label}
+                    <span
+                      className="block w-full truncate text-center text-[11px] font-semibold leading-tight whitespace-nowrap"
+                      style={{ letterSpacing: "-0.01em" }}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="mt-1.5 block rounded-full"
+                      style={{
+                        width: 22,
+                        height: 2,
+                        background: active ? GOLD : "transparent",
+                      }}
+                    />
                   </button>
                 );
               })}
