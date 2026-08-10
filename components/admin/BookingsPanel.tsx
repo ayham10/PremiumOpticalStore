@@ -521,11 +521,7 @@ export default function BookingsPanel({
         </p>
 
         <section
-          className={`overflow-hidden rounded-[16px] ${
-            viewMode === "list"
-              ? "max-lg:w-[114%] max-lg:max-w-none max-lg:-mx-[7%]"
-              : ""
-          }`}
+          className="overflow-hidden rounded-[16px]"
           style={{
             background: CARD_BG,
             border: `1px solid ${BORDER}`,
@@ -638,34 +634,37 @@ export default function BookingsPanel({
                           <div
                             className="grid items-center lg:hidden"
                             style={{
-                              gridTemplateColumns: "20% 18% 32% 30%",
-                              columnGap: 0,
-                              padding: "14px 10px",
+                              gridTemplateColumns:
+                                "minmax(0,2.2fr) minmax(0,1.8fr) minmax(0,3fr) minmax(0,3fr)",
+                              columnGap: 9,
+                              height: 38,
+                              padding: "0 10px",
                               width: "100%",
+                              boxSizing: "border-box",
                             }}
                           >
                             <span
-                              className="min-w-0 truncate whitespace-nowrap pe-2 text-start text-[0.74rem] font-semibold tabular-nums leading-none"
+                              className="min-w-0 truncate whitespace-nowrap text-[0.74rem] font-semibold tabular-nums leading-none"
                               style={{ color: MUTED }}
                               dir="ltr"
                             >
                               {compactListDate(row.appointmentDate)}
                             </span>
                             <span
-                              className="min-w-0 truncate whitespace-nowrap pe-2 text-start text-[0.86rem] font-bold tabular-nums leading-none"
+                              className="min-w-0 truncate whitespace-nowrap text-[0.86rem] font-bold tabular-nums leading-none"
                               style={{ color: GOLD }}
                               dir="ltr"
                             >
                               {clock}
                             </span>
                             <span
-                              className="min-w-0 truncate whitespace-nowrap pe-2 text-start text-[0.86rem] font-semibold leading-none"
+                              className="min-w-0 truncate whitespace-nowrap text-[0.86rem] font-semibold leading-none"
                               style={{ color: INK }}
                             >
                               {row.fullName}
                             </span>
                             <span
-                              className="min-w-0 truncate whitespace-nowrap text-start text-[0.74rem] tabular-nums leading-none"
+                              className="min-w-0 overflow-visible whitespace-nowrap text-[0.74rem] tabular-nums leading-none"
                               style={{ color: MUTED }}
                               dir="ltr"
                             >
