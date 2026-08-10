@@ -826,6 +826,12 @@ body.admin-home-active .admin-main {
   margin-inline: auto;
 }
 
+@media (min-width: 1024px) {
+  .admin-bookings-panel {
+    gap: 22px !important;
+  }
+}
+
 .admin-page-title {
   margin: 0.45rem 0 0;
   color: #f5f5f5;

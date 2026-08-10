@@ -172,9 +172,12 @@ export default function BookingsPanel({
   }
 
   return (
-    <div className="admin-bookings-panel" style={{ color: INK }}>
+    <div
+      className="admin-bookings-panel flex flex-col"
+      style={{ color: INK, gap: 18 }}
+    >
       {/* Title + actions */}
-      <div className="mb-4 flex flex-col gap-3 lg:mb-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <h1
@@ -228,15 +231,15 @@ export default function BookingsPanel({
 
       {/* View toggle */}
       <div
-        className="mb-3.5 grid grid-cols-2 gap-1 rounded-[14px] p-1 lg:mb-4 lg:inline-grid lg:w-auto"
+        className="grid grid-cols-2 gap-1.5 rounded-[14px] p-1.5 lg:inline-grid lg:w-auto"
         style={{ background: CARD_BG, border: `1px solid ${BORDER}` }}
       >
         <button
           type="button"
           onClick={() => setViewMode("weekly")}
-          className="inline-flex items-center justify-center gap-2 rounded-[11px] px-3 text-[0.82rem] font-bold"
+          className="inline-flex items-center justify-center gap-2 rounded-[11px] px-3.5 text-[0.82rem] font-bold"
           style={{
-            height: 40,
+            height: 42,
             background: viewMode === "weekly" ? GOLD : "transparent",
             color: viewMode === "weekly" ? "#0B0E14" : INK,
             border: "none",
@@ -252,9 +255,9 @@ export default function BookingsPanel({
         <button
           type="button"
           onClick={() => setViewMode("list")}
-          className="inline-flex items-center justify-center gap-2 rounded-[11px] px-3 text-[0.82rem] font-bold"
+          className="inline-flex items-center justify-center gap-2 rounded-[11px] px-3.5 text-[0.82rem] font-bold"
           style={{
-            height: 40,
+            height: 42,
             background: viewMode === "list" ? GOLD : "transparent",
             color: viewMode === "list" ? "#0B0E14" : INK,
             border: "none",
@@ -270,7 +273,7 @@ export default function BookingsPanel({
       </div>
 
       {/* Search + filters */}
-      <div className="mb-3.5 flex flex-col gap-2.5 lg:mb-4 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
         <div className="relative min-w-0 flex-1">
           <Search
             size={16}
@@ -285,13 +288,14 @@ export default function BookingsPanel({
             aria-label="بحث"
             style={{
               ...fieldStyle,
+              height: 44,
               paddingInlineStart: 38,
               border: `1px solid ${BORDER}`,
             }}
           />
         </div>
 
-        <label className="relative block lg:w-[11.5rem]">
+        <label className="relative block lg:w-[12rem]">
           <CalendarDays
             size={15}
             strokeWidth={1.5}
@@ -311,12 +315,13 @@ export default function BookingsPanel({
             }}
             style={{
               ...fieldStyle,
+              height: 44,
               paddingInlineStart: 36,
             }}
           />
         </label>
 
-        <label className="relative block lg:w-[12rem]">
+        <label className="relative block lg:w-[12.5rem]">
           <Filter
             size={15}
             strokeWidth={1.5}
@@ -328,6 +333,7 @@ export default function BookingsPanel({
             onChange={(e) => onTypeFilterChange(e.target.value)}
             style={{
               ...fieldStyle,
+              height: 44,
               paddingInlineStart: 36,
               appearance: "none",
             }}
@@ -350,22 +356,30 @@ export default function BookingsPanel({
       {/* Weekly strip */}
       {viewMode === "weekly" ? (
         <section
-          className="mb-3.5 rounded-[16px] p-3 lg:mb-4 lg:p-4"
-          style={{ background: CARD_BG, border: `1px solid ${BORDER}` }}
+          className="rounded-[16px]"
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${BORDER}`,
+            padding: "16px 14px 18px",
+            height: "fit-content",
+          }}
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="m-0 text-[0.95rem] font-semibold" style={{ color: INK }}>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2
+              className="m-0 text-[1rem] font-semibold lg:text-[1.05rem]"
+              style={{ color: INK }}
+            >
               جدول الأسبوع
             </h2>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 aria-label="الأسبوع السابق"
                 onClick={() => shiftWeek(-1)}
-                className="grid place-items-center rounded-[9px]"
+                className="grid place-items-center rounded-[10px]"
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 34,
+                  height: 34,
                   background: PAGE_BG,
                   border: `1px solid ${BORDER}`,
                   color: GOLD,
@@ -374,7 +388,7 @@ export default function BookingsPanel({
                 <ChevronRight size={15} strokeWidth={1.6} />
               </button>
               <span
-                className="min-w-[9.5rem] text-center text-[0.78rem] font-semibold"
+                className="min-w-[10rem] text-center text-[0.8rem] font-semibold"
                 style={{ color: MUTED }}
               >
                 {rangeLabelAr(weekAnchor, weekEnd)}
@@ -383,10 +397,10 @@ export default function BookingsPanel({
                 type="button"
                 aria-label="الأسبوع التالي"
                 onClick={() => shiftWeek(1)}
-                className="grid place-items-center rounded-[9px]"
+                className="grid place-items-center rounded-[10px]"
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 34,
+                  height: 34,
                   background: PAGE_BG,
                   border: `1px solid ${BORDER}`,
                   color: GOLD,
@@ -397,7 +411,7 @@ export default function BookingsPanel({
             </div>
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto pb-1 lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible">
+          <div className="flex gap-2.5 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-7 lg:gap-3 lg:overflow-visible">
             {weekDays.map((day) => {
               const active = day.iso === selectedDay;
               return (
@@ -408,21 +422,26 @@ export default function BookingsPanel({
                     setSelectedDay(day.iso);
                     onDateFilterChange(day.iso);
                   }}
-                  className="flex min-w-[4.6rem] flex-1 flex-col items-center gap-0.5 rounded-[12px] px-1.5 py-2.5"
+                  className="flex min-w-[5.1rem] flex-1 flex-col items-center gap-1 rounded-[14px] px-2 py-3.5 lg:min-w-0 lg:py-4"
                   style={{
                     background: active ? GOLD : PAGE_BG,
-                    border: active ? `1px solid ${GOLD}` : `1px solid ${BORDER}`,
+                    border: active
+                      ? `1.5px solid ${GOLD}`
+                      : `1px solid ${BORDER}`,
                     color: active ? "#0B0E14" : INK,
+                    boxShadow: active
+                      ? "0 0 0 1px rgba(212,175,55,0.35)"
+                      : "none",
                   }}
                 >
-                  <span className="text-[0.68rem] font-semibold leading-tight">
+                  <span className="text-[0.72rem] font-semibold leading-tight lg:text-[0.76rem]">
                     {weekdayShortAr(day.date)}
                   </span>
-                  <span className="text-[0.78rem] font-bold tabular-nums leading-tight">
+                  <span className="text-[0.84rem] font-bold tabular-nums leading-tight lg:text-[0.9rem]">
                     {dayMonthAr(day.date)}
                   </span>
                   <span
-                    className="text-[0.68rem] font-bold tabular-nums"
+                    className="mt-0.5 text-[0.72rem] font-bold tabular-nums lg:text-[0.78rem]"
                     style={{ color: active ? "#0B0E14" : GOLD }}
                   >
                     {day.count}
@@ -434,163 +453,171 @@ export default function BookingsPanel({
         </section>
       ) : null}
 
-      {/* Count */}
-      <p
-        className="mb-2.5 mt-0 text-[0.88rem] font-bold tabular-nums lg:mb-3"
-        style={{ color: GOLD }}
-      >
-        {viewMode === "weekly" ? (
-          <>
-            {visible.length} {longDayAr(selectedDay)}
-          </>
-        ) : (
-          <>{visible.length} حجز</>
-        )}
-      </p>
+      {/* Results block — clear separation from weekly schedule */}
+      <div className="flex flex-col gap-3.5 lg:gap-4">
+        <p
+          className="m-0 text-[0.9rem] font-bold tabular-nums lg:text-[0.95rem]"
+          style={{ color: GOLD }}
+        >
+          {viewMode === "weekly" ? (
+            <>
+              {visible.length} {longDayAr(selectedDay)}
+            </>
+          ) : (
+            <>{visible.length} حجز</>
+          )}
+        </p>
 
-      {/* Rows */}
-      <section
-        className="overflow-hidden rounded-[16px]"
-        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, height: "fit-content" }}
-      >
-        {loading ? (
-          <p className="m-0 px-4 py-6 text-sm" style={{ color: MUTED }}>
-            جارٍ التحميل…
-          </p>
-        ) : visible.length === 0 ? (
-          <p className="m-0 px-4 py-6 text-sm" style={{ color: MUTED }}>
-            لا توجد حجوزات
-          </p>
-        ) : (
-          <>
-            {/* Desktop headers */}
-            <div
-              className="hidden grid-cols-[6.5rem_minmax(0,1.2fr)_minmax(0,1.05fr)_minmax(0,1.25fr)_minmax(0,0.7fr)_1.75rem] gap-3 px-4 pb-2 pt-3 text-[0.72rem] font-medium lg:grid"
-              style={{ color: MUTED }}
-            >
-              <span>الوقت</span>
-              <span>العميل</span>
-              <span>رقم الهاتف</span>
-              <span>الخدمة</span>
-              <span>ملاحظات</span>
-              <span />
-            </div>
+        <section
+          className="overflow-hidden rounded-[16px]"
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${BORDER}`,
+            height: "fit-content",
+          }}
+        >
+          {loading ? (
+            <p className="m-0 px-4 py-7 text-sm" style={{ color: MUTED }}>
+              جارٍ التحميل…
+            </p>
+          ) : visible.length === 0 ? (
+            <p className="m-0 px-4 py-7 text-sm" style={{ color: MUTED }}>
+              لا توجد حجوزات
+            </p>
+          ) : (
+            <>
+              {/* Desktop headers: time | customer | phone | service | notes */}
+              <div
+                className="hidden grid-cols-[7rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] gap-4 px-5 pb-2.5 pt-4 text-[0.74rem] font-medium lg:grid"
+                style={{ color: MUTED }}
+              >
+                <span>الوقت</span>
+                <span>العميل</span>
+                <span>رقم الهاتف</span>
+                <span>الخدمة</span>
+                <span>ملاحظات</span>
+                <span />
+              </div>
 
-            <ul className="m-0 list-none p-0">
-              {visible.map((row) => {
-                const { clock, period } = splitTime(row.appointmentTime);
-                return (
-                  <li key={row.id}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenRow(row)}
-                      className="block w-full text-start"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        borderTop: `1px solid rgba(42,47,54,0.95)`,
-                        padding: 0,
-                      }}
-                    >
-                      {/* Desktop row */}
-                      <div className="hidden grid-cols-[6.5rem_minmax(0,1.2fr)_minmax(0,1.05fr)_minmax(0,1.25fr)_minmax(0,0.7fr)_1.75rem] items-center gap-3 px-4 py-3.5 lg:grid">
-                        <div>
-                          <p
-                            className="m-0 text-[1rem] font-bold tabular-nums leading-tight"
-                            style={{ color: GOLD }}
-                          >
-                            {clock}
-                          </p>
-                          <p
-                            className="mb-0 mt-0.5 text-[0.72rem] font-medium leading-tight"
-                            style={{ color: GOLD }}
-                          >
-                            {period}
-                          </p>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-2">
-                          <User size={16} strokeWidth={1.45} color={GOLD} />
-                          <span className="truncate text-[0.9rem] font-semibold" style={{ color: INK }}>
-                            {row.fullName}
-                          </span>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-2">
-                          <Phone size={16} strokeWidth={1.45} color={GOLD} />
-                          <span
-                            className="truncate text-[0.86rem] tabular-nums"
-                            style={{ color: INK }}
-                            dir="ltr"
-                          >
-                            {row.phone || "—"}
-                          </span>
-                        </div>
-                        <span className="truncate text-[0.86rem]" style={{ color: INK }}>
-                          {serviceLabel(row.appointmentType || "eye_exam")}
-                        </span>
-                        <span className="truncate text-[0.84rem]" style={{ color: MUTED }}>
-                          {row.notes?.trim() ? row.notes : "—"}
-                        </span>
-                        <ChevronLeft size={18} strokeWidth={1.55} color={GOLD} />
-                      </div>
-
-                      {/* Mobile card */}
-                      <div className="flex items-center gap-3 px-3.5 py-3.5 lg:hidden">
-                        <div className="w-[4.25rem] shrink-0">
-                          <p
-                            className="m-0 text-[0.95rem] font-bold tabular-nums leading-tight"
-                            style={{ color: GOLD }}
-                          >
-                            {clock}
-                          </p>
-                          <p
-                            className="mb-0 mt-0.5 text-[0.7rem] font-medium leading-tight"
-                            style={{ color: GOLD }}
-                          >
-                            {period}
-                          </p>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <User size={14} strokeWidth={1.45} color={GOLD} />
+              <ul className="m-0 list-none p-0">
+                {visible.map((row) => {
+                  const { clock, period } = splitTime(row.appointmentTime);
+                  return (
+                    <li key={row.id}>
+                      <button
+                        type="button"
+                        onClick={() => onOpenRow(row)}
+                        className="block w-full text-start"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          borderTop: `1px solid rgba(42,47,54,0.95)`,
+                          padding: 0,
+                        }}
+                      >
+                        {/* Desktop row */}
+                        <div className="hidden grid-cols-[7rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] items-center gap-4 px-5 py-4 lg:grid">
+                          <div>
+                            <p
+                              className="m-0 text-[1.02rem] font-bold tabular-nums leading-tight"
+                              style={{ color: GOLD }}
+                            >
+                              {clock}
+                            </p>
+                            <p
+                              className="mb-0 mt-1 text-[0.74rem] font-medium leading-tight"
+                              style={{ color: GOLD }}
+                            >
+                              {period}
+                            </p>
+                          </div>
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <User size={17} strokeWidth={1.45} color={GOLD} />
                             <span
-                              className="truncate text-[0.88rem] font-semibold"
+                              className="truncate text-[0.92rem] font-semibold"
                               style={{ color: INK }}
                             >
                               {row.fullName}
                             </span>
                           </div>
-                          <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                            <Phone size={13} strokeWidth={1.45} color={GOLD} />
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <Phone size={17} strokeWidth={1.45} color={GOLD} />
                             <span
-                              className="truncate text-[0.78rem] tabular-nums"
-                              style={{ color: MUTED }}
+                              className="truncate text-[0.88rem] tabular-nums"
+                              style={{ color: INK }}
                               dir="ltr"
                             >
                               {row.phone || "—"}
                             </span>
                           </div>
-                          <p
-                            className="mb-0 mt-1 truncate text-[0.76rem]"
-                            style={{ color: MUTED }}
+                          <span
+                            className="truncate text-[0.88rem]"
+                            style={{ color: INK }}
                           >
                             {serviceLabel(row.appointmentType || "eye_exam")}
-                          </p>
+                          </span>
+                          <span
+                            className="truncate text-[0.84rem]"
+                            style={{ color: MUTED }}
+                          >
+                            {row.notes?.trim() ? row.notes : "—"}
+                          </span>
+                          <ChevronLeft size={18} strokeWidth={1.55} color={GOLD} />
                         </div>
-                        <ChevronLeft
-                          size={18}
-                          strokeWidth={1.55}
-                          color={GOLD}
-                          className="shrink-0"
-                        />
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        )}
-      </section>
+
+                        {/* Mobile — time | name | phone only */}
+                        <div className="flex items-center gap-3.5 px-3.5 py-4 lg:hidden">
+                          <div className="w-[4.4rem] shrink-0">
+                            <p
+                              className="m-0 text-[0.95rem] font-bold tabular-nums leading-tight"
+                              style={{ color: GOLD }}
+                            >
+                              {clock}
+                            </p>
+                            <p
+                              className="mb-0 mt-1 text-[0.7rem] font-medium leading-tight"
+                              style={{ color: GOLD }}
+                            >
+                              {period}
+                            </p>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <User size={15} strokeWidth={1.45} color={GOLD} />
+                              <span
+                                className="truncate text-[0.9rem] font-semibold"
+                                style={{ color: INK }}
+                              >
+                                {row.fullName}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 flex min-w-0 items-center gap-2">
+                              <Phone size={14} strokeWidth={1.45} color={GOLD} />
+                              <span
+                                className="truncate text-[0.8rem] tabular-nums"
+                                style={{ color: MUTED }}
+                                dir="ltr"
+                              >
+                                {row.phone || "—"}
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronLeft
+                            size={18}
+                            strokeWidth={1.55}
+                            color={GOLD}
+                            className="shrink-0"
+                          />
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
