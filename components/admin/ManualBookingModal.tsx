@@ -750,19 +750,21 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
 
           {/* Actions */}
           <div
-            className="flex items-center gap-2.5 px-4 py-3"
+            className="flex items-center gap-3 px-4 pb-4 pt-3"
             style={{ borderTop: `1px solid ${BORDER}`, background: PAGE_BG }}
           >
             <button
               type="submit"
               disabled={!canSubmit}
-              className="inline-flex min-w-0 flex-1 items-center justify-center rounded-[12px] text-[0.9rem] font-semibold disabled:opacity-50"
+              className="inline-flex min-w-0 items-center justify-center rounded-[12px] text-[0.88rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 height: 48,
-                background: "rgba(212,175,106,0.16)",
-                border: "1px solid rgba(212,175,106,0.6)",
-                color: GOLD,
-                boxShadow: "0 0 16px rgba(212,175,106,0.12)",
+                flex: "1 1 78%",
+                background: canSubmit ? "#D4AF37" : "rgba(212,175,55,0.14)",
+                border: canSubmit
+                  ? "1px solid #D4AF37"
+                  : "1px solid rgba(212,175,55,0.4)",
+                color: canSubmit ? "#0B0E14" : GOLD,
               }}
             >
               {saving
@@ -772,9 +774,11 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex shrink-0 items-center justify-center rounded-[12px] px-4 text-[0.84rem] font-semibold"
+              className="inline-flex min-w-0 items-center justify-center rounded-[12px] px-2 text-[0.84rem] font-semibold"
               style={{
                 height: 48,
+                flex: "0 0 22%",
+                maxWidth: "25%",
                 background: FIELD_BG,
                 border: `1px solid ${BORDER}`,
                 color: "#E8EAED",
