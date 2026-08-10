@@ -375,15 +375,32 @@ export default function AdminSidebar({
   role: UserRole;
   userName?: string;
 }) {
+  return (
+    <Suspense fallback={null}>
+      <AdminSidebarInner role={role} />
+    </Suspense>
+  );
+}
+
+function AdminSidebarInner({
+  role,
+}: {
+  role: UserRole;
+}) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t } = useLocale();
   const { branding } = useBranding();
   const [open, setOpen] = useState(false);
+  const tab = searchParams.get("tab");
   const isDashboard = pathname === "/admin";
+  const isAppointments =
+    pathname.startsWith("/admin/eye-exam") && tab === "appointments";
+  const useRailChrome = isDashboard || isAppointments;
 
   useEffect(() => {
     setOpen(false);
-  }, [pathname]);
+  }, [pathname, tab]);
 
   useEffect(() => {
     document.body.classList.toggle("has-mobile-nav-open", open);
@@ -399,9 +416,8 @@ export default function AdminSidebar({
   }, []);
 
   return (
-    <div className={cn("relative z-40", isDashboard ? "" : "md:contents")}>
-      {/* Top sticky — hide on dashboard (has its own header) */}
-      {!isDashboard ? (
+    <div className={cn("relative z-40", useRailChrome ? "" : "md:contents")}>
+      {!useRailChrome ? (
         <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[rgba(11,15,20,0.92)] px-4 py-3 backdrop-blur md:hidden">
           <BrandMark branding={branding} href="/admin" size="sm" />
           <button
@@ -426,8 +442,7 @@ export default function AdminSidebar({
         />
       )}
 
-      {/* Desktop sidebar — hidden on dashboard home (reference is full-bleed) */}
-      {!isDashboard ? (
+      {!useRailChrome ? (
         <div className="hidden h-full md:block">
           <Suspense fallback={null}>
             <SidebarNav role={role} />
@@ -439,7 +454,7 @@ export default function AdminSidebar({
         <MobileBottomNav onMore={() => setOpen(true)} moreOpen={open} />
       </Suspense>
 
-      {isDashboard ? (
+      {useRailChrome ? (
         <Suspense fallback={null}>
           <DashboardDesktopRail
             onMore={() => setOpen(true)}

@@ -6,13 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarCheck,
   Eye,
-  MoreHorizontal,
-  Plus,
-  RefreshCw,
-  Search,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AvailabilityCalendarPanel from "@/components/admin/AvailabilityCalendarPanel";
+import BookingsPanel from "@/components/admin/BookingsPanel";
 import ManualBookingModal from "@/components/admin/ManualBookingModal";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -122,7 +119,6 @@ function AdminEyeExamPageInner() {
   const [busy, setBusy] = useState(false);
 
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const dateParam = searchParams.get("date");
   const [dateFilter, setDateFilter] = useState(() =>
@@ -134,6 +130,13 @@ function AdminEyeExamPageInner() {
       setDateFilter(dateParam);
     }
   }, [dateParam]);
+
+  useEffect(() => {
+    if (tab !== "appointments") return;
+    document.body.classList.add("admin-home-active");
+    return () => document.body.classList.remove("admin-home-active");
+  }, [tab]);
+
   const [editing, setEditing] = useState<AppointmentRow | null>(null);
   const [editForm, setEditForm] = useState({
     firstName: "",
@@ -175,15 +178,13 @@ function AdminEyeExamPageInner() {
 
   const loadAppointments = useCallback(async () => {
     const params = new URLSearchParams();
-    if (statusFilter !== "all") params.set("status", statusFilter);
     if (typeFilter !== "all") params.set("type", typeFilter);
-    if (dateFilter) params.set("date", dateFilter);
     if (query.trim()) params.set("q", query.trim());
     const data = await apiFetch<{ appointments: AppointmentRow[] }>(
       `/api/admin/eye-exam/appointments?${params.toString()}`
     );
     setAppointments(data.appointments || []);
-  }, [dateFilter, query, statusFilter, typeFilter]);
+  }, [query, typeFilter]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -287,29 +288,6 @@ function AdminEyeExamPageInner() {
     }
   }
 
-  async function updateAppointmentStatus(
-    id: string,
-    status: EyeExamAppointmentStatus
-  ) {
-    setBusy(true);
-    setError("");
-    try {
-      await apiFetch("/api/admin/eye-exam/appointments", {
-        method: "PATCH",
-        body: JSON.stringify({ id, status }),
-      });
-      setMessage(t("admin.bookings.updated"));
-      await loadAppointments();
-      await loadAvailability();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("admin.bookings.updateError")
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function openEdit(row: AppointmentRow) {
     setEditing(row);
     setEditForm({
@@ -349,20 +327,12 @@ function AdminEyeExamPageInner() {
   }
 
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title={
-          tab === "availability"
-            ? t("admin.availability.title")
-            : t("admin.bookings.title")
-        }
-        description={
-          tab === "availability"
-            ? t("admin.availability.description")
-            : t("admin.bookings.description")
-        }
-        actions={
-          tab === "availability" ? (
+    <div className={tab === "appointments" ? "admin-bookings-page" : "space-y-6"}>
+      {tab === "availability" ? (
+        <AdminPageHeader
+          title={t("admin.availability.title")}
+          description={t("admin.availability.description")}
+          actions={
             <>
               <Link
                 href="/"
@@ -382,42 +352,22 @@ function AdminEyeExamPageInner() {
                 {t("admin.availability.saveChanges")}
               </button>
             </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="btn btn-ghost inline-flex items-center gap-2"
-                onClick={() => void refresh()}
-                disabled={loading || busy}
-              >
-                <RefreshCw size={16} />
-                {t("admin.bookings.refresh")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-accent inline-flex items-center gap-2"
-                onClick={openManualBooking}
-              >
-                <Plus size={16} />
-                {t("admin.bookings.newBooking")}
-              </button>
-            </>
-          )
-        }
-      />
+          }
+        />
+      ) : null}
 
       {message ? (
-        <p className="rounded-xl border border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.12)] px-3 py-2 text-sm text-[var(--success)]">
+        <p className="mb-4 rounded-xl border border-[rgba(94,196,154,0.35)] bg-[rgba(94,196,154,0.12)] px-3 py-2 text-sm text-[var(--success)]">
           {message}
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+        <p className="mb-4 rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </p>
       ) : null}
 
-      {loading ? (
+      {tab === "availability" && loading ? (
         <p className="text-sm text-[var(--slate)]">{t("common.loading")}</p>
       ) : null}
 
@@ -439,200 +389,26 @@ function AdminEyeExamPageInner() {
           }}
         />
       ) : (
-        <section className="admin-bookings">
-          <div className="admin-bookings-toolbar">
-            <div className="admin-bookings-search">
-              <Search
-                size={18}
-                className="admin-bookings-search-icon"
-                aria-hidden
-              />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="admin-bookings-search-input"
-                placeholder={t("admin.bookings.searchPlaceholder")}
-                aria-label={t("admin.bookings.searchPlaceholder")}
-              />
-            </div>
-
-            <div className="admin-bookings-filters">
-              <label
-                className={`admin-filter-chip admin-filter-chip--date${
-                  dateFilter ? " is-active" : ""
-                }`}
-              >
-                <span className="admin-filter-chip-label">
-                  {t("admin.bookings.filterDate")}
-                </span>
-                <input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="admin-filter-chip-control admin-filter-chip-date"
-                />
-              </label>
-
-              <label className="admin-filter-chip">
-                <span className="admin-filter-chip-label">
-                  {t("admin.bookings.filterService")}
-                </span>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="admin-filter-chip-control"
-                >
-                  <option value="all">{t("admin.bookings.allServices")}</option>
-                  <option value="eye_exam">
-                    {t("clinicBooking.services.eye_exam")}
-                  </option>
-                  <option value="contact_lens_fitting">
-                    {t("clinicBooking.services.contact_lens_fitting")}
-                  </option>
-                  <option value="frame_consultation">
-                    {t("clinicBooking.services.frame_consultation")}
-                  </option>
-                  <option value="sunglasses_consultation">
-                    {t("clinicBooking.services.sunglasses_consultation")}
-                  </option>
-                </select>
-              </label>
-
-              <label className="admin-filter-chip">
-                <span className="admin-filter-chip-label">
-                  {t("admin.bookings.filterStatus")}
-                </span>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="admin-filter-chip-control"
-                >
-                  <option value="all">{t("admin.bookings.allStatuses")}</option>
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {bookingStatusLabel(t, s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <button
-                type="button"
-                className="admin-bookings-more"
-                aria-label={t("admin.bookings.moreFilters")}
-                disabled
-                title={t("admin.bookings.moreFilters")}
-              >
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
-          </div>
-
-          <div className="admin-bookings-table-wrap">
-            <div className="admin-bookings-table-scroll">
-              <table className="admin-bookings-table">
-                <thead>
-                  <tr>
-                    <th>{t("admin.bookings.colWhen")}</th>
-                    <th>{t("admin.bookings.colClient")}</th>
-                    <th>{t("admin.bookings.colPhone")}</th>
-                    <th>{t("admin.bookings.colService")}</th>
-                    <th>{t("admin.bookings.colNotes")}</th>
-                    <th>{t("admin.bookings.colStatus")}</th>
-                    <th>{t("admin.bookings.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appointments.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="admin-bookings-empty-cell">
-                        {t("admin.bookings.noResults")}
-                      </td>
-                    </tr>
-                  ) : (
-                    appointments.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <div className="admin-cell-primary">
-                            {row.dateLabel}
-                          </div>
-                          <div className="admin-cell-secondary">
-                            {row.appointmentTime}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="admin-cell-primary">
-                            {row.fullName}
-                          </div>
-                          {row.email ? (
-                            <div className="admin-cell-secondary">
-                              {row.email}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="tabular-nums">{row.phone || "—"}</td>
-                        <td>
-                          {t(
-                            `clinicBooking.services.${row.appointmentType || "eye_exam"}`
-                          )}
-                        </td>
-                        <td className="admin-bookings-notes">
-                          {row.notes?.trim() ? row.notes : "—"}
-                        </td>
-                        <td>
-                          <select
-                            value={row.status}
-                            disabled={busy}
-                            aria-label={t("admin.bookings.filterStatus")}
-                            onChange={(e) =>
-                              void updateAppointmentStatus(
-                                row.id,
-                                e.target.value as EyeExamAppointmentStatus
-                              )
-                            }
-                            className={`admin-booking-status status status-${row.status}`}
-                          >
-                            {STATUSES.map((s) => (
-                              <option key={s} value={s}>
-                                {bookingStatusLabel(t, s)}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <div className="admin-bookings-row-actions">
-                            <button
-                              type="button"
-                              className="admin-booking-action"
-                              onClick={() => openEdit(row)}
-                            >
-                              {t("admin.bookings.edit")}
-                            </button>
-                            {row.status !== "cancelled" ? (
-                              <button
-                                type="button"
-                                className="admin-booking-action admin-booking-action--danger"
-                                disabled={busy}
-                                onClick={() =>
-                                  void updateAppointmentStatus(
-                                    row.id,
-                                    "cancelled"
-                                  )
-                                }
-                              >
-                                {t("admin.bookings.cancel")}
-                              </button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+        <BookingsPanel
+          appointments={appointments}
+          loading={loading}
+          busy={busy}
+          query={query}
+          onQueryChange={setQuery}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          onRefresh={() => void refresh()}
+          onAdd={openManualBooking}
+          onOpenRow={(row) => {
+            const full = appointments.find((a) => a.id === row.id);
+            if (full) openEdit(full);
+          }}
+          serviceLabel={(type) =>
+            t(`clinicBooking.services.${type || "eye_exam"}`)
+          }
+        />
       )}
 
       <ManualBookingModal
