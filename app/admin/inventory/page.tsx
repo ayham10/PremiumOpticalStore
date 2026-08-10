@@ -824,14 +824,14 @@ export default function AdminInventoryPage() {
 
   /* ───────────── Products list ───────────── */
   const compactSelect: CSSProperties = {
-    height: 42,
+    height: 40,
     borderRadius: 12,
     border: `1px solid ${BORDER}`,
     background: CARD_BG,
     color: "#FFFFFF",
-    padding: "0 0.65rem",
+    padding: "0 0.6rem",
     font: "inherit",
-    fontSize: "0.8rem",
+    fontSize: "0.78rem",
     fontWeight: 600,
     outline: "none",
     maxWidth: "100%",
@@ -839,39 +839,42 @@ export default function AdminInventoryPage() {
 
   return (
     <div style={pageWrap}>
-      <header className="mb-[18px]">
-        <h1
-          className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em]"
-          style={{ color: "#FFFFFF", lineHeight: 1.4 }}
-        >
-          المنتجات
-        </h1>
-        <p
-          className="mb-0 mt-1 text-[0.86rem] leading-relaxed"
-          style={{ color: MUTED }}
-        >
-          إدارة المنتجات والمخزون والأسعار والصور
-        </p>
+      <header className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1
+            className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em]"
+            style={{ color: "#FFFFFF", lineHeight: 1.4 }}
+          >
+            المنتجات
+          </h1>
+          <p
+            className="mb-0 mt-1 text-[0.86rem] leading-relaxed"
+            style={{ color: MUTED }}
+          >
+            إدارة المنتجات والمخزون والأسعار والصور
+          </p>
+        </div>
         <button
           type="button"
           onClick={openCreate}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] text-[0.95rem] font-bold md:w-auto md:px-5"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[12px] px-3.5 text-[0.84rem] font-bold"
           style={{
-            height: 48,
-            background: GOLD,
-            color: "#0B0F14",
-            border: "none",
+            height: 40,
+            background: "rgba(212,175,106,0.14)",
+            color: GOLD,
+            border: "1px solid rgba(212,175,106,0.55)",
+            boxShadow: "0 0 14px rgba(212,175,106,0.1)",
           }}
         >
-          <Plus size={17} strokeWidth={1.7} />
+          <Plus size={15} strokeWidth={1.7} />
           إضافة منتج
         </button>
       </header>
 
       <section className="mb-[18px] flex flex-wrap items-center gap-2.5">
-        <div className="relative shrink-0" style={{ width: "min(11.5rem, 46%)" }}>
+        <div className="relative shrink-0" style={{ width: "11rem", maxWidth: "46vw" }}>
           <Search
-            size={15}
+            size={14}
             strokeWidth={1.55}
             className="pointer-events-none absolute top-1/2 -translate-y-1/2"
             style={{ insetInlineStart: 10, color: MUTED }}
@@ -880,7 +883,7 @@ export default function AdminInventoryPage() {
             style={{
               ...compactSelect,
               width: "100%",
-              paddingInlineStart: 32,
+              paddingInlineStart: 30,
               fontWeight: 500,
             }}
             placeholder="ابحث بالاسم…"
@@ -890,7 +893,7 @@ export default function AdminInventoryPage() {
         </div>
 
         <select
-          style={{ ...compactSelect, width: "auto", minWidth: "7.5rem" }}
+          style={{ ...compactSelect, width: "auto", minWidth: "7rem", maxWidth: "46vw" }}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -903,7 +906,8 @@ export default function AdminInventoryPage() {
         </select>
 
         <select
-          style={{ ...compactSelect, width: "auto", minWidth: "7.25rem" }}
+          className="hidden md:block"
+          style={{ ...compactSelect, width: "auto", minWidth: "7rem" }}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -916,7 +920,8 @@ export default function AdminInventoryPage() {
         </select>
 
         <select
-          style={{ ...compactSelect, width: "auto", minWidth: "7.5rem" }}
+          className="hidden md:block"
+          style={{ ...compactSelect, width: "auto", minWidth: "7.25rem" }}
           value={sortMode}
           onChange={(e) => setSortMode(e.target.value as SortMode)}
         >
@@ -925,7 +930,7 @@ export default function AdminInventoryPage() {
         </select>
 
         <p
-          className="m-0 w-full text-[0.8rem] sm:ms-auto sm:w-auto"
+          className="m-0 hidden text-[0.78rem] md:ms-auto md:block"
           style={{ color: MUTED }}
         >
           {filtered.length} منتج
@@ -972,16 +977,13 @@ export default function AdminInventoryPage() {
           لا توجد منتجات
         </div>
       ) : (
-        <div
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4"
-        >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
           {filtered.map((p) => (
             <AdminProductCard
               key={p.id}
               product={p}
               canDelete={hasPermission(role, "delete")}
               onEdit={() => openEdit(p)}
-              onDuplicate={() => void onDuplicate(p)}
               onDelete={() => void onDelete(p)}
             />
           ))}
