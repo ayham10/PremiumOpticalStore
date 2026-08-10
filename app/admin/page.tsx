@@ -26,6 +26,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import AccountSettingsModal from "@/components/admin/AccountSettingsModal";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { apiFetch } from "@/lib/admin-api";
@@ -163,6 +164,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [profileName, setProfileName] = useState("");
   const [profileInitials, setProfileInitials] = useState("AH");
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -371,6 +373,7 @@ export default function AdminDashboardPage() {
               color: GOLD,
             }}
             aria-label={profileInitials}
+            onClick={() => setAccountOpen(true)}
           >
             <span className="admin-home-avatar grid place-items-center rounded-full font-bold">
               {profileInitials}
@@ -384,6 +387,11 @@ export default function AdminDashboardPage() {
           </button>
         </div>
       </header>
+
+      <AccountSettingsModal
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+      />
 
       {/* ── DATE + GREETING ── */}
       <div className="admin-home-hero-mobile flex flex-col items-center text-center lg:hidden">
