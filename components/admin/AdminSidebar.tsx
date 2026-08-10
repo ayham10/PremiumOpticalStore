@@ -233,30 +233,34 @@ function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex flex-col items-center justify-center gap-1 no-underline"
-              style={{ minHeight: 52 }}
+              className="relative flex flex-col items-center justify-center gap-1.5 no-underline"
+              style={{ minHeight: 54 }}
             >
-              <Icon
-                size={18}
-                strokeWidth={1.5}
-                color={active ? GOLD : MUTED}
-              />
               <span
-                className="text-[0.62rem] font-semibold leading-none"
-                style={{ color: active ? GOLD : MUTED }}
+                className="grid place-items-center rounded-full"
+                style={
+                  active
+                    ? {
+                        width: 36,
+                        height: 36,
+                        background:
+                          "radial-gradient(circle, rgba(212,175,106,0.28) 0%, rgba(212,175,106,0.08) 55%, transparent 70%)",
+                      }
+                    : undefined
+                }
+              >
+                <Icon
+                  size={19}
+                  strokeWidth={1.45}
+                  color={active ? GOLD : "#C8CDD4"}
+                />
+              </span>
+              <span
+                className="text-[0.64rem] font-semibold leading-none"
+                style={{ color: active ? GOLD : "#C8CDD4" }}
               >
                 {item.label}
               </span>
-              {active ? (
-                <span
-                  aria-hidden
-                  className="absolute bottom-0 h-[2px] w-6 rounded-full"
-                  style={{
-                    background: GOLD,
-                    boxShadow: "0 0 10px rgba(212,175,106,0.55)",
-                  }}
-                />
-              ) : null}
             </Link>
           );
         })}
@@ -272,13 +276,13 @@ function MobileBottomNav({
           }}
         >
           <MoreHorizontal
-            size={18}
-            strokeWidth={1.5}
-            color={moreOpen ? GOLD : MUTED}
+            size={19}
+            strokeWidth={1.45}
+            color={moreOpen ? GOLD : "#C8CDD4"}
           />
           <span
-            className="text-[0.62rem] font-semibold leading-none"
-            style={{ color: moreOpen ? GOLD : MUTED }}
+            className="text-[0.64rem] font-semibold leading-none"
+            style={{ color: moreOpen ? GOLD : "#C8CDD4" }}
           >
             المزيد
           </span>
