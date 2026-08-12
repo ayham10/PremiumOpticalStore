@@ -2957,6 +2957,110 @@ html[dir="rtl"] .home-card-arrow {
   border-color: var(--accent);
 }
 
+.lang-switch-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lang-switch-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 6.75rem;
+  min-height: 2.25rem;
+  padding: 0 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+.lang-switch-menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lang-switch-menu-chevron {
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: transform 0.18s ease;
+}
+
+.lang-switch-menu-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.lang-switch-menu-list {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.35rem);
+  inset-inline-end: 0;
+  min-width: 7.25rem;
+  margin: 0;
+  padding: 0.3rem;
+  list-style: none;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 106, 0.35);
+  background: rgba(11, 15, 20, 0.97);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+}
+
+.lang-switch-menu.is-light .lang-switch-menu-list {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 28px rgba(16, 21, 28, 0.14);
+}
+
+.lang-switch-menu-option {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  padding: 0.45rem 0.55rem;
+  text-align: start;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lang-switch-menu.is-dark .lang-switch-menu-option {
+  color: #f5f7fa;
+}
+
+.lang-switch-menu.is-light .lang-switch-menu-option {
+  color: var(--ink);
+}
+
+.lang-switch-menu-option:hover:not(:disabled),
+.lang-switch-menu-option:focus-visible {
+  background: rgba(212, 175, 106, 0.14);
+  color: #e6c58a;
+  outline: none;
+}
+
+.lang-switch-menu.is-light .lang-switch-menu-option:hover:not(:disabled),
+.lang-switch-menu.is-light .lang-switch-menu-option:focus-visible {
+  background: rgba(212, 175, 106, 0.12);
+  color: var(--accent);
+}
+
+.lang-switch-menu-option.is-active {
+  color: #e6c58a;
+}
+
+.lang-switch-menu.is-light .lang-switch-menu-option.is-active {
+  color: var(--accent);
+}
+
+.lang-switch-menu-option:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .input,
 .select,
 .textarea {

@@ -226,17 +226,24 @@ export default function Navbar() {
                     {t("nav.bookCta")}
                   </Link>
                 </div>
-                <Link
-                  href="/shop"
-                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
-                    whiteText || open
-                      ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
-                      : "border-[var(--line-strong)] text-[var(--ink)]"
-                  }`}
-                  aria-label={t("nav.shop")}
-                >
-                  <ShoppingBag size={17} strokeWidth={1.6} />
-                </Link>
+                <div className="flex items-center gap-1.5 lg:hidden">
+                  <LanguageSwitcher
+                    compact
+                    variant="dropdown"
+                    tone={whiteText || open ? "dark" : "light"}
+                  />
+                  <Link
+                    href="/shop"
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-full border ${
+                      whiteText || open
+                        ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
+                        : "border-[var(--line-strong)] text-[var(--ink)]"
+                    }`}
+                    aria-label={t("nav.shop")}
+                  >
+                    <ShoppingBag size={17} strokeWidth={1.6} />
+                  </Link>
+                </div>
               </div>
             </>
           ) : (
@@ -277,19 +284,26 @@ export default function Navbar() {
                 </Link>
               </div>
 
-              <button
-                type="button"
-                className={`inline-flex h-11 w-11 items-center justify-center rounded-full border lg:hidden ${
-                  whiteText || open
-                    ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
-                    : "border-[var(--line-strong)] text-[var(--ink)]"
-                }`}
-                onClick={() => setOpen((v) => !v)}
-                aria-label={open ? t("nav.close") : t("nav.menu")}
-                aria-expanded={open}
-              >
-                {open ? <X size={18} /> : <Menu size={18} />}
-              </button>
+              <div className="flex items-center gap-1.5 lg:hidden">
+                <LanguageSwitcher
+                  compact
+                  variant="dropdown"
+                  tone={whiteText || open ? "dark" : "light"}
+                />
+                <button
+                  type="button"
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-full border ${
+                    whiteText || open
+                      ? "border-[rgba(212,175,106,0.55)] text-[#e6c58a]"
+                      : "border-[var(--line-strong)] text-[var(--ink)]"
+                  }`}
+                  onClick={() => setOpen((v) => !v)}
+                  aria-label={open ? t("nav.close") : t("nav.menu")}
+                  aria-expanded={open}
+                >
+                  {open ? <X size={18} /> : <Menu size={18} />}
+                </button>
+              </div>
             </>
           )}
         </div>
