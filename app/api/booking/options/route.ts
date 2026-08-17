@@ -3,6 +3,7 @@ import { dayLabel } from "@/lib/appointments";
 import { getStore } from "@/lib/db/store";
 import { SERVICES } from "@/lib/seed";
 import { handleRouteError } from "@/lib/api/helpers";
+import { formatDayHoursSummary } from "@/lib/working-hours";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function GET() {
       open: h.open,
       close: h.close,
       closed: Boolean(h.closed),
-      summary: h.closed ? "Closed" : `${h.open} – ${h.close}`,
+      summary: h.closed ? "Closed" : formatDayHoursSummary(h) || `${h.open} – ${h.close}`,
     }));
 
     return NextResponse.json({

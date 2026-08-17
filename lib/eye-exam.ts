@@ -3,6 +3,7 @@ import {
   BUILTIN_CLINIC_APPOINTMENT_TYPES,
   isBookingServiceKey,
 } from "@/lib/booking-services";
+import { getDayPeriods } from "@/lib/working-hours";
 import type {
   ClinicAppointmentType,
   EyeExamAppointment,
@@ -318,17 +319,18 @@ export function buildPeriodsFromOpeningHours(
   hours: WorkingHours | undefined,
 ): WorkingPeriod[] {
   if (!hours || hours.closed) return [];
-  const start = parseTimeToMinutes(hours.open);
-  const end = parseTimeToMinutes(hours.close);
-  if (start == null || end == null || end <= start) return [];
-  return [
-    {
+  return getDayPeriods(hours)
+    .filter((p) => {
+      const open = parseTimeToMinutes(p.open);
+      const close = parseTimeToMinutes(p.close);
+      return open != null && close != null && close > open;
+    })
+    .map((p) => ({
       id: newId("period"),
-      start: hours.open,
-      end: hours.close,
+      start: p.open,
+      end: p.close,
       enabled: true,
-    },
-  ];
+    }));
 }
 
 export function buildSlotsFromPeriodRange(

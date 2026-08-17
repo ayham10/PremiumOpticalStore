@@ -1,3 +1,4 @@
+import { getDayPeriods } from "@/lib/working-hours";
 import { addMinutes, format, parse } from "date-fns";
 import type {
   Appointment,
@@ -66,8 +67,7 @@ export function generateSlots(opts: {
   if (!wh) return [];
 
   const slot = opts.settings.appointmentSlotMinutes || 30;
-  const open = parseTimeToMinutes(wh.open);
-  const close = parseTimeToMinutes(wh.close);
+  const dayPeriods = getDayPeriods(wh);
   const slots: string[] = [];
 
   const occupied = opts.appointments.filter(
@@ -77,24 +77,34 @@ export function generateSlots(opts: {
       a.status !== "cancelled"
   );
 
-  for (let t = open; t + slot <= close; t += slot) {
-    const start = minutesToTime(t);
-    const end = minutesToTime(t + slot);
-    const conflict = occupied.some((a) =>
-      overlaps(start, end, a.startTime, a.endTime)
-    );
-    if (!conflict) slots.push(start);
+  for (const period of dayPeriods) {
+    const open = parseTimeToMinutes(period.open);
+    const close = parseTimeToMinutes(period.close);
+    if (close <= open) continue;
+
+    for (let t = open; t + slot <= close; t += slot) {
+      const start = minutesToTime(t);
+      const end = minutesToTime(t + slot);
+      const conflict = occupied.some((a) =>
+        overlaps(start, end, a.startTime, a.endTime)
+      );
+      if (!conflict) slots.push(start);
+    }
   }
+
+  const unique = Array.from(new Set(slots)).sort(
+    (a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b),
+  );
 
   // Hide past slots for today
   const today = format(new Date(), "yyyy-MM-dd");
   if (opts.date === today) {
     const nowMinutes =
       new Date().getHours() * 60 + new Date().getMinutes() + 30;
-    return slots.filter((s) => parseTimeToMinutes(s) >= nowMinutes);
+    return unique.filter((s) => parseTimeToMinutes(s) >= nowMinutes);
   }
 
-  return slots;
+  return unique;
 }
 
 export function endTimeFromStart(start: string, minutes: number): string {

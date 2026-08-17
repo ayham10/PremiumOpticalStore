@@ -1635,6 +1635,60 @@ body.admin-home-active .admin-main {
   min-width: 8.5rem;
 }
 
+.admin-hours-period-to {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-hours-period-row td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: none;
+}
+
+.admin-hours-add-row td {
+  padding-top: 0.25rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-hours-add-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent, #d4af37);
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.admin-hours-add-period:hover {
+  color: #e8c96a;
+}
+
+.admin-hours-remove-period {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 1px solid rgba(224, 122, 122, 0.35);
+  background: transparent;
+  color: #e07a7a;
+  cursor: pointer;
+}
+
+.admin-hours-remove-period:hover {
+  border-color: rgba(224, 122, 122, 0.6);
+  background: rgba(224, 122, 122, 0.1);
+}
+
 @media (max-width: 640px) {
   .admin-settings-tab {
     padding-inline: 0.85rem;
@@ -1643,6 +1697,15 @@ body.admin-home-active .admin-main {
 
   .admin-hours-table {
     min-width: 28rem;
+  }
+
+  .admin-hours-period-to {
+    flex-wrap: wrap;
+  }
+
+  .admin-hours-table .input {
+    min-width: 6.5rem;
+    flex: 1;
   }
 }
 

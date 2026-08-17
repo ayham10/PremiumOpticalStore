@@ -6,6 +6,7 @@ import Reveal from "@/components/Reveal";
 import PageAtmosphere from "@/components/PageAtmosphere";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { WorkingHours } from "@/lib/types";
+import { formatDayHoursSummary } from "@/lib/working-hours";
 
 type PublicSettings = {
   storeName: string;
@@ -219,7 +220,7 @@ export default function ContactPage() {
                       <span>
                         {h.closed
                           ? t("contact.closed")
-                          : `${h.open} – ${h.close}`}
+                          : formatDayHoursSummary(h) || `${h.open} – ${h.close}`}
                       </span>
                     </li>
                   ))}

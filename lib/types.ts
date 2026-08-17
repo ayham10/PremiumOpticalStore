@@ -52,11 +52,18 @@ export interface Customer {
   updatedAt: string;
 }
 
+export interface DayHoursPeriod {
+  open: string; // "09:00"
+  close: string; // "13:30"
+}
+
 export interface WorkingHours {
   day: number; // 0=Sun ... 6=Sat
-  open: string; // "09:00"
-  close: string; // "18:00"
+  open: string; // legacy / first period start
+  close: string; // legacy / last period end
   closed?: boolean;
+  /** Up to 3 non-overlapping periods; drives booking when present */
+  periods?: DayHoursPeriod[];
 }
 
 /** One continuous working period on a calendar day (expanded to bookable slots). */

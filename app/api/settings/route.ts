@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/helpers";
 import { mergeBranding } from "@/lib/branding";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
+import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -136,9 +137,17 @@ export async function PUT(request: Request) {
           },
         }),
         openingHours: Array.isArray(patch.openingHours)
-          ? patch.openingHours
+          ? normalizeOpeningHours(patch.openingHours)
           : store.settings.openingHours,
       };
+
+      for (const h of next.openingHours) {
+        if (h.closed) continue;
+        const err = validateDayPeriods(getDayPeriods(h));
+        if (err) {
+          throw new Error(`HOURS_${err.toUpperCase()}`);
+        }
+      }
 
       if (next.branding?.storeNameEn) {
         next.storeName = next.branding.storeNameEn;
@@ -175,6 +184,9 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ settings });
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("HOURS_")) {
+      return jsonError("Invalid working hours", 400);
+    }
     return handleRouteError(error);
   }
 }

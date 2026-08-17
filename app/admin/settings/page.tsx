@@ -1,15 +1,23 @@
 "use client";
 
-import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
+import { FormEvent, Fragment, Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Eye, Save } from "lucide-react";
+import { Eye, Plus, Save, Trash2 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
+import { minutesToTime, parseTimeToMinutes } from "@/lib/appointments";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
-import type { StoreSettings, WorkingHours } from "@/lib/types";
+import type { DayHoursPeriod, StoreSettings, WorkingHours } from "@/lib/types";
+import {
+  getDayPeriods,
+  MAX_DAY_PERIODS,
+  normalizeOpeningHours,
+  syncDayHours,
+  validateDayPeriods,
+} from "@/lib/working-hours";
 
 type SettingsTab =
   | "general"
@@ -81,6 +89,11 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
       ...EMPTY_SETTINGS.content,
       ...(settings.content || {}),
     },
+    openingHours: normalizeOpeningHours(
+      settings.openingHours?.length
+        ? settings.openingHours
+        : EMPTY_SETTINGS.openingHours,
+    ),
   };
 }
 
@@ -137,26 +150,117 @@ function AdminSettingsPageInner() {
   function updateHours(day: number, patch: Partial<WorkingHours>) {
     setForm((prev) => ({
       ...prev,
-      openingHours: prev.openingHours.map((h) =>
-        h.day === day ? { ...h, ...patch } : h
-      ),
+      openingHours: prev.openingHours.map((h) => {
+        if (h.day !== day) return h;
+        const next = syncDayHours({ ...h, ...patch });
+        if (patch.closed === false && !getDayPeriods(next).length) {
+          return syncDayHours({
+            ...next,
+            periods: [{ open: "09:00", close: "18:00" }],
+          });
+        }
+        return next;
+      }),
     }));
+  }
+
+  function updatePeriod(day: number, index: number, patch: Partial<DayHoursPeriod>) {
+    setForm((prev) => ({
+      ...prev,
+      openingHours: prev.openingHours.map((h) => {
+        if (h.day !== day) return h;
+        const periods = getDayPeriods(h).map((p, i) =>
+          i === index ? { ...p, ...patch } : p,
+        );
+        return syncDayHours({ ...h, periods });
+      }),
+    }));
+  }
+
+  function addPeriod(day: number) {
+    setForm((prev) => ({
+      ...prev,
+      openingHours: prev.openingHours.map((h) => {
+        if (h.day !== day || h.closed) return h;
+        const periods = getDayPeriods(h);
+        if (periods.length >= MAX_DAY_PERIODS) return h;
+        const last = periods[periods.length - 1];
+        const lastClose = parseTimeToMinutes(last.close);
+        const breakStart = Math.min(lastClose + 60, 23 * 60 + 30);
+        const breakEnd = Math.min(breakStart + 120, 23 * 60 + 59);
+        return syncDayHours({
+          ...h,
+          periods: [
+            ...periods,
+            {
+              open: minutesToTime(breakStart),
+              close: minutesToTime(breakEnd),
+            },
+          ],
+        });
+      }),
+    }));
+  }
+
+  function removePeriod(day: number, index: number) {
+    setForm((prev) => ({
+      ...prev,
+      openingHours: prev.openingHours.map((h) => {
+        if (h.day !== day) return h;
+        const periods = getDayPeriods(h).filter((_, i) => i !== index);
+        if (!periods.length) return h;
+        return syncDayHours({ ...h, periods });
+      }),
+    }));
+  }
+
+  function validateHours(): string | null {
+    for (const h of form.openingHours) {
+      if (h.closed) continue;
+      const code = validateDayPeriods(getDayPeriods(h));
+      if (code) {
+        const dayLabel = t(`days.${h.day}`);
+        const errorKey =
+          code === "invalidRange"
+            ? "admin.settings.hoursErrorInvalidRange"
+            : code === "overlap"
+              ? "admin.settings.hoursErrorOverlap"
+              : "admin.settings.hoursErrorMaxPeriods";
+        return `${dayLabel}: ${t(errorKey)}`;
+      }
+    }
+    return null;
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const hoursError = validateHours();
+    if (hoursError) {
+      setError(hoursError);
+      setMessage("");
+      return;
+    }
     setSaving(true);
     setMessage("");
     setError("");
     try {
       const saved = await apiFetch<StoreSettings | { settings: StoreSettings }>(
         "/api/settings",
-        { method: "PUT", body: JSON.stringify({ settings: form }) }
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            settings: {
+              ...form,
+              openingHours: normalizeOpeningHours(form.openingHours),
+            },
+          }),
+        }
       );
       const next = normalizeSettings(saved);
       setForm(next);
       setMessage(t("admin.settings.saved"));
       window.dispatchEvent(new Event("oyon:branding-saved"));
+      window.dispatchEvent(new Event("oyon:availability-saved"));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("admin.settings.saveError")
@@ -378,53 +482,120 @@ function AdminSettingsPageInner() {
                   </tr>
                 </thead>
                 <tbody>
-                  {form.openingHours.map((h) => (
-                    <tr key={h.day} className={h.closed ? "is-closed" : undefined}>
-                      <td className="admin-hours-day">
-                        {t(`days.${h.day}`)}
-                      </td>
-                      {h.closed ? (
-                        <td colSpan={2} className="admin-hours-closed">
-                          {t("admin.settings.closedLabel")}
-                        </td>
-                      ) : (
-                        <>
-                          <td>
-                            <input
-                              type="time"
-                              className="input"
-                              value={h.open}
-                              onChange={(e) =>
-                                updateHours(h.day, { open: e.target.value })
-                              }
-                            />
+                  {form.openingHours.map((h) => {
+                    if (h.closed) {
+                      return (
+                        <tr key={h.day} className="is-closed">
+                          <td className="admin-hours-day">
+                            {t(`days.${h.day}`)}
+                          </td>
+                          <td colSpan={2} className="admin-hours-closed">
+                            {t("admin.settings.closedLabel")}
                           </td>
                           <td>
-                            <input
-                              type="time"
-                              className="input"
-                              value={h.close}
-                              onChange={(e) =>
-                                updateHours(h.day, { close: e.target.value })
-                              }
-                            />
+                            <label className="admin-hours-open">
+                              <input
+                                type="checkbox"
+                                checked={!h.closed}
+                                onChange={(e) =>
+                                  updateHours(h.day, { closed: !e.target.checked })
+                                }
+                              />
+                              <span>{t("admin.settings.isOpen")}</span>
+                            </label>
                           </td>
-                        </>
-                      )}
-                      <td>
-                        <label className="admin-hours-open">
-                          <input
-                            type="checkbox"
-                            checked={!h.closed}
-                            onChange={(e) =>
-                              updateHours(h.day, { closed: !e.target.checked })
+                        </tr>
+                      );
+                    }
+
+                    const periods = getDayPeriods(h);
+                    const rowSpan = periods.length + 1;
+
+                    return (
+                      <Fragment key={h.day}>
+                        {periods.map((period, index) => (
+                          <tr
+                            key={`${h.day}-${index}`}
+                            className={
+                              index > 0 ? "admin-hours-period-row" : undefined
                             }
-                          />
-                          <span>{t("admin.settings.isOpen")}</span>
-                        </label>
-                      </td>
-                    </tr>
-                  ))}
+                          >
+                            {index === 0 ? (
+                              <td rowSpan={rowSpan} className="admin-hours-day">
+                                {t(`days.${h.day}`)}
+                              </td>
+                            ) : null}
+                            <td>
+                              <input
+                                type="time"
+                                className="input"
+                                value={period.open}
+                                onChange={(e) =>
+                                  updatePeriod(h.day, index, {
+                                    open: e.target.value,
+                                  })
+                                }
+                              />
+                            </td>
+                            <td>
+                              <div className="admin-hours-period-to">
+                                <input
+                                  type="time"
+                                  className="input"
+                                  value={period.close}
+                                  onChange={(e) =>
+                                    updatePeriod(h.day, index, {
+                                      close: e.target.value,
+                                    })
+                                  }
+                                />
+                                {periods.length > 1 ? (
+                                  <button
+                                    type="button"
+                                    className="admin-hours-remove-period"
+                                    onClick={() => removePeriod(h.day, index)}
+                                    aria-label={t("admin.settings.removePeriod")}
+                                  >
+                                    <Trash2 size={14} aria-hidden />
+                                  </button>
+                                ) : null}
+                              </div>
+                            </td>
+                            {index === 0 ? (
+                              <td rowSpan={rowSpan}>
+                                <label className="admin-hours-open">
+                                  <input
+                                    type="checkbox"
+                                    checked={!h.closed}
+                                    onChange={(e) =>
+                                      updateHours(h.day, {
+                                        closed: !e.target.checked,
+                                      })
+                                    }
+                                  />
+                                  <span>{t("admin.settings.isOpen")}</span>
+                                </label>
+                              </td>
+                            ) : null}
+                          </tr>
+                        ))}
+                        {periods.length < MAX_DAY_PERIODS ? (
+                          <tr className="admin-hours-add-row">
+                            <td colSpan={2}>
+                              <button
+                                type="button"
+                                className="admin-hours-add-period"
+                                onClick={() => addPeriod(h.day)}
+                              >
+                                <Plus size={14} aria-hidden />
+                                {t("admin.settings.addPeriod")}
+                              </button>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
