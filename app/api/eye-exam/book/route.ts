@@ -29,6 +29,10 @@ import {
 } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms/provider";
+import {
+  logWhatsAppBookingResult,
+  sendWhatsAppBookingConfirmation,
+} from "@/lib/whatsapp/provider";
 import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -108,7 +112,7 @@ export async function POST(request: Request) {
       });
     }
 
-    let created: EyeExamAppointment | null = null;
+    let savedAppointment: EyeExamAppointment | undefined;
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
@@ -158,7 +162,7 @@ export async function POST(request: Request) {
         }
 
         const now = new Date().toISOString();
-        created = {
+        const created: EyeExamAppointment = {
           id: newId("eea"),
           firstName,
           lastName,
@@ -176,6 +180,7 @@ export async function POST(request: Request) {
         };
 
         store.eyeExamAppointments.unshift(created);
+        savedAppointment = created;
 
         const dateDisplay = formatEyeExamDateDisplay(appointmentDate);
         const smsBody = eyeExamSmsBody(
@@ -222,17 +227,40 @@ export async function POST(request: Request) {
       });
     });
 
+    if (!savedAppointment) {
+      return jsonError("Unable to complete booking", 500);
+    }
+
+    const saved = savedAppointment;
+
+    try {
+      const whatsappResult = await sendWhatsAppBookingConfirmation({
+        to: saved.phone,
+        appointmentId: saved.id,
+      });
+      logWhatsAppBookingResult(whatsappResult, {
+        appointmentId: saved.id,
+        to: saved.phone,
+      });
+    } catch (error) {
+      console.error("[WhatsApp] booking confirmation unexpected error", {
+        appointmentId: saved.id,
+        error:
+          error instanceof Error ? error.message : "Unexpected WhatsApp error",
+      });
+    }
+
     return NextResponse.json(
       {
         appointment: {
-          id: created!.id,
-          firstName: created!.firstName,
-          lastName: created!.lastName,
-          appointmentDate: created!.appointmentDate,
-          appointmentTime: created!.appointmentTime,
-          appointmentType: created!.appointmentType,
-          dateLabel: formatEyeExamDateDisplay(created!.appointmentDate),
-          status: created!.status,
+          id: saved.id,
+          firstName: saved.firstName,
+          lastName: saved.lastName,
+          appointmentDate: saved.appointmentDate,
+          appointmentTime: saved.appointmentTime,
+          appointmentType: saved.appointmentType,
+          dateLabel: formatEyeExamDateDisplay(saved.appointmentDate),
+          status: saved.status,
         },
       },
       { status: 201 },
