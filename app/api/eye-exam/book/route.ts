@@ -7,6 +7,7 @@ import {
   pushSmsLog,
 } from "@/lib/api/helpers";
 import { updateStore } from "@/lib/db/store";
+import { isActiveBookingServiceKey } from "@/lib/booking-services";
 import {
   daySupportsService,
   ensureFutureAvailability,
@@ -111,6 +112,9 @@ export async function POST(request: Request) {
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
+        if (!isActiveBookingServiceKey(appointmentType, store.bookingServices || [])) {
+          throw new Error("SERVICE_UNAVAILABLE");
+        }
         // Keep near-term persisted days aligned; public horizon is schedule-driven
         store.eyeExamAvailability = ensureFutureAvailability(
           store.eyeExamAvailability,
@@ -238,6 +242,11 @@ export async function POST(request: Request) {
       if (error.message === "DATE_UNAVAILABLE") {
         return jsonError("Selected date is not available", 409, {
           field: "appointmentDate",
+        });
+      }
+      if (error.message === "SERVICE_UNAVAILABLE") {
+        return jsonError("Selected service is not available", 409, {
+          field: "appointmentType",
         });
       }
       if (error.message === "TIME_UNAVAILABLE") {

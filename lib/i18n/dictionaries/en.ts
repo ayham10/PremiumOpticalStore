@@ -285,6 +285,7 @@ export type Dictionary = {
     backHome: string;
     emptyDates: string;
     emptyTimes: string;
+    emptyServices: string;
     errorLoad: string;
     errorSubmit: string;
     prevMonth: string;
@@ -328,6 +329,7 @@ export type Dictionary = {
     bookings: Record<string, string>;
     availability: Record<string, string>;
     promotions: Record<string, string>;
+    bookingServices: Record<string, string>;
     settings: Record<string, string>;
     common: Record<string, string>;
   };
@@ -929,6 +931,7 @@ const en: Dictionary = {
     backHome: "Back to home",
     emptyDates: "No available dates at the moment. Please check back soon.",
     emptyTimes: "No available times for this date.",
+    emptyServices: "No booking services are available at the moment.",
     errorLoad: "Unable to load availability. Please try again.",
     errorSubmit: "Unable to complete booking. Please try again.",
     prevMonth: "Previous month",
@@ -1086,6 +1089,7 @@ const en: Dictionary = {
     sidebar: {
       dashboard: "Home",
       appointments: "Bookings",
+      bookingServices: "Booking services",
       eyeExam: "Bookings",
       availability: "Working Hours",
       calendar: "Calendar",
@@ -1271,6 +1275,38 @@ const en: Dictionary = {
       loadError: "Failed to load promotions",
       saveError: "Save failed",
       deleteError: "Delete failed",
+    },
+    bookingServices: {
+      title: "Booking services",
+      lead: "Manage the booking reasons shown to customers on the public booking page.",
+      add: "Add service",
+      addTitle: "Add service",
+      editTitle: "Edit service",
+      empty: "No services yet",
+      active: "Active",
+      inactive: "Inactive",
+      order: "Display order",
+      orderLabel: "Order",
+      icon: "Icon",
+      selectedIcon: "Selected icon",
+      nameAr: "Service name (Arabic)",
+      nameEn: "Service name (English)",
+      nameHe: "Service name (Hebrew)",
+      descriptionAr: "Short description (Arabic)",
+      descriptionEn: "Short description (English)",
+      descriptionHe: "Short description (Hebrew)",
+      moveUp: "Move up",
+      moveDown: "Move down",
+      created: "Service added",
+      updated: "Service updated",
+      deleted: "Service deleted",
+      reordered: "Order updated",
+      loadError: "Failed to load booking services",
+      saveError: "Failed to save service",
+      deleteError: "Failed to delete service",
+      deleteDenied: "You do not have permission to delete",
+      deleteConfirm:
+        "Delete “{name}”? If linked to bookings it will be deactivated instead.",
     },
     availability: {
       title: "Working Hours",

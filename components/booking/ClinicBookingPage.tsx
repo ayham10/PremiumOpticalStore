@@ -10,13 +10,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Eye,
-  Glasses,
   MessageCircle,
   Phone,
-  Sparkles,
-  Sun,
 } from "lucide-react";
+import { BookingServiceIcon } from "@/components/admin/BookingServiceIcon";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
   buildMonthGrid,
@@ -26,6 +23,7 @@ import {
 } from "@/lib/clinic-booking";
 import {
   bookingDatesCacheKey,
+  bookingServicesCacheKey,
   bookingTimesCacheKey,
   cachedJsonFetch,
   invalidatePublicCache,
@@ -37,37 +35,13 @@ type Step = "service" | "schedule" | "success";
 
 type DateOption = { date: string; label: string };
 
-const SERVICE_META: Array<{
-  type: ClinicAppointmentType;
-  icon: typeof Eye;
-  labelKey: string;
-  hintKey: string;
-}> = [
-  {
-    type: "eye_exam",
-    icon: Eye,
-    labelKey: "clinicBooking.services.eye_exam",
-    hintKey: "clinicBooking.serviceHints.eye_exam",
-  },
-  {
-    type: "contact_lens_fitting",
-    icon: Sparkles,
-    labelKey: "clinicBooking.services.contact_lens_fitting",
-    hintKey: "clinicBooking.serviceHints.contact_lens_fitting",
-  },
-  {
-    type: "frame_consultation",
-    icon: Glasses,
-    labelKey: "clinicBooking.services.frame_consultation",
-    hintKey: "clinicBooking.serviceHints.frame_consultation",
-  },
-  {
-    type: "sunglasses_consultation",
-    icon: Sun,
-    labelKey: "clinicBooking.services.sunglasses_consultation",
-    hintKey: "clinicBooking.serviceHints.sunglasses_consultation",
-  },
-];
+type PublicBookingService = {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+};
 
 const COUNTRY_CODES = [{ value: "+972", label: "+972" }] as const;
 
@@ -101,14 +75,14 @@ function syntheticEmail(phoneCombined: string): string {
 export default function ClinicBookingPage() {
   const { t, locale, rtl } = useLocale();
   const searchParams = useSearchParams();
-  const preset = resolveClinicTypeFromQuery(
-    searchParams.get("type"),
-    searchParams.get("service"),
-  );
+  const typeParam = searchParams.get("type");
+  const serviceParam = searchParams.get("service");
 
-  const [step, setStep] = useState<Step>(preset ? "schedule" : "service");
+  const [step, setStep] = useState<Step>("service");
+  const [services, setServices] = useState<PublicBookingService[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
   const [appointmentType, setAppointmentType] =
-    useState<ClinicAppointmentType | null>(preset);
+    useState<ClinicAppointmentType | null>(null);
   const [availableDates, setAvailableDates] = useState<DateOption[]>([]);
   const [availableSet, setAvailableSet] = useState<Set<string>>(new Set());
   const [loadingDates, setLoadingDates] = useState(false);
@@ -144,11 +118,36 @@ export default function ClinicBookingPage() {
   const [datesEpoch, setDatesEpoch] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoadingServices(true);
+    cachedJsonFetch<{ services: PublicBookingService[] }>(
+      bookingServicesCacheKey(locale),
+      `/api/booking-services?locale=${encodeURIComponent(locale)}`,
+      { ttlMs: 60_000 },
+    )
+      .then((data) => {
+        if (!cancelled) setServices(data.services || []);
+      })
+      .catch(() => {
+        if (!cancelled) setServices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingServices(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
+
+  useEffect(() => {
+    if (!services.length) return;
+    const keys = services.map((s) => s.key);
+    const preset = resolveClinicTypeFromQuery(typeParam, serviceParam, keys);
     if (preset) {
       setAppointmentType(preset);
       setStep("schedule");
     }
-  }, [preset]);
+  }, [services, typeParam, serviceParam]);
 
   // Admin Working Hours / exceptions → refresh public calendar immediately
   useEffect(() => {
@@ -156,13 +155,26 @@ export default function ClinicBookingPage() {
       invalidatePublicCache("booking-");
       setDatesEpoch((n) => n + 1);
     }
+    function onServicesChanged() {
+      invalidatePublicCache("booking-services:");
+      setLoadingServices(true);
+      cachedJsonFetch<{ services: PublicBookingService[] }>(
+        bookingServicesCacheKey(locale),
+        `/api/booking-services?locale=${encodeURIComponent(locale)}`,
+        { ttlMs: 0, revalidate: true },
+      )
+        .then((data) => setServices(data.services || []))
+        .finally(() => setLoadingServices(false));
+    }
     window.addEventListener("oyon:branding-saved", onScheduleChanged);
     window.addEventListener("oyon:availability-saved", onScheduleChanged);
+    window.addEventListener("oyon:booking-services-saved", onServicesChanged);
     return () => {
       window.removeEventListener("oyon:branding-saved", onScheduleChanged);
       window.removeEventListener("oyon:availability-saved", onScheduleChanged);
+      window.removeEventListener("oyon:booking-services-saved", onServicesChanged);
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (!appointmentType || step !== "schedule") return;
@@ -269,8 +281,18 @@ export default function ClinicBookingPage() {
 
   const grouped = useMemo(() => groupTimesOfDay(times), [times]);
 
+  const presetType = useMemo(() => {
+    if (!services.length) return null;
+    return resolveClinicTypeFromQuery(
+      typeParam,
+      serviceParam,
+      services.map((s) => s.key),
+    );
+  }, [services, typeParam, serviceParam]);
+
   const serviceLabel = appointmentType
-    ? t(`clinicBooking.services.${appointmentType}`)
+    ? services.find((s) => s.key === appointmentType)?.name ||
+      t(`clinicBooking.services.${appointmentType}`)
     : "";
 
   const whatsappHref = `https://wa.me/9725550180?text=${encodeURIComponent(
@@ -364,28 +386,38 @@ export default function ClinicBookingPage() {
           {step === "service" ? (
             <>
               <div className="clinic-book-service-list" role="radiogroup" aria-label={t("clinicBooking.askService")}>
-                {SERVICE_META.map((item) => {
-                  const selected = appointmentType === item.type;
-                  return (
-                    <button
-                      key={item.type}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      className={`clinic-book-service${selected ? " is-selected" : ""}`}
-                      onClick={() => setAppointmentType(item.type)}
-                    >
-                      <span className={`clinic-book-service-check${selected ? " is-on" : ""}`} aria-hidden>
-                        {selected ? <Check size={12} strokeWidth={2.5} /> : null}
-                      </span>
-                      <span className="clinic-book-service-copy">
-                        <strong>{t(item.labelKey)}</strong>
-                        <span>{t(item.hintKey)}</span>
-                      </span>
-                      <item.icon className="clinic-book-service-icon" size={20} aria-hidden />
-                    </button>
-                  );
-                })}
+                {loadingServices ? (
+                  <p className="clinic-book-loading">{t("common.loading")}</p>
+                ) : services.length === 0 ? (
+                  <p className="clinic-book-loading">{t("clinicBooking.emptyServices")}</p>
+                ) : (
+                  services.map((item) => {
+                    const selected = appointmentType === item.key;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        className={`clinic-book-service${selected ? " is-selected" : ""}`}
+                        onClick={() => setAppointmentType(item.key)}
+                      >
+                        <span className={`clinic-book-service-check${selected ? " is-on" : ""}`} aria-hidden>
+                          {selected ? <Check size={12} strokeWidth={2.5} /> : null}
+                        </span>
+                        <span className="clinic-book-service-copy">
+                          <strong>{item.name}</strong>
+                          <span>{item.description}</span>
+                        </span>
+                        <BookingServiceIcon
+                          icon={item.icon}
+                          className="clinic-book-service-icon"
+                          size={20}
+                        />
+                      </button>
+                    );
+                  })
+                )}
               </div>
               <button
                 type="button"
@@ -606,7 +638,7 @@ export default function ClinicBookingPage() {
               {error ? <p className="clinic-book-error">{error}</p> : null}
 
               <div className="clinic-book-actions">
-                {!preset ? (
+                {!presetType ? (
                   <button
                     type="button"
                     className="clinic-book-back-btn"

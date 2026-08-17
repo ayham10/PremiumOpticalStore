@@ -109,6 +109,10 @@ export function bookingTimesCacheKey(type: string, date: string): string {
   return `booking-times:${type}:${date}`;
 }
 
+export function bookingServicesCacheKey(locale: string): string {
+  return `booking-services:${locale}`;
+}
+
 export function promotionsSlidesCacheKey(): string {
   return "promotions:slides";
 }

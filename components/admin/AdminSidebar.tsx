@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   CalendarClock,
+  ClipboardList,
   Package,
   Tag,
   ImageIcon,
@@ -56,6 +57,13 @@ const NAV: Array<{
     icon: CalendarDays,
     match: (pathname, tab) =>
       pathname.startsWith("/admin/eye-exam") && tab === "appointments",
+  },
+  {
+    href: "/admin/booking-services",
+    labelKey: "admin.sidebar.bookingServices",
+    permission: "appointments",
+    icon: ClipboardList,
+    exact: false,
   },
   {
     href: "/admin/eye-exam?tab=availability",

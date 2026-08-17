@@ -105,11 +105,20 @@ export type EyeExamAppointmentStatus =
   | "no-show";
 
 /** Clinic slot booking types that share the eye-exam calendar system */
-export type ClinicAppointmentType =
-  | "eye_exam"
-  | "contact_lens_fitting"
-  | "frame_consultation"
-  | "sunglasses_consultation";
+export type ClinicAppointmentType = string;
+
+export interface BookingService {
+  id: string;
+  /** Stable slug used in URLs and stored on appointments (e.g. eye_exam) */
+  key: string;
+  name: LocalizedContent;
+  description: LocalizedContent;
+  icon: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface EyeExamTimeSlot {
   id: string;
@@ -401,6 +410,7 @@ export interface AppData {
   availability: StaffAvailability[];
   eyeExamAvailability: EyeExamAvailability[];
   eyeExamAppointments: EyeExamAppointment[];
+  bookingServices: BookingService[];
   settings: StoreSettings;
   updatedAt: string;
 }

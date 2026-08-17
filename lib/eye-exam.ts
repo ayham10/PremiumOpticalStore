@@ -1,4 +1,8 @@
 import { newId } from "@/lib/auth";
+import {
+  BUILTIN_CLINIC_APPOINTMENT_TYPES,
+  isBookingServiceKey,
+} from "@/lib/booking-services";
 import type {
   ClinicAppointmentType,
   EyeExamAppointment,
@@ -10,21 +14,13 @@ import type {
 } from "@/lib/types";
 
 export const CLINIC_APPOINTMENT_TYPES: ClinicAppointmentType[] = [
-  "eye_exam",
-  "contact_lens_fitting",
-  "frame_consultation",
-  "sunglasses_consultation",
+  ...BUILTIN_CLINIC_APPOINTMENT_TYPES,
 ];
 
 export function isClinicAppointmentType(
   value: unknown,
 ): value is ClinicAppointmentType {
-  return (
-    value === "eye_exam" ||
-    value === "contact_lens_fitting" ||
-    value === "frame_consultation" ||
-    value === "sunglasses_consultation"
-  );
+  return isBookingServiceKey(value);
 }
 
 export function normalizeAppointmentType(

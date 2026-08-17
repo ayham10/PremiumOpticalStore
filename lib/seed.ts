@@ -4,6 +4,7 @@ import {
   todayInJerusalem,
   weekdayUtc,
 } from "@/lib/eye-exam";
+import { createDefaultBookingServices } from "@/lib/booking-services";
 import { newId } from "@/lib/auth";
 import { DEFAULT_BRANDING } from "@/lib/branding";
 import type {
@@ -637,6 +638,7 @@ export function createSeedData(): AppData {
     })),
     eyeExamAvailability: createSeedEyeExamAvailability(),
     eyeExamAppointments: [],
+    bookingServices: createDefaultBookingServices(timestamp),
     settings: DEFAULT_SETTINGS,
     updatedAt: timestamp,
   };

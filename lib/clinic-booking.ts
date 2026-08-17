@@ -18,15 +18,11 @@ export const CLINIC_BOOKING_SERVICES: ClinicAppointmentType[] = [
 export function resolveClinicTypeFromQuery(
   type?: string | null,
   service?: string | null,
+  allowedKeys?: string[],
 ): ClinicAppointmentType | null {
   const raw = (type || "").trim().toLowerCase();
-  if (
-    raw === "eye_exam" ||
-    raw === "contact_lens_fitting" ||
-    raw === "frame_consultation" ||
-    raw === "sunglasses_consultation"
-  ) {
-    return raw;
+  if (raw && /^[a-z][a-z0-9_]{0,50}$/.test(raw)) {
+    if (!allowedKeys || allowedKeys.includes(raw)) return raw;
   }
 
   const s = (service || "").trim().toLowerCase();

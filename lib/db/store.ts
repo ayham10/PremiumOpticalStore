@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { mergeBranding } from "@/lib/branding";
+import { mergeSeedBookingServices } from "@/lib/booking-services";
 import { createSeedData } from "@/lib/seed";
 import type { AppData } from "@/lib/types";
 
@@ -116,14 +117,12 @@ function normalizeData(data: AppData): AppData {
   const eyeExamAppointments = (data.eyeExamAppointments ?? []).map((a) => {
     const type = a.appointmentType;
     const appointmentType =
-      type === "contact_lens_fitting" ||
-      type === "frame_consultation" ||
-      type === "sunglasses_consultation" ||
-      type === "eye_exam"
-        ? type
+      typeof type === "string" && type.trim()
+        ? type.trim()
         : ("eye_exam" as const);
     return { ...a, appointmentType };
   });
+  const bookingServices = mergeSeedBookingServices(data.bookingServices);
   return {
     ...createSeedData(),
     ...data,
@@ -146,6 +145,7 @@ function normalizeData(data: AppData): AppData {
       ? data.eyeExamAvailability
       : createSeedData().eyeExamAvailability,
     eyeExamAppointments,
+    bookingServices,
     settings: {
       ...createSeedData().settings,
       ...(data.settings || {}),
