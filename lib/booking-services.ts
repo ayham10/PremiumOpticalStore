@@ -30,12 +30,25 @@ export function isBookingServiceKey(value: unknown): value is string {
 }
 
 export function pickLocalized(
-  content: LocalizedContent | undefined,
+  content: LocalizedContent | string | null | undefined,
   locale: Locale,
   fallback = "",
 ): string {
-  if (!content) return fallback;
-  return content[locale]?.trim() || content.ar?.trim() || content.en?.trim() || content.he?.trim() || fallback;
+  if (content == null) return fallback;
+  if (typeof content === "string") {
+    const trimmed = content.trim();
+    return trimmed || fallback;
+  }
+  if (typeof content !== "object") return fallback;
+  const fromLocale = content[locale];
+  if (typeof fromLocale === "string" && fromLocale.trim()) {
+    return fromLocale.trim();
+  }
+  for (const key of ["ar", "en", "he"] as const) {
+    const value = content[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return fallback;
 }
 
 export function sortBookingServices(services: BookingService[]): BookingService[] {
@@ -142,11 +155,53 @@ export function serializePublicBookingService(
 ) {
   return {
     key: service.key,
-    name: pickLocalized(service.name, locale),
+    name: pickLocalized(service.name, locale, service.key),
     description: pickLocalized(service.description, locale),
-    icon: service.icon,
-    sortOrder: service.sortOrder,
+    icon: typeof service.icon === "string" ? service.icon : "calendar",
+    sortOrder: Number(service.sortOrder) || 0,
   };
+}
+
+export function normalizePublicBookingServices(
+  raw: unknown,
+  locale: Locale,
+): Array<{
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+}> {
+  const list = Array.isArray(raw)
+    ? raw
+    : raw &&
+        typeof raw === "object" &&
+        Array.isArray((raw as { services?: unknown }).services)
+      ? ((raw as { services: unknown[] }).services)
+      : [];
+
+  return list
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const key = typeof row.key === "string" ? row.key.trim() : "";
+      if (!isBookingServiceKey(key)) return null;
+      return {
+        key,
+        name: pickLocalized(
+          row.name as LocalizedContent | string | undefined,
+          locale,
+          key,
+        ),
+        description: pickLocalized(
+          row.description as LocalizedContent | string | undefined,
+          locale,
+        ),
+        icon: typeof row.icon === "string" ? row.icon : "calendar",
+        sortOrder: Number(row.sortOrder) || 0,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row));
 }
 
 export function resolveBookingServiceLocale(

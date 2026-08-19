@@ -30,6 +30,7 @@ import {
   peekPublicCache,
 } from "@/lib/public-data-cache";
 import type { ClinicAppointmentType } from "@/lib/types";
+import { normalizePublicBookingServices } from "@/lib/booking-services";
 
 type Step = "service" | "schedule" | "success";
 
@@ -42,6 +43,10 @@ type PublicBookingService = {
   icon: string;
   sortOrder: number;
 };
+
+function asReactText(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
 
 const COUNTRY_CODES = [{ value: "+972", label: "+972" }] as const;
 
@@ -126,7 +131,9 @@ export default function ClinicBookingPage() {
       { ttlMs: 60_000 },
     )
       .then((data) => {
-        if (!cancelled) setServices(data.services || []);
+        if (!cancelled) {
+          setServices(normalizePublicBookingServices(data.services ?? data, locale));
+        }
       })
       .catch(() => {
         if (!cancelled) setServices([]);
@@ -163,7 +170,9 @@ export default function ClinicBookingPage() {
         `/api/booking-services?locale=${encodeURIComponent(locale)}`,
         { ttlMs: 0, revalidate: true },
       )
-        .then((data) => setServices(data.services || []))
+        .then((data) =>
+          setServices(normalizePublicBookingServices(data.services ?? data, locale)),
+        )
         .finally(() => setLoadingServices(false));
     }
     window.addEventListener("oyon:branding-saved", onScheduleChanged);
@@ -291,7 +300,7 @@ export default function ClinicBookingPage() {
   }, [services, typeParam, serviceParam]);
 
   const serviceLabel = appointmentType
-    ? services.find((s) => s.key === appointmentType)?.name ||
+    ? asReactText(services.find((s) => s.key === appointmentType)?.name) ||
       t(`clinicBooking.services.${appointmentType}`)
     : "";
 
@@ -406,8 +415,8 @@ export default function ClinicBookingPage() {
                           {selected ? <Check size={12} strokeWidth={2.5} /> : null}
                         </span>
                         <span className="clinic-book-service-copy">
-                          <strong>{item.name}</strong>
-                          <span>{item.description}</span>
+                          <strong>{asReactText(item.name, item.key)}</strong>
+                          <span>{asReactText(item.description)}</span>
                         </span>
                         <BookingServiceIcon
                           icon={item.icon}

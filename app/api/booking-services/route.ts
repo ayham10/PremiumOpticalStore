@@ -67,13 +67,31 @@ function uniqueKey(key: string, services: BookingService[], ignoreId?: string) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const locale = resolveBookingServiceLocale(searchParams.get("locale"));
+    const localeParam = searchParams.get("locale");
+    const locale = resolveBookingServiceLocale(localeParam);
     const { data } = await getStore();
     let services = sortBookingServices(
       data.bookingServices?.length
         ? data.bookingServices
         : createDefaultBookingServices(),
     );
+
+    // Public /book always sends ?locale= — never return nested {ar,en,he} objects.
+    if (localeParam) {
+      services = activeBookingServices(services);
+      return NextResponse.json(
+        {
+          services: services.map((s) =>
+            serializePublicBookingService(s, locale),
+          ),
+        },
+        {
+          headers: {
+            "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+          },
+        },
+      );
+    }
 
     try {
       await requireSession("appointments");
