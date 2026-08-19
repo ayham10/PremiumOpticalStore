@@ -575,50 +575,50 @@ export default function BookingsPanel({
                         className="abk-card"
                         onClick={() => onOpenRow(row)}
                       >
-                        <div className="abk-card-top">
-                          <span className="abk-card-when">
-                            <span className="abk-date">
-                              {formatDateDisplay(row.appointmentDate)}
-                            </span>
-                            <span className="abk-time" dir="ltr">
-                              {formatTime24(row.appointmentTime)}
-                            </span>
+                        <button
+                          type="button"
+                          className="abk-action"
+                          aria-label="تعديل"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenRow(row);
+                          }}
+                        >
+                          <SquarePen size={13} strokeWidth={1.6} />
+                        </button>
+                        <div className="abk-card-when">
+                          <span className="abk-date">
+                            {formatDateDisplay(row.appointmentDate)}
                           </span>
-                          <button
-                            type="button"
-                            className="abk-action"
-                            aria-label="تعديل"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenRow(row);
-                            }}
-                          >
-                            <SquarePen size={15} strokeWidth={1.6} />
-                          </button>
+                          <span className="abk-time" dir="ltr">
+                            {formatTime24(row.appointmentTime)}
+                          </span>
                         </div>
-                        <p className="abk-card-name">
-                          <User size={15} strokeWidth={1.5} />
-                          <span>{row.fullName}</span>
-                        </p>
-                        <p className="abk-card-phone">
-                          <Phone size={15} strokeWidth={1.5} />
-                          <span dir="ltr">{row.phone || "—"}</span>
-                          {waHref ? (
-                            <a
-                              href={waHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="abk-wa"
-                              aria-label="واتساب"
-                              title="واتساب"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <WhatsAppGlyph size={15} />
-                            </a>
-                          ) : null}
-                        </p>
+                        <div className="abk-card-client">
+                          <p className="abk-card-name">
+                            <User size={13} strokeWidth={1.5} />
+                            <span>{row.fullName}</span>
+                          </p>
+                          <p className="abk-card-phone">
+                            <Phone size={13} strokeWidth={1.5} />
+                            <span dir="ltr">{row.phone || "—"}</span>
+                            {waHref ? (
+                              <a
+                                href={waHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="abk-wa"
+                                aria-label="واتساب"
+                                title="واتساب"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <WhatsAppGlyph size={13} />
+                              </a>
+                            ) : null}
+                          </p>
+                        </div>
                         <p className="abk-card-reason">
-                          <ReasonIcon size={15} strokeWidth={1.5} />
+                          <ReasonIcon size={13} strokeWidth={1.5} />
                           <span>
                             {serviceLabel(row.appointmentType || "eye_exam")}
                           </span>

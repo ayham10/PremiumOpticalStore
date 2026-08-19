@@ -1378,10 +1378,15 @@ body.admin-home-active .admin-main {
 }
 
 .abk-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-areas:
+    "when action"
+    "client client"
+    "reason reason";
+  grid-template-columns: 1fr auto;
+  align-items: center;
   overflow: hidden;
-  padding: 0 12px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(212, 175, 55, 0.38);
   background:
@@ -1390,32 +1395,38 @@ body.admin-home-active .admin-main {
   cursor: pointer;
 }
 
-.abk-card-top,
+.abk-card > .abk-action {
+  grid-area: action;
+}
+
+.abk-card-when {
+  grid-area: when;
+}
+
+.abk-card-client {
+  grid-area: client;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.abk-card-reason {
+  grid-area: reason;
+}
+
+.abk-card-when,
 .abk-card-name,
 .abk-card-phone,
 .abk-card-reason {
   min-width: 0;
   margin: 0;
-  padding: 9px 0;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.16);
-}
-
-.abk-card-reason {
-  border-bottom: 0;
-}
-
-.abk-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 .abk-card-when {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  min-width: 0;
 }
 
 .abk-card-name {
@@ -1433,7 +1444,7 @@ body.admin-home-active .admin-main {
 
 .abk-card-phone {
   direction: ltr;
-  justify-content: flex-end;
+  justify-content: flex-start;
   color: #f5f1e8;
   font-size: 0.84rem;
   font-variant-numeric: tabular-nums;
@@ -1521,7 +1532,80 @@ body.admin-home-active .admin-main {
     overflow-x: hidden;
   }
 
-  .abk-card-top .abk-action {
+  .abk-card {
+    grid-template-areas: "action when client reason";
+    grid-template-columns: 24px 3.55rem minmax(0, 1fr) minmax(3.4rem, 5.1rem);
+    direction: ltr;
+    align-items: center;
+    column-gap: 0;
+    row-gap: 0;
+    padding: 7px 8px 7px 6px;
+  }
+
+  .abk-card-when,
+  .abk-card-client,
+  .abk-card-reason {
+    min-height: 38px;
+    padding: 0 7px;
+    border-inline-end: 1px solid rgba(212, 175, 55, 0.18);
+  }
+
+  .abk-card-reason {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    padding-inline-end: 0;
+    border-inline-end: 0;
+    direction: rtl;
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  .abk-card-when {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1px;
+  }
+
+  .abk-card .abk-date {
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  .abk-card .abk-time {
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  .abk-card-client {
+    gap: 2px;
+    justify-content: center;
+  }
+
+  .abk-card-name,
+  .abk-card-phone {
+    min-height: 0;
+    padding: 0;
+    gap: 5px;
+    font-size: 0.74rem;
+    line-height: 1.2;
+  }
+
+  .abk-card-phone {
+    justify-content: flex-start;
+  }
+
+  .abk-card .abk-wa {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+  }
+
+  .abk-card > .abk-action {
+    width: 24px;
+    height: 24px;
     flex-shrink: 0;
   }
 }
