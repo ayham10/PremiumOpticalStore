@@ -6,7 +6,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
 } from "react";
 import {
   addMonths,
@@ -28,8 +27,11 @@ import {
   CircleDot,
   Clock3,
   Eye,
+  FileText,
   Glasses,
+  Phone,
   Sun,
+  User,
   UserRound,
   X,
   type LucideIcon,
@@ -52,12 +54,6 @@ const SERVICE_ICONS: Record<ClinicAppointmentType, LucideIcon> = {
   frame_consultation: Glasses,
   sunglasses_consultation: Sun,
 };
-
-const GOLD = "#D4AF6A";
-const PAGE_BG = "#0E1116";
-const FIELD_BG = "#151A21";
-const BORDER = "#2A2F36";
-const MUTED = "#8A929C";
 
 function daySupports(
   day: { services?: ClinicAppointmentType[] },
@@ -146,14 +142,11 @@ function SectionTitle({
   children: string;
 }) {
   return (
-    <div className="mb-2.5 flex items-center gap-2">
-      <Icon size={17} strokeWidth={1.55} color={GOLD} />
-      <h3
-        className="m-0 text-[0.92rem] font-semibold"
-        style={{ color: "#F3F4F5", lineHeight: 1.4 }}
-      >
-        {children}
-      </h3>
+    <div className="amb-card-title">
+      <span className="amb-card-title-icon" aria-hidden>
+        <Icon size={16} strokeWidth={1.55} />
+      </span>
+      <h3>{children}</h3>
     </div>
   );
 }
@@ -366,22 +359,9 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
 
   if (!open) return null;
 
-  const fieldStyle: CSSProperties = {
-    width: "100%",
-    height: 44,
-    borderRadius: 12,
-    border: `1px solid ${BORDER}`,
-    background: FIELD_BG,
-    color: "#F3F4F5",
-    padding: "0 0.75rem",
-    font: "inherit",
-    outline: "none",
-  };
-
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center"
-      style={{ background: "rgba(11, 15, 20, 0.72)", padding: 12 }}
+      className="amb-overlay"
       onClick={() => {
         if (timePickerOpen) {
           closeTimePicker();
@@ -392,50 +372,25 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
       role="presentation"
     >
       <div
-        className="relative flex flex-col overflow-hidden"
-        style={{
-          width: "calc(100vw - 24px)",
-          maxWidth: 520,
-          maxHeight: "88dvh",
-          background: PAGE_BG,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 18,
-          boxShadow: "0 16px 48px rgba(0,0,0,0.45)",
-        }}
+        className="amb-dialog"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={t("admin.bookings.manualTitle")}
       >
-        {/* Header */}
-        <div
-          className="flex items-start justify-between gap-3 px-4 pb-3 pt-4"
-          style={{ borderBottom: `1px solid ${BORDER}` }}
-        >
-          <div className="min-w-0">
-            <h2
-              className="m-0 text-[1.12rem] font-semibold tracking-[-0.02em]"
-              style={{ color: "#F5F6F7", lineHeight: 1.4 }}
-            >
-              {t("admin.bookings.manualTitle")}
-            </h2>
-            <p
-              className="mb-0 mt-0.5 text-[0.78rem]"
-              style={{ color: MUTED, lineHeight: 1.4 }}
-            >
-              {t("admin.bookings.manualKicker")}
-            </p>
+        <div className="amb-header">
+          <div className="amb-header-copy">
+            <div className="amb-header-title">
+              <span className="amb-card-title-icon" aria-hidden>
+                <CalendarDays size={16} strokeWidth={1.55} />
+              </span>
+              <h2>{t("admin.bookings.manualTitle")}</h2>
+            </div>
+            <p>{t("admin.bookings.manualKicker")}</p>
           </div>
           <button
             type="button"
-            className="grid shrink-0 place-items-center rounded-[10px]"
-            style={{
-              width: 34,
-              height: 34,
-              border: `1px solid ${BORDER}`,
-              background: FIELD_BG,
-              color: MUTED,
-            }}
+            className="amb-close"
             onClick={onClose}
             aria-label={t("admin.bookings.close")}
           >
@@ -443,33 +398,18 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
           </button>
         </div>
 
-        {error ? (
-          <p
-            className="mx-4 mt-3 mb-0 rounded-[12px] px-3 py-2 text-sm"
-            style={{
-              border: "1px solid rgba(224,122,122,0.35)",
-              background: "rgba(224,122,122,0.12)",
-              color: "var(--danger)",
-            }}
-          >
-            {error}
-          </p>
-        ) : null}
+        {error ? <p className="amb-error">{error}</p> : null}
 
         <form
           onSubmit={(e) => void confirmBooking(e)}
-          className="flex min-h-0 flex-1 flex-col"
+          className="amb-form"
         >
-          <div
-            className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5"
-            style={{ display: "flex", flexDirection: "column", gap: 15 }}
-          >
-            {/* Service */}
-            <section>
+          <div className="amb-body">
+            <section className="amb-card">
               <SectionTitle icon={Eye}>
                 {sectionAppointmentDetails(locale)}
               </SectionTitle>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="amb-services">
                 {SERVICES.map((type) => {
                   const selected = service === type;
                   const Icon = SERVICE_ICONS[type];
@@ -478,49 +418,27 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                       key={type}
                       type="button"
                       onClick={() => setService(type)}
-                      className="flex items-center gap-2 rounded-[12px] px-2.5 text-start transition"
-                      style={{
-                        height: 66,
-                        border: selected
-                          ? "1px solid rgba(212,175,106,0.7)"
-                          : `1px solid ${BORDER}`,
-                        background: selected
-                          ? "rgba(212,175,106,0.12)"
-                          : FIELD_BG,
-                        color: selected ? GOLD : "#F0F1F2",
-                      }}
+                      className={cn("amb-service", selected && "is-selected")}
                     >
-                      <Icon size={17} strokeWidth={1.55} color={GOLD} />
-                      <span className="text-[0.8rem] font-semibold leading-snug">
-                        {serviceLabel(type)}
+                      <span className="amb-service-icon" aria-hidden>
+                        <Icon size={16} strokeWidth={1.55} />
                       </span>
+                      <span>{serviceLabel(type)}</span>
                     </button>
                   );
                 })}
               </div>
             </section>
 
-            {/* Date */}
-            <section>
+            <section className="amb-card">
               <SectionTitle icon={CalendarDays}>
                 {sectionChooseDate(locale)}
               </SectionTitle>
-              <div
-                className="rounded-[14px] p-3"
-                style={{
-                  background: FIELD_BG,
-                  border: `1px solid ${BORDER}`,
-                }}
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="amb-cal">
+                <div className="amb-cal-head">
                   <button
                     type="button"
-                    className="grid h-8 w-8 place-items-center rounded-[9px]"
-                    style={{
-                      border: "1px solid rgba(212,175,106,0.35)",
-                      color: GOLD,
-                      background: "rgba(212,175,106,0.06)",
-                    }}
+                    className="amb-cal-nav"
                     aria-label={t("clinicBooking.prevMonth")}
                     onClick={() => setMonthCursor((d) => subMonths(d, 1))}
                   >
@@ -530,20 +448,10 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                       <ChevronLeft size={15} strokeWidth={1.6} />
                     )}
                   </button>
-                  <strong
-                    className="text-[0.86rem] font-semibold"
-                    style={{ color: "#F3F4F5" }}
-                  >
-                    {monthLabel}
-                  </strong>
+                  <strong>{monthLabel}</strong>
                   <button
                     type="button"
-                    className="grid h-8 w-8 place-items-center rounded-[9px]"
-                    style={{
-                      border: "1px solid rgba(212,175,106,0.35)",
-                      color: GOLD,
-                      background: "rgba(212,175,106,0.06)",
-                    }}
+                    className="amb-cal-nav"
                     aria-label={t("clinicBooking.nextMonth")}
                     onClick={() => setMonthCursor((d) => addMonths(d, 1))}
                   >
@@ -555,16 +463,11 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                   </button>
                 </div>
 
-                <div className="mb-1.5 grid grid-cols-7 gap-1">
+                <div className="amb-cal-week">
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const label = t(`eyeExam.weekdays.${d}`);
                     return (
-                      <span
-                        key={d}
-                        className="truncate text-center text-[0.62rem] font-semibold"
-                        style={{ color: "rgba(212,175,106,0.9)" }}
-                        title={label}
-                      >
+                      <span key={d} title={label}>
                         {label}
                       </span>
                     );
@@ -572,15 +475,13 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                 </div>
 
                 {loading ? (
-                  <p className="py-4 text-center text-sm" style={{ color: MUTED }}>
+                  <p className="amb-cal-msg">
                     {t("admin.bookings.loadingDates")}
                   </p>
                 ) : serviceDays.length === 0 ? (
-                  <p className="py-4 text-center text-sm" style={{ color: MUTED }}>
-                    {t("admin.bookings.noDates")}
-                  </p>
+                  <p className="amb-cal-msg">{t("admin.bookings.noDates")}</p>
                 ) : (
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="amb-cal-grid">
                     {calendarDays.map((day) => {
                       const iso = ymd(day);
                       const inMonth = isSameMonth(day, monthCursor);
@@ -596,34 +497,12 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                           disabled={disabled}
                           onClick={() => openTimePicker(iso)}
                           className={cn(
-                            "rounded-[9px] text-[0.8rem] font-semibold transition",
-                            !inMonth && "opacity-20",
-                            disabled && inMonth && "cursor-not-allowed opacity-30",
+                            "amb-cal-day",
+                            !inMonth && "is-outside",
+                            disabled && inMonth && "is-unavailable",
+                            selected && "is-selected",
+                            pending && "is-pending",
                           )}
-                          style={{
-                            width: "100%",
-                            height: 36,
-                            ...(selected || pending
-                              ? {
-                                  border: `1px solid ${GOLD}`,
-                                  background:
-                                    selected
-                                      ? GOLD
-                                      : "rgba(212,175,106,0.18)",
-                                  color: selected ? "#1A140C" : GOLD,
-                                }
-                              : disabled
-                                ? {
-                                    border: "1px solid transparent",
-                                    background: "transparent",
-                                    color: MUTED,
-                                  }
-                                : {
-                                    border: `1px solid ${BORDER}`,
-                                    background: PAGE_BG,
-                                    color: "#F0F1F2",
-                                  }),
-                          }}
                         >
                           {format(day, "d")}
                         </button>
@@ -633,229 +512,138 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                 )}
               </div>
 
-              {/* Selected date + time summary (not the slot grid) */}
               {date && time ? (
                 <button
                   type="button"
                   onClick={() => openTimePicker(date)}
-                  className="mt-2.5 flex w-full items-center justify-between gap-2 rounded-[12px] px-3 text-start"
-                  style={{
-                    height: 44,
-                    background: FIELD_BG,
-                    border: "1px solid rgba(212,175,106,0.4)",
-                  }}
+                  className="amb-time-summary"
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <Clock3 size={16} strokeWidth={1.55} color={GOLD} />
-                    <span className="truncate text-[0.84rem] font-semibold" style={{ color: "#F3F4F5" }}>
-                      <span style={{ color: GOLD }}>{confirmedDateLabel}</span>
-                      <span style={{ color: MUTED }}> · </span>
-                      <span style={{ color: GOLD }}>{time}</span>
+                  <span>
+                    <Clock3 size={15} strokeWidth={1.55} />
+                    <span>
+                      {confirmedDateLabel}
+                      {" · "}
+                      {time}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[0.72rem] font-semibold" style={{ color: GOLD }}>
-                    {changeTimeLabel(locale)}
-                  </span>
+                  <em>{changeTimeLabel(locale)}</em>
                 </button>
               ) : null}
             </section>
 
-            {/* Customer */}
-            <section>
+            <section className="amb-card">
               <SectionTitle icon={UserRound}>
                 {sectionCustomer(locale)}
               </SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label
-                      className="mb-1.5 block text-[0.76rem] font-medium"
-                      style={{ color: MUTED }}
-                      htmlFor="mb-first"
-                    >
-                      {t("admin.bookings.firstName")}
-                    </label>
-                    <input
-                      id="mb-first"
-                      style={fieldStyle}
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                      autoComplete="given-name"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="mb-1.5 block text-[0.76rem] font-medium"
-                      style={{ color: MUTED }}
-                      htmlFor="mb-last"
-                    >
-                      {t("admin.bookings.lastName")}
-                    </label>
-                    <input
-                      id="mb-last"
-                      style={fieldStyle}
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                      autoComplete="family-name"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className="mb-1.5 block text-[0.76rem] font-medium"
-                    style={{ color: MUTED }}
-                    htmlFor="mb-phone"
-                  >
-                    {t("admin.bookings.phone")}
+              <div className="amb-fields">
+                <div className="amb-fields-row">
+                  <label className="amb-field" htmlFor="mb-first">
+                    <span>{t("admin.bookings.firstName")}</span>
+                    <span className="amb-control">
+                      <User size={15} strokeWidth={1.55} aria-hidden />
+                      <input
+                        id="mb-first"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        autoComplete="given-name"
+                      />
+                    </span>
                   </label>
-                  <input
-                    id="mb-phone"
-                    style={fieldStyle}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="05X-XXX-XXXX"
-                    required
-                    inputMode="tel"
-                    autoComplete="tel"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="mb-1.5 block text-[0.76rem] font-medium"
-                    style={{ color: MUTED }}
-                    htmlFor="mb-notes"
-                  >
-                    {t("admin.bookings.notes")}
+                  <label className="amb-field" htmlFor="mb-last">
+                    <span>{t("admin.bookings.lastName")}</span>
+                    <span className="amb-control">
+                      <UserRound size={15} strokeWidth={1.55} aria-hidden />
+                      <input
+                        id="mb-last"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        autoComplete="family-name"
+                      />
+                    </span>
                   </label>
-                  <textarea
-                    id="mb-notes"
-                    style={{
-                      ...fieldStyle,
-                      height: "auto",
-                      minHeight: 68,
-                      padding: "0.65rem 0.75rem",
-                      resize: "vertical",
-                    }}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder={t("admin.bookings.notesPlaceholder")}
-                    rows={2}
-                  />
                 </div>
+                <label className="amb-field amb-field-phone" htmlFor="mb-phone">
+                  <span>{t("admin.bookings.phone")}</span>
+                  <span className="amb-control">
+                    <Phone size={15} strokeWidth={1.55} aria-hidden />
+                    <input
+                      id="mb-phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="05XXXXXXXX"
+                      required
+                      inputMode="tel"
+                      autoComplete="tel"
+                      maxLength={10}
+                      size={15}
+                    />
+                  </span>
+                </label>
+                <label className="amb-field" htmlFor="mb-notes">
+                  <span>{t("admin.bookings.notes")}</span>
+                  <span className="amb-control amb-control-notes">
+                    <FileText size={15} strokeWidth={1.55} aria-hidden />
+                    <textarea
+                      id="mb-notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder={t("admin.bookings.notesPlaceholder")}
+                      rows={2}
+                    />
+                  </span>
+                </label>
               </div>
             </section>
           </div>
 
-          {/* Actions */}
-          <div
-            className="flex items-center gap-3 px-4 pb-4 pt-3"
-            style={{ borderTop: `1px solid ${BORDER}`, background: PAGE_BG }}
-          >
+          <div className="amb-actions">
             <button
               type="submit"
               disabled={!canSubmit}
-              className="inline-flex min-w-0 items-center justify-center rounded-[12px] text-[0.88rem] font-bold disabled:cursor-not-allowed disabled:opacity-50"
-              style={{
-                height: 48,
-                flex: "1 1 78%",
-                background: canSubmit ? "#D4AF37" : "rgba(212,175,55,0.14)",
-                border: canSubmit
-                  ? "1px solid #D4AF37"
-                  : "1px solid rgba(212,175,55,0.4)",
-                color: canSubmit ? "#0B0E14" : GOLD,
-              }}
+              className="amb-confirm"
             >
               {saving
                 ? t("admin.bookings.confirming")
                 : t("admin.bookings.confirmBooking")}
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex min-w-0 items-center justify-center rounded-[12px] px-2 text-[0.84rem] font-semibold"
-              style={{
-                height: 48,
-                flex: "0 0 22%",
-                maxWidth: "25%",
-                background: FIELD_BG,
-                border: `1px solid ${BORDER}`,
-                color: "#E8EAED",
-              }}
-            >
+            <button type="button" onClick={onClose} className="amb-cancel">
               {t("admin.bookings.cancel")}
             </button>
           </div>
         </form>
 
-        {/* Time selection popup — above booking modal */}
         {timePickerOpen ? (
           <div
-            className="absolute inset-0 z-20 flex items-end justify-center sm:items-center"
-            style={{ background: "rgba(8, 10, 14, 0.62)", padding: 12 }}
+            className="amb-time-overlay"
             onClick={closeTimePicker}
             role="presentation"
           >
             <div
-              className="w-full overflow-hidden"
-              style={{
-                maxWidth: 420,
-                maxHeight: "70dvh",
-                background: PAGE_BG,
-                border: `1px solid ${BORDER}`,
-                borderRadius: 18,
-                boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
-              }}
+              className="amb-time-dialog"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-label={sectionChooseTime(locale)}
             >
-              <div className="px-4 pb-3 pt-4">
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="grid shrink-0 place-items-center rounded-[10px]"
-                    style={{
-                      width: 34,
-                      height: 34,
-                      background: "rgba(212,175,106,0.08)",
-                      border: "1px solid rgba(212,175,106,0.35)",
-                      color: GOLD,
-                    }}
-                  >
-                    <Clock3 size={16} strokeWidth={1.55} />
-                  </span>
-                  <div className="min-w-0">
-                    <h3
-                      className="m-0 text-[1rem] font-semibold"
-                      style={{ color: "#F5F6F7", lineHeight: 1.35 }}
-                    >
-                      {sectionChooseTime(locale)}
-                    </h3>
-                    <p
-                      className="mb-0 mt-0.5 truncate text-[0.78rem]"
-                      style={{ color: MUTED }}
-                    >
-                      {pendingDateLabel}
-                    </p>
-                  </div>
+              <div className="amb-time-head">
+                <span className="amb-card-title-icon" aria-hidden>
+                  <Clock3 size={16} strokeWidth={1.55} />
+                </span>
+                <div>
+                  <h3>{sectionChooseTime(locale)}</h3>
+                  <p>{pendingDateLabel}</p>
                 </div>
               </div>
 
-              <div
-                className="overflow-y-auto px-4 pb-3"
-                style={{ maxHeight: "46dvh" }}
-              >
+              <div className="amb-time-body">
                 {availableSlots.length === 0 ? (
-                  <p
-                    className="mb-0 rounded-[12px] px-3 py-4 text-center text-[0.84rem]"
-                    style={{ color: MUTED, border: `1px dashed ${BORDER}` }}
-                  >
+                  <p className="amb-cal-msg">
                     {t("admin.bookings.noAvailableTimes")}
                   </p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="amb-time-grid">
                     {availableSlots.map((slot) => {
                       const selected =
                         time === slot.time && date === pickerDate;
@@ -864,21 +652,10 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                           key={slot.id}
                           type="button"
                           onClick={() => selectTime(slot.time)}
-                          className="rounded-[11px] text-center text-[0.86rem] font-bold tabular-nums transition"
-                          style={{
-                            height: 42,
-                            ...(selected
-                              ? {
-                                  border: `1px solid ${GOLD}`,
-                                  background: "rgba(212,175,106,0.16)",
-                                  color: GOLD,
-                                }
-                              : {
-                                  border: `1px solid ${BORDER}`,
-                                  background: FIELD_BG,
-                                  color: "#F0F1F2",
-                                }),
-                          }}
+                          className={cn(
+                            "amb-time-slot",
+                            selected && "is-selected",
+                          )}
                         >
                           {slot.time}
                         </button>
@@ -888,20 +665,11 @@ export default function ManualBookingModal({ open, onClose, onCreated }: Props) 
                 )}
               </div>
 
-              <div
-                className="px-4 py-3"
-                style={{ borderTop: `1px solid ${BORDER}` }}
-              >
+              <div className="amb-time-foot">
                 <button
                   type="button"
                   onClick={closeTimePicker}
-                  className="inline-flex w-full items-center justify-center rounded-[12px] text-[0.86rem] font-semibold"
-                  style={{
-                    height: 44,
-                    background: FIELD_BG,
-                    border: `1px solid ${BORDER}`,
-                    color: "#E8EAED",
-                  }}
+                  className="amb-cancel amb-cancel-block"
                 >
                   {backLabel(locale)}
                 </button>
