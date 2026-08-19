@@ -16,13 +16,20 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDot,
+  FileText,
+  Glasses,
+  Hash,
   ImageIcon,
+  Layers,
   Minus,
   Package,
   Plus,
   Save,
   Search,
+  Star,
+  Tag,
   Trash2,
+  Truck,
   Wallet,
 } from "lucide-react";
 import AdminProductCard from "@/components/admin/AdminProductCard";
@@ -154,26 +161,6 @@ function statusLabel(status: ProductStatus): string {
   return status;
 }
 
-const fieldStyle: CSSProperties = {
-  width: "100%",
-  height: 46,
-  borderRadius: 11,
-  border: `1px solid ${BORDER}`,
-  background: "#12161D",
-  color: "#FFFFFF",
-  padding: "0 0.75rem",
-  font: "inherit",
-  outline: "none",
-};
-
-const labelStyle: CSSProperties = {
-  display: "block",
-  marginBottom: 7,
-  fontSize: "0.78rem",
-  fontWeight: 500,
-  color: MUTED,
-};
-
 const editorCard: CSSProperties = {
   background: CARD_BG,
   border: `1px solid ${BORDER}`,
@@ -211,13 +198,6 @@ const dangerOutlineBtn: CSSProperties = {
   fontSize: "0.88rem",
 };
 
-function FieldLabel({ htmlFor, children }: { htmlFor: string; children: string }) {
-  return (
-    <label htmlFor={htmlFor} style={labelStyle}>
-      {children}
-    </label>
-  );
-}
 
 export default function AdminInventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -431,8 +411,8 @@ export default function AdminInventoryPage() {
     }
 
     const editorShell = (
-      <div className="mx-auto w-full" style={{ maxWidth: 430 }}>
-        <header className="mb-4 flex items-start gap-2.5">
+      <div className="admin-pe-editor">
+        <header className="admin-pe-header">
           <button
             type="button"
             onClick={() => {
@@ -440,39 +420,15 @@ export default function AdminInventoryPage() {
               else closeEditor();
             }}
             aria-label="رجوع"
-            className="mt-0.5 grid shrink-0 place-items-center rounded-[12px]"
-            style={{
-              width: 42,
-              height: 42,
-              border: `1px solid ${BORDER}`,
-              background: CARD_BG,
-              color: "#FFFFFF",
-            }}
+            className="admin-pe-back"
           >
             <ChevronRight size={18} strokeWidth={1.6} />
           </button>
-          <div className="min-w-0 flex-1 text-center">
-            <h1
-              className="m-0 text-[1.15rem] font-semibold"
-              style={{ color: "#FFFFFF", lineHeight: 1.35 }}
-            >
-              {editing ? "تعديل المنتج" : "إضافة منتج"}
-            </h1>
-            <p className="mb-0 mt-1 text-[0.78rem]" style={{ color: MUTED }}>
-              قم بتحديث بيانات المنتج
-            </p>
+          <div className="admin-pe-header-copy">
+            <h1>{editing ? "تعديل المنتج" : "إضافة منتج"}</h1>
+            <p>قم بتحديث بيانات المنتج</p>
           </div>
-          <span
-            className="mt-0.5 grid shrink-0 place-items-center rounded-[12px]"
-            style={{
-              width: 42,
-              height: 42,
-              border: `1px solid rgba(212,175,55,0.35)`,
-              background: "rgba(212,175,55,0.08)",
-              color: GOLD,
-            }}
-            aria-hidden
-          >
+          <span className="admin-pe-mark" aria-hidden>
             <Box size={18} strokeWidth={1.55} />
           </span>
         </header>
@@ -599,47 +555,20 @@ export default function AdminInventoryPage() {
           </div>
         ) : (
           <>
-            <div
-              className="grid grid-cols-3"
-              style={{
-                gap: 11,
-                marginBottom: 10,
-                borderBottom: `1px solid ${BORDER}`,
-              }}
-            >
-              {tabs.map(({ id, label }) => {
-                const active = tab === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setTab(id)}
-                    className="relative flex min-w-0 flex-col items-center justify-center px-1 pb-2.5 pt-1"
-                    style={{
-                      color: active ? GOLD : MUTED,
-                      background: "transparent",
-                      border: "none",
-                      marginBottom: -1,
-                    }}
-                  >
-                    <span
-                      className="block w-full truncate text-center text-[11px] font-semibold leading-tight whitespace-nowrap"
-                      style={{ letterSpacing: "-0.01em" }}
-                    >
-                      {label}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="mt-1.5 block rounded-full"
-                      style={{
-                        width: 22,
-                        height: 2,
-                        background: active ? GOLD : "transparent",
-                      }}
-                    />
-                  </button>
-                );
-              })}
+            <div className="admin-pe-tabs" role="tablist">
+              {tabs.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  className={`admin-pe-tab${tab === id ? " is-active" : ""}`}
+                  onClick={() => setTab(id)}
+                >
+                  <Icon size={18} strokeWidth={1.7} />
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
 
             <form
@@ -648,31 +577,39 @@ export default function AdminInventoryPage() {
             >
               {tab === "details" ? (
                 <>
-                  <div style={{ ...editorCard, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div className="admin-pe-card">
+                    <h2 className="admin-pe-card-title">
+                      <Package size={16} strokeWidth={1.7} />
+                      بيانات المنتج
+                    </h2>
+                    <div className="admin-pe-fields">
                     <div>
-                      <FieldLabel htmlFor="p-name">اسم المنتج</FieldLabel>
-                      <div className="relative">
+                      <label className="admin-pe-label" htmlFor="p-name">
+                        <Tag size={13} strokeWidth={1.7} />
+                        اسم المنتج
+                      </label>
+                      <div className="admin-pe-control">
                         <input
                           id="p-name"
-                          style={{ ...fieldStyle, paddingInlineEnd: "3.4rem" }}
+                          className="admin-pe-input has-count"
                           value={form.name}
                           maxLength={100}
                           onChange={(e) => setField("name", e.target.value)}
                           required
                         />
-                        <span
-                          className="pointer-events-none absolute inset-y-0 end-3 grid place-items-center text-[0.7rem] tabular-nums"
-                          style={{ color: MUTED }}
-                        >
+                        <span className="admin-pe-count is-end">
                           {form.name.length}/100
                         </span>
                       </div>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="p-category">الفئة</FieldLabel>
+                      <label className="admin-pe-label" htmlFor="p-category">
+                        <Layers size={13} strokeWidth={1.7} />
+                        الفئة
+                      </label>
                       <select
                         id="p-category"
-                        style={fieldStyle}
+                        className="admin-pe-input"
                         value={form.category}
                         onChange={(e) =>
                           setField("category", e.target.value as ProductCategory)
@@ -686,121 +623,121 @@ export default function AdminInventoryPage() {
                       </select>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="p-brand">العلامة التجارية</FieldLabel>
+                      <label className="admin-pe-label" htmlFor="p-brand">
+                        <Star size={13} strokeWidth={1.7} />
+                        العلامة التجارية
+                      </label>
                       <input
                         id="p-brand"
-                        style={fieldStyle}
+                        className="admin-pe-input"
                         value={form.brand}
                         onChange={(e) => setField("brand", e.target.value)}
                       />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="p-frame">نوع الإطار</FieldLabel>
+                      <label className="admin-pe-label" htmlFor="p-frame">
+                        <Glasses size={13} strokeWidth={1.7} />
+                        نوع الإطار
+                      </label>
                       <input
                         id="p-frame"
-                        style={fieldStyle}
+                        className="admin-pe-input"
                         value={form.frameType}
                         onChange={(e) => setField("frameType", e.target.value)}
                       />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="p-lens">نوع العدسة</FieldLabel>
+                      <label className="admin-pe-label" htmlFor="p-lens">
+                        <CircleDot size={13} strokeWidth={1.7} />
+                        نوع العدسة
+                      </label>
                       <input
                         id="p-lens"
-                        style={fieldStyle}
+                        className="admin-pe-input"
                         value={form.lensType}
                         onChange={(e) => setField("lensType", e.target.value)}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="admin-pe-pair">
                       <div>
-                        <FieldLabel htmlFor="p-sku">SKU</FieldLabel>
+                        <label className="admin-pe-label" htmlFor="p-sku">
+                          <Hash size={13} strokeWidth={1.7} />
+                          SKU
+                        </label>
                         <input
                           id="p-sku"
-                          style={fieldStyle}
+                          className="admin-pe-input"
                           value={form.sku}
                           onChange={(e) => setField("sku", e.target.value)}
                           required
                         />
                       </div>
                       <div>
-                        <FieldLabel htmlFor="p-barcode">الباركود</FieldLabel>
-                        <div className="relative">
+                        <label className="admin-pe-label" htmlFor="p-barcode">
+                          <Barcode size={13} strokeWidth={1.7} />
+                          الباركود
+                        </label>
+                        <div className="admin-pe-control">
                           <input
                             id="p-barcode"
-                            style={{ ...fieldStyle, paddingInlineEnd: "2.4rem" }}
+                            className="admin-pe-input has-end-icon"
                             value={form.barcode}
                             onChange={(e) => setField("barcode", e.target.value)}
                           />
-                          <span
-                            className="pointer-events-none absolute inset-y-0 end-2.5 grid place-items-center"
-                            style={{ color: GOLD }}
-                          >
+                          <span className="admin-pe-end-icon">
                             <Barcode size={15} strokeWidth={1.5} />
                           </span>
                         </div>
                       </div>
                     </div>
                     <div>
-                      <FieldLabel htmlFor="p-supplier">المورد</FieldLabel>
+                      <label className="admin-pe-label" htmlFor="p-supplier">
+                        <Truck size={13} strokeWidth={1.7} />
+                        المورد
+                      </label>
                       <input
                         id="p-supplier"
-                        style={fieldStyle}
+                        className="admin-pe-input"
                         value={form.supplier}
                         onChange={(e) => setField("supplier", e.target.value)}
                       />
                     </div>
                     <div>
-                      <FieldLabel htmlFor="p-description">وصف المنتج</FieldLabel>
-                      <div className="relative">
+                      <label className="admin-pe-label" htmlFor="p-description">
+                        <FileText size={13} strokeWidth={1.7} />
+                        وصف المنتج
+                      </label>
+                      <div className="admin-pe-control">
                         <textarea
                           id="p-description"
-                          style={{
-                            ...fieldStyle,
-                            height: "auto",
-                            minHeight: 96,
-                            padding: "0.7rem 0.75rem",
-                            paddingBottom: "1.6rem",
-                            resize: "vertical",
-                          }}
+                          className="admin-pe-input admin-pe-textarea"
                           value={form.description}
                           maxLength={300}
                           onChange={(e) => setField("description", e.target.value)}
                           required
                         />
-                        <span
-                          className="pointer-events-none absolute bottom-2 end-3 text-[0.7rem] tabular-nums"
-                          style={{ color: MUTED }}
-                        >
+                        <span className="admin-pe-count is-bottom">
                           {form.description.length}/300
                         </span>
                       </div>
                     </div>
-                    <div
-                      className="flex items-center justify-between gap-2 pt-1"
-                      style={{ borderTop: `1px solid ${BORDER}`, marginTop: 2, paddingTop: 12 }}
-                    >
+                    <div className="admin-pe-meta">
                       <span
-                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold"
-                        style={{
-                          background:
-                            form.status === "active"
-                              ? "rgba(94,196,154,0.16)"
-                              : "rgba(138,146,156,0.14)",
-                          color: form.status === "active" ? "#5EC49A" : MUTED,
-                        }}
+                        className={
+                          form.status === "active"
+                            ? "admin-pe-pill is-active"
+                            : "admin-pe-pill"
+                        }
                       >
                         {statusLabel(form.status)}
                       </span>
                       {updatedLabel ? (
-                        <span
-                          className="inline-flex items-center gap-1.5 text-[0.72rem]"
-                          style={{ color: MUTED }}
-                        >
-                          <Calendar size={13} strokeWidth={1.5} color={GOLD} />
+                        <span className="admin-pe-meta-updated">
+                          <Calendar size={13} strokeWidth={1.5} />
                           آخر تحديث: {updatedLabel}
                         </span>
                       ) : null}
+                    </div>
                     </div>
                   </div>
 
