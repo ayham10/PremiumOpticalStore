@@ -120,8 +120,27 @@ function discountLabel(p: Promotion): string {
 
 const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
 
+const OFFER_SECTIONS = {
+  ar: {
+    details: "تفاصيل العرض",
+    period: "فترة العرض",
+    more: "إعدادات إضافية",
+  },
+  en: {
+    details: "Offer details",
+    period: "Offer period",
+    more: "Additional settings",
+  },
+  he: {
+    details: "פרטי המבצע",
+    period: "תקופת המבצע",
+    more: "הגדרות נוספות",
+  },
+} as const;
+
 export default function AdminPromotionsPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const sections = OFFER_SECTIONS[locale] || OFFER_SECTIONS.ar;
   const [items, setItems] = useState<Promotion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [role, setRole] = useState<AdminSession["role"]>("admin");
@@ -418,260 +437,284 @@ export default function AdminPromotionsPage() {
         }
         onClose={() => setModalOpen(false)}
         wide
+        className="admin-offer-modal overflow-hidden !pb-0"
+        icon={<BadgePercent size={18} strokeWidth={1.7} />}
       >
-        <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="pr-title">
-              {t("admin.promotions.fieldTitle")}
-            </label>
-            <input
-              id="pr-title"
-              className="input"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="pr-desc">
-              {t("admin.promotions.fieldDescription")}
-            </label>
-            <textarea
-              id="pr-desc"
-              className="textarea"
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="pr-coupon">
-              {t("admin.promotions.fieldCoupon")}
-            </label>
-            <input
-              id="pr-coupon"
-              className="input"
-              value={form.couponCode}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, couponCode: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="pr-dtype">
-              {t("admin.promotions.fieldDiscountType")}
-            </label>
-            <select
-              id="pr-dtype"
-              className="input"
-              value={form.discountType}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  discountType: e.target.value as DiscountType,
-                }))
-              }
-            >
-              <option value="percentage">
-                {t("admin.promotions.typePercentage")}
-              </option>
-              <option value="fixed">{t("admin.promotions.typeFixed")}</option>
-            </select>
-          </div>
-          <div>
-            <label className="label" htmlFor="pr-dval">
-              {t("admin.promotions.fieldDiscountValue")}
-            </label>
-            <input
-              id="pr-dval"
-              type="number"
-              min={0}
-              step="any"
-              className="input"
-              value={form.discountValue}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, discountValue: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <p className="label mb-2">{t("admin.promotions.fieldScope")}</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {SCOPES.map((scope) => (
-                <button
-                  key={scope}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, scope }))}
-                  className={cn(
-                    "rounded-xl border px-3 py-2.5 text-start text-sm font-semibold transition",
-                    form.scope === scope
-                      ? "border-[var(--accent)] bg-[var(--accent-wash)] text-[var(--accent)]"
-                      : "border-[var(--line)] text-[var(--ink)] hover:border-[var(--accent)]"
-                  )}
-                >
-                  {scopeLabel(scope)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {form.scope === "specific" ? (
-            <div className="sm:col-span-2 space-y-3">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <label className="label mb-0" htmlFor="pr-product-q">
-                  {t("admin.promotions.searchProducts")}
+        <form onSubmit={onSubmit} className="admin-offer-form">
+          <div className="admin-offer-form-body">
+            <section className="admin-offer-section">
+              <h3 className="admin-offer-section-title">{sections.details}</h3>
+              <div className="admin-offer-fields">
+                <label className="admin-offer-field admin-offer-field-full">
+                  <span>{t("admin.promotions.fieldTitle")}</span>
+                  <input
+                    id="pr-title"
+                    className="admin-offer-input"
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, title: e.target.value }))
+                    }
+                    required
+                  />
                 </label>
-                <span className="text-xs text-[var(--accent)]">
-                  {t("admin.promotions.selectedCount", {
-                    n: form.productIds.length,
-                  })}
-                </span>
+                <label className="admin-offer-field admin-offer-field-full">
+                  <span>{t("admin.promotions.fieldDescription")}</span>
+                  <textarea
+                    id="pr-desc"
+                    className="admin-offer-input admin-offer-textarea"
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="admin-offer-field">
+                  <span>{t("admin.promotions.fieldCoupon")}</span>
+                  <input
+                    id="pr-coupon"
+                    className="admin-offer-input"
+                    value={form.couponCode}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, couponCode: e.target.value }))
+                    }
+                  />
+                </label>
               </div>
-              <input
-                id="pr-product-q"
-                className="input"
-                value={productQuery}
-                onChange={(e) => setProductQuery(e.target.value)}
-                placeholder={t("admin.promotions.searchProducts")}
-              />
-              <div className="max-h-56 space-y-2 overflow-y-auto pe-1">
-                {filteredProducts.length === 0 ? (
-                  <p className="admin-muted text-sm">
-                    {t("admin.promotions.noProducts")}
-                  </p>
-                ) : (
-                  filteredProducts.map((product) => {
-                    const selected = form.productIds.includes(product.id);
-                    const thumb =
-                      product.images[0] || "/images/placeholder-frame.svg";
-                    return (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => toggleProduct(product.id)}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-start transition",
-                          selected
-                            ? "border-[var(--accent)] bg-[var(--accent-wash)]"
-                            : "border-[var(--line)] hover:border-[var(--accent)]"
-                        )}
-                      >
-                        <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--admin-elevated)]">
-                          <Image
-                            src={thumb}
-                            alt=""
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-[var(--ink)]">
-                            {product.name}
-                          </span>
-                          <span className="admin-muted block truncate text-xs">
-                            {product.brand} · {product.category} ·{" "}
-                            {formatPrice(product.sellingPrice)}
-                          </span>
-                        </span>
-                        {selected ? (
-                          <Check
-                            size={16}
-                            className="shrink-0 text-[var(--accent)]"
-                          />
-                        ) : null}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          ) : null}
+            </section>
 
-          <div>
-            <label className="label" htmlFor="pr-start">
-              {t("admin.promotions.fieldStart")}
-            </label>
-            <input
-              id="pr-start"
-              type="date"
-              className="input"
-              value={form.startDate}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, startDate: e.target.value }))
-              }
-              required
-            />
+            <section className="admin-offer-section">
+              <h3 className="admin-offer-section-title">
+                {t("admin.promotions.colDiscount")}
+              </h3>
+              <div className="admin-offer-fields admin-offer-fields-2">
+                <label className="admin-offer-field">
+                  <span>{t("admin.promotions.fieldDiscountType")}</span>
+                  <select
+                    id="pr-dtype"
+                    className="admin-offer-input"
+                    value={form.discountType}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        discountType: e.target.value as DiscountType,
+                      }))
+                    }
+                  >
+                    <option value="percentage">
+                      {t("admin.promotions.typePercentage")}
+                    </option>
+                    <option value="fixed">
+                      {t("admin.promotions.typeFixed")}
+                    </option>
+                  </select>
+                </label>
+                <label className="admin-offer-field">
+                  <span>{t("admin.promotions.fieldDiscountValue")}</span>
+                  <input
+                    id="pr-dval"
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="admin-offer-input"
+                    value={form.discountValue}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, discountValue: e.target.value }))
+                    }
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="admin-offer-section">
+              <h3 className="admin-offer-section-title">
+                {t("admin.promotions.fieldScope")}
+              </h3>
+              <div className="admin-offer-chips">
+                {SCOPES.map((scope) => (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, scope }))}
+                    className={cn(
+                      "admin-offer-chip",
+                      form.scope === scope && "is-selected",
+                    )}
+                  >
+                    {scopeLabel(scope)}
+                  </button>
+                ))}
+              </div>
+
+              {form.scope === "specific" ? (
+                <div className="admin-offer-products">
+                  <div className="admin-offer-products-head">
+                    <label htmlFor="pr-product-q">
+                      {t("admin.promotions.searchProducts")}
+                    </label>
+                    <span>
+                      {t("admin.promotions.selectedCount", {
+                        n: form.productIds.length,
+                      })}
+                    </span>
+                  </div>
+                  <input
+                    id="pr-product-q"
+                    className="admin-offer-input"
+                    value={productQuery}
+                    onChange={(e) => setProductQuery(e.target.value)}
+                    placeholder={t("admin.promotions.searchProducts")}
+                  />
+                  <div className="admin-offer-product-list">
+                    {filteredProducts.length === 0 ? (
+                      <p className="admin-offer-empty-note">
+                        {t("admin.promotions.noProducts")}
+                      </p>
+                    ) : (
+                      filteredProducts.map((product) => {
+                        const selected = form.productIds.includes(product.id);
+                        const thumb =
+                          product.images[0] || "/images/placeholder-frame.svg";
+                        return (
+                          <button
+                            key={product.id}
+                            type="button"
+                            onClick={() => toggleProduct(product.id)}
+                            className={cn(
+                              "admin-offer-product",
+                              selected && "is-selected",
+                            )}
+                          >
+                            <span className="admin-offer-product-thumb">
+                              <Image
+                                src={thumb}
+                                alt=""
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                              />
+                            </span>
+                            <span className="admin-offer-product-copy">
+                              <span>{product.name}</span>
+                              <span>
+                                {product.brand} · {product.category} ·{" "}
+                                {formatPrice(product.sellingPrice)}
+                              </span>
+                            </span>
+                            {selected ? (
+                              <Check size={16} className="admin-offer-check" />
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="admin-offer-section">
+              <h3 className="admin-offer-section-title">{sections.period}</h3>
+              <div className="admin-offer-fields admin-offer-fields-2">
+                <label className="admin-offer-field">
+                  <span>{t("admin.promotions.fieldStart")}</span>
+                  <span className="admin-offer-control">
+                    <CalendarDays size={16} />
+                    <input
+                      id="pr-start"
+                      type="date"
+                      className="admin-offer-input has-icon"
+                      value={form.startDate}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, startDate: e.target.value }))
+                      }
+                      required
+                    />
+                  </span>
+                </label>
+                <label className="admin-offer-field">
+                  <span>{t("admin.promotions.fieldEnd")}</span>
+                  <span className="admin-offer-control">
+                    <CalendarDays size={16} />
+                    <input
+                      id="pr-end"
+                      type="date"
+                      className="admin-offer-input has-icon"
+                      value={form.endDate}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, endDate: e.target.value }))
+                      }
+                      required
+                    />
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            <section className="admin-offer-section">
+              <h3 className="admin-offer-section-title">{sections.more}</h3>
+              <div className="admin-offer-fields">
+                <label className="admin-offer-field">
+                  <span>{t("admin.promotions.fieldPriority")}</span>
+                  <input
+                    id="pr-priority"
+                    type="number"
+                    className="admin-offer-input"
+                    value={form.priority}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, priority: e.target.value }))
+                    }
+                  />
+                </label>
+                <div className="admin-offer-field admin-offer-field-full">
+                  <SingleImageField
+                    label={t("admin.promotions.fieldImage")}
+                    value={form.image}
+                    onChange={(image) => setForm((f) => ({ ...f, image }))}
+                    folder="promotions"
+                  />
+                </div>
+                <label className="admin-offer-checkrow">
+                  <input
+                    type="checkbox"
+                    checked={form.homepageVisible}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        homepageVisible: e.target.checked,
+                      }))
+                    }
+                  />
+                  {t("admin.promotions.showHomepage")}
+                </label>
+                <label className="admin-offer-checkrow">
+                  <input
+                    type="checkbox"
+                    checked={form.active}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, active: e.target.checked }))
+                    }
+                  />
+                  {t("admin.promotions.fieldActive")}
+                </label>
+              </div>
+            </section>
           </div>
-          <div>
-            <label className="label" htmlFor="pr-end">
-              {t("admin.promotions.fieldEnd")}
-            </label>
-            <input
-              id="pr-end"
-              type="date"
-              className="input"
-              value={form.endDate}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, endDate: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="pr-priority">
-              {t("admin.promotions.fieldPriority")}
-            </label>
-            <input
-              id="pr-priority"
-              type="number"
-              className="input"
-              value={form.priority}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, priority: e.target.value }))
-              }
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <SingleImageField
-              label={t("admin.promotions.fieldImage")}
-              value={form.image}
-              onChange={(image) => setForm((f) => ({ ...f, image }))}
-              folder="promotions"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm font-medium text-[var(--ink)]">
-            <input
-              type="checkbox"
-              checked={form.homepageVisible}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, homepageVisible: e.target.checked }))
-              }
-            />
-            {t("admin.promotions.showHomepage")}
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-[var(--ink)]">
-            <input
-              type="checkbox"
-              checked={form.active}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, active: e.target.checked }))
-              }
-            />
-            {t("admin.promotions.fieldActive")}
-          </label>
-          <div className="flex justify-end gap-2 sm:col-span-2">
+
+          <div className="admin-offer-form-foot">
             <button
               type="button"
-              className="btn btn-ghost"
+              className="admin-offer-btn-cancel"
               onClick={() => setModalOpen(false)}
             >
               {t("admin.promotions.cancel")}
             </button>
-            <button type="submit" className="btn btn-accent" disabled={saving}>
+            <button
+              type="submit"
+              className="admin-offer-btn-save"
+              disabled={saving}
+            >
               {saving
                 ? t("admin.promotions.saving")
                 : t("admin.promotions.save")}

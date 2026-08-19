@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { cn } from "@/lib/format";
 
 export default function AdminModal({
   open,
@@ -9,12 +10,16 @@ export default function AdminModal({
   onClose,
   children,
   wide,
+  className,
+  icon,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  className?: string;
+  icon?: ReactNode;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -35,18 +40,24 @@ export default function AdminModal({
       role="presentation"
     >
       <div
-        className="admin-card max-h-[92svh] w-full overflow-y-auto rounded-b-none pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:rounded-[18px] sm:pb-6"
+        className={cn(
+          "admin-card max-h-[92svh] w-full overflow-y-auto rounded-b-none pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:rounded-[18px] sm:pb-6",
+          className,
+        )}
         style={{ maxWidth: wide ? 720 : 480 }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <h2 className="admin-section-title">{title}</h2>
+        <div className="admin-modal-head mb-6 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {icon ? <span className="admin-modal-icon">{icon}</span> : null}
+            <h2 className="admin-section-title">{title}</h2>
+          </div>
           <button
             type="button"
-            className="grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]"
+            className="admin-modal-close grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]"
             onClick={onClose}
             aria-label="Close"
           >
