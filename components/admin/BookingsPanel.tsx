@@ -7,14 +7,19 @@ import {
   CalendarRange,
   ChevronLeft,
   ChevronRight,
+  CircleDot,
+  Eye,
   Filter,
+  Glasses,
   List,
   Phone,
   Plus,
   RefreshCw,
   Search,
   SquarePen,
+  Sun,
   User,
+  type LucideIcon,
 } from "lucide-react";
 import type { ClinicAppointmentType } from "@/lib/types";
 
@@ -140,6 +145,13 @@ function WhatsAppGlyph({ size = 14 }: { size?: number }) {
     </svg>
   );
 }
+
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  eye_exam: Eye,
+  contact_lens_fitting: CircleDot,
+  frame_consultation: Glasses,
+  sunglasses_consultation: Sun,
+};
 
 export default function BookingsPanel({
   appointments,
@@ -555,26 +567,41 @@ export default function BookingsPanel({
               <ul className="abk-cards">
                 {visible.map((row) => {
                   const waHref = toWhatsAppHref(row.phone);
+                  const ReasonIcon =
+                    SERVICE_ICONS[row.appointmentType || "eye_exam"] || Eye;
                   return (
                     <li key={row.id}>
                       <article
                         className="abk-card"
                         onClick={() => onOpenRow(row)}
                       >
-                        <header className="abk-card-head">
-                          <span className="abk-date">
-                            {formatDateDisplay(row.appointmentDate)}
+                        <div className="abk-card-top">
+                          <span className="abk-card-when">
+                            <span className="abk-date">
+                              {formatDateDisplay(row.appointmentDate)}
+                            </span>
+                            <span className="abk-time" dir="ltr">
+                              {formatTime24(row.appointmentTime)}
+                            </span>
                           </span>
-                          <span className="abk-time" dir="ltr">
-                            {formatTime24(row.appointmentTime)}
-                          </span>
-                        </header>
+                          <button
+                            type="button"
+                            className="abk-action"
+                            aria-label="تعديل"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenRow(row);
+                            }}
+                          >
+                            <SquarePen size={15} strokeWidth={1.6} />
+                          </button>
+                        </div>
                         <p className="abk-card-name">
                           <User size={15} strokeWidth={1.5} />
-                          {row.fullName}
+                          <span>{row.fullName}</span>
                         </p>
                         <p className="abk-card-phone">
-                          <Phone size={14} strokeWidth={1.5} />
+                          <Phone size={15} strokeWidth={1.5} />
                           <span dir="ltr">{row.phone || "—"}</span>
                           {waHref ? (
                             <a
@@ -586,32 +613,16 @@ export default function BookingsPanel({
                               title="واتساب"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <WhatsAppGlyph size={13} />
+                              <WhatsAppGlyph size={15} />
                             </a>
                           ) : null}
                         </p>
-                        <p className="abk-card-meta">
-                          <span>الخدمة</span>
-                          {serviceLabel(row.appointmentType || "eye_exam")}
+                        <p className="abk-card-reason">
+                          <ReasonIcon size={15} strokeWidth={1.5} />
+                          <span>
+                            {serviceLabel(row.appointmentType || "eye_exam")}
+                          </span>
                         </p>
-                        <p className="abk-card-meta">
-                          <span>ملاحظات</span>
-                          {row.notes?.trim() ? row.notes : "—"}
-                        </p>
-                        <footer className="abk-card-foot">
-                          <button
-                            type="button"
-                            className="abk-action"
-                            aria-label="تعديل"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenRow(row);
-                            }}
-                          >
-                            <SquarePen size={13} strokeWidth={1.6} />
-                          </button>
-                          <ChevronLeft size={16} strokeWidth={1.55} color={GOLD} />
-                        </footer>
                       </article>
                     </li>
                   );
