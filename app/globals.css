@@ -9930,7 +9930,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   flex-direction: column;
   overflow: hidden;
   margin: 0;
-  background: #1a1f26;
+  background: #262626;
   border: 1.5px solid rgba(212, 175, 55, 0.78);
   border-radius: 10px;
   box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.14);
@@ -9940,7 +9940,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   position: relative;
   height: 132px;
   overflow: hidden;
-  background: #12161c;
+  background: #262626;
 }
 
 .admin-product-card-img,
@@ -10098,9 +10098,10 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     flex: 1;
     min-width: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto auto;
+    justify-content: start;
     align-items: center;
-    column-gap: 8px;
+    column-gap: 6px;
     row-gap: 2px;
     padding: 0;
   }
@@ -10157,7 +10158,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     grid-column: 2;
     grid-row: 1 / span 3;
     align-self: center;
-    gap: 5px;
+    gap: 4px;
   }
 
   .admin-product-icon-btn {
