@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
+  Calendar,
   CalendarDays,
+  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -11,16 +13,12 @@ import {
   Plus,
   RefreshCw,
   Search,
+  SquarePen,
   User,
 } from "lucide-react";
 import type { ClinicAppointmentType } from "@/lib/types";
 
 const GOLD = "#D4AF37";
-const MUTED = "#8B93A0";
-const PAGE_BG = "#0B0E14";
-const CARD_BG = "#151A21";
-const BORDER = "#2A2F36";
-const INK = "#FFFFFF";
 
 export type BookingRow = {
   id: string;
@@ -71,12 +69,20 @@ function addDays(d: Date, n: number): Date {
   return x;
 }
 
-function splitTime(time: string): { clock: string; period: string } {
-  if (!time) return { clock: "", period: "" };
-  const [h, m] = time.split(":").map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return { clock: time, period: "" };
-  const clock = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  return { clock, period: h < 12 ? "صباحاً" : "مساءً" };
+function formatTime24(time: string): string {
+  if (!time) return "—";
+  const [h, m] = time.split(":");
+  const hh = Number(h);
+  const mm = Number(m);
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return time;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+function formatDateDisplay(iso: string): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
 }
 
 function weekdayShortAr(d: Date): string {
@@ -108,35 +114,32 @@ function longDayAr(iso: string): string {
   });
 }
 
-function shortDateAr(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString("ar", {
-    day: "numeric",
-    month: "short",
-  });
+function toWhatsAppHref(phone: string): string | null {
+  const trimmed = phone.trim();
+  if (!trimmed) return null;
+  let digits = trimmed.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0") && digits.length >= 9 && digits.length <= 10) {
+    digits = `972${digits.slice(1)}`;
+  }
+  if (digits.length < 8) return null;
+  return `https://wa.me/${digits}`;
 }
 
-/** Compact single-line date for mobile list rows, e.g. 10/08/26 */
-function compactListDate(iso: string): string {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  if (!y || !m || !d) return shortDateAr(iso);
-  return `${d}/${m}/${y.slice(2)}`;
+function WhatsAppGlyph({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M20.5 3.5A11 11 0 0 0 2.1 17.2L1 23l5.9-1.1A11 11 0 0 0 20.5 3.5zm-8.5 17a9 9 0 0 1-4.6-1.3l-.3-.2-3.5.7.7-3.4-.2-.3A9 9 0 1 1 12 20.5zm4.9-6.7c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.6.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.5-1.5-1.8-.2-.3 0-.4.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.6-1.5-.8-2-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.2.1-1.3-.1-.1-.3-.2-.6-.3z" />
+    </svg>
+  );
 }
-
-const fieldStyle: CSSProperties = {
-  height: 42,
-  borderRadius: 12,
-  border: `1px solid ${BORDER}`,
-  background: CARD_BG,
-  color: INK,
-  padding: "0 0.75rem",
-  font: "inherit",
-  fontSize: "0.84rem",
-  outline: "none",
-  width: "100%",
-};
 
 export default function BookingsPanel({
   appointments,
@@ -154,9 +157,12 @@ export default function BookingsPanel({
   serviceLabel,
 }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
-  const [weekAnchor, setWeekAnchor] = useState(() => startOfWeekSunday(new Date()));
+  const [weekAnchor, setWeekAnchor] = useState(() =>
+    startOfWeekSunday(new Date()),
+  );
   const [selectedDay, setSelectedDay] = useState(() => isoLocal(new Date()));
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const viewingAllDates = viewMode === "list" && !dateFilter;
 
   function openDatePicker() {
     const input = dateInputRef.current;
@@ -177,14 +183,38 @@ export default function BookingsPanel({
     return Array.from({ length: 7 }, (_, i) => {
       const d = addDays(weekAnchor, i);
       const iso = isoLocal(d);
-      const count = appointments.filter(
-        (a) => a.appointmentDate === iso,
-      ).length;
+      const count = appointments.filter((a) => a.appointmentDate === iso).length;
       return { date: d, iso, count };
     });
   }, [weekAnchor, appointments]);
 
   const weekEnd = addDays(weekAnchor, 6);
+
+  const stats = useMemo(() => {
+    const today = isoLocal(new Date());
+    const weekStartIso = isoLocal(startOfWeekSunday(new Date()));
+    const weekEndIso = isoLocal(addDays(startOfWeekSunday(new Date()), 6));
+    const monthPrefix = today.slice(0, 7);
+    let todayCount = 0;
+    let weekCount = 0;
+    let monthCount = 0;
+    for (const row of appointments) {
+      if (row.appointmentDate === today) todayCount += 1;
+      if (
+        row.appointmentDate >= weekStartIso &&
+        row.appointmentDate <= weekEndIso
+      ) {
+        weekCount += 1;
+      }
+      if (row.appointmentDate.startsWith(monthPrefix)) monthCount += 1;
+    }
+    return {
+      todayCount,
+      weekCount,
+      monthCount,
+      total: appointments.length,
+    };
+  }, [appointments]);
 
   const visible = useMemo(() => {
     let rows = [...appointments];
@@ -207,262 +237,189 @@ export default function BookingsPanel({
     setSelectedDay(isoLocal(next));
   }
 
+  function viewAllDates() {
+    setViewMode("list");
+    onDateFilterChange("");
+  }
+
+  function applyDate(iso: string) {
+    onDateFilterChange(iso);
+    if (!iso) return;
+    const d = new Date(`${iso}T12:00:00`);
+    setWeekAnchor(startOfWeekSunday(d));
+    setSelectedDay(iso);
+  }
+
   return (
-    <div
-      className="admin-bookings-panel flex flex-col"
-      style={{ color: INK, gap: 18 }}
-    >
-      {/* Title + actions */}
-      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <h1
-              className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em] lg:text-[1.7rem]"
-              style={{ color: INK, lineHeight: 1.3 }}
-            >
-              الحجوزات
-            </h1>
+    <div className="admin-bookings-panel abk-panel">
+      <div className="abk-hero">
+        <div className="abk-hero-copy">
+          <div className="abk-hero-title">
+            <h1>الحجوزات</h1>
             <CalendarDays size={24} strokeWidth={1.45} color={GOLD} aria-hidden />
           </div>
-          <p
-            className="mb-0 mt-1.5 text-[0.84rem] leading-relaxed lg:text-[0.9rem]"
-            style={{ color: MUTED }}
-          >
-            عرض جميع الحجوزات وإدارتها بسهولة
-          </p>
+          <p>عرض جميع الحجوزات وإدارتها بسهولة</p>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onAdd}
-            className="inline-flex items-center justify-center gap-1 rounded-[12px] text-[0.84rem] font-bold"
-            style={{
-              height: 44,
-              width: "42%",
-              maxWidth: 148,
-              background: GOLD,
-              color: "#0B0E14",
-              border: "none",
-              paddingInline: 10,
-            }}
-          >
-            موعد جديد
-            <Plus size={15} strokeWidth={1.7} />
-          </button>
+        <div className="abk-hero-actions">
           <button
             type="button"
             onClick={onRefresh}
             disabled={loading || busy}
-            className="inline-flex items-center justify-center gap-1.5 rounded-[12px] px-3.5 text-[0.84rem] font-semibold disabled:opacity-50"
-            style={{
-              height: 44,
-              background: CARD_BG,
-              color: INK,
-              border: `1px solid ${BORDER}`,
-            }}
+            className="abk-btn"
           >
-            <RefreshCw size={16} strokeWidth={1.5} color={GOLD} />
+            <RefreshCw size={14} strokeWidth={1.6} />
             تحديث
+          </button>
+          <button type="button" onClick={onAdd} className="abk-btn abk-btn-add">
+            <Plus size={14} strokeWidth={1.7} />
+            موعد جديد
           </button>
         </div>
       </div>
 
-      {/* View toggle */}
-      <div
-        className="grid grid-cols-2 gap-1.5 rounded-[14px] p-1.5 lg:inline-grid lg:w-auto"
-        style={{ background: CARD_BG, border: `1px solid ${BORDER}` }}
-      >
+      <section className="abk-stats" aria-label="ملخص الحجوزات">
+        <article className="abk-stat">
+          <span className="abk-stat-icon">
+            <CalendarDays size={16} strokeWidth={1.6} />
+          </span>
+          <div className="abk-stat-copy">
+            <span className="abk-stat-label">اليوم</span>
+            <strong className="abk-stat-value">{stats.todayCount}</strong>
+          </div>
+        </article>
+        <article className="abk-stat">
+          <span className="abk-stat-icon">
+            <CalendarRange size={16} strokeWidth={1.6} />
+          </span>
+          <div className="abk-stat-copy">
+            <span className="abk-stat-label">هذا الأسبوع</span>
+            <strong className="abk-stat-value">{stats.weekCount}</strong>
+          </div>
+        </article>
+        <article className="abk-stat">
+          <span className="abk-stat-icon">
+            <Calendar size={16} strokeWidth={1.6} />
+          </span>
+          <div className="abk-stat-copy">
+            <span className="abk-stat-label">هذا الشهر</span>
+            <strong className="abk-stat-value">{stats.monthCount}</strong>
+          </div>
+        </article>
+        <article className="abk-stat">
+          <span className="abk-stat-icon">
+            <List size={16} strokeWidth={1.6} />
+          </span>
+          <div className="abk-stat-copy">
+            <span className="abk-stat-label">إجمالي الحجوزات</span>
+            <strong className="abk-stat-value">{stats.total}</strong>
+          </div>
+        </article>
+      </section>
+
+      <div className="abk-toggle">
         <button
           type="button"
           onClick={() => setViewMode("weekly")}
-          className="inline-flex items-center justify-center gap-2 rounded-[11px] px-3.5 text-[0.82rem] font-bold"
-          style={{
-            height: 42,
-            background: viewMode === "weekly" ? GOLD : "transparent",
-            color: viewMode === "weekly" ? "#0B0E14" : INK,
-            border: "none",
-          }}
+          className={`abk-toggle-btn${viewMode === "weekly" ? " is-active" : ""}`}
         >
-          <CalendarDays
-            size={16}
-            strokeWidth={1.5}
-            color={viewMode === "weekly" ? "#0B0E14" : GOLD}
-          />
+          <CalendarDays size={15} strokeWidth={1.55} />
           عرض جدول أسبوعي
         </button>
         <button
           type="button"
           onClick={() => setViewMode("list")}
-          className="inline-flex items-center justify-center gap-2 rounded-[11px] px-3.5 text-[0.82rem] font-bold"
-          style={{
-            height: 42,
-            background: viewMode === "list" ? GOLD : "transparent",
-            color: viewMode === "list" ? "#0B0E14" : INK,
-            border: "none",
-          }}
+          className={`abk-toggle-btn${viewMode === "list" ? " is-active" : ""}`}
         >
-          <List
-            size={16}
-            strokeWidth={1.5}
-            color={viewMode === "list" ? "#0B0E14" : GOLD}
-          />
+          <List size={15} strokeWidth={1.55} />
           عرض قائمة
         </button>
       </div>
 
-      {/* Search — weekly: search only | list: search + date + service */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            size={16}
-            strokeWidth={1.5}
-            className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-            style={{ insetInlineStart: 12, color: GOLD }}
-          />
+      <div className="abk-toolbar">
+        <div className="abk-search">
+          <Search size={15} strokeWidth={1.55} />
           <input
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="ابحث باسم العميل أو رقم الهاتف..."
             aria-label="بحث"
-            style={{
-              ...fieldStyle,
-              height: 44,
-              paddingInlineStart: 38,
-              border: `1px solid ${BORDER}`,
-            }}
           />
         </div>
 
-        {viewMode === "list" ? (
-          <>
-            <label className="relative block lg:w-[12rem]">
-              <button
-                type="button"
-                aria-label="فتح التقويم"
-                onClick={openDatePicker}
-                className="absolute top-1/2 z-[2] -translate-y-1/2 border-0 bg-transparent p-0 leading-none"
-                style={{
-                  insetInlineStart: 12,
-                  color: GOLD,
-                  cursor: "pointer",
-                }}
-              >
-                <CalendarDays size={15} strokeWidth={1.5} aria-hidden />
-              </button>
-              <input
-                ref={dateInputRef}
-                type="date"
-                className="admin-bookings-date-input"
-                value={dateFilter}
-                onChange={(e) => {
-                  onDateFilterChange(e.target.value);
-                  if (e.target.value) {
-                    const d = new Date(`${e.target.value}T12:00:00`);
-                    setWeekAnchor(startOfWeekSunday(d));
-                    setSelectedDay(e.target.value);
-                  }
-                }}
-                style={{
-                  ...fieldStyle,
-                  height: 44,
-                  paddingInlineStart: 36,
-                }}
-              />
-            </label>
+        <label className="abk-ctrl abk-date-ctrl">
+          <button
+            type="button"
+            aria-label="فتح التقويم"
+            onClick={openDatePicker}
+            className="abk-date-icon"
+          >
+            <CalendarDays size={14} strokeWidth={1.55} aria-hidden />
+          </button>
+          <input
+            ref={dateInputRef}
+            type="date"
+            className="admin-bookings-date-input abk-date-input"
+            value={dateFilter}
+            onChange={(e) => applyDate(e.target.value)}
+          />
+        </label>
 
-            <label className="relative block lg:w-[12.5rem]">
-              <Filter
-                size={15}
-                strokeWidth={1.5}
-                className="pointer-events-none absolute top-1/2 z-[1] -translate-y-1/2"
-                style={{ insetInlineStart: 12, color: GOLD }}
-              />
-              <select
-                value={typeFilter}
-                onChange={(e) => onTypeFilterChange(e.target.value)}
-                style={{
-                  ...fieldStyle,
-                  height: 44,
-                  paddingInlineStart: 36,
-                  appearance: "none",
-                }}
-              >
-                <option value="all">كل الخدمات</option>
-                <option value="eye_exam">{serviceLabel("eye_exam")}</option>
-                <option value="contact_lens_fitting">
-                  {serviceLabel("contact_lens_fitting")}
-                </option>
-                <option value="frame_consultation">
-                  {serviceLabel("frame_consultation")}
-                </option>
-                <option value="sunglasses_consultation">
-                  {serviceLabel("sunglasses_consultation")}
-                </option>
-              </select>
-            </label>
-          </>
-        ) : null}
+        <button
+          type="button"
+          onClick={viewAllDates}
+          className={`abk-btn${viewingAllDates ? " is-active" : ""}`}
+        >
+          <List size={14} strokeWidth={1.55} />
+          عرض كل التواريخ
+        </button>
+
+        <label className="abk-ctrl">
+          <Filter size={14} strokeWidth={1.55} />
+          <select
+            value={typeFilter}
+            onChange={(e) => onTypeFilterChange(e.target.value)}
+            aria-label="كل الخدمات"
+          >
+            <option value="all">كل الخدمات</option>
+            <option value="eye_exam">{serviceLabel("eye_exam")}</option>
+            <option value="contact_lens_fitting">
+              {serviceLabel("contact_lens_fitting")}
+            </option>
+            <option value="frame_consultation">
+              {serviceLabel("frame_consultation")}
+            </option>
+            <option value="sunglasses_consultation">
+              {serviceLabel("sunglasses_consultation")}
+            </option>
+          </select>
+        </label>
       </div>
 
-      {/* Weekly strip */}
       {viewMode === "weekly" ? (
-        <section
-          className="rounded-[16px] px-3 pb-3.5 pt-3 lg:px-[14px] lg:pb-[18px] lg:pt-4"
-          style={{
-            background: CARD_BG,
-            border: `1px solid ${BORDER}`,
-            height: "fit-content",
-          }}
-        >
-          <div className="mb-2.5 flex items-center justify-between gap-2 lg:mb-4 lg:gap-3">
-            <h2
-              className="m-0 text-[0.95rem] font-semibold lg:text-[1.05rem]"
-              style={{ color: INK }}
-            >
-              جدول الأسبوع
-            </h2>
-            <div className="flex items-center gap-1.5 lg:gap-2">
+        <section className="abk-week">
+          <div className="abk-week-head">
+            <h2>جدول الأسبوع</h2>
+            <div className="abk-week-nav">
               <button
                 type="button"
                 aria-label="الأسبوع السابق"
                 onClick={() => shiftWeek(-1)}
-                className="grid place-items-center rounded-[10px]"
-                style={{
-                  width: 34,
-                  height: 34,
-                  background: PAGE_BG,
-                  border: `1px solid ${BORDER}`,
-                  color: GOLD,
-                }}
+                className="abk-icon-btn"
               >
                 <ChevronRight size={15} strokeWidth={1.6} />
               </button>
-              <span
-                className="min-w-0 text-center text-[0.72rem] font-semibold lg:min-w-[10rem] lg:text-[0.8rem]"
-                style={{ color: MUTED }}
-              >
-                {rangeLabelAr(weekAnchor, weekEnd)}
-              </span>
+              <span>{rangeLabelAr(weekAnchor, weekEnd)}</span>
               <button
                 type="button"
                 aria-label="الأسبوع التالي"
                 onClick={() => shiftWeek(1)}
-                className="grid place-items-center rounded-[10px]"
-                style={{
-                  width: 34,
-                  height: 34,
-                  background: PAGE_BG,
-                  border: `1px solid ${BORDER}`,
-                  color: GOLD,
-                }}
+                className="abk-icon-btn"
               >
                 <ChevronLeft size={15} strokeWidth={1.6} />
               </button>
             </div>
           </div>
-
-          <div className="flex gap-[5px] overflow-hidden lg:grid lg:grid-cols-7 lg:gap-3.5 lg:overflow-visible">
+          <div className="abk-week-grid">
             {weekDays.map((day) => {
               const active = day.iso === selectedDay;
               return (
@@ -473,31 +430,18 @@ export default function BookingsPanel({
                     setSelectedDay(day.iso);
                     onDateFilterChange(day.iso);
                   }}
-                  className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-[12px] px-0.5 py-2 gap-1.5 aspect-[1/1.05] lg:aspect-auto lg:min-w-0 lg:justify-start lg:rounded-[14px] lg:px-2.5 lg:py-4 lg:gap-2"
-                  style={{
-                    background: active ? GOLD : PAGE_BG,
-                    border: active
-                      ? `1.5px solid ${GOLD}`
-                      : `1px solid ${BORDER}`,
-                    color: active ? "#0B0E14" : INK,
-                    boxShadow: active
-                      ? "0 0 0 1px rgba(212,175,55,0.35)"
-                      : "none",
-                  }}
+                  className={`abk-week-day${active ? " is-active" : ""}`}
                 >
-                  <span className="max-w-full truncate text-[0.62rem] font-semibold leading-none lg:text-[0.82rem] lg:leading-snug">
-                    <span className="lg:hidden">{weekdayShortAr(day.date)}</span>
-                    <span className="hidden lg:inline">{weekdayLongAr(day.date)}</span>
+                  <span className="abk-week-name">
+                    <span className="abk-week-name-short">
+                      {weekdayShortAr(day.date)}
+                    </span>
+                    <span className="abk-week-name-long">
+                      {weekdayLongAr(day.date)}
+                    </span>
                   </span>
-                  <span className="text-[0.82rem] font-bold tabular-nums leading-none lg:text-[1.02rem]">
-                    {dayMonthAr(day.date)}
-                  </span>
-                  <span
-                    className="text-[0.68rem] font-bold tabular-nums leading-none lg:text-[0.8rem]"
-                    style={{ color: active ? "#0B0E14" : GOLD }}
-                  >
-                    {day.count}
-                  </span>
+                  <span className="abk-week-date">{dayMonthAr(day.date)}</span>
+                  <span className="abk-week-count">{day.count}</span>
                 </button>
               );
             })}
@@ -505,238 +449,170 @@ export default function BookingsPanel({
         </section>
       ) : null}
 
-      {/* Results block — clear separation from weekly schedule */}
-      <div className="flex flex-col gap-3.5 lg:gap-4">
-        <p
-          className="m-0 text-[0.9rem] font-bold tabular-nums lg:text-[0.95rem]"
-          style={{ color: GOLD }}
-        >
+      <div className="abk-results">
+        <p className="abk-count">
           {viewMode === "weekly" ? (
             <>
               {visible.length} {longDayAr(selectedDay)}
             </>
+          ) : viewingAllDates ? (
+            <>{visible.length} حجز — كل التواريخ</>
           ) : (
             <>{visible.length} حجز</>
           )}
         </p>
 
-        <section
-          className={`overflow-hidden rounded-[16px] ${
-            viewMode === "list"
-              ? "max-lg:w-[calc(100%+12px)] max-lg:max-w-none max-lg:-mx-1.5"
-              : ""
-          }`}
-          style={{
-            background: CARD_BG,
-            border: `1px solid ${BORDER}`,
-            height: "fit-content",
-          }}
-        >
+        <section className="abk-list-shell">
           {loading ? (
-            <p className="m-0 px-4 py-7 text-sm" style={{ color: MUTED }}>
-              جارٍ التحميل…
-            </p>
+            <p className="abk-empty">جارٍ التحميل…</p>
           ) : visible.length === 0 ? (
-            <p className="m-0 px-4 py-7 text-sm" style={{ color: MUTED }}>
-              لا توجد حجوزات
-            </p>
+            <p className="abk-empty">لا توجد حجوزات</p>
           ) : (
             <>
-              {/* Desktop headers */}
-              <div
-                className="hidden grid-cols-[7.75rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] gap-4 px-5 pb-2.5 pt-4 text-[0.74rem] font-medium lg:grid"
-                style={{ color: MUTED }}
-              >
-                <span>{viewMode === "list" ? "التاريخ / الوقت" : "الوقت"}</span>
-                <span>العميل</span>
-                <span>رقم الهاتف</span>
-                <span>الخدمة</span>
-                <span>ملاحظات</span>
-                <span />
-              </div>
-
-              <ul className="m-0 list-none p-0">
-                {visible.map((row) => {
-                  const { clock, period } = splitTime(row.appointmentTime);
-                  const showDate = viewMode === "list";
-                  return (
-                    <li key={row.id}>
-                      <button
-                        type="button"
-                        onClick={() => onOpenRow(row)}
-                        className="block w-full text-start"
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          borderTop: `1px solid rgba(42,47,54,0.95)`,
-                          padding: 0,
-                        }}
-                      >
-                        {/* Desktop row */}
-                        <div className="hidden grid-cols-[7.75rem_minmax(0,1.25fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.75fr)_1.75rem] items-center gap-4 px-5 py-3.5 lg:grid">
-                          <div>
-                            {showDate ? (
-                              <p
-                                className="m-0 text-[0.72rem] font-semibold leading-tight"
-                                style={{ color: MUTED }}
-                              >
-                                {shortDateAr(row.appointmentDate)}
-                              </p>
-                            ) : null}
-                            <p
-                              className="m-0 text-[1rem] font-bold tabular-nums leading-tight"
-                              style={{
-                                color: GOLD,
-                                marginTop: showDate ? 4 : 0,
+              <div className="abk-table-wrap">
+                <table className="abk-table">
+                  <thead>
+                    <tr>
+                      <th>التاريخ</th>
+                      <th>الوقت</th>
+                      <th>العميل</th>
+                      <th>الهاتف</th>
+                      <th>الخدمة</th>
+                      <th>ملاحظات</th>
+                      <th>إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.map((row) => {
+                      const waHref = toWhatsAppHref(row.phone);
+                      return (
+                        <tr
+                          key={row.id}
+                          className="abk-row"
+                          onClick={() => onOpenRow(row)}
+                        >
+                          <td>
+                            <span className="abk-date">
+                              {formatDateDisplay(row.appointmentDate)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="abk-time" dir="ltr">
+                              {formatTime24(row.appointmentTime)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="abk-cell-icon">
+                              <User size={15} strokeWidth={1.5} />
+                              <span className="abk-name">{row.fullName}</span>
+                            </span>
+                          </td>
+                          <td>
+                            <span className="abk-phone-cell">
+                              <Phone size={14} strokeWidth={1.5} />
+                              <span dir="ltr">{row.phone || "—"}</span>
+                              {waHref ? (
+                                <a
+                                  href={waHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="abk-wa"
+                                  aria-label="واتساب"
+                                  title="واتساب"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <WhatsAppGlyph size={13} />
+                                </a>
+                              ) : null}
+                            </span>
+                          </td>
+                          <td className="abk-service">
+                            {serviceLabel(row.appointmentType || "eye_exam")}
+                          </td>
+                          <td className="abk-notes">
+                            {row.notes?.trim() ? row.notes : "—"}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="abk-action"
+                              aria-label="تعديل"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenRow(row);
                               }}
                             >
-                              {clock}
-                            </p>
-                            <p
-                              className="mb-0 mt-0.5 text-[0.72rem] font-medium leading-tight"
-                              style={{ color: GOLD }}
-                            >
-                              {period}
-                            </p>
-                          </div>
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <User size={17} strokeWidth={1.45} color={GOLD} />
-                            <span
-                              className="truncate text-[0.92rem] font-semibold"
-                              style={{ color: INK }}
-                            >
-                              {row.fullName}
-                            </span>
-                          </div>
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <Phone size={17} strokeWidth={1.45} color={GOLD} />
-                            <span
-                              className="truncate text-[0.88rem] tabular-nums"
-                              style={{ color: INK }}
-                              dir="ltr"
-                            >
-                              {row.phone || "—"}
-                            </span>
-                          </div>
-                          <span
-                            className="truncate text-[0.88rem]"
-                            style={{ color: INK }}
-                          >
-                            {serviceLabel(row.appointmentType || "eye_exam")}
-                          </span>
-                          <span
-                            className="truncate text-[0.84rem]"
-                            style={{ color: MUTED }}
-                          >
-                            {row.notes?.trim() ? row.notes : "—"}
-                          </span>
-                          <ChevronLeft size={18} strokeWidth={1.55} color={GOLD} />
-                        </div>
+                              <SquarePen size={13} strokeWidth={1.6} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-                        {/* Mobile — list: date+hour | name | phone */}
-                        {showDate ? (
-                          <div
-                            className="flex items-center gap-3.5 px-3.5 lg:hidden"
-                            style={{
-                              width: "100%",
-                              boxSizing: "border-box",
-                              minHeight: 76,
-                              paddingTop: 18,
-                              paddingBottom: 18,
+              <ul className="abk-cards">
+                {visible.map((row) => {
+                  const waHref = toWhatsAppHref(row.phone);
+                  return (
+                    <li key={row.id}>
+                      <article
+                        className="abk-card"
+                        onClick={() => onOpenRow(row)}
+                      >
+                        <header className="abk-card-head">
+                          <span className="abk-date">
+                            {formatDateDisplay(row.appointmentDate)}
+                          </span>
+                          <span className="abk-time" dir="ltr">
+                            {formatTime24(row.appointmentTime)}
+                          </span>
+                        </header>
+                        <p className="abk-card-name">
+                          <User size={15} strokeWidth={1.5} />
+                          {row.fullName}
+                        </p>
+                        <p className="abk-card-phone">
+                          <Phone size={14} strokeWidth={1.5} />
+                          <span dir="ltr">{row.phone || "—"}</span>
+                          {waHref ? (
+                            <a
+                              href={waHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="abk-wa"
+                              aria-label="واتساب"
+                              title="واتساب"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <WhatsAppGlyph size={13} />
+                            </a>
+                          ) : null}
+                        </p>
+                        <p className="abk-card-meta">
+                          <span>الخدمة</span>
+                          {serviceLabel(row.appointmentType || "eye_exam")}
+                        </p>
+                        <p className="abk-card-meta">
+                          <span>ملاحظات</span>
+                          {row.notes?.trim() ? row.notes : "—"}
+                        </p>
+                        <footer className="abk-card-foot">
+                          <button
+                            type="button"
+                            className="abk-action"
+                            aria-label="تعديل"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenRow(row);
                             }}
                           >
-                            <div
-                              className="shrink-0"
-                              style={{ width: "3.85rem", minWidth: "3.85rem" }}
-                            >
-                              <p
-                                className="m-0 whitespace-nowrap text-[0.74rem] font-semibold tabular-nums leading-none"
-                                style={{ color: MUTED }}
-                                dir="ltr"
-                              >
-                                {compactListDate(row.appointmentDate)}
-                              </p>
-                              <p
-                                className="m-0 whitespace-nowrap text-[0.9rem] font-bold tabular-nums leading-none"
-                                style={{ color: GOLD, marginTop: 11 }}
-                                dir="ltr"
-                              >
-                                {clock}
-                              </p>
-                            </div>
-                            <span
-                              className="min-w-0 flex-[1.45] truncate self-center text-[0.9rem] font-semibold leading-snug"
-                              style={{ color: INK }}
-                            >
-                              {row.fullName}
-                            </span>
-                            <div className="flex min-w-0 flex-1 items-center gap-1.5 self-center">
-                              <Phone
-                                size={13}
-                                strokeWidth={1.45}
-                                color={GOLD}
-                                className="shrink-0"
-                              />
-                              <span
-                                className="min-w-0 truncate text-[0.74rem] tabular-nums leading-none"
-                                style={{ color: MUTED }}
-                                dir="ltr"
-                              >
-                                {row.phone || "—"}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3 px-3.5 py-3 lg:hidden">
-                            <div className="w-[3.6rem] shrink-0" style={{ minWidth: "3.6rem" }}>
-                              <p
-                                className="m-0 whitespace-nowrap text-[0.9rem] font-bold tabular-nums leading-tight"
-                                style={{ color: GOLD }}
-                                dir="ltr"
-                              >
-                                {clock}
-                              </p>
-                            </div>
-                            <div className="min-w-0 flex-1 overflow-hidden">
-                              <div className="flex min-w-0 items-center gap-1.5">
-                                <User
-                                  size={14}
-                                  strokeWidth={1.45}
-                                  color={GOLD}
-                                  className="shrink-0"
-                                />
-                                <span
-                                  className="truncate text-[0.86rem] font-semibold"
-                                  style={{ color: INK }}
-                                >
-                                  {row.fullName}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                                <Phone
-                                  size={13}
-                                  strokeWidth={1.45}
-                                  color={GOLD}
-                                  className="shrink-0"
-                                />
-                                <span
-                                  className="truncate text-[0.74rem] tabular-nums"
-                                  style={{ color: MUTED }}
-                                  dir="ltr"
-                                >
-                                  {row.phone || "—"}
-                                </span>
-                              </div>
-                            </div>
-                            <ChevronLeft
-                              size={17}
-                              strokeWidth={1.55}
-                              color={GOLD}
-                              className="shrink-0"
-                            />
-                          </div>
-                        )}
-                      </button>
+                            <SquarePen size={13} strokeWidth={1.6} />
+                          </button>
+                          <ChevronLeft size={16} strokeWidth={1.55} color={GOLD} />
+                        </footer>
+                      </article>
                     </li>
                   );
                 })}
