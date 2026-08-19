@@ -125,6 +125,8 @@ function discountLabel(p: Promotion): string {
   return p.discount || "—";
 }
 
+const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
+
 const SCOPE_ICONS = {
   all: Package,
   sunglasses: Glasses,
