@@ -11757,6 +11757,23 @@ div.admin-pe-input {
   gap: 12px;
 }
 
+.admin-pe-price-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-pe-price-fields,
+.admin-pe-price-fields > * {
+  min-width: 0;
+}
+
+.admin-pe-price-fields input.admin-pe-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .admin-pe-control {
   position: relative;
   display: block;
@@ -11955,23 +11972,6 @@ select.admin-pe-input {
 
   .admin-pe-price-fields > :nth-child(3) {
     order: 3;
-  }
-
-  .admin-pe-price-fields .admin-pe-control,
-  .admin-pe-price-fields .admin-pe-input {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
-  .admin-pe-price-fields input.admin-pe-input {
-    min-width: 12.5rem;
-    font-variant-numeric: tabular-nums;
-    padding-inline-end: 0.95rem;
-  }
-
-  .admin-pe-price-fields .admin-pe-input.has-icon {
-    padding-inline-start: 2.55rem;
   }
 
   .admin-pe-thumbs {

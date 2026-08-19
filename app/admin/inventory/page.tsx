@@ -806,7 +806,7 @@ export default function AdminInventoryPage() {
               {tab === "stock" ? (
                 <>
                   <div className="admin-pe-stock-wrap">
-                    <div className="admin-pe-card">
+                    <div className="admin-pe-card admin-pe-price-card">
                       <h2 className="admin-pe-card-title">
                         <Wallet size={16} strokeWidth={1.7} />
                         السعر
@@ -816,18 +816,15 @@ export default function AdminInventoryPage() {
                           <label className="admin-pe-label" htmlFor="p-selling">
                             السعر (₪)
                           </label>
-                          <div className="admin-pe-control">
-                            <span className="admin-pe-affix">₪</span>
-                            <input
-                              id="p-selling"
-                              type="number"
-                              className="admin-pe-input has-icon"
-                              value={form.sellingPrice}
-                              onChange={(e) =>
-                                setField("sellingPrice", e.target.value)
-                              }
-                            />
-                          </div>
+                          <input
+                            id="p-selling"
+                            type="number"
+                            className="admin-pe-input"
+                            value={form.sellingPrice}
+                            onChange={(e) =>
+                              setField("sellingPrice", e.target.value)
+                            }
+                          />
                         </div>
                         <div>
                           <label className="admin-pe-label" htmlFor="p-purchase">
