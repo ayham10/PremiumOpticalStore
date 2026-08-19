@@ -67,7 +67,12 @@ export default function AdminProductCard({
       </div>
 
       <div className="admin-product-card-body">
-        <h2 className="admin-product-card-name">{product.name}</h2>
+        <div className="admin-product-card-heading">
+          <h2 className="admin-product-card-name">{product.name}</h2>
+          {isActive ? (
+            <span className="admin-product-card-badge-inline">نشط</span>
+          ) : null}
+        </div>
         <div className="admin-product-card-footer">
           <div className="admin-product-card-meta">
             <p className="admin-product-card-price">

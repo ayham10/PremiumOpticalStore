@@ -9245,6 +9245,14 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   line-height: 1.4;
 }
 
+.admin-product-card-badge-inline {
+  display: none;
+}
+
+.admin-product-card-heading {
+  display: contents;
+}
+
 .admin-product-card-body {
   display: flex;
   flex-direction: column;
@@ -9327,6 +9335,109 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-product-icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .admin-products-grid {
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 2px;
+    box-sizing: border-box;
+  }
+
+  .admin-product-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-product-card-media {
+    width: 76px;
+    height: 76px;
+    flex: 0 0 76px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .admin-product-card-badge {
+    display: none;
+  }
+
+  .admin-product-card-body {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 2px;
+    padding: 0;
+  }
+
+  .admin-product-card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .admin-product-card-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 12.5px;
+    line-height: 1.25;
+    -webkit-line-clamp: 1;
+    text-align: start;
+  }
+
+  .admin-product-card-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #22c55e;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .admin-product-card-footer {
+    display: contents;
+  }
+
+  .admin-product-card-meta {
+    grid-column: 1;
+    gap: 1px;
+  }
+
+  .admin-product-card-price {
+    font-size: 12.5px;
+  }
+
+  .admin-product-card-stock {
+    font-size: 10.5px;
+  }
+
+  .admin-product-card-actions {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
+    gap: 5px;
+  }
+
+  .admin-product-icon-btn {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 @media (min-width: 768px) {
