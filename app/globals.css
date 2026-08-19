@@ -9880,6 +9880,181 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   }
 }
 
+@media (min-width: 768px) {
+  .admin-wh-shell {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .admin-wh-calendar {
+    padding: 16px 16px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    background:
+      linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .admin-wh-calendar-title {
+    color: rgba(212, 175, 55, 0.82);
+    letter-spacing: 0.08em;
+  }
+
+  .admin-wh-month-label {
+    color: #f3f4f5;
+  }
+
+  .admin-wh-nav-btn {
+    border-color: rgba(212, 175, 55, 0.32);
+    background: rgba(11, 14, 20, 0.55);
+    color: #d4af37;
+  }
+
+  .admin-wh-weekdays {
+    color: rgba(212, 175, 55, 0.72);
+  }
+
+  .admin-wh-day-cell {
+    border-color: rgba(130, 160, 200, 0.12);
+    background: rgba(11, 14, 20, 0.35);
+    color: #e8eaed;
+  }
+
+  .admin-wh-day-cell:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.08);
+  }
+
+  .admin-wh-day-cell.is-selected {
+    border-color: rgba(212, 175, 55, 0.95);
+    background: linear-gradient(180deg, #e6c85a 0%, #d4af37 100%);
+    color: #0b0e14;
+    box-shadow:
+      0 0 16px rgba(212, 175, 55, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+
+  .admin-wh-day-cell.is-selected .admin-wh-day-num {
+    color: #0b0e14;
+    font-weight: 800;
+  }
+
+  .admin-wh-empty {
+    border-radius: 16px;
+    border: 1px solid rgba(212, 175, 55, 0.22);
+    background:
+      linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
+  }
+
+  .admin-wh-day-header {
+    margin: 0;
+    padding: 14px 16px 10px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-bottom: 0;
+    border-radius: 16px 16px 0 0;
+    background:
+      linear-gradient(180deg, rgba(26, 36, 54, 0.98) 0%, rgba(16, 22, 34, 1) 100%);
+  }
+
+  .admin-wh-day-label {
+    color: #f5f6f7;
+  }
+
+  .admin-wh-gold-icon {
+    color: #d4af37;
+  }
+
+  .admin-wh-actions {
+    margin: 0 0 12px;
+    padding: 10px 14px 14px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-top: 1px solid rgba(212, 175, 55, 0.14);
+    border-radius: 0 0 16px 16px;
+    background: rgba(12, 18, 28, 0.98);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  }
+
+  .admin-wh-action {
+    background: rgba(11, 14, 20, 0.55);
+  }
+
+  .admin-wh-banner {
+    margin-bottom: 12px;
+    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  .admin-wh-banner.is-open {
+    border-color: rgba(34, 197, 94, 0.42);
+    background:
+      linear-gradient(180deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 28, 24, 0.92) 100%);
+  }
+
+  .admin-wh-banner.is-open strong {
+    color: #4ade80;
+  }
+
+  .admin-wh-banner.is-closed {
+    border-color: rgba(212, 175, 55, 0.2);
+    background: rgba(16, 22, 34, 0.96);
+  }
+
+  .admin-wh-slots-head {
+    margin: 0;
+    padding: 14px 16px 10px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-bottom: 0;
+    border-radius: 16px 16px 0 0;
+    background:
+      linear-gradient(180deg, rgba(26, 36, 54, 0.98) 0%, rgba(16, 22, 34, 1) 100%);
+  }
+
+  .admin-wh-slots-head h3 {
+    color: #f5f6f7;
+  }
+
+  .admin-wh-periods {
+    margin: 0 0 12px;
+    padding: 10px 14px 14px;
+    gap: 8px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-top: 1px solid rgba(212, 175, 55, 0.14);
+    border-radius: 0 0 16px 16px;
+    background: rgba(12, 18, 28, 0.98);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  }
+
+  .admin-wh-period-row {
+    border-color: rgba(212, 175, 55, 0.22);
+    background: rgba(11, 14, 20, 0.72);
+  }
+
+  .admin-wh-period-input {
+    border-color: rgba(212, 175, 55, 0.28);
+    background: #0b0e14;
+  }
+
+  .admin-wh-booked-hint,
+  .admin-wh-tip {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(212, 175, 55, 0.16);
+    background: rgba(16, 22, 34, 0.9);
+  }
+}
+
+@media (min-width: 960px) {
+  .admin-wh-day {
+    border-inline-start-color: rgba(212, 175, 55, 0.18);
+  }
+}
+
 /* Admin — booking services */
 .admin-bsvc-list {
   display: flex;
