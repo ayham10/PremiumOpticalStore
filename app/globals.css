@@ -11941,6 +11941,39 @@ select.admin-pe-input {
     grid-template-columns: 1fr 1fr;
   }
 
+  .admin-pe-fields.is-2.admin-pe-price-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-pe-price-fields > :nth-child(1) {
+    order: 2;
+  }
+
+  .admin-pe-price-fields > :nth-child(2) {
+    order: 1;
+  }
+
+  .admin-pe-price-fields > :nth-child(3) {
+    order: 3;
+  }
+
+  .admin-pe-price-fields .admin-pe-control,
+  .admin-pe-price-fields .admin-pe-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-pe-price-fields input.admin-pe-input {
+    min-width: 12.5rem;
+    font-variant-numeric: tabular-nums;
+    padding-inline-end: 0.95rem;
+  }
+
+  .admin-pe-price-fields .admin-pe-input.has-icon {
+    padding-inline-start: 2.55rem;
+  }
+
   .admin-pe-thumbs {
     gap: 12px;
   }

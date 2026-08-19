@@ -811,7 +811,7 @@ export default function AdminInventoryPage() {
                         <Wallet size={16} strokeWidth={1.7} />
                         السعر
                       </h2>
-                      <div className="admin-pe-fields is-2">
+                      <div className="admin-pe-fields is-2 admin-pe-price-fields">
                         <div>
                           <label className="admin-pe-label" htmlFor="p-selling">
                             السعر (₪)
