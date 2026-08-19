@@ -1082,20 +1082,6 @@ export default function AdminInventoryPage() {
   }
 
   /* ───────────── Products list ───────────── */
-  const compactSelect: CSSProperties = {
-    height: 40,
-    borderRadius: 12,
-    border: `1px solid ${BORDER}`,
-    background: CARD_BG,
-    color: "#FFFFFF",
-    padding: "0 0.65rem",
-    font: "inherit",
-    fontSize: "0.78rem",
-    fontWeight: 600,
-    outline: "none",
-    maxWidth: "100%",
-  };
-
   return (
     <div style={{ ...pageWrap, overflowX: "hidden" }}>
       {/* Header — ONE cube icon */}
@@ -1119,53 +1105,87 @@ export default function AdminInventoryPage() {
         </div>
       </header>
 
-      {/* MOBILE toolbar: Add, Search | Category, count */}
-      <section className="mb-3.5 space-y-2.5 md:hidden">
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-[12px] text-[0.88rem] font-bold"
-          style={{
-            height: 42,
-            background: "transparent",
-            color: GOLD,
-            border: `1px solid rgba(212,175,55,0.75)`,
-          }}
-        >
-          <Plus size={15} strokeWidth={1.7} />
-          إضافة منتج
-        </button>
-        <div className="flex items-center gap-2">
-          <div className="relative min-w-0 flex-[1.35]">
-            <Search
-              size={14}
-              strokeWidth={1.55}
-              className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-              style={{ insetInlineStart: 10, color: MUTED }}
-            />
+      {/* MOBILE toolbar */}
+      <section className="admin-products-toolbar is-mobile">
+        <div className="admin-products-toolbar-row">
+          <button type="button" onClick={openCreate} className="admin-products-add">
+            <Plus size={14} strokeWidth={1.7} />
+            إضافة منتج
+          </button>
+          <span className="admin-products-count">
+            <Package size={14} strokeWidth={1.55} />
+            {filtered.length} منتج
+          </span>
+        </div>
+        <div className="admin-products-toolbar-row">
+          <label className="admin-products-ctrl">
+            <Wallet size={14} strokeWidth={1.55} />
+            <select
+              className="admin-products-ctrl-select"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="all">كل الفئات</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="admin-products-search-wrap">
+            <Search size={14} strokeWidth={1.55} />
             <input
-              style={{
-                ...compactSelect,
-                width: "100%",
-                height: 40,
-                paddingInlineStart: 30,
-                fontWeight: 500,
-                border: `1px solid rgba(212,175,55,0.55)`,
-              }}
+              className="admin-products-search"
               placeholder="ابحث…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              size={20}
             />
           </div>
+        </div>
+      </section>
+
+      {/* DESKTOP toolbar */}
+      <section className="admin-products-toolbar is-desktop">
+        <button type="button" onClick={openCreate} className="admin-products-add">
+          <Plus size={14} strokeWidth={1.7} />
+          إضافة منتج
+        </button>
+        <span className="admin-products-count">
+          <Package size={14} strokeWidth={1.55} />
+          {filtered.length} منتج
+        </span>
+        <label className="admin-products-ctrl">
+          <Calendar size={14} strokeWidth={1.55} />
           <select
-            style={{
-              ...compactSelect,
-              height: 40,
-              width: "auto",
-              minWidth: "6.75rem",
-              flex: "0.85",
-              border: `1px solid rgba(212,175,55,0.55)`,
-            }}
+            className="admin-products-ctrl-select"
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+          >
+            <option value="newest">الأحدث أولاً</option>
+            <option value="name">حسب الاسم</option>
+          </select>
+        </label>
+        <label className="admin-products-ctrl">
+          <Package size={14} strokeWidth={1.55} />
+          <select
+            className="admin-products-ctrl-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">كل الحالات</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="admin-products-ctrl">
+          <Wallet size={14} strokeWidth={1.55} />
+          <select
+            className="admin-products-ctrl-select"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
@@ -1176,92 +1196,15 @@ export default function AdminInventoryPage() {
               </option>
             ))}
           </select>
-        </div>
-        <p
-          className="mb-0 text-start text-[0.8rem] font-semibold tabular-nums"
-          style={{ color: MUTED }}
-        >
-          {filtered.length} منتج
-        </p>
-      </section>
-
-      {/* DESKTOP toolbar — compact row */}
-      <section className="mb-5 hidden flex-wrap items-center gap-2.5 md:flex">
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[11px] px-3 text-[0.8rem] font-bold"
-          style={{
-            height: 38,
-            background: "transparent",
-            color: GOLD,
-            border: `1px solid rgba(212,175,55,0.7)`,
-          }}
-        >
-          إضافة منتج
-          <Plus size={14} strokeWidth={1.7} />
-        </button>
-
-        <span
-          className="shrink-0 text-[0.8rem] font-semibold tabular-nums"
-          style={{ color: MUTED }}
-        >
-          <span style={{ color: GOLD }}>{filtered.length}</span> منتج
-        </span>
-
-        <select
-          style={{ ...compactSelect, height: 38, width: "auto", minWidth: "7.5rem" }}
-          value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortMode)}
-        >
-          <option value="newest">الأحدث أولاً</option>
-          <option value="name">حسب الاسم</option>
-        </select>
-
-        <select
-          style={{ ...compactSelect, height: 38, width: "auto", minWidth: "7rem" }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">كل الحالات</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {statusLabel(s)}
-            </option>
-          ))}
-        </select>
-
-        <select
-          style={{ ...compactSelect, height: 38, width: "auto", minWidth: "7rem" }}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="all">كل الفئات</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <div className="relative ms-auto min-w-[12rem] max-w-[16rem] flex-1">
-          <Search
-            size={14}
-            strokeWidth={1.55}
-            className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-            style={{ insetInlineStart: 10, color: MUTED }}
-          />
+        </label>
+        <div className="admin-products-search-wrap admin-products-toolbar-end">
+          <Search size={14} strokeWidth={1.55} />
           <input
-            style={{
-              ...compactSelect,
-              height: 38,
-              width: "100%",
-              paddingInlineStart: 30,
-              fontWeight: 500,
-            }}
+            className="admin-products-search"
             placeholder="ابحث بالاسم…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            size={20}
           />
         </div>
       </section>
@@ -1307,7 +1250,7 @@ export default function AdminInventoryPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-[15px] md:grid-cols-4 md:gap-[18px] md:items-stretch">
+          <div className="admin-products-grid">
             {paged.map((p) => (
               <AdminProductCard
                 key={p.id}
