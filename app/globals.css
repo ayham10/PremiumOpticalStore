@@ -1532,7 +1532,7 @@ body.admin-home-active .admin-main {
 
   .abk-card {
     grid-template-areas: "when client reason action";
-    grid-template-columns: 4.6rem minmax(0, 1fr) minmax(4.6rem, 6.5rem) 40px;
+    grid-template-columns: auto minmax(0, 1fr) max-content 30px;
     direction: rtl;
     align-items: stretch;
     column-gap: 0;
@@ -1541,22 +1541,41 @@ body.admin-home-active .admin-main {
     max-width: 100%;
     box-sizing: border-box;
     min-height: 60px;
-    padding: 10px 12px;
+    padding: 10px 10px;
+    overflow: hidden;
   }
 
   .abk-card-when,
-  .abk-card-client,
-  .abk-card-reason {
+  .abk-card-client {
     min-height: 0;
-    padding: 2px 10px;
-    border-inline-end: 1px solid rgba(212, 175, 55, 0.2);
+    padding: 2px 8px;
+    border-inline-end: 1px solid rgba(212, 175, 55, 0.22);
+  }
+
+  .abk-card-reason {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-height: 0;
+    width: max-content;
+    max-width: 6.75rem;
+    padding: 2px 6px 2px 8px;
+    border-inline-end: 1px solid rgba(212, 175, 55, 0.22);
+    font-size: 0.78rem;
+    line-height: 1.25;
+    font-weight: 700;
+  }
+
+  .abk-card-reason span {
+    max-width: 5.25rem;
   }
 
   .abk-card > .abk-action {
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     align-self: center;
     justify-self: center;
     margin: 0;
@@ -1565,35 +1584,32 @@ body.admin-home-active .admin-main {
     border-inline-end: 0;
   }
 
-  .abk-card-reason {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    font-size: 0.84rem;
-    line-height: 1.25;
-  }
-
   .abk-card-when {
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
     gap: 2px;
+    flex-shrink: 0;
   }
 
   .abk-card-client {
     gap: 3px;
     justify-content: center;
+    min-width: 0;
   }
 
   .abk-card-name,
   .abk-card-phone {
     min-height: 0;
     padding: 0;
-    gap: 6px;
+    gap: 5px;
     line-height: 1.25;
     direction: rtl;
     justify-content: flex-start;
+  }
+
+  .abk-card-phone > svg {
+    display: none;
   }
 
   .abk-card-phone .abk-wa {
@@ -1601,8 +1617,8 @@ body.admin-home-active .admin-main {
   }
 
   .abk-card .abk-wa {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 6px;
   }
 }
