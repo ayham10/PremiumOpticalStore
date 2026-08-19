@@ -6,16 +6,34 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
+import { ar, enUS, he } from "date-fns/locale";
+import {
   CalendarCheck,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
   Clock3,
   Eye,
+  Phone,
+  SquarePen,
+  User,
+  UserRound,
   X,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -91,8 +109,22 @@ function bookingStatusLabel(
   return label === key ? status : label;
 }
 
+const GOLD = "#D4AF37";
+const ICON_STROKE = 1.6;
+const ICON_SIZE = 16;
+
+function ymdFromDate(d: Date): string {
+  return format(d, "yyyy-MM-dd");
+}
+
+function parseIsoDate(iso: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const d = new Date(`${iso}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function AdminEyeExamPageInner() {
-  const { t, locale } = useLocale();
+  const { t, locale, rtl } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -158,7 +190,8 @@ function AdminEyeExamPageInner() {
     appointmentType: "eye_exam" as ClinicAppointmentType,
     status: "confirmed" as EyeExamAppointmentStatus,
   });
-  const editDateInputRef = useRef<HTMLInputElement>(null);
+  const [editCalOpen, setEditCalOpen] = useState(false);
+  const [editCalMonth, setEditCalMonth] = useState(() => new Date());
 
   const selected = useMemo(
     () => days.find((d) => d.id === selectedId) || null,
@@ -173,6 +206,14 @@ function AdminEyeExamPageInner() {
       .filter((s) => s.isEnabled || s.time === editForm.appointmentTime)
       .map((s) => s.time);
   }, [days, editForm.appointmentDate, editForm.appointmentTime]);
+
+  const dateLocale = locale === "ar" ? ar : locale === "he" ? he : enUS;
+  const editCalendarDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(editCalMonth), { locale: dateLocale });
+    const end = endOfWeek(endOfMonth(editCalMonth), { locale: dateLocale });
+    return eachDayOfInterval({ start, end });
+  }, [dateLocale, editCalMonth]);
+  const todayIso = ymdFromDate(new Date());
 
   const loadAvailability = useCallback(async () => {
     const data = await apiFetch<{
@@ -314,21 +355,17 @@ function AdminEyeExamPageInner() {
       appointmentType: row.appointmentType || "eye_exam",
       status: row.status,
     });
+    setEditCalOpen(false);
+    setEditCalMonth(parseIsoDate(row.appointmentDate) || new Date());
   }
 
-  function openEditDatePicker() {
-    const input = editDateInputRef.current;
-    if (!input) return;
-    try {
-      if (typeof input.showPicker === "function") {
-        void input.showPicker();
-        return;
-      }
-    } catch {
-      /* showPicker can throw if not triggered by a user gesture */
-    }
-    input.focus();
-    input.click();
+  function selectEditDate(iso: string) {
+    setEditForm((f) => ({
+      ...f,
+      appointmentDate: iso,
+      appointmentTime: "",
+    }));
+    setEditCalOpen(false);
   }
 
   async function saveEdit(e: FormEvent) {
@@ -456,17 +493,32 @@ function AdminEyeExamPageInner() {
           role="presentation"
         >
           <form
+            dir="rtl"
             onSubmit={saveEdit}
             className="admin-edit-booking"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              const target = e.target as HTMLElement;
+              if (!target.closest(".admin-edit-booking-date-wrap")) {
+                setEditCalOpen(false);
+              }
+            }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-edit-booking-title"
           >
             <header className="admin-edit-booking-header">
-              <h3 id="admin-edit-booking-title">
-                {t("admin.bookings.editTitle")}
-              </h3>
+              <div className="admin-edit-booking-title">
+                <SquarePen
+                  size={18}
+                  strokeWidth={ICON_STROKE}
+                  color={GOLD}
+                  aria-hidden
+                />
+                <h3 id="admin-edit-booking-title">
+                  {t("admin.bookings.editTitle")}
+                </h3>
+              </div>
               <button
                 type="button"
                 className="admin-edit-booking-close"
@@ -474,169 +526,325 @@ function AdminEyeExamPageInner() {
                 disabled={busy}
                 aria-label={t("admin.bookings.cancel")}
               >
-                <X size={16} strokeWidth={1.6} />
+                <X size={16} strokeWidth={ICON_STROKE} />
               </button>
             </header>
 
             <div className="admin-edit-booking-body">
-              <div className="admin-edit-booking-grid">
-                <label className="admin-edit-booking-field">
-                  <span>{t("admin.bookings.firstName")}</span>
-                  <input
-                    value={editForm.firstName}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, firstName: e.target.value }))
-                    }
-                    required
-                    autoComplete="given-name"
-                  />
-                </label>
-                <label className="admin-edit-booking-field">
-                  <span>{t("admin.bookings.lastName")}</span>
-                  <input
-                    value={editForm.lastName}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, lastName: e.target.value }))
-                    }
-                    required
-                    autoComplete="family-name"
-                  />
-                </label>
-              </div>
-
-              <label className="admin-edit-booking-field">
-                <span>{t("admin.bookings.phone")}</span>
-                <input
-                  value={editForm.phone}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, phone: e.target.value }))
-                  }
-                  required
-                  inputMode="tel"
-                  autoComplete="tel"
-                />
-              </label>
-
-              <div className="admin-edit-booking-appt">
-                <label className="admin-edit-booking-date-card">
-                  <span className="admin-edit-booking-field-label">
-                    {t("admin.bookings.date")}
-                  </span>
-                  <span className="admin-edit-booking-date-value">
-                    <CalendarDays size={16} strokeWidth={1.55} aria-hidden />
-                    <strong>
-                      {editForm.appointmentDate
-                        ? new Date(
-                            `${editForm.appointmentDate}T12:00:00`,
-                          ).toLocaleDateString(
-                            locale === "ar"
-                              ? "ar"
-                              : locale === "he"
-                                ? "he"
-                                : "en-GB",
-                            {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                            },
-                          )
-                        : t("admin.bookings.date")}
-                    </strong>
-                  </span>
-                  <input
-                    ref={editDateInputRef}
-                    type="date"
-                    className="admin-edit-booking-date-input"
-                    value={editForm.appointmentDate}
-                    onChange={(e) =>
-                      setEditForm((f) => ({
-                        ...f,
-                        appointmentDate: e.target.value,
-                        appointmentTime: "",
-                      }))
-                    }
-                    onClick={openEditDatePicker}
-                    required
-                    aria-label={t("admin.bookings.date")}
-                  />
-                </label>
-
-                <label className="admin-edit-booking-field">
-                  <span>{t("admin.bookings.time")}</span>
-                  <span className="admin-edit-booking-select-wrap">
-                    <Clock3 size={15} strokeWidth={1.55} aria-hidden />
-                    <select
-                      value={editForm.appointmentTime}
+              <section className="admin-edit-booking-card">
+                <h4 className="admin-edit-booking-card-title">
+                  {t("admin.bookings.customerSection")}
+                </h4>
+                <div className="admin-edit-booking-grid">
+                  <label className="admin-edit-booking-field">
+                    <span>{t("admin.bookings.firstName")}</span>
+                    <span className="admin-edit-booking-control">
+                      <User
+                        size={ICON_SIZE}
+                        strokeWidth={ICON_STROKE}
+                        aria-hidden
+                      />
+                      <input
+                        value={editForm.firstName}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            firstName: e.target.value,
+                          }))
+                        }
+                        required
+                        autoComplete="given-name"
+                      />
+                    </span>
+                  </label>
+                  <label className="admin-edit-booking-field">
+                    <span>{t("admin.bookings.lastName")}</span>
+                    <span className="admin-edit-booking-control">
+                      <UserRound
+                        size={ICON_SIZE}
+                        strokeWidth={ICON_STROKE}
+                        aria-hidden
+                      />
+                      <input
+                        value={editForm.lastName}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            lastName: e.target.value,
+                          }))
+                        }
+                        required
+                        autoComplete="family-name"
+                      />
+                    </span>
+                  </label>
+                </div>
+                <label className="admin-edit-booking-field admin-edit-booking-phone">
+                  <span>{t("admin.bookings.phone")}</span>
+                  <span className="admin-edit-booking-control">
+                    <Phone
+                      size={ICON_SIZE}
+                      strokeWidth={ICON_STROKE}
+                      aria-hidden
+                    />
+                    <input
+                      value={editForm.phone}
                       onChange={(e) =>
-                        setEditForm((f) => ({
-                          ...f,
-                          appointmentTime: e.target.value,
-                        }))
+                        setEditForm((f) => ({ ...f, phone: e.target.value }))
                       }
                       required
-                    >
-                      <option value="">{t("admin.bookings.selectTime")}</option>
-                      {editDaySlots.map((time) => (
-                        <option key={time} value={time}>
-                          {time}
-                        </option>
-                      ))}
-                      {editForm.appointmentTime &&
-                      !editDaySlots.includes(editForm.appointmentTime) ? (
-                        <option value={editForm.appointmentTime}>
-                          {editForm.appointmentTime}
-                        </option>
-                      ) : null}
-                    </select>
+                      inputMode="tel"
+                      autoComplete="tel"
+                      dir="ltr"
+                    />
                   </span>
                 </label>
+              </section>
 
-                <label className="admin-edit-booking-field">
-                  <span>{t("admin.bookings.service")}</span>
-                  <select
-                    value={editForm.appointmentType}
-                    onChange={(e) =>
-                      setEditForm((f) => ({
-                        ...f,
-                        appointmentType: e.target
-                          .value as ClinicAppointmentType,
-                      }))
-                    }
-                  >
-                    {(
-                      [
-                        "eye_exam",
-                        "contact_lens_fitting",
-                        "frame_consultation",
-                        "sunglasses_consultation",
-                      ] as ClinicAppointmentType[]
-                    ).map((type) => (
-                      <option key={type} value={type}>
-                        {t(`clinicBooking.services.${type}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <section className="admin-edit-booking-card">
+                <h4 className="admin-edit-booking-card-title">
+                  {t("admin.bookings.appointmentSection")}
+                </h4>
+                <div className="admin-edit-booking-appt">
+                  <div className="admin-edit-booking-field">
+                    <span>{t("admin.bookings.date")}</span>
+                    <div className="admin-edit-booking-date-wrap">
+                      <button
+                        type="button"
+                        className="admin-edit-booking-control admin-edit-booking-date-btn"
+                        onClick={() => {
+                          setEditCalMonth(
+                            parseIsoDate(editForm.appointmentDate) ||
+                              new Date(),
+                          );
+                          setEditCalOpen((open) => !open);
+                        }}
+                        aria-expanded={editCalOpen}
+                        aria-label={t("admin.bookings.date")}
+                      >
+                        <CalendarDays
+                          size={ICON_SIZE}
+                          strokeWidth={ICON_STROKE}
+                          aria-hidden
+                        />
+                        <strong>
+                          {editForm.appointmentDate
+                            ? format(
+                                parseIsoDate(editForm.appointmentDate) ||
+                                  new Date(),
+                                "d MMM yyyy",
+                                { locale: dateLocale },
+                              )
+                            : t("admin.bookings.date")}
+                        </strong>
+                      </button>
+                      <input
+                        type="text"
+                        className="admin-edit-booking-date-required"
+                        value={editForm.appointmentDate}
+                        onChange={() => undefined}
+                        required
+                        tabIndex={-1}
+                        aria-hidden
+                      />
+                      {editCalOpen ? (
+                        <div
+                          className="admin-edit-booking-cal"
+                          dir="rtl"
+                          role="dialog"
+                          aria-label={t("admin.bookings.date")}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="admin-edit-booking-cal-nav">
+                            <button
+                              type="button"
+                              aria-label={t("clinicBooking.prevMonth")}
+                              onClick={() =>
+                                setEditCalMonth((d) => subMonths(d, 1))
+                              }
+                            >
+                              {rtl ? (
+                                <ChevronRight size={16} strokeWidth={ICON_STROKE} />
+                              ) : (
+                                <ChevronLeft size={16} strokeWidth={ICON_STROKE} />
+                              )}
+                            </button>
+                            <strong>
+                              {format(editCalMonth, "LLLL yyyy", {
+                                locale: dateLocale,
+                              })}
+                            </strong>
+                            <button
+                              type="button"
+                              aria-label={t("clinicBooking.nextMonth")}
+                              onClick={() =>
+                                setEditCalMonth((d) => addMonths(d, 1))
+                              }
+                            >
+                              {rtl ? (
+                                <ChevronLeft size={16} strokeWidth={ICON_STROKE} />
+                              ) : (
+                                <ChevronRight size={16} strokeWidth={ICON_STROKE} />
+                              )}
+                            </button>
+                          </div>
+                          <div className="admin-edit-booking-cal-week">
+                            {editCalendarDays.slice(0, 7).map((day) => (
+                              <span key={ymdFromDate(day)}>
+                                {format(day, "EEEEEE", { locale: dateLocale })}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="admin-edit-booking-cal-grid">
+                            {editCalendarDays.map((day) => {
+                              const iso = ymdFromDate(day);
+                              const inMonth = isSameMonth(day, editCalMonth);
+                              const selected =
+                                editForm.appointmentDate === iso;
+                              const isToday = iso === todayIso;
+                              return (
+                                <button
+                                  key={iso + String(inMonth)}
+                                  type="button"
+                                  className={
+                                    selected
+                                      ? "is-selected"
+                                      : isToday
+                                        ? "is-today"
+                                        : undefined
+                                  }
+                                  data-outside={inMonth ? undefined : "1"}
+                                  onClick={() => selectEditDate(iso)}
+                                >
+                                  {format(day, "d")}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="admin-edit-booking-cal-footer">
+                            <button
+                              type="button"
+                              onClick={() => selectEditDate(todayIso)}
+                            >
+                              {t("admin.bookings.pickerToday")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditForm((f) => ({
+                                  ...f,
+                                  appointmentDate: "",
+                                  appointmentTime: "",
+                                }));
+                                setEditCalOpen(false);
+                              }}
+                            >
+                              {t("admin.bookings.pickerClear")}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
 
-                <label className="admin-edit-booking-field">
-                  <span>{t("admin.bookings.status")}</span>
-                  <select
-                    value={editForm.status}
-                    onChange={(e) =>
-                      setEditForm((f) => ({
-                        ...f,
-                        status: e.target.value as EyeExamAppointmentStatus,
-                      }))
-                    }
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {bookingStatusLabel(t, s)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+                  <label className="admin-edit-booking-field">
+                    <span>{t("admin.bookings.time")}</span>
+                    <span className="admin-edit-booking-control">
+                      <Clock3
+                        size={ICON_SIZE}
+                        strokeWidth={ICON_STROKE}
+                        aria-hidden
+                      />
+                      <select
+                        value={editForm.appointmentTime}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            appointmentTime: e.target.value,
+                          }))
+                        }
+                        required
+                      >
+                        <option value="">
+                          {t("admin.bookings.selectTime")}
+                        </option>
+                        {editDaySlots.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                        {editForm.appointmentTime &&
+                        !editDaySlots.includes(editForm.appointmentTime) ? (
+                          <option value={editForm.appointmentTime}>
+                            {editForm.appointmentTime}
+                          </option>
+                        ) : null}
+                      </select>
+                    </span>
+                  </label>
+
+                  <label className="admin-edit-booking-field">
+                    <span>{t("admin.bookings.service")}</span>
+                    <span className="admin-edit-booking-control">
+                      <Eye
+                        size={ICON_SIZE}
+                        strokeWidth={ICON_STROKE}
+                        aria-hidden
+                      />
+                      <select
+                        value={editForm.appointmentType}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            appointmentType: e.target
+                              .value as ClinicAppointmentType,
+                          }))
+                        }
+                      >
+                        {(
+                          [
+                            "eye_exam",
+                            "contact_lens_fitting",
+                            "frame_consultation",
+                            "sunglasses_consultation",
+                          ] as ClinicAppointmentType[]
+                        ).map((type) => (
+                          <option key={type} value={type}>
+                            {t(`clinicBooking.services.${type}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  </label>
+
+                  <label className="admin-edit-booking-field">
+                    <span>{t("admin.bookings.status")}</span>
+                    <span className="admin-edit-booking-control">
+                      <CircleDot
+                        size={ICON_SIZE}
+                        strokeWidth={ICON_STROKE}
+                        aria-hidden
+                      />
+                      <select
+                        value={editForm.status}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            status: e.target
+                              .value as EyeExamAppointmentStatus,
+                          }))
+                        }
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {bookingStatusLabel(t, s)}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  </label>
+                </div>
+              </section>
             </div>
 
             <div className="admin-edit-booking-actions">
