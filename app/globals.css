@@ -10073,10 +10073,11 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding: 8px;
+    padding: 8px 10px;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
   .admin-product-card-media {
@@ -10094,33 +10095,45 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   .admin-product-card-body {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: minmax(0, 10.25rem) auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 2px;
     padding: 0;
   }
 
-  .admin-product-card-heading {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    min-width: 0;
+  .admin-product-card-heading,
+  .admin-product-card-footer {
+    display: contents;
   }
 
   .admin-product-card-name {
-    flex: 1;
-    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
+    flex: none;
+    width: 100%;
+    max-width: 10.25rem;
     font-size: 12.5px;
     line-height: 1.25;
     -webkit-line-clamp: 1;
     text-align: start;
   }
 
+  .admin-product-card-meta {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 10.25rem;
+    gap: 1px;
+  }
+
   .admin-product-card-badge-inline {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
     flex-shrink: 0;
     padding: 1px 6px;
     border-radius: 4px;
@@ -10129,18 +10142,6 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     font-size: 9px;
     font-weight: 700;
     line-height: 1.35;
-  }
-
-  .admin-product-card-footer {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-  }
-
-  .admin-product-card-meta {
-    gap: 1px;
   }
 
   .admin-product-card-price {
@@ -10152,6 +10153,11 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   }
 
   .admin-product-card-actions {
+    grid-column: 3;
+    grid-row: 1 / span 3;
+    align-self: center;
+    justify-self: end;
+    flex-direction: column;
     gap: 4px;
   }
 
