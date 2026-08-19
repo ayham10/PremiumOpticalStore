@@ -834,7 +834,7 @@ const ar: Dictionary = {
       statusCompleted: "مكتمل",
       statusCancelled: "ملغى",
       statusNoShow: "لم يحضر",
-      editTitle: "تعديل الموعد",
+      editTitle: "تعديل الحجز",
       firstName: "الاسم الأول",
       lastName: "اسم العائلة",
       email: "البريد الإلكتروني",

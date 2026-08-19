@@ -1189,7 +1189,7 @@ const en: Dictionary = {
       statusCompleted: "Completed",
       statusCancelled: "Cancelled",
       statusNoShow: "No show",
-      editTitle: "Edit appointment",
+      editTitle: "Edit booking",
       firstName: "First name",
       lastName: "Last name",
       email: "Email",

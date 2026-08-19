@@ -1,11 +1,22 @@
 "use client";
 
-import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarCheck,
+  CalendarDays,
+  Clock3,
   Eye,
+  X,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AvailabilityCalendarPanel from "@/components/admin/AvailabilityCalendarPanel";
@@ -81,7 +92,7 @@ function bookingStatusLabel(
 }
 
 function AdminEyeExamPageInner() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -141,13 +152,13 @@ function AdminEyeExamPageInner() {
   const [editForm, setEditForm] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     phone: "",
     appointmentDate: "",
     appointmentTime: "",
     appointmentType: "eye_exam" as ClinicAppointmentType,
     status: "confirmed" as EyeExamAppointmentStatus,
   });
+  const editDateInputRef = useRef<HTMLInputElement>(null);
 
   const selected = useMemo(
     () => days.find((d) => d.id === selectedId) || null,
@@ -297,13 +308,27 @@ function AdminEyeExamPageInner() {
     setEditForm({
       firstName: row.firstName,
       lastName: row.lastName,
-      email: row.email,
       phone: row.phone,
       appointmentDate: row.appointmentDate,
       appointmentTime: row.appointmentTime,
       appointmentType: row.appointmentType || "eye_exam",
       status: row.status,
     });
+  }
+
+  function openEditDatePicker() {
+    const input = editDateInputRef.current;
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === "function") {
+        void input.showPicker();
+        return;
+      }
+    } catch {
+      /* showPicker can throw if not triggered by a user gesture */
+    }
+    input.focus();
+    input.click();
   }
 
   async function saveEdit(e: FormEvent) {
@@ -425,163 +450,212 @@ function AdminEyeExamPageInner() {
       />
 
       {editing ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+        <div
+          className="admin-edit-booking-overlay"
+          onClick={() => !busy && setEditing(null)}
+          role="presentation"
+        >
           <form
             onSubmit={saveEdit}
-            className="admin-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
+            className="admin-edit-booking"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-edit-booking-title"
           >
-            <h3 className="admin-section-title">
-              {t("admin.bookings.editTitle")}
-            </h3>
-            <p className="admin-page-desc mt-2">{editing.fullName}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                {t("admin.bookings.firstName")}
+            <header className="admin-edit-booking-header">
+              <h3 id="admin-edit-booking-title">
+                {t("admin.bookings.editTitle")}
+              </h3>
+              <button
+                type="button"
+                className="admin-edit-booking-close"
+                onClick={() => setEditing(null)}
+                disabled={busy}
+                aria-label={t("admin.bookings.cancel")}
+              >
+                <X size={16} strokeWidth={1.6} />
+              </button>
+            </header>
+
+            <div className="admin-edit-booking-body">
+              <div className="admin-edit-booking-grid">
+                <label className="admin-edit-booking-field">
+                  <span>{t("admin.bookings.firstName")}</span>
+                  <input
+                    value={editForm.firstName}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, firstName: e.target.value }))
+                    }
+                    required
+                    autoComplete="given-name"
+                  />
+                </label>
+                <label className="admin-edit-booking-field">
+                  <span>{t("admin.bookings.lastName")}</span>
+                  <input
+                    value={editForm.lastName}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, lastName: e.target.value }))
+                    }
+                    required
+                    autoComplete="family-name"
+                  />
+                </label>
+              </div>
+
+              <label className="admin-edit-booking-field">
+                <span>{t("admin.bookings.phone")}</span>
                 <input
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.firstName}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, firstName: e.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                {t("admin.bookings.lastName")}
-                <input
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.lastName}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, lastName: e.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
-                {t("admin.bookings.email")}
-                <input
-                  type="email"
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
-                {t("admin.bookings.phone")}
-                <input
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
                   value={editForm.phone}
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, phone: e.target.value }))
                   }
                   required
+                  inputMode="tel"
+                  autoComplete="tel"
                 />
               </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
-                {t("admin.bookings.service")}
-                <select
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.appointmentType}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      appointmentType: e.target.value as ClinicAppointmentType,
-                    }))
-                  }
-                >
-                  {(
-                    [
-                      "eye_exam",
-                      "contact_lens_fitting",
-                      "frame_consultation",
-                      "sunglasses_consultation",
-                    ] as ClinicAppointmentType[]
-                  ).map((type) => (
-                    <option key={type} value={type}>
-                      {t(`clinicBooking.services.${type}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                {t("admin.bookings.date")}
-                <input
-                  type="date"
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.appointmentDate}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      appointmentDate: e.target.value,
-                      appointmentTime: "",
-                    }))
-                  }
-                  required
-                />
-              </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                {t("admin.bookings.time")}
-                <select
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.appointmentTime}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      appointmentTime: e.target.value,
-                    }))
-                  }
-                  required
-                >
-                  <option value="">{t("admin.bookings.selectTime")}</option>
-                  {editDaySlots.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                  {editForm.appointmentTime &&
-                  !editDaySlots.includes(editForm.appointmentTime) ? (
-                    <option value={editForm.appointmentTime}>
-                      {editForm.appointmentTime}
-                    </option>
-                  ) : null}
-                </select>
-              </label>
-              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--slate)] sm:col-span-2">
-                {t("admin.bookings.status")}
-                <select
-                  className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-                  value={editForm.status}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      status: e.target.value as EyeExamAppointmentStatus,
-                    }))
-                  }
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {bookingStatusLabel(t, s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+
+              <div className="admin-edit-booking-appt">
+                <label className="admin-edit-booking-date-card">
+                  <span className="admin-edit-booking-field-label">
+                    {t("admin.bookings.date")}
+                  </span>
+                  <span className="admin-edit-booking-date-value">
+                    <CalendarDays size={16} strokeWidth={1.55} aria-hidden />
+                    <strong>
+                      {editForm.appointmentDate
+                        ? new Date(
+                            `${editForm.appointmentDate}T12:00:00`,
+                          ).toLocaleDateString(
+                            locale === "ar"
+                              ? "ar"
+                              : locale === "he"
+                                ? "he"
+                                : "en-GB",
+                            {
+                              weekday: "short",
+                              day: "numeric",
+                              month: "short",
+                            },
+                          )
+                        : t("admin.bookings.date")}
+                    </strong>
+                  </span>
+                  <input
+                    ref={editDateInputRef}
+                    type="date"
+                    className="admin-edit-booking-date-input"
+                    value={editForm.appointmentDate}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        appointmentDate: e.target.value,
+                        appointmentTime: "",
+                      }))
+                    }
+                    onClick={openEditDatePicker}
+                    required
+                    aria-label={t("admin.bookings.date")}
+                  />
+                </label>
+
+                <label className="admin-edit-booking-field">
+                  <span>{t("admin.bookings.time")}</span>
+                  <span className="admin-edit-booking-select-wrap">
+                    <Clock3 size={15} strokeWidth={1.55} aria-hidden />
+                    <select
+                      value={editForm.appointmentTime}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          appointmentTime: e.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="">{t("admin.bookings.selectTime")}</option>
+                      {editDaySlots.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                      {editForm.appointmentTime &&
+                      !editDaySlots.includes(editForm.appointmentTime) ? (
+                        <option value={editForm.appointmentTime}>
+                          {editForm.appointmentTime}
+                        </option>
+                      ) : null}
+                    </select>
+                  </span>
+                </label>
+
+                <label className="admin-edit-booking-field">
+                  <span>{t("admin.bookings.service")}</span>
+                  <select
+                    value={editForm.appointmentType}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        appointmentType: e.target
+                          .value as ClinicAppointmentType,
+                      }))
+                    }
+                  >
+                    {(
+                      [
+                        "eye_exam",
+                        "contact_lens_fitting",
+                        "frame_consultation",
+                        "sunglasses_consultation",
+                      ] as ClinicAppointmentType[]
+                    ).map((type) => (
+                      <option key={type} value={type}>
+                        {t(`clinicBooking.services.${type}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="admin-edit-booking-field">
+                  <span>{t("admin.bookings.status")}</span>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        status: e.target.value as EyeExamAppointmentStatus,
+                      }))
+                    }
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {bookingStatusLabel(t, s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
+
+            <div className="admin-edit-booking-actions">
               <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setEditing(null)}
+                type="submit"
+                className="admin-edit-booking-save"
                 disabled={busy}
               >
-                {t("admin.bookings.close")}
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={busy}>
                 {busy
                   ? t("admin.bookings.saving")
                   : t("admin.bookings.save")}
+              </button>
+              <button
+                type="button"
+                className="admin-edit-booking-cancel"
+                onClick={() => setEditing(null)}
+                disabled={busy}
+              >
+                {t("admin.bookings.cancel")}
               </button>
             </div>
           </form>

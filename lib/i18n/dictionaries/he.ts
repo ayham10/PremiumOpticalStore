@@ -834,7 +834,7 @@ const he: Dictionary = {
       statusCompleted: "הושלם",
       statusCancelled: "בוטל",
       statusNoShow: "לא הגיע",
-      editTitle: "עריכת תור",
+      editTitle: "עריכת הזמנה",
       firstName: "שם פרטי",
       lastName: "שם משפחה",
       email: "אימייל",
