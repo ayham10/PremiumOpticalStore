@@ -12421,7 +12421,8 @@ select.admin-pe-input {
 
 .admin-set-period {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2rem;
+  grid-template-columns: max-content max-content 2rem;
+  justify-content: start;
   gap: 8px;
   align-items: end;
 }
@@ -12435,7 +12436,8 @@ select.admin-pe-input {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .admin-set-time-label {
@@ -12447,13 +12449,15 @@ select.admin-pe-input {
 .admin-set-timebox {
   position: relative;
   display: block;
-  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .admin-set-timebox svg {
   position: absolute;
   top: 50%;
   inset-inline-start: 10px;
+  z-index: 1;
   width: 13px;
   height: 13px;
   color: #d4af37;
@@ -12462,11 +12466,34 @@ select.admin-pe-input {
 }
 
 .admin-set-timebox .input {
-  width: 100%;
+  width: 7.75rem;
+  max-width: 100%;
   min-width: 0;
   min-height: 42px;
   padding-inline-start: 2rem;
+  padding-inline-end: 0.5rem;
   font-variant-numeric: tabular-nums;
+  text-align: start;
+}
+
+.admin-set-timebox .input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+}
+
+.admin-set-timebox .input[type="time"]::-webkit-datetime-edit {
+  padding: 0;
+  text-align: start;
+}
+
+.admin-set-timebox .input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
 }
 
 .admin-set-day.is-closed .admin-set-timebox .input {
@@ -12526,6 +12553,6 @@ select.admin-pe-input {
   }
 
   .admin-set-period {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2rem;
+    grid-template-columns: max-content max-content 2rem;
   }
 }
