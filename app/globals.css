@@ -10639,11 +10639,22 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 }
 
 .admin-offer-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
   margin: 0 0 10px;
   color: #d4af37;
   font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.04em;
+}
+
+.admin-offer-section-title svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #d4af37;
 }
 
 .admin-offer-fields {
@@ -10713,6 +10724,10 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 }
 
 .admin-offer-chip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
   min-height: 42px;
   padding: 0.55rem 0.7rem;
   border-radius: 11px;
@@ -10723,6 +10738,13 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   font-weight: 700;
   text-align: start;
   cursor: pointer;
+}
+
+.admin-offer-chip svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #d4af37;
 }
 
 .admin-offer-chip.is-selected {

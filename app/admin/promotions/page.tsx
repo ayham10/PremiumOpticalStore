@@ -458,12 +458,7 @@ export default function AdminPromotionsPage() {
           <div className="admin-offer-form-body">
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
-                <FileText
-                  size={14}
-                  strokeWidth={1.7}
-                  color="#D4AF37"
-                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
-                />
+                <FileText size={14} strokeWidth={1.7} />
                 {sections.details}
               </h3>
               <div className="admin-offer-fields">
@@ -507,12 +502,7 @@ export default function AdminPromotionsPage() {
 
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
-                <Percent
-                  size={14}
-                  strokeWidth={1.7}
-                  color="#D4AF37"
-                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
-                />
+                <Percent size={14} strokeWidth={1.7} />
                 {t("admin.promotions.colDiscount")}
               </h3>
               <div className="admin-offer-fields admin-offer-fields-2">
@@ -557,12 +547,7 @@ export default function AdminPromotionsPage() {
 
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
-                <Target
-                  size={14}
-                  strokeWidth={1.7}
-                  color="#D4AF37"
-                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
-                />
+                <Target size={14} strokeWidth={1.7} />
                 {t("admin.promotions.fieldScope")}
               </h3>
               <div className="admin-offer-chips">
@@ -578,12 +563,7 @@ export default function AdminPromotionsPage() {
                       form.scope === scope && "is-selected",
                     )}
                   >
-                    <ScopeIcon
-                      size={14}
-                      strokeWidth={1.7}
-                      color="#D4AF37"
-                      style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
-                    />
+                    <ScopeIcon size={14} strokeWidth={1.7} />
                     {scopeLabel(scope)}
                   </button>
                   );
@@ -659,12 +639,7 @@ export default function AdminPromotionsPage() {
 
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
-                <CalendarDays
-                  size={14}
-                  strokeWidth={1.7}
-                  color="#D4AF37"
-                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
-                />
+                <CalendarDays size={14} strokeWidth={1.7} />
                 {sections.period}
               </h3>
               <div className="admin-offer-fields admin-offer-fields-2">
@@ -705,12 +680,7 @@ export default function AdminPromotionsPage() {
 
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
-                <Settings
-                  size={14}
-                  strokeWidth={1.7}
-                  color="#D4AF37"
-                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
-                />
+                <Settings size={14} strokeWidth={1.7} />
                 {sections.more}
               </h3>
               <div className="admin-offer-fields">
