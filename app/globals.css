@@ -1521,10 +1521,8 @@ body.admin-home-active .admin-main {
     color: #0b0e14;
   }
 
-  .abk-cards,
-  .abk-card,
-  .abk-card-name span,
-  .abk-card-reason span {
+  .abk-cards {
+    width: 100%;
     max-width: 100%;
   }
 
@@ -1534,53 +1532,64 @@ body.admin-home-active .admin-main {
 
   .abk-card {
     grid-template-areas: "action when client reason";
-    grid-template-columns: 24px 3.55rem minmax(0, 1fr) minmax(3.4rem, 5.1rem);
+    grid-template-columns: 40px 4.5rem minmax(0, 1fr) minmax(4.5rem, 6.4rem);
     direction: ltr;
-    align-items: center;
+    align-items: stretch;
     column-gap: 0;
     row-gap: 0;
-    padding: 7px 8px 7px 6px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 60px;
+    padding: 10px 12px;
+  }
+
+  .abk-card > .abk-action,
+  .abk-card-when,
+  .abk-card-client {
+    border-inline-end: 1px solid rgba(212, 175, 55, 0.2);
+  }
+
+  .abk-card > .abk-action {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    align-self: center;
+    justify-self: center;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
   }
 
   .abk-card-when,
   .abk-card-client,
   .abk-card-reason {
-    min-height: 38px;
-    padding: 0 7px;
-    border-inline-end: 1px solid rgba(212, 175, 55, 0.18);
+    min-height: 0;
+    padding: 2px 10px;
   }
 
   .abk-card-reason {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 6px;
     padding-inline-end: 0;
     border-inline-end: 0;
     direction: rtl;
-    font-size: 0.68rem;
-    line-height: 1.2;
+    font-size: 0.84rem;
+    line-height: 1.25;
   }
 
   .abk-card-when {
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: flex-start;
     justify-content: center;
-    gap: 1px;
-  }
-
-  .abk-card .abk-date {
-    font-size: 0.68rem;
-    line-height: 1.2;
-  }
-
-  .abk-card .abk-time {
-    font-size: 0.78rem;
-    line-height: 1.2;
+    gap: 2px;
   }
 
   .abk-card-client {
-    gap: 2px;
+    gap: 3px;
     justify-content: center;
   }
 
@@ -1588,9 +1597,8 @@ body.admin-home-active .admin-main {
   .abk-card-phone {
     min-height: 0;
     padding: 0;
-    gap: 5px;
-    font-size: 0.74rem;
-    line-height: 1.2;
+    gap: 6px;
+    line-height: 1.25;
   }
 
   .abk-card-phone {
@@ -1598,15 +1606,9 @@ body.admin-home-active .admin-main {
   }
 
   .abk-card .abk-wa {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-  }
-
-  .abk-card > .abk-action {
     width: 24px;
     height: 24px;
-    flex-shrink: 0;
+    border-radius: 6px;
   }
 }
 
