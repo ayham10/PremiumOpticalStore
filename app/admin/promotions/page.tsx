@@ -6,10 +6,17 @@ import {
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
 } from "react";
 import Image from "next/image";
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  BadgePercent,
+  CalendarDays,
+  Check,
+  Pencil,
+  Plus,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import SingleImageField from "@/components/admin/SingleImageField";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -23,13 +30,6 @@ import type {
   Promotion,
   PromotionScope,
 } from "@/lib/types";
-
-const PAGE_BG = "#0B0E14";
-const CARD_BG = "#151A21";
-const BORDER = "#2A2F36";
-const GOLD = "#D4AF37";
-const MUTED = "#8A929C";
-const DANGER = "#F07178";
 
 function unwrapList<T>(data: unknown, keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -119,16 +119,6 @@ function discountLabel(p: Promotion): string {
 }
 
 const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
-
-const pageWrap: CSSProperties = {
-  margin: "-1.15rem",
-  marginBottom: "calc(-1.5rem - env(safe-area-inset-bottom, 0px))",
-  minHeight: "100%",
-  background: PAGE_BG,
-  padding: 16,
-  paddingBottom: "calc(5.85rem + env(safe-area-inset-bottom, 0px))",
-  overflowX: "hidden",
-};
 
 export default function AdminPromotionsPage() {
   const { t } = useLocale();
@@ -307,207 +297,117 @@ export default function AdminPromotionsPage() {
     }
   }
 
-  const addBtnStyle: CSSProperties = {
-    height: 42,
-    background: "transparent",
-    color: GOLD,
-    border: `1px solid rgba(212,175,55,0.75)`,
-  };
-
   return (
-    <div style={pageWrap}>
-      <div className="mx-auto w-full" style={{ maxWidth: 1180 }}>
-        <header className="mb-4 md:mb-5">
-          <p
-            className="mb-1.5 text-[0.72rem] font-semibold tracking-wide"
-            style={{ color: MUTED }}
-          >
-            {t("admin.promotions.kicker")}
-          </p>
-          <h1
-            className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em] md:text-[1.65rem]"
-            style={{ color: "#FFFFFF", lineHeight: 1.35 }}
-          >
-            {t("admin.promotions.title")}
-          </h1>
-          <p
-            className="mb-0 mt-1.5 max-w-[32rem] text-[0.84rem] leading-relaxed md:text-[0.88rem]"
-            style={{ color: MUTED }}
-          >
-            {t("admin.promotions.description")}
-          </p>
+    <div className="admin-offers-page">
+      <div className="admin-offers-inner">
+        <header className="admin-offers-header">
+          <p className="admin-offers-kicker">{t("admin.promotions.kicker")}</p>
+          <h1 className="admin-offers-title">{t("admin.promotions.title")}</h1>
+          <p className="admin-offers-lead">{t("admin.promotions.description")}</p>
         </header>
 
         <button
           type="button"
           onClick={openCreate}
-          className="mb-4 inline-flex w-full items-center justify-center gap-1.5 rounded-[12px] text-[0.88rem] font-bold md:mb-5 md:w-auto md:px-4"
-          style={addBtnStyle}
+          className="admin-offers-add"
         >
           <Plus size={15} strokeWidth={1.7} />
           {t("admin.promotions.add")}
         </button>
 
         {message ? (
-          <p
-            className="mb-3.5 rounded-[12px] px-3 py-2 text-sm"
-            style={{
-              background: "rgba(212,175,55,0.12)",
-              border: "1px solid rgba(212,175,55,0.35)",
-              color: GOLD,
-            }}
-          >
-            {message}
-          </p>
+          <p className="admin-offers-flash is-ok">{message}</p>
         ) : null}
-        {error ? (
-          <p
-            className="mb-3.5 rounded-[12px] px-3 py-2 text-sm"
-            style={{
-              background: "rgba(224,122,122,0.12)",
-              border: "1px solid rgba(224,122,122,0.35)",
-              color: DANGER,
-            }}
-          >
-            {error}
-          </p>
-        ) : null}
+        {error ? <p className="admin-offers-flash is-error">{error}</p> : null}
 
         {loading ? (
-          <p className="m-0 text-sm" style={{ color: MUTED }}>
-            {t("admin.promotions.loading")}
-          </p>
-        ) : sorted.length === 0 ? (
-          <p className="m-0 text-sm" style={{ color: MUTED }}>
-            {t("admin.promotions.empty")}
-          </p>
+          <p className="admin-offers-loading">{t("admin.promotions.loading")}</p>
         ) : (
-          <ul
-            className="m-0 grid list-none p-0 md:grid-cols-2 xl:grid-cols-3"
-            style={{ gap: 15 }}
-          >
-            {sorted.map((p) => (
-              <li key={p.id}>
-                <article
-                  className="flex h-full flex-col"
-                  style={{
-                    background: CARD_BG,
-                    border: `1px solid ${BORDER}`,
-                    borderRadius: 12,
-                    padding: 14,
-                    gap: 12,
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h2
-                        className="m-0 truncate text-[0.98rem] font-semibold leading-snug"
-                        style={{ color: "#FFFFFF" }}
-                      >
-                        {p.title}
-                      </h2>
-                      <p
-                        className="mb-0 mt-1 line-clamp-2 text-[0.78rem] leading-relaxed"
-                        style={{ color: MUTED }}
-                      >
-                        {p.description}
-                      </p>
-                    </div>
-                    <span
-                      className="shrink-0 rounded-[6px] px-2 py-0.5 text-[0.68rem] font-bold"
-                      style={{
-                        background: p.active ? "#0F3D2E" : "#6B2A2E",
-                        color: "#FFFFFF",
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {p.active
-                        ? t("admin.promotions.active")
-                        : t("admin.promotions.off")}
-                    </span>
-                  </div>
+          <>
+            {sorted.length > 0 ? (
+              <ul className="admin-offers-grid">
+                {sorted.map((p) => (
+                  <li key={p.id}>
+                    <article className="admin-offers-card">
+                      <div className="admin-offers-card-top">
+                        <div className="admin-offers-card-copy">
+                          <h2 className="admin-offers-card-name">{p.title}</h2>
+                          <p className="admin-offers-card-desc">{p.description}</p>
+                        </div>
+                        <span
+                          className={
+                            p.active
+                              ? "admin-offers-status"
+                              : "admin-offers-status is-off"
+                          }
+                        >
+                          {p.active
+                            ? t("admin.promotions.active")
+                            : t("admin.promotions.off")}
+                        </span>
+                      </div>
 
-                  <div
-                    className="flex flex-col gap-2 rounded-[10px] px-3 py-2.5"
-                    style={{
-                      background: PAGE_BG,
-                      border: `1px solid ${BORDER}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-2 text-[0.78rem]">
-                      <span style={{ color: MUTED }}>
-                        {t("admin.promotions.colDiscount")}
-                      </span>
-                      <span
-                        className="font-semibold tabular-nums"
-                        style={{ color: "#FFFFFF" }}
-                      >
-                        {discountLabel(p)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-[0.78rem]">
-                      <span style={{ color: MUTED }}>
-                        {t("admin.promotions.colScope")}
-                      </span>
-                      <span
-                        className="truncate font-medium"
-                        style={{ color: "#FFFFFF" }}
-                      >
-                        {scopeLabel(p.scope)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-[0.78rem]">
-                      <span style={{ color: MUTED }}>
-                        {t("admin.promotions.colSchedule")}
-                      </span>
-                      <span
-                        className="truncate font-medium tabular-nums"
-                        style={{ color: "#FFFFFF" }}
-                        dir="ltr"
-                      >
-                        {p.startDate} → {p.endDate}
-                      </span>
-                    </div>
-                  </div>
+                      <div className="admin-offers-meta">
+                        <span className="admin-offers-discount">
+                          <BadgePercent size={14} strokeWidth={1.8} />
+                          {discountLabel(p)}
+                        </span>
+                        <p className="admin-offers-meta-row">
+                          <Tag size={14} strokeWidth={1.7} />
+                          <span>{scopeLabel(p.scope)}</span>
+                        </p>
+                        <p className="admin-offers-meta-row">
+                          <CalendarDays size={14} strokeWidth={1.7} />
+                          <span dir="ltr">
+                            {p.startDate} → {p.endDate}
+                          </span>
+                        </p>
+                      </div>
 
-                  <div className="mt-auto flex items-center justify-end gap-2 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(p)}
-                      aria-label={t("admin.promotions.edit")}
-                      className="grid place-items-center rounded-[8px] transition hover:brightness-110"
-                      style={{
-                        width: 36,
-                        height: 36,
-                        color: GOLD,
-                        background: "transparent",
-                        border: `1px solid rgba(212,175,55,0.7)`,
-                      }}
-                    >
-                      <Pencil size={14} strokeWidth={1.55} />
-                    </button>
-                    {hasPermission(role, "delete") ? (
-                      <button
-                        type="button"
-                        onClick={() => void onDelete(p)}
-                        aria-label="حذف"
-                        className="grid place-items-center rounded-[8px] transition hover:brightness-110"
-                        style={{
-                          width: 36,
-                          height: 36,
-                          color: DANGER,
-                          background: "transparent",
-                          border: `1px solid rgba(240,113,120,0.55)`,
-                        }}
-                      >
-                        <Trash2 size={14} strokeWidth={1.55} />
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
-              </li>
-            ))}
-          </ul>
+                      <div className="admin-offers-actions">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(p)}
+                          aria-label={t("admin.promotions.edit")}
+                          className="admin-offers-icon-btn"
+                        >
+                          <Pencil size={13} strokeWidth={1.6} />
+                        </button>
+                        {hasPermission(role, "delete") ? (
+                          <button
+                            type="button"
+                            onClick={() => void onDelete(p)}
+                            aria-label="حذف"
+                            className="admin-offers-icon-btn is-danger"
+                          >
+                            <Trash2 size={13} strokeWidth={1.6} />
+                          </button>
+                        ) : null}
+                      </div>
+                    </article>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <button
+              type="button"
+              className="admin-offers-empty"
+              onClick={openCreate}
+            >
+              <span className="admin-offers-empty-icon">
+                <Plus size={16} strokeWidth={1.8} />
+              </span>
+              <span className="admin-offers-empty-title">
+                {t("admin.promotions.add")}
+              </span>
+              {sorted.length === 0 ? (
+                <span className="admin-offers-empty-lead">
+                  {t("admin.promotions.empty")}
+                </span>
+              ) : null}
+            </button>
+          </>
         )}
       </div>
 
