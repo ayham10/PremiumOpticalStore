@@ -1,9 +1,36 @@
 "use client";
 
-import { FormEvent, Fragment, Suspense, useCallback, useEffect, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Eye, Plus, Save, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  CalendarDays,
+  Clock,
+  Coins,
+  Eye,
+  Facebook,
+  FileText,
+  Globe,
+  Instagram,
+  Languages,
+  Mail,
+  Map,
+  MapPin,
+  MessageCircle,
+  Music2,
+  Phone,
+  Plus,
+  Save,
+  Search,
+  Share2,
+  SlidersHorizontal,
+  Store,
+  Tags,
+  Trash2,
+  Youtube,
+  type LucideIcon,
+} from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -27,16 +54,40 @@ type SettingsTab =
   | "booking"
   | "seo";
 
-const TABS: { id: SettingsTab; labelKey: string }[] = [
-  { id: "general", labelKey: "admin.settings.tabGeneral" },
-  { id: "social", labelKey: "admin.settings.tabSocial" },
-  { id: "contact", labelKey: "admin.settings.tabContact" },
-  { id: "hours", labelKey: "admin.settings.tabHours" },
-  { id: "booking", labelKey: "admin.settings.tabBooking" },
-  { id: "seo", labelKey: "admin.settings.tabSeo" },
+const TABS: { id: SettingsTab; labelKey: string; icon: LucideIcon }[] = [
+  { id: "general", labelKey: "admin.settings.tabGeneral", icon: SlidersHorizontal },
+  { id: "social", labelKey: "admin.settings.tabSocial", icon: Share2 },
+  { id: "contact", labelKey: "admin.settings.tabContact", icon: Phone },
+  { id: "hours", labelKey: "admin.settings.tabHours", icon: Clock },
+  { id: "booking", labelKey: "admin.settings.tabBooking", icon: CalendarDays },
+  { id: "seo", labelKey: "admin.settings.tabSeo", icon: Search },
 ];
 
 const SOCIAL_KEYS = ["instagram", "facebook", "youtube", "tiktok"] as const;
+
+const SOCIAL_ICONS: Record<(typeof SOCIAL_KEYS)[number], LucideIcon> = {
+  instagram: Instagram,
+  facebook: Facebook,
+  youtube: Youtube,
+  tiktok: Music2,
+};
+
+function SetLabel({
+  htmlFor,
+  icon: Icon,
+  children,
+}: {
+  htmlFor?: string;
+  icon?: LucideIcon;
+  children: ReactNode;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="label admin-set-label">
+      {Icon ? <Icon size={13} strokeWidth={1.7} aria-hidden /> : null}
+      {children}
+    </label>
+  );
+}
 
 const CONTENT_FIELDS = [
   ["heroTitle", "admin.settings.heroTitle"],
@@ -275,7 +326,7 @@ function AdminSettingsPageInner() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="admin-set space-y-5">
       <AdminPageHeader
         title={t("admin.settings.title")}
         description={t("admin.settings.description")}
@@ -303,16 +354,20 @@ function AdminSettingsPageInner() {
       />
 
       <nav className="admin-settings-tabs" aria-label={t("admin.settings.title")}>
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`admin-settings-tab${tab === item.id ? " is-active" : ""}`}
-            onClick={() => setTab(item.id)}
-          >
-            {t(item.labelKey)}
-          </button>
-        ))}
+        {TABS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`admin-settings-tab${tab === item.id ? " is-active" : ""}`}
+              onClick={() => setTab(item.id)}
+            >
+              <Icon size={15} strokeWidth={1.7} aria-hidden />
+              <span>{t(item.labelKey)}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {error ? (
@@ -334,13 +389,17 @@ function AdminSettingsPageInner() {
             </div>
 
             <section className="admin-card space-y-4 p-5">
-              <h2 className="admin-section-title">
+              <h2 className="admin-section-title admin-set-title">
+                <Store size={16} strokeWidth={1.7} />
                 {t("admin.settings.storeInfo")}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="label">{t("admin.settings.currency")}</label>
+                  <SetLabel htmlFor="set-currency" icon={Coins}>
+                    {t("admin.settings.currency")}
+                  </SetLabel>
                   <input
+                    id="set-currency"
                     className="input"
                     value={form.currencySymbol}
                     onChange={(e) =>
@@ -359,36 +418,49 @@ function AdminSettingsPageInner() {
 
         {tab === "social" ? (
           <section className="admin-card space-y-4 p-5">
-            <h2 className="admin-section-title">{t("admin.settings.social")}</h2>
+            <h2 className="admin-section-title admin-set-title">
+              <Share2 size={16} strokeWidth={1.7} />
+              {t("admin.settings.social")}
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              {SOCIAL_KEYS.map((key) => (
-                <div key={key}>
-                  <label className="label capitalize">{key}</label>
-                  <input
-                    className="input"
-                    value={form.social[key] || ""}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        social: { ...f.social, [key]: e.target.value },
-                      }))
-                    }
-                  />
-                </div>
-              ))}
+              {SOCIAL_KEYS.map((key) => {
+                const Icon = SOCIAL_ICONS[key];
+                return (
+                  <div key={key}>
+                    <SetLabel htmlFor={`set-social-${key}`} icon={Icon}>
+                      <span className="capitalize">{key}</span>
+                    </SetLabel>
+                    <input
+                      id={`set-social-${key}`}
+                      className="input"
+                      value={form.social[key] || ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          social: { ...f.social, [key]: e.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
           </section>
         ) : null}
 
         {tab === "contact" ? (
           <section className="admin-card space-y-4 p-5">
-            <h2 className="admin-section-title">
+            <h2 className="admin-section-title admin-set-title">
+              <Phone size={16} strokeWidth={1.7} />
               {t("admin.settings.storeInfo")}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="label">{t("admin.settings.phone")}</label>
+                <SetLabel htmlFor="set-phone" icon={Phone}>
+                  {t("admin.settings.phone")}
+                </SetLabel>
                 <input
+                  id="set-phone"
                   className="input"
                   value={form.phone}
                   onChange={(e) =>
@@ -397,8 +469,11 @@ function AdminSettingsPageInner() {
                 />
               </div>
               <div>
-                <label className="label">{t("admin.settings.whatsapp")}</label>
+                <SetLabel htmlFor="set-whatsapp" icon={MessageCircle}>
+                  {t("admin.settings.whatsapp")}
+                </SetLabel>
                 <input
+                  id="set-whatsapp"
                   className="input"
                   value={form.whatsapp}
                   onChange={(e) =>
@@ -408,8 +483,11 @@ function AdminSettingsPageInner() {
                 />
               </div>
               <div>
-                <label className="label">{t("admin.settings.email")}</label>
+                <SetLabel htmlFor="set-email" icon={Mail}>
+                  {t("admin.settings.email")}
+                </SetLabel>
                 <input
+                  id="set-email"
                   className="input"
                   type="email"
                   value={form.email}
@@ -419,8 +497,11 @@ function AdminSettingsPageInner() {
                 />
               </div>
               <div>
-                <label className="label">{t("admin.settings.city")}</label>
+                <SetLabel htmlFor="set-city" icon={Globe}>
+                  {t("admin.settings.city")}
+                </SetLabel>
                 <input
+                  id="set-city"
                   className="input"
                   value={form.city}
                   onChange={(e) =>
@@ -429,8 +510,11 @@ function AdminSettingsPageInner() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="label">{t("admin.settings.address")}</label>
+                <SetLabel htmlFor="set-address" icon={MapPin}>
+                  {t("admin.settings.address")}
+                </SetLabel>
                 <input
+                  id="set-address"
                   className="input"
                   value={form.address}
                   onChange={(e) =>
@@ -439,8 +523,11 @@ function AdminSettingsPageInner() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="label">{t("admin.settings.mapsLink")}</label>
+                <SetLabel htmlFor="set-maps-link" icon={Map}>
+                  {t("admin.settings.mapsLink")}
+                </SetLabel>
                 <input
+                  id="set-maps-link"
                   className="input"
                   value={form.googleMapsLink}
                   onChange={(e) =>
@@ -452,8 +539,11 @@ function AdminSettingsPageInner() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="label">{t("admin.settings.mapsEmbed")}</label>
+                <SetLabel htmlFor="set-maps-embed" icon={Globe}>
+                  {t("admin.settings.mapsEmbed")}
+                </SetLabel>
                 <input
+                  id="set-maps-embed"
                   className="input"
                   value={form.googleMapsEmbedUrl}
                   onChange={(e) =>
@@ -470,141 +560,122 @@ function AdminSettingsPageInner() {
 
         {tab === "hours" ? (
           <section className="admin-card space-y-4 p-5">
-            <h2 className="admin-section-title">{t("admin.settings.hours")}</h2>
-            <div className="overflow-x-auto">
-              <table className="admin-hours-table">
-                <thead>
-                  <tr>
-                    <th>{t("admin.settings.day")}</th>
-                    <th>{t("admin.settings.from")}</th>
-                    <th>{t("admin.settings.to")}</th>
-                    <th>{t("admin.settings.isOpen")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {form.openingHours.map((h) => {
-                    if (h.closed) {
-                      return (
-                        <tr key={h.day} className="is-closed">
-                          <td className="admin-hours-day">
-                            {t(`days.${h.day}`)}
-                          </td>
-                          <td colSpan={2} className="admin-hours-closed">
-                            {t("admin.settings.closedLabel")}
-                          </td>
-                          <td>
-                            <label className="admin-hours-open">
-                              <input
-                                type="checkbox"
-                                checked={!h.closed}
-                                onChange={(e) =>
-                                  updateHours(h.day, { closed: !e.target.checked })
-                                }
-                              />
-                              <span>{t("admin.settings.isOpen")}</span>
-                            </label>
-                          </td>
-                        </tr>
-                      );
-                    }
+            <h2 className="admin-section-title admin-set-title">
+              <Clock size={16} strokeWidth={1.7} />
+              {t("admin.settings.hours")}
+            </h2>
+            <div className="admin-set-hours">
+              {form.openingHours.map((h) => {
+                const periods = h.closed
+                  ? [{ open: h.open || "09:00", close: h.close || "18:00" }]
+                  : getDayPeriods(h);
 
-                    const periods = getDayPeriods(h);
-                    const rowSpan = periods.length + 1;
+                return (
+                  <article
+                    key={h.day}
+                    className={`admin-set-day${h.closed ? " is-closed" : ""}`}
+                  >
+                    <div className="admin-set-day-name">
+                      <Calendar size={15} strokeWidth={1.7} aria-hidden />
+                      {t(`days.${h.day}`)}
+                    </div>
 
-                    return (
-                      <Fragment key={h.day}>
-                        {periods.map((period, index) => (
-                          <tr
-                            key={`${h.day}-${index}`}
-                            className={
-                              index > 0 ? "admin-hours-period-row" : undefined
-                            }
-                          >
-                            {index === 0 ? (
-                              <td rowSpan={rowSpan} className="admin-hours-day">
-                                {t(`days.${h.day}`)}
-                              </td>
-                            ) : null}
-                            <td>
+                    <div className="admin-set-periods">
+                      {periods.map((period, index) => (
+                        <div
+                          key={`${h.day}-${index}`}
+                          className="admin-set-period"
+                        >
+                          <label className="admin-set-time">
+                            <span className="admin-set-time-label">
+                              {t("admin.settings.from")}
+                            </span>
+                            <span className="admin-set-timebox">
+                              <Clock size={13} strokeWidth={1.7} aria-hidden />
                               <input
                                 type="time"
                                 className="input"
                                 value={period.open}
+                                disabled={h.closed}
                                 onChange={(e) =>
                                   updatePeriod(h.day, index, {
                                     open: e.target.value,
                                   })
                                 }
                               />
-                            </td>
-                            <td>
-                              <div className="admin-hours-period-to">
-                                <input
-                                  type="time"
-                                  className="input"
-                                  value={period.close}
-                                  onChange={(e) =>
-                                    updatePeriod(h.day, index, {
-                                      close: e.target.value,
-                                    })
-                                  }
-                                />
-                                {periods.length > 1 ? (
-                                  <button
-                                    type="button"
-                                    className="admin-hours-remove-period"
-                                    onClick={() => removePeriod(h.day, index)}
-                                    aria-label={t("admin.settings.removePeriod")}
-                                  >
-                                    <Trash2 size={14} aria-hidden />
-                                  </button>
-                                ) : null}
-                              </div>
-                            </td>
-                            {index === 0 ? (
-                              <td rowSpan={rowSpan}>
-                                <label className="admin-hours-open">
-                                  <input
-                                    type="checkbox"
-                                    checked={!h.closed}
-                                    onChange={(e) =>
-                                      updateHours(h.day, {
-                                        closed: !e.target.checked,
-                                      })
-                                    }
-                                  />
-                                  <span>{t("admin.settings.isOpen")}</span>
-                                </label>
-                              </td>
-                            ) : null}
-                          </tr>
-                        ))}
-                        {periods.length < MAX_DAY_PERIODS ? (
-                          <tr className="admin-hours-add-row">
-                            <td colSpan={2}>
-                              <button
-                                type="button"
-                                className="admin-hours-add-period"
-                                onClick={() => addPeriod(h.day)}
-                              >
-                                <Plus size={14} aria-hidden />
-                                {t("admin.settings.addPeriod")}
-                              </button>
-                            </td>
-                          </tr>
-                        ) : null}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            </span>
+                          </label>
+                          <label className="admin-set-time">
+                            <span className="admin-set-time-label">
+                              {t("admin.settings.to")}
+                            </span>
+                            <span className="admin-set-timebox">
+                              <Clock size={13} strokeWidth={1.7} aria-hidden />
+                              <input
+                                type="time"
+                                className="input"
+                                value={period.close}
+                                disabled={h.closed}
+                                onChange={(e) =>
+                                  updatePeriod(h.day, index, {
+                                    close: e.target.value,
+                                  })
+                                }
+                              />
+                            </span>
+                          </label>
+                          {!h.closed && periods.length > 1 ? (
+                            <button
+                              type="button"
+                              className="admin-hours-remove-period"
+                              onClick={() => removePeriod(h.day, index)}
+                              aria-label={t("admin.settings.removePeriod")}
+                            >
+                              <Trash2 size={14} aria-hidden />
+                            </button>
+                          ) : (
+                            <span className="admin-set-period-spacer" />
+                          )}
+                        </div>
+                      ))}
+                      {!h.closed && periods.length < MAX_DAY_PERIODS ? (
+                        <button
+                          type="button"
+                          className="admin-hours-add-period"
+                          onClick={() => addPeriod(h.day)}
+                        >
+                          <Plus size={14} aria-hidden />
+                          {t("admin.settings.addPeriod")}
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <label className="admin-set-switch">
+                      <input
+                        type="checkbox"
+                        checked={!h.closed}
+                        onChange={(e) =>
+                          updateHours(h.day, { closed: !e.target.checked })
+                        }
+                      />
+                      <span className="admin-set-switch-track" aria-hidden />
+                      <span className="admin-set-switch-text">
+                        {h.closed
+                          ? t("admin.settings.closedLabel")
+                          : t("admin.settings.isOpen")}
+                      </span>
+                    </label>
+                  </article>
+                );
+              })}
             </div>
           </section>
         ) : null}
 
         {tab === "booking" ? (
           <section className="admin-card space-y-4 p-5">
-            <h2 className="admin-section-title">
+            <h2 className="admin-section-title admin-set-title">
+              <CalendarDays size={16} strokeWidth={1.7} />
               {t("admin.settings.bookingSms")}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -697,13 +768,17 @@ function AdminSettingsPageInner() {
         {tab === "seo" ? (
           <>
             <section className="admin-card space-y-4 p-5">
-              <h2 className="admin-section-title">
+              <h2 className="admin-section-title admin-set-title">
+                <Search size={16} strokeWidth={1.7} />
                 {t("admin.settings.tabSeo")}
               </h2>
               <div className="grid gap-4">
                 <div>
-                  <label className="label">{t("admin.settings.seoTitle")}</label>
+                  <SetLabel htmlFor="set-seo-title" icon={FileText}>
+                    {t("admin.settings.seoTitle")}
+                  </SetLabel>
                   <input
+                    id="set-seo-title"
                     className="input"
                     value={form.seo.title}
                     onChange={(e) =>
@@ -715,10 +790,11 @@ function AdminSettingsPageInner() {
                   />
                 </div>
                 <div>
-                  <label className="label">
+                  <SetLabel htmlFor="set-seo-desc" icon={FileText}>
                     {t("admin.settings.seoDescription")}
-                  </label>
+                  </SetLabel>
                   <textarea
+                    id="set-seo-desc"
                     className="textarea"
                     value={form.seo.description}
                     onChange={(e) =>
@@ -730,10 +806,11 @@ function AdminSettingsPageInner() {
                   />
                 </div>
                 <div>
-                  <label className="label">
+                  <SetLabel htmlFor="set-seo-keys" icon={Tags}>
                     {t("admin.settings.seoKeywords")}
-                  </label>
+                  </SetLabel>
                   <input
+                    id="set-seo-keys"
                     className="input"
                     value={form.seo.keywords}
                     onChange={(e) =>
@@ -748,25 +825,24 @@ function AdminSettingsPageInner() {
             </section>
 
             <section className="admin-card space-y-4 p-5">
-              <h2 className="admin-section-title">
+              <h2 className="admin-section-title admin-set-title">
+                <Languages size={16} strokeWidth={1.7} />
                 {t("admin.settings.homepageContent")}
               </h2>
               <p className="admin-muted text-sm">
                 {t("admin.settings.homepageHint")}
               </p>
               {CONTENT_FIELDS.map(([key, labelKey]) => (
-                <div
-                  key={key}
-                  className="space-y-2 rounded-xl border border-[var(--line)] p-3"
-                >
-                  <p className="text-sm font-semibold text-[var(--ink)]">
-                    {t(labelKey)}
-                  </p>
+                <div key={key} className="admin-set-subcard">
+                  <p className="admin-set-subtitle">{t(labelKey)}</p>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {(["en", "ar", "he"] as const).map((lang) => (
                       <div key={lang}>
-                        <label className="label uppercase">{lang}</label>
+                        <label className="label admin-set-label uppercase" htmlFor={`set-${key}-${lang}`}>
+                          {lang}
+                        </label>
                         <input
+                          id={`set-${key}-${lang}`}
                           className="input"
                           dir={lang === "en" ? "ltr" : "rtl"}
                           value={form.content?.[key]?.[lang] || ""}

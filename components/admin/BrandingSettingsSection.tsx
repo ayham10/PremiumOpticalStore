@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Upload } from "lucide-react";
+import { Palette, Store, Type, Upload } from "lucide-react";
 import {
   BRANDING_FONT_OPTIONS,
   mergeBranding,
@@ -27,7 +27,7 @@ function ColorField({
   const isRgba = value.trim().startsWith("rgba") || value.trim().startsWith("rgb");
   return (
     <label className="block space-y-1.5">
-      <span className="label">{label}</span>
+      <span className="label admin-set-label">{label}</span>
       <div className="admin-color-field">
         <input
           className="input flex-1 font-mono text-sm"
@@ -122,7 +122,10 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
     <div className="space-y-5">
       {/* Store identity — compact premium card matching reference */}
       <section className="admin-card admin-identity-card space-y-5 p-5">
-        <h2 className="admin-section-title">{t("admin.settings.identity")}</h2>
+        <h2 className="admin-section-title admin-set-title">
+          <Store size={16} strokeWidth={1.7} />
+          {t("admin.settings.identity")}
+        </h2>
 
         {uploadError ? (
           <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
@@ -132,7 +135,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
         <div className="admin-identity-names">
           <div>
-            <label className="label">{t("admin.settings.storeNameAr")}</label>
+            <label className="label admin-set-label">{t("admin.settings.storeNameAr")}</label>
             <input
               className="input"
               dir="rtl"
@@ -141,7 +144,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             />
           </div>
           <div>
-            <label className="label">{t("admin.settings.storeNameEn")}</label>
+            <label className="label admin-set-label">{t("admin.settings.storeNameEn")}</label>
             <input
               className="input"
               value={branding.storeNameEn}
@@ -149,7 +152,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             />
           </div>
           <div>
-            <label className="label">{t("admin.settings.storeNameHe")}</label>
+            <label className="label admin-set-label">{t("admin.settings.storeNameHe")}</label>
             <input
               className="input"
               dir="rtl"
@@ -161,7 +164,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
         <div className="admin-identity-media">
           <div className="admin-identity-logo">
-            <label className="label">{t("admin.settings.storeLogo")}</label>
+            <label className="label admin-set-label">{t("admin.settings.storeLogo")}</label>
             <div className="admin-logo-preview">
               {branding.logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -189,7 +192,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
           <div className="admin-identity-side">
             <div>
-              <label className="label">{t("admin.settings.faviconUrl")}</label>
+              <label className="label admin-set-label">{t("admin.settings.faviconUrl")}</label>
               <div className="admin-favicon-row">
                 <span className="admin-favicon-preview" aria-hidden>
                   {branding.favicon ? (
@@ -220,7 +223,7 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
             </div>
 
             <div>
-              <label className="label">{t("admin.settings.tagline")}</label>
+              <label className="label admin-set-label">{t("admin.settings.tagline")}</label>
               <input
                 className="input"
                 value={value.tagline}
@@ -235,7 +238,10 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
       {/* Colors */}
       <section className="admin-card space-y-4 p-5">
-        <h2 className="admin-section-title">{t("admin.settings.colors")}</h2>
+        <h2 className="admin-section-title admin-set-title">
+          <Palette size={16} strokeWidth={1.7} />
+          {t("admin.settings.colors")}
+        </h2>
         <div className="admin-colors-row">
           <ColorField
             label={t("admin.settings.primaryColor")}
@@ -294,7 +300,10 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
 
       {/* Advanced branding (unchanged capabilities, below identity) */}
       <section className="admin-card space-y-4 p-5">
-        <h2 className="admin-section-title text-base">Typography</h2>
+        <h2 className="admin-section-title admin-set-title text-base">
+          <Type size={16} strokeWidth={1.7} />
+          Typography
+        </h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className="label">Heading font</label>
@@ -342,7 +351,10 @@ export default function BrandingSettingsSection({ value, onChange }: Props) {
       </section>
 
       <section className="admin-card space-y-4 p-5">
-        <h2 className="admin-section-title text-base">Store name styling</h2>
+        <h2 className="admin-section-title admin-set-title text-base">
+          <Type size={16} strokeWidth={1.7} />
+          Store name styling
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ColorField
             label="Name color"
