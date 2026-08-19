@@ -6,13 +6,12 @@ import { useSearchParams } from "next/navigation";
 import {
   Calendar,
   CalendarDays,
+  Camera,
   Clock,
   Coins,
   Eye,
-  Facebook,
   FileText,
   Globe,
-  Instagram,
   Languages,
   Mail,
   Map,
@@ -20,6 +19,7 @@ import {
   MessageCircle,
   Music2,
   Phone,
+  Play,
   Plus,
   Save,
   Search,
@@ -28,7 +28,7 @@ import {
   Store,
   Tags,
   Trash2,
-  Youtube,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -66,9 +66,9 @@ const TABS: { id: SettingsTab; labelKey: string; icon: LucideIcon }[] = [
 const SOCIAL_KEYS = ["instagram", "facebook", "youtube", "tiktok"] as const;
 
 const SOCIAL_ICONS: Record<(typeof SOCIAL_KEYS)[number], LucideIcon> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  youtube: Youtube,
+  instagram: Camera,
+  facebook: Users,
+  youtube: Play,
   tiktok: Music2,
 };
 
