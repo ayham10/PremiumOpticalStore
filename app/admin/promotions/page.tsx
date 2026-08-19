@@ -9,12 +9,18 @@ import {
 } from "react";
 import Image from "next/image";
 import {
-  BadgePercent,
   CalendarDays,
   Check,
+  FileText,
+  Glasses,
+  Package,
   Pencil,
+  Percent,
   Plus,
+  Save,
+  Settings,
   Tag,
+  Target,
   Trash2,
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
@@ -118,7 +124,12 @@ function discountLabel(p: Promotion): string {
   return p.discount || "—";
 }
 
-const SCOPES: PromotionScope[] = ["all", "sunglasses", "frames", "specific"];
+const SCOPE_ICONS = {
+  all: Package,
+  sunglasses: Glasses,
+  frames: Glasses,
+  specific: Package,
+} as const;
 
 const OFFER_SECTIONS = {
   ar: {
@@ -438,12 +449,20 @@ export default function AdminPromotionsPage() {
         onClose={() => setModalOpen(false)}
         wide
         className="admin-offer-modal overflow-hidden !pb-0"
-        icon={<BadgePercent size={18} strokeWidth={1.7} />}
+        icon={<Tag size={18} strokeWidth={1.7} />}
       >
         <form onSubmit={onSubmit} className="admin-offer-form">
           <div className="admin-offer-form-body">
             <section className="admin-offer-section">
-              <h3 className="admin-offer-section-title">{sections.details}</h3>
+              <h3 className="admin-offer-section-title">
+                <FileText
+                  size={14}
+                  strokeWidth={1.7}
+                  color="#D4AF37"
+                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                />
+                {sections.details}
+              </h3>
               <div className="admin-offer-fields">
                 <label className="admin-offer-field admin-offer-field-full">
                   <span>{t("admin.promotions.fieldTitle")}</span>
@@ -485,6 +504,12 @@ export default function AdminPromotionsPage() {
 
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
+                <Percent
+                  size={14}
+                  strokeWidth={1.7}
+                  color="#D4AF37"
+                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                />
                 {t("admin.promotions.colDiscount")}
               </h3>
               <div className="admin-offer-fields admin-offer-fields-2">
@@ -529,10 +554,18 @@ export default function AdminPromotionsPage() {
 
             <section className="admin-offer-section">
               <h3 className="admin-offer-section-title">
+                <Target
+                  size={14}
+                  strokeWidth={1.7}
+                  color="#D4AF37"
+                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                />
                 {t("admin.promotions.fieldScope")}
               </h3>
               <div className="admin-offer-chips">
-                {SCOPES.map((scope) => (
+                {SCOPES.map((scope) => {
+                  const ScopeIcon = SCOPE_ICONS[scope];
+                  return (
                   <button
                     key={scope}
                     type="button"
@@ -542,9 +575,16 @@ export default function AdminPromotionsPage() {
                       form.scope === scope && "is-selected",
                     )}
                   >
+                    <ScopeIcon
+                      size={14}
+                      strokeWidth={1.7}
+                      color="#D4AF37"
+                      style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                    />
                     {scopeLabel(scope)}
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {form.scope === "specific" ? (
@@ -615,7 +655,15 @@ export default function AdminPromotionsPage() {
             </section>
 
             <section className="admin-offer-section">
-              <h3 className="admin-offer-section-title">{sections.period}</h3>
+              <h3 className="admin-offer-section-title">
+                <CalendarDays
+                  size={14}
+                  strokeWidth={1.7}
+                  color="#D4AF37"
+                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                />
+                {sections.period}
+              </h3>
               <div className="admin-offer-fields admin-offer-fields-2">
                 <label className="admin-offer-field">
                   <span>{t("admin.promotions.fieldStart")}</span>
@@ -653,7 +701,15 @@ export default function AdminPromotionsPage() {
             </section>
 
             <section className="admin-offer-section">
-              <h3 className="admin-offer-section-title">{sections.more}</h3>
+              <h3 className="admin-offer-section-title">
+                <Settings
+                  size={14}
+                  strokeWidth={1.7}
+                  color="#D4AF37"
+                  style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                />
+                {sections.more}
+              </h3>
               <div className="admin-offer-fields">
                 <label className="admin-offer-field">
                   <span>{t("admin.promotions.fieldPriority")}</span>
@@ -715,9 +771,18 @@ export default function AdminPromotionsPage() {
               className="admin-offer-btn-save"
               disabled={saving}
             >
-              {saving
-                ? t("admin.promotions.saving")
-                : t("admin.promotions.save")}
+              {saving ? (
+                t("admin.promotions.saving")
+              ) : (
+                <>
+                  <Save
+                    size={15}
+                    strokeWidth={1.7}
+                    style={{ marginInlineEnd: 6, verticalAlign: "middle" }}
+                  />
+                  {t("admin.promotions.save")}
+                </>
+              )}
             </button>
           </div>
         </form>
