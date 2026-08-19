@@ -15,6 +15,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  CircleDot,
   ImageIcon,
   Minus,
   Package,
@@ -830,16 +831,12 @@ export default function AdminInventoryPage() {
 
               {tab === "images" ? (
                 <>
-                  <div style={editorCard}>
-                    <h2
-                      className="m-0 text-[0.95rem] font-semibold"
-                      style={{ color: "#FFFFFF" }}
-                    >
+                  <div className="admin-pe-card">
+                    <h2 className="admin-pe-card-title">
+                      <ImageIcon size={16} strokeWidth={1.7} />
                       صور المنتج
                     </h2>
-                    <p className="mb-3.5 mt-1 text-[0.76rem]" style={{ color: MUTED }}>
-                      يمكنك إضافة حتى 6 صور
-                    </p>
+                    <p className="admin-pe-lead">يمكنك إضافة حتى 6 صور</p>
                     <ProductImagesField
                       images={form.images}
                       onChange={(images) => setField("images", images)}
@@ -871,178 +868,177 @@ export default function AdminInventoryPage() {
 
               {tab === "stock" ? (
                 <>
-                  <div style={{ ...editorCard, display: "flex", flexDirection: "column", gap: 14 }}>
-                    <h2 className="m-0 text-[0.95rem] font-semibold" style={{ color: "#FFFFFF" }}>
-                      السعر
-                    </h2>
-                    <div>
-                      <FieldLabel htmlFor="p-selling">السعر (₪)</FieldLabel>
-                      <div className="relative">
-                        <input
-                          id="p-selling"
-                          type="number"
-                          style={{ ...fieldStyle, paddingInlineStart: "2.2rem" }}
-                          value={form.sellingPrice}
-                          onChange={(e) => setField("sellingPrice", e.target.value)}
-                        />
-                        <span
-                          className="pointer-events-none absolute inset-y-0 start-3 grid place-items-center text-[0.9rem] font-bold"
-                          style={{ color: GOLD }}
-                        >
-                          ₪
-                        </span>
+                  <div className="admin-pe-stock-wrap">
+                    <div className="admin-pe-card">
+                      <h2 className="admin-pe-card-title">
+                        <Wallet size={16} strokeWidth={1.7} />
+                        السعر
+                      </h2>
+                      <div className="admin-pe-fields is-2">
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-selling">
+                            السعر (₪)
+                          </label>
+                          <div className="admin-pe-control">
+                            <span className="admin-pe-affix">₪</span>
+                            <input
+                              id="p-selling"
+                              type="number"
+                              className="admin-pe-input has-icon"
+                              value={form.sellingPrice}
+                              onChange={(e) =>
+                                setField("sellingPrice", e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-purchase">
+                            سعر الشراء
+                          </label>
+                          <input
+                            id="p-purchase"
+                            type="number"
+                            className="admin-pe-input"
+                            value={form.purchasePrice}
+                            onChange={(e) =>
+                              setField("purchasePrice", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-currency">
+                            العملة
+                          </label>
+                          <div className="admin-pe-input" id="p-currency">
+                            ILS — شيكل
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <FieldLabel htmlFor="p-purchase">سعر الشراء</FieldLabel>
-                      <input
-                        id="p-purchase"
-                        type="number"
-                        style={fieldStyle}
-                        value={form.purchasePrice}
-                        onChange={(e) => setField("purchasePrice", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <FieldLabel htmlFor="p-currency">العملة</FieldLabel>
-                      <div
-                        style={{
-                          ...fieldStyle,
-                          display: "flex",
-                          alignItems: "center",
-                          color: "#FFFFFF",
-                        }}
-                      >
-                        ILS — شيكل
-                      </div>
-                    </div>
-                  </div>
 
-                  <div style={{ ...editorCard, display: "flex", flexDirection: "column", gap: 14 }}>
-                    <h2 className="m-0 text-[0.95rem] font-semibold" style={{ color: "#FFFFFF" }}>
-                      المخزون
-                    </h2>
-                    <div>
-                      <FieldLabel htmlFor="p-stock">الكمية المتوفرة</FieldLabel>
-                      <div
-                        className="flex items-center justify-between gap-3"
-                        style={{
-                          height: 46,
-                          borderRadius: 11,
-                          border: `1px solid ${BORDER}`,
-                          background: "#12161D",
-                          padding: "0 0.45rem",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          aria-label="إنقاص"
-                          className="grid place-items-center rounded-[9px]"
-                          style={{
-                            width: 36,
-                            height: 36,
-                            border: `1px solid ${BORDER}`,
-                            background: CARD_BG,
-                            color: GOLD,
-                          }}
-                          onClick={() =>
-                            setField("stockQuantity", String(Math.max(0, stockQty - 1)))
-                          }
-                        >
-                          <Minus size={15} strokeWidth={2} />
-                        </button>
-                        <input
-                          id="p-stock"
-                          type="number"
-                          className="min-w-0 flex-1 border-0 bg-transparent text-center text-[1rem] font-semibold tabular-nums outline-none"
-                          style={{ color: "#FFFFFF", font: "inherit" }}
-                          value={form.stockQuantity}
-                          onChange={(e) => setField("stockQuantity", e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          aria-label="زيادة"
-                          className="grid place-items-center rounded-[9px]"
-                          style={{
-                            width: 36,
-                            height: 36,
-                            border: `1px solid ${BORDER}`,
-                            background: CARD_BG,
-                            color: GOLD,
-                          }}
-                          onClick={() => setField("stockQuantity", String(stockQty + 1))}
-                        >
-                          <Plus size={15} strokeWidth={2} />
-                        </button>
+                    <div className="admin-pe-card">
+                      <h2 className="admin-pe-card-title">
+                        <Package size={16} strokeWidth={1.7} />
+                        المخزون
+                      </h2>
+                      <div className="admin-pe-fields">
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-stock">
+                            الكمية المتوفرة
+                          </label>
+                          <div className="admin-pe-stepper">
+                            <button
+                              type="button"
+                              aria-label="إنقاص"
+                              className="admin-pe-stepper-btn"
+                              onClick={() =>
+                                setField(
+                                  "stockQuantity",
+                                  String(Math.max(0, stockQty - 1)),
+                                )
+                              }
+                            >
+                              <Minus size={15} strokeWidth={2} />
+                            </button>
+                            <input
+                              id="p-stock"
+                              type="number"
+                              value={form.stockQuantity}
+                              onChange={(e) =>
+                                setField("stockQuantity", e.target.value)
+                              }
+                            />
+                            <button
+                              type="button"
+                              aria-label="زيادة"
+                              className="admin-pe-stepper-btn"
+                              onClick={() =>
+                                setField("stockQuantity", String(stockQty + 1))
+                              }
+                            >
+                              <Plus size={15} strokeWidth={2} />
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-min">
+                            الحد الأدنى
+                          </label>
+                          <input
+                            id="p-min"
+                            type="number"
+                            className="admin-pe-input"
+                            value={form.minimumStock}
+                            onChange={(e) =>
+                              setField("minimumStock", e.target.value)
+                            }
+                          />
+                          <p className="admin-pe-hint">
+                            يُستخدم لتنبيهات انخفاض المخزون
+                          </p>
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-status">
+                            حالة المنتج
+                          </label>
+                          <div className="admin-pe-status">
+                            <span
+                              className={
+                                form.status === "active"
+                                  ? "admin-pe-status-dot is-active"
+                                  : "admin-pe-status-dot"
+                              }
+                            />
+                            <select
+                              id="p-status"
+                              className="admin-pe-input"
+                              value={form.status}
+                              onChange={(e) =>
+                                setField(
+                                  "status",
+                                  e.target.value as ProductStatus,
+                                )
+                              }
+                            >
+                              <option value="active">نشط</option>
+                              <option value="draft">غير نشط</option>
+                              <option value="archived">مؤرشف</option>
+                              <option value="out_of_stock">غير متوفر</option>
+                            </select>
+                          </div>
+                          <p className="admin-pe-hint">
+                            {form.status === "active"
+                              ? "المنتج متاح للمبيعات"
+                              : "المنتج غير ظاهر للمبيعات حالياً"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <FieldLabel htmlFor="p-min">الحد الأدنى</FieldLabel>
-                      <input
-                        id="p-min"
-                        type="number"
-                        style={fieldStyle}
-                        value={form.minimumStock}
-                        onChange={(e) => setField("minimumStock", e.target.value)}
-                      />
-                      <p className="mb-0 mt-1.5 text-[0.7rem]" style={{ color: MUTED }}>
-                        يُستخدم لتنبيهات انخفاض المخزون
-                      </p>
-                    </div>
-                    <div>
-                      <FieldLabel htmlFor="p-status">حالة المنتج</FieldLabel>
-                      <select
-                        id="p-status"
-                        style={fieldStyle}
-                        value={form.status}
-                        onChange={(e) =>
-                          setField("status", e.target.value as ProductStatus)
-                        }
-                      >
-                        <option value="active">نشط</option>
-                        <option value="draft">غير نشط</option>
-                        <option value="archived">مؤرشف</option>
-                        <option value="out_of_stock">غير متوفر</option>
-                      </select>
-                      <p className="mb-0 mt-1.5 text-[0.7rem]" style={{ color: MUTED }}>
-                        {form.status === "active"
-                          ? "المنتج متاح للمبيعات"
-                          : "المنتج غير ظاهر للمبيعات حالياً"}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div style={{ ...editorCard, padding: "14px 16px" }}>
-                    <h2
-                      className="mb-3 mt-0 text-[0.9rem] font-semibold"
-                      style={{ color: "#FFFFFF" }}
-                    >
-                      ملخص المنتج
-                    </h2>
-                    <div className="flex flex-col gap-2.5">
-                      <div className="flex items-center justify-between text-[0.8rem]">
-                        <span style={{ color: MUTED }}>السعر</span>
-                        <span className="font-semibold tabular-nums" style={{ color: "#FFFFFF" }}>
+                    <div className="admin-pe-card is-summary">
+                      <h2 className="admin-pe-card-title">
+                        <CircleDot size={16} strokeWidth={1.7} />
+                        ملخص المنتج
+                      </h2>
+                      <div className="admin-pe-summary-row">
+                        <span>السعر</span>
+                        <strong>
                           ₪{Number(form.sellingPrice || 0).toLocaleString("en-US")}
-                        </span>
+                        </strong>
                       </div>
-                      <div className="flex items-center justify-between text-[0.8rem]">
-                        <span style={{ color: MUTED }}>المخزون</span>
-                        <span className="font-semibold tabular-nums" style={{ color: "#FFFFFF" }}>
-                          {stockQty}
-                        </span>
+                      <div className="admin-pe-summary-row">
+                        <span>المخزون</span>
+                        <strong>{stockQty}</strong>
                       </div>
-                      <div className="flex items-center justify-between text-[0.8rem]">
-                        <span style={{ color: MUTED }}>الحالة</span>
+                      <div className="admin-pe-summary-row">
+                        <span>الحالة</span>
                         <span
-                          className="rounded-full px-2 py-0.5 text-[0.72rem] font-bold"
-                          style={{
-                            background:
-                              form.status === "active"
-                                ? "rgba(94,196,154,0.16)"
-                                : "rgba(138,146,156,0.14)",
-                            color: form.status === "active" ? "#5EC49A" : MUTED,
-                          }}
+                          className={
+                            form.status === "active"
+                              ? "admin-pe-pill is-active"
+                              : "admin-pe-pill"
+                          }
                         >
                           {statusLabel(form.status)}
                         </span>

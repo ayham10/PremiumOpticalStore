@@ -8,11 +8,6 @@ const MAX_GALLERY = 5;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const GOLD = "#D4AF37";
-const FIELD_BG = "#12161D";
-const BORDER = "#2A2F36";
-const MUTED = "#8A929C";
-
 type Props = {
   images: string[];
   onChange: (images: string[]) => void;
@@ -138,7 +133,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-3.5">
+    <div>
       <input
         ref={inputRef}
         type="file"
@@ -148,49 +143,33 @@ export default function ProductImagesField({ images, onChange }: Props) {
         onChange={(e) => void handleFiles(e.target.files)}
       />
 
-      {error ? (
-        <p
-          className="rounded-[12px] px-3 py-2 text-sm"
-          style={{
-            border: "1px solid rgba(224,122,122,0.35)",
-            background: "rgba(224,122,122,0.12)",
-            color: "var(--danger)",
-          }}
-        >
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="admin-pe-error">{error}</p> : null}
 
       {canAddMore ? (
         <button
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex w-full flex-col items-center justify-center gap-1.5 disabled:opacity-60"
-          style={{
-            minHeight: 118,
-            borderRadius: 12,
-            border: `1.5px dashed ${GOLD}`,
-            background: FIELD_BG,
-            padding: "18px 12px",
-          }}
+          className="admin-pe-drop"
         >
-          {uploading ? (
-            <Loader2 size={22} className="animate-spin" color={GOLD} />
-          ) : (
-            <Camera size={22} strokeWidth={1.5} color={GOLD} />
-          )}
-          <span className="text-[0.88rem] font-semibold" style={{ color: GOLD }}>
+          <span className="admin-pe-drop-icon">
+            {uploading ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <Camera size={20} strokeWidth={1.5} />
+            )}
+          </span>
+          <span className="admin-pe-drop-title">
             {uploading ? `جارٍ الرفع… ${progress}%` : "إضافة صورة"}
           </span>
-          <span className="text-center text-[0.68rem] leading-snug" style={{ color: MUTED }}>
+          <span className="admin-pe-drop-hint">
             حتى 5MB · PNG / JPG · نسبة 1:1 مفضّلة
           </span>
         </button>
       ) : null}
 
       {images.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="admin-pe-thumbs">
           {images.map((url, index) => {
             const isMain = index === 0;
             return (
@@ -200,50 +179,18 @@ export default function ProductImagesField({ images, onChange }: Props) {
                 onDragStart={() => onDragStart(index)}
                 onDragOver={(e) => onDragOverItem(e, index)}
                 onDragEnd={() => setDragIndex(null)}
-                className="relative overflow-hidden"
-                style={{
-                  borderRadius: 12,
-                  border: isMain ? `1px solid rgba(212,175,55,0.45)` : `1px solid ${BORDER}`,
-                  background: FIELD_BG,
-                  aspectRatio: "1 / 1",
-                }}
+                className={isMain ? "admin-pe-thumb is-main" : "admin-pe-thumb"}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="h-full w-full object-cover" />
+                <img src={url} alt="" />
 
                 {isMain ? (
                   <>
-                    <span
-                      className="absolute end-2 top-2 grid place-items-center rounded-full"
-                      style={{
-                        width: 26,
-                        height: 26,
-                        background: GOLD,
-                        color: "#0B0F14",
-                      }}
-                    >
-                      <Star size={12} strokeWidth={1.7} fill="currentColor" />
-                    </span>
-                    <span
-                      className="absolute inset-x-0 bottom-0 px-2 py-1.5 text-center text-[0.72rem] font-bold"
-                      style={{
-                        background: "rgba(11,14,20,0.72)",
-                        color: GOLD,
-                      }}
-                    >
-                      رئيسية
-                    </span>
+                    <span className="admin-pe-thumb-badge">رئيسية</span>
                     <button
                       type="button"
                       aria-label="حذف"
-                      className="absolute start-2 top-2 grid place-items-center rounded-[8px]"
-                      style={{
-                        width: 28,
-                        height: 28,
-                        background: "rgba(0,0,0,0.55)",
-                        border: "none",
-                        color: "#F07178",
-                      }}
+                      className="admin-pe-thumb-del"
                       onClick={() => removeAt(0)}
                     >
                       <Trash2 size={13} strokeWidth={1.55} />
@@ -254,14 +201,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
                     <button
                       type="button"
                       aria-label="حذف"
-                      className="absolute end-2 top-2 grid place-items-center rounded-[8px]"
-                      style={{
-                        width: 28,
-                        height: 28,
-                        background: "rgba(0,0,0,0.55)",
-                        border: "none",
-                        color: "#F07178",
-                      }}
+                      className="admin-pe-thumb-del"
                       onClick={() => removeAt(index)}
                     >
                       <Trash2 size={13} strokeWidth={1.55} />
@@ -269,14 +209,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
                     <button
                       type="button"
                       title="تعيين كرئيسية"
-                      className="absolute start-2 top-2 grid place-items-center rounded-[8px]"
-                      style={{
-                        width: 28,
-                        height: 28,
-                        background: "rgba(0,0,0,0.55)",
-                        border: "none",
-                        color: GOLD,
-                      }}
+                      className="admin-pe-thumb-star"
                       onClick={() => makeMain(index)}
                     >
                       <Star size={13} strokeWidth={1.55} />
@@ -290,12 +223,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
       ) : null}
 
       {images.length > 1 ? (
-        <p
-          className="mb-0 mt-1 text-center text-[0.72rem]"
-          style={{ color: MUTED }}
-        >
-          اسحب الصور لتغيير الترتيب ←
-        </p>
+        <p className="admin-pe-reorder">اسحب الصور لتغيير الترتيب ←</p>
       ) : null}
     </div>
   );
