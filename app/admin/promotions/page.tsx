@@ -9,6 +9,7 @@ import {
 } from "react";
 import Image from "next/image";
 import {
+  BadgePercent,
   CalendarDays,
   Check,
   FileText,
