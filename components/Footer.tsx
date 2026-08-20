@@ -76,16 +76,6 @@ export default function Footer() {
               <span>{city}</span>
             </p>
           </div>
-
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="oyon-footer-show-location"
-          >
-            <Map className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("footer.showLocation")}
-          </a>
         </div>
 
         <div className="oyon-footer-actions">
