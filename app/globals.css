@@ -8131,15 +8131,27 @@ html[dir="rtl"] .clinic-book-title {
 
 .oyon-footer-inner {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.65rem;
   padding: 2rem 0 1.5rem;
+}
+
+@media (max-width: 767px) {
+  .oyon-footer-inner.wrap,
+  .oyon-footer-copy .wrap {
+    width: min(24.5rem, calc(100% - 2rem));
+  }
+
+  .oyon-footer-inner {
+    padding: 1.75rem 0 1.25rem;
+    justify-items: stretch;
+  }
 }
 
 @media (min-width: 768px) {
   .oyon-footer-inner {
-    grid-template-columns: 1.2fr 1fr 1fr;
+    grid-template-columns: 1.15fr 1.15fr 0.9fr;
     align-items: start;
-    gap: 2rem;
+    gap: 2.15rem;
   }
 }
 
@@ -8154,25 +8166,97 @@ html[dir="rtl"] .clinic-book-title {
 .oyon-footer-info {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
   font-size: 0.9rem;
-  color: rgba(245, 245, 245, 0.78);
+  color: rgba(245, 245, 245, 0.82);
 }
 
-.oyon-footer-info-row {
+.oyon-footer-icon {
+  flex-shrink: 0;
+  color: var(--brand-gold, #d4af37);
+}
+
+.oyon-footer-heading {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.65rem;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0;
-}
-
-.oyon-footer-label {
-  color: #d4af6a;
-  font-size: 0.72rem;
+  color: #d4af37;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  min-width: 4.5rem;
+}
+
+.oyon-footer-hours-card {
+  background: rgba(15, 20, 26, 0.92);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  border-radius: 12px;
+  padding: 0.9rem 1rem 0.95rem;
+}
+
+.oyon-footer-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  margin-top: 0.7rem;
+}
+
+.oyon-footer-hours-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.85rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.oyon-footer-hours-line strong {
+  font-weight: 650;
+  color: rgba(245, 245, 245, 0.92);
+}
+
+.oyon-footer-hours-line span {
+  color: rgba(245, 245, 245, 0.72);
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.oyon-footer-hours-fallback {
+  display: block;
+  margin-top: 0.55rem;
+  color: rgba(245, 245, 245, 0.78);
+}
+
+.oyon-footer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.9rem 0.15rem;
+  border-top: 1px solid rgba(212, 175, 55, 0.16);
+}
+
+.oyon-footer-hours-card + .oyon-footer-item {
+  margin-top: 0.15rem;
+}
+
+.oyon-footer-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.oyon-footer-kicker {
+  color: #d4af37;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .oyon-footer-info a {
@@ -8180,19 +8264,22 @@ html[dir="rtl"] .clinic-book-title {
   text-decoration: none;
 }
 
-.oyon-footer-hours {
-  display: flex;
-  flex-direction: column;
-  gap: 0.18rem;
+.oyon-footer-show-location {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+  color: #d4af37;
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  padding-bottom: 0.12rem;
 }
 
-.oyon-footer-show-location {
-  margin-top: 0.35rem;
-  color: #d4af6a;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+.oyon-footer-show-location:hover {
+  border-bottom-color: #d4af37;
 }
 
 .oyon-footer-actions {
@@ -8200,28 +8287,46 @@ html[dir="rtl"] .clinic-book-title {
   flex-direction: column;
   align-items: stretch;
   gap: 0.85rem;
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
 }
 
 .oyon-footer-map-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.oyon-footer-map-actions:has(> :only-child) {
+  grid-template-columns: 1fr;
 }
 
 .oyon-footer-map-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2.35rem;
-  border-radius: 999px;
-  border: 1px solid rgba(212, 175, 106, 0.35);
-  padding: 0.35rem 0.85rem;
-  color: #e6c58a;
-  font-size: 0.8rem;
-  font-weight: 600;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.06);
+  padding: 0.5rem 0.7rem;
+  color: #d4af37;
+  font-size: 0.86rem;
+  font-weight: 650;
   text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.oyon-footer-map-btn svg {
+  color: #d4af37;
+  flex-shrink: 0;
+}
+
+.oyon-footer-map-btn:hover {
+  background: rgba(212, 175, 55, 0.14);
+  border-color: #d4af37;
 }
 
 .oyon-footer-copy {
@@ -8232,6 +8337,46 @@ html[dir="rtl"] .clinic-book-title {
 
 .oyon-footer-copy .wrap {
   padding-block: 0.95rem;
+}
+
+.oyon-contact-aside {
+  background: #070a0d;
+  color: #f5f5f5;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px;
+  padding: 1.15rem 1.1rem 1.2rem;
+  gap: 0.15rem;
+}
+
+.oyon-contact-store {
+  margin: 0 0 0.45rem;
+  color: #d4af37;
+  font-family: var(--brand-heading-font, "Fraunces", ui-serif, Georgia, serif);
+  font-size: 1.45rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.oyon-contact-email {
+  display: inline-block;
+  margin-bottom: 0.95rem;
+  color: rgba(245, 245, 245, 0.72);
+  font-size: 0.9rem;
+}
+
+.oyon-contact-email:hover {
+  color: #d4af37;
+}
+
+.oyon-contact-aside .oyon-footer-map-actions {
+  margin-top: 0.85rem;
+}
+
+@media (max-width: 767px) {
+  .oyon-contact-aside-wrap {
+    width: min(24.5rem, 100%);
+    margin-inline: auto;
+  }
 }
 
 /* ========== Store catalogue ========== */

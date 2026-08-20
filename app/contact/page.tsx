@@ -2,10 +2,12 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { Clock, Map, MapPin, Phone } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import PageAtmosphere from "@/components/PageAtmosphere";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { formatLocalPhone, phoneTelHref } from "@/lib/format";
 import type { WorkingHours } from "@/lib/types";
 import { buildPublicHoursLines } from "@/lib/working-hours";
 
@@ -85,6 +87,20 @@ export default function ContactPage() {
   const waHref = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
     "Hello Oyon, I would like assistance."
   )}`;
+  const phoneRaw = liveSettings?.phone || settings?.phone || "+972-3-555-0180";
+  const phoneDisplay = formatLocalPhone(phoneRaw);
+  const phoneHref = phoneTelHref(phoneRaw);
+  const hourLines = buildPublicHoursLines(
+    liveSettings?.openingHours || settings?.openingHours,
+    (day) => t(`days.${day}`),
+    t("contact.closed"),
+  );
+  const locationLine = [
+    liveSettings?.address || settings?.address || "128 King George Street",
+    liveSettings?.city || settings?.city || "Tel Aviv",
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <div className="pb-20">
@@ -183,50 +199,72 @@ export default function ContactPage() {
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="space-y-8">
-              <div>
-                <h2 className="font-[family-name:var(--font-display)] text-2xl">
-                  {settings?.storeName || "Oyon"}
-                </h2>
-                <p className="mt-3 text-[var(--ink-soft)]">
-                  {settings?.address || "128 King George Street"}
-                  <br />
-                  {settings?.city || "Tel Aviv"}
-                </p>
-                <p className="mt-4">
+            <div className="oyon-contact-aside-wrap space-y-8">
+              <div className="oyon-contact-aside oyon-footer-info">
+                <div>
+                  <h2 className="oyon-contact-store">
+                    {settings?.storeName || "Oyon"}
+                  </h2>
                   <a
-                    href={`tel:${settings?.phone || "+972-3-555-0180"}`}
-                    className="hover:text-[var(--accent)]"
-                  >
-                    {settings?.phone || "+972-3-555-0180"}
-                  </a>
-                </p>
-                <p>
-                  <a
+                    className="oyon-contact-email"
                     href={`mailto:${settings?.email || "hello@oyon.optics"}`}
-                    className="hover:text-[var(--accent)]"
                   >
                     {settings?.email || "hello@oyon.optics"}
                   </a>
-                </p>
-              </div>
+                </div>
 
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--slate)]">
-                  {t("contact.hours")}
-                </h3>
-                <ul className="mt-3 space-y-1.5 text-sm text-[var(--ink-soft)]">
-                  {buildPublicHoursLines(
-                    liveSettings?.openingHours || settings?.openingHours,
-                    (day) => t(`days.${day}`),
-                    t("contact.closed"),
-                  ).map((line) => (
-                    <li key={line.key} className="flex justify-between gap-4">
-                      <span>{line.label}</span>
-                      <span dir={line.closed ? undefined : "ltr"}>{line.value}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="oyon-footer-hours-card">
+                  <p className="oyon-footer-heading">
+                    <Clock className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
+                    <span>{t("contact.hours")}</span>
+                  </p>
+                  {hourLines.length ? (
+                    <div className="oyon-footer-hours">
+                      {hourLines.map((line) => (
+                        <span key={line.key} className="oyon-footer-hours-line">
+                          <strong>{line.label}</strong>
+                          {line.closed ? (
+                            <span>{line.value}</span>
+                          ) : (
+                            <span dir="ltr">{line.value}</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="oyon-footer-item">
+                  <Phone className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
+                  <p className="oyon-footer-item-body">
+                    <span className="oyon-footer-kicker">{t("contact.phone")}</span>
+                    <a href={phoneHref || undefined} dir="ltr">
+                      {phoneDisplay}
+                    </a>
+                  </p>
+                </div>
+
+                <div className="oyon-footer-item">
+                  <MapPin className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
+                  <p className="oyon-footer-item-body">
+                    <span className="oyon-footer-kicker">{t("footer.location")}</span>
+                    <span>{locationLine}</span>
+                  </p>
+                </div>
+
+                {settings?.googleMapsLink ? (
+                  <div className="oyon-footer-map-actions">
+                    <a
+                      href={settings.googleMapsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="oyon-footer-map-btn"
+                    >
+                      <Map size={18} strokeWidth={1.75} aria-hidden />
+                      {t("contact.maps")}
+                    </a>
+                  </div>
+                ) : null}
               </div>
 
               <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--mist)]">
@@ -244,16 +282,6 @@ export default function ContactPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {settings?.googleMapsLink && (
-                  <a
-                    href={settings.googleMapsLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-ghost"
-                  >
-                    {t("contact.maps")}
-                  </a>
-                )}
                 <Link href="/book" className="btn btn-accent">
                   {t("contact.bookCta")}
                 </Link>

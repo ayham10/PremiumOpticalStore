@@ -25,6 +25,26 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
+export function formatLocalPhone(raw?: string | null): string {
+  if (!raw) return "";
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
+  else if (digits.startsWith("5") && digits.length === 9) digits = `0${digits}`;
+  if (digits.startsWith("05") && digits.length >= 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 10)}`;
+  }
+  if (digits.startsWith("0") && digits.length >= 9) {
+    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  }
+  return raw;
+}
+
+export function phoneTelHref(raw?: string | null): string {
+  const local = formatLocalPhone(raw).replace(/\D/g, "");
+  const digits = local || (raw || "").replace(/\D/g, "");
+  return digits ? `tel:${digits}` : "";
+}
+
 export function slugify(value: string): string {
   return value
     .toLowerCase()

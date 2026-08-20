@@ -1,9 +1,10 @@
 "use client";
 
-import { MapPin, Navigation } from "lucide-react";
+import { Clock, Map, MapPin, Navigation, Phone } from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { formatLocalPhone, phoneTelHref } from "@/lib/format";
 import { buildPublicHoursLines } from "@/lib/working-hours";
 
 const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
@@ -21,6 +22,8 @@ export default function Footer() {
     t("contact.closed"),
   );
   const mapsUrl = settings?.googleMapsLink || MAPS_URL;
+  const phoneDisplay = formatLocalPhone(phone);
+  const phoneHref = phoneTelHref(phone);
 
   return (
     <footer className="oyon-footer">
@@ -31,37 +34,56 @@ export default function Footer() {
         </div>
 
         <div className="oyon-footer-info">
-          <p className="oyon-footer-info-row">
-            <span className="oyon-footer-label">{t("footer.hours")}</span>
+          <div className="oyon-footer-hours-card">
+            <p className="oyon-footer-heading">
+              <Clock className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
+              <span>{t("footer.hours")}</span>
+            </p>
             {hourLines.length ? (
-              <span className="oyon-footer-hours">
+              <div className="oyon-footer-hours">
                 {hourLines.map((line) => (
-                  <span key={line.key}>
-                    {line.label}:{" "}
-                    {line.closed ? line.value : <span dir="ltr">{line.value}</span>}
+                  <span key={line.key} className="oyon-footer-hours-line">
+                    <strong>{line.label}</strong>
+                    {line.closed ? (
+                      <span>{line.value}</span>
+                    ) : (
+                      <span dir="ltr">{line.value}</span>
+                    )}
                   </span>
                 ))}
-              </span>
+              </div>
             ) : (
-              <span dir="ltr">{t("footer.hoursValue")}</span>
+              <span className="oyon-footer-hours-fallback" dir="ltr">
+                {t("footer.hoursValue")}
+              </span>
             )}
-          </p>
-          <p className="oyon-footer-info-row">
-            <span className="oyon-footer-label">{t("footer.phone")}</span>
-            <a href={`tel:${phone.replace(/\s+/g, "")}`} dir="ltr">
-              {phone}
-            </a>
-          </p>
-          <p className="oyon-footer-info-row">
-            <span className="oyon-footer-label">{t("footer.location")}</span>
-            <span>{city}</span>
-          </p>
+          </div>
+
+          <div className="oyon-footer-item">
+            <Phone className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
+            <p className="oyon-footer-item-body">
+              <span className="oyon-footer-kicker">{t("footer.phone")}</span>
+              <a href={phoneHref || undefined} dir="ltr">
+                {phoneDisplay}
+              </a>
+            </p>
+          </div>
+
+          <div className="oyon-footer-item">
+            <MapPin className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
+            <p className="oyon-footer-item-body">
+              <span className="oyon-footer-kicker">{t("footer.location")}</span>
+              <span>{city}</span>
+            </p>
+          </div>
+
           <a
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="oyon-footer-show-location"
           >
+            <Map className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
             {t("footer.showLocation")}
           </a>
         </div>
@@ -74,7 +96,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="oyon-footer-map-btn"
             >
-              <MapPin size={15} aria-hidden />
+              <Map size={18} strokeWidth={1.75} aria-hidden />
               {t("footer.maps")}
             </a>
             <a
@@ -83,7 +105,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="oyon-footer-map-btn"
             >
-              <Navigation size={15} aria-hidden />
+              <Navigation size={18} strokeWidth={1.75} aria-hidden />
               {t("footer.waze")}
             </a>
           </div>
