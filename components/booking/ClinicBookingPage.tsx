@@ -49,21 +49,14 @@ function asReactText(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
-function normalizePhoneHint(value: string): boolean {
-  const digits = value.replace(/\D/g, "");
-  return (
-    /^05\d{8}$/.test(digits) ||
-    /^9725\d{8}$/.test(digits) ||
-    /^5\d{8}$/.test(digits)
-  );
+const PHONE_ERROR = "رقم الهاتف غير صحيح";
+
+function phoneDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 10);
 }
 
-function combinePhone(local: string): string {
-  const localDigits = local.replace(/\D/g, "");
-  if (!localDigits) return "";
-  if (localDigits.startsWith("0")) return `972${localDigits.slice(1)}`;
-  if (localDigits.startsWith("972")) return localDigits;
-  return `972${localDigits}`;
+function isIsraeliMobile(value: string): boolean {
+  return /^05\d{8}$/.test(phoneDigits(value));
 }
 
 /** Backend still expects email; UI no longer collects it. */
@@ -310,11 +303,7 @@ export default function ClinicBookingPage() {
     if (!time) next.time = t("eyeExam.errors.timeRequired");
     if (!firstName.trim()) next.firstName = t("validation.required");
     if (!lastName.trim()) next.lastName = t("validation.required");
-    const combined = combinePhone(phoneLocal);
-    if (!phoneLocal.trim()) next.phone = t("validation.required");
-    else if (!normalizePhoneHint(combined) && !normalizePhoneHint(phoneLocal)) {
-      next.phone = t("validation.phone");
-    }
+    if (!isIsraeliMobile(phoneLocal)) next.phone = PHONE_ERROR;
     setFieldErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -324,7 +313,7 @@ export default function ClinicBookingPage() {
     if (!appointmentType || submitting) return;
     if (!validateSchedule()) return;
 
-    const phone = combinePhone(phoneLocal);
+    const phone = phoneDigits(phoneLocal);
     setSubmitting(true);
     setError("");
     try {
@@ -627,13 +616,30 @@ export default function ClinicBookingPage() {
                   </span>
                   <input
                     type="tel"
-                    value={phoneLocal}
-                    onChange={(e) => setPhoneLocal(e.target.value)}
+                    inputMode="numeric"
                     autoComplete="tel-national"
+                    maxLength={10}
+                    pattern="05[0-9]{8}"
+                    value={phoneLocal}
+                    onChange={(e) => {
+                      const next = phoneDigits(e.target.value);
+                      setPhoneLocal(next);
+                      setFieldErrors((prev) => {
+                        if (!prev.phone) return prev;
+                        const copy = { ...prev };
+                        if (isIsraeliMobile(next)) delete copy.phone;
+                        else copy.phone = PHONE_ERROR;
+                        return copy;
+                      });
+                    }}
                     placeholder={t("clinicBooking.phonePlaceholder")}
                     required
                   />
-                  {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
+                  {(fieldErrors.phone || (phoneLocal.length > 0 && !isIsraeliMobile(phoneLocal))) ? (
+                    <em className="clinic-book-phone-error" dir="rtl">
+                      {PHONE_ERROR}
+                    </em>
+                  ) : null}
                 </label>
               </div>
 
@@ -656,7 +662,7 @@ export default function ClinicBookingPage() {
                 <button
                   type="submit"
                   className="btn btn-copper clinic-book-cta clinic-book-cta--primary"
-                  disabled={submitting}
+                  disabled={submitting || !isIsraeliMobile(phoneLocal)}
                 >
                   <CalendarCheck2 size={16} aria-hidden />
                   {submitting ? t("clinicBooking.submitting") : t("clinicBooking.confirm")}

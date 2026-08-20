@@ -7458,6 +7458,14 @@ html[dir="rtl"] .clinic-cal-weekdays span {
   position: relative;
 }
 
+.clinic-book-phone-error {
+  color: #e07a7a;
+  font-style: normal;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: start;
+}
+
 .clinic-book-country-control {
   display: inline-flex;
   align-items: center;
@@ -7757,6 +7765,12 @@ html[dir="rtl"] .clinic-book-title {
 
   .clinic-book-back-btn {
     min-height: 2.6rem;
+  }
+
+  .clinic-book-phone {
+    width: 72%;
+    max-width: 72%;
+    justify-self: start;
   }
 }
 
