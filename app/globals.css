@@ -6907,8 +6907,17 @@ body.eye-exam-booking-open .whatsapp-fab {
   min-height: 100svh;
   background: #070a0d;
   color: #f5f5f5;
+  --clinic-gold: var(--brand-gold, #d4af37);
   padding-top: calc(5.25rem + env(safe-area-inset-top, 0px));
   padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.clinic-book-page h1,
+.clinic-book-page h2,
+.clinic-book-title,
+.clinic-book-form-title,
+.clinic-book-success h2 {
+  color: var(--clinic-gold);
 }
 
 .clinic-book-inner {
@@ -6949,14 +6958,14 @@ body.eye-exam-booking-open .whatsapp-fab {
 }
 
 .clinic-book-progress-node.is-active {
-  border-color: #d4af6a;
-  background: #d4af6a;
+  border-color: var(--clinic-gold);
+  background: var(--clinic-gold);
   color: #1a140c;
 }
 
 .clinic-book-progress-node.is-done {
   background: transparent;
-  color: #d4af6a;
+  color: var(--clinic-gold);
 }
 
 .clinic-book-progress-line {
@@ -6966,7 +6975,7 @@ body.eye-exam-booking-open .whatsapp-fab {
 }
 
 .clinic-book-progress-line.is-active {
-  background: rgba(212, 175, 106, 0.65);
+  background: color-mix(in srgb, var(--clinic-gold) 65%, transparent);
 }
 
 .clinic-book-progress-label {
@@ -6982,6 +6991,7 @@ body.eye-exam-booking-open .whatsapp-fab {
   font-size: clamp(1.35rem, 4vw, 1.7rem);
   font-weight: 750;
   line-height: 1.25;
+  color: var(--clinic-gold);
 }
 
 .clinic-book-card {
@@ -7018,8 +7028,18 @@ body.eye-exam-booking-open .whatsapp-fab {
 }
 
 .clinic-book-service.is-selected {
-  border-color: #d4af6a;
-  background: rgba(212, 175, 106, 0.06);
+  border-color: var(--clinic-gold);
+  background: color-mix(in srgb, var(--clinic-gold) 8%, transparent);
+}
+
+.clinic-book-service.is-selected .clinic-book-service-copy strong,
+.clinic-book-service.is-selected .clinic-book-service-icon {
+  color: var(--clinic-gold);
+}
+
+.clinic-book-service-check.is-on {
+  border-color: var(--clinic-gold);
+  background: var(--clinic-gold);
 }
 
 .clinic-book-service-check {
@@ -7032,11 +7052,6 @@ body.eye-exam-booking-open .whatsapp-fab {
   color: #1a140c;
 }
 
-.clinic-book-service-check.is-on {
-  border-color: #d4af6a;
-  background: #d4af6a;
-}
-
 .clinic-book-service-copy {
   display: grid;
   gap: 0.15rem;
@@ -7046,6 +7061,7 @@ body.eye-exam-booking-open .whatsapp-fab {
 .clinic-book-service-copy strong {
   font-size: 0.92rem;
   font-weight: 700;
+  color: #f5f5f5;
 }
 
 .clinic-book-service-copy span {
@@ -7055,7 +7071,7 @@ body.eye-exam-booking-open .whatsapp-fab {
 }
 
 .clinic-book-service-icon {
-  color: #d4af6a;
+  color: var(--clinic-gold);
 }
 
 .clinic-book-schedule {
@@ -7089,7 +7105,7 @@ body.eye-exam-booking-open .whatsapp-fab {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #d4af6a;
+  color: var(--clinic-gold);
 }
 
 .clinic-cal {
@@ -7115,17 +7131,17 @@ body.eye-exam-booking-open .whatsapp-fab {
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 1px solid rgba(212, 175, 106, 0.28);
+  border: 1px solid color-mix(in srgb, var(--clinic-gold) 40%, transparent);
   background: #15191f;
-  color: #e6c58a;
+  color: var(--clinic-gold);
   display: grid;
   place-items: center;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .clinic-cal-nav button:hover {
-  border-color: rgba(212, 175, 106, 0.55);
-  background: rgba(212, 175, 106, 0.1);
+  border-color: color-mix(in srgb, var(--clinic-gold) 70%, transparent);
+  background: color-mix(in srgb, var(--clinic-gold) 12%, transparent);
 }
 
 .clinic-cal-weekdays,
@@ -7143,7 +7159,7 @@ body.eye-exam-booking-open .whatsapp-fab {
   text-align: center;
   font-size: 0.62rem;
   font-weight: 650;
-  color: rgba(212, 175, 106, 0.72);
+  color: color-mix(in srgb, var(--clinic-gold) 78%, #fff);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -7166,20 +7182,20 @@ html[dir="rtl"] .clinic-cal-weekdays span {
 }
 
 .clinic-cal-day.is-available {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in srgb, var(--clinic-gold) 32%, transparent);
   background: #15191f;
 }
 
 .clinic-cal-day.is-available:hover {
-  border-color: rgba(212, 175, 106, 0.55);
-  background: rgba(212, 175, 106, 0.12);
+  border-color: color-mix(in srgb, var(--clinic-gold) 70%, transparent);
+  background: color-mix(in srgb, var(--clinic-gold) 14%, transparent);
 }
 
 .clinic-cal-day.is-selected {
-  background: #d4af6a;
+  background: var(--clinic-gold);
   color: #1a140c;
-  border-color: #d4af6a;
-  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.35);
+  border-color: var(--clinic-gold);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--clinic-gold) 40%, transparent);
 }
 
 .clinic-cal-day.is-disabled,
@@ -7280,7 +7296,7 @@ html[dir="rtl"] .clinic-cal-weekdays span {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #d4af6a;
+  color: var(--clinic-gold);
 }
 
 .clinic-time-grid {
@@ -7315,16 +7331,16 @@ html[dir="rtl"] .clinic-cal-weekdays span {
 }
 
 .clinic-time-chip:hover {
-  border-color: rgba(212, 175, 106, 0.55);
-  background: rgba(212, 175, 106, 0.12);
+  border-color: color-mix(in srgb, var(--clinic-gold) 70%, transparent);
+  background: color-mix(in srgb, var(--clinic-gold) 12%, transparent);
 }
 
 .clinic-time-chip.is-active {
-  border-color: #d4af6a;
-  background: #d4af6a;
+  border-color: var(--clinic-gold);
+  background: var(--clinic-gold);
   color: #1a140c;
   font-weight: 750;
-  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.28);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--clinic-gold) 28%, transparent);
 }
 
 .clinic-book-pick-summary {
@@ -7353,7 +7369,7 @@ html[dir="rtl"] .clinic-cal-weekdays span {
 }
 
 .clinic-book-pick-summary svg {
-  color: #d4af6a;
+  color: var(--clinic-gold);
   flex-shrink: 0;
 }
 
@@ -7373,7 +7389,16 @@ html[dir="rtl"] .clinic-cal-weekdays span {
   margin: 0;
   font-size: 0.92rem;
   font-weight: 700;
-  color: #f5f5f5;
+  color: var(--clinic-gold);
+}
+
+.clinic-book-m-icon,
+.clinic-panel-label svg,
+.clinic-book-form-title svg,
+.clinic-book-field-head svg,
+.clinic-book-service-icon {
+  color: var(--clinic-gold);
+  stroke: currentColor;
 }
 
 .clinic-book-name-row {
@@ -7408,11 +7433,11 @@ html[dir="rtl"] .clinic-cal-weekdays span {
 .clinic-book-form input:focus,
 .clinic-book-country-control:focus-within {
   outline: none;
-  border-color: rgba(212, 175, 106, 0.55);
+  border-color: color-mix(in srgb, var(--clinic-gold) 70%, transparent);
 }
 
 .clinic-book-form input::placeholder {
-  color: rgba(212, 175, 106, 0.55);
+  color: color-mix(in srgb, var(--clinic-gold) 55%, transparent);
 }
 
 .clinic-book-form em,
@@ -7470,7 +7495,7 @@ html[dir="rtl"] .clinic-cal-weekdays span {
 }
 
 .clinic-book-summary-bar svg {
-  color: #d4af6a;
+  color: var(--clinic-gold);
 }
 
 .clinic-book-actions {
@@ -7487,7 +7512,7 @@ html[dir="rtl"] .clinic-cal-weekdays span {
   min-height: 2.35rem;
   border: 0;
   background: transparent;
-  color: #d4af6a;
+  color: var(--clinic-gold);
   font-size: 0.84rem;
   font-weight: 650;
   padding: 0 0.25rem;
@@ -7527,7 +7552,7 @@ html[dir="rtl"] .clinic-cal-weekdays span {
   gap: 0.4rem;
   width: 100%;
   margin-top: 1rem;
-  color: #d4af6a;
+  color: var(--clinic-gold);
   font-size: 0.84rem;
   font-weight: 600;
   text-decoration: none;
@@ -7572,13 +7597,14 @@ html[dir="rtl"] .clinic-cal-weekdays span {
   width: 3.2rem;
   height: 3.2rem;
   border-radius: 999px;
-  background: rgba(212, 175, 106, 0.14);
-  color: #d4af6a;
+  background: color-mix(in srgb, var(--clinic-gold) 16%, transparent);
+  color: var(--clinic-gold);
 }
 
 .clinic-book-success h2 {
   margin: 0;
   font-size: 1.25rem;
+  color: var(--clinic-gold);
 }
 
 .clinic-book-success p {
@@ -7637,8 +7663,8 @@ html[dir="rtl"] .clinic-book-title {
   }
 
   .clinic-book-service.is-selected {
-    border-color: #d4af6a;
-    box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.2);
+    border-color: var(--clinic-gold);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--clinic-gold) 22%, transparent);
   }
 
   .clinic-book-schedule {
@@ -7662,7 +7688,7 @@ html[dir="rtl"] .clinic-book-title {
   }
 
   .clinic-book-form-title {
-    color: #d4af6a;
+    color: var(--clinic-gold);
     font-size: 0.95rem;
   }
 
@@ -7672,7 +7698,8 @@ html[dir="rtl"] .clinic-book-title {
   .clinic-book-m-icon {
     width: 14px;
     height: 14px;
-    color: #d4af6a;
+    color: var(--clinic-gold);
+    stroke: currentColor;
     flex-shrink: 0;
   }
 
@@ -7697,8 +7724,8 @@ html[dir="rtl"] .clinic-book-title {
   }
 
   .clinic-book-form input:focus {
-    border-color: rgba(212, 175, 106, 0.7);
-    box-shadow: 0 0 0 3px rgba(212, 175, 106, 0.14);
+    border-color: color-mix(in srgb, var(--clinic-gold) 75%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--clinic-gold) 16%, transparent);
   }
 
   .clinic-cal-nav {
