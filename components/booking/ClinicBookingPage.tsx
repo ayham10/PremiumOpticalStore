@@ -12,6 +12,7 @@ import {
   Clock3,
   MessageCircle,
   Phone,
+  User,
 } from "lucide-react";
 import { BookingServiceIcon } from "@/components/admin/BookingServiceIcon";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -48,8 +49,6 @@ function asReactText(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
-const COUNTRY_CODES = [{ value: "+972", label: "+972" }] as const;
-
 function normalizePhoneHint(value: string): boolean {
   const digits = value.replace(/\D/g, "");
   return (
@@ -59,16 +58,12 @@ function normalizePhoneHint(value: string): boolean {
   );
 }
 
-function combinePhone(countryCode: string, local: string): string {
+function combinePhone(local: string): string {
   const localDigits = local.replace(/\D/g, "");
-  const ccDigits = countryCode.replace(/\D/g, "");
   if (!localDigits) return "";
-  if (ccDigits === "972") {
-    if (localDigits.startsWith("0")) return `972${localDigits.slice(1)}`;
-    if (localDigits.startsWith("972")) return localDigits;
-    return `972${localDigits}`;
-  }
-  return `${ccDigits}${localDigits}`;
+  if (localDigits.startsWith("0")) return `972${localDigits.slice(1)}`;
+  if (localDigits.startsWith("972")) return localDigits;
+  return `972${localDigits}`;
 }
 
 /** Backend still expects email; UI no longer collects it. */
@@ -97,7 +92,6 @@ export default function ClinicBookingPage() {
   const [time, setTime] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [countryCode, setCountryCode] = useState("+972");
   const [phoneLocal, setPhoneLocal] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -316,7 +310,7 @@ export default function ClinicBookingPage() {
     if (!time) next.time = t("eyeExam.errors.timeRequired");
     if (!firstName.trim()) next.firstName = t("validation.required");
     if (!lastName.trim()) next.lastName = t("validation.required");
-    const combined = combinePhone(countryCode, phoneLocal);
+    const combined = combinePhone(phoneLocal);
     if (!phoneLocal.trim()) next.phone = t("validation.required");
     else if (!normalizePhoneHint(combined) && !normalizePhoneHint(phoneLocal)) {
       next.phone = t("validation.phone");
@@ -330,7 +324,7 @@ export default function ClinicBookingPage() {
     if (!appointmentType || submitting) return;
     if (!validateSchedule()) return;
 
-    const phone = combinePhone(countryCode, phoneLocal);
+    const phone = combinePhone(phoneLocal);
     setSubmitting(true);
     setError("");
     try {
@@ -449,7 +443,10 @@ export default function ClinicBookingPage() {
             <form className="clinic-book-schedule" onSubmit={(e) => void confirmBooking(e)} noValidate>
               <div className="clinic-book-schedule-panel">
                 <div className="clinic-cal">
-                  <p className="clinic-panel-label">{t("clinicBooking.selectDate")}</p>
+                  <p className="clinic-panel-label">
+                    <CalendarDays size={14} className="clinic-book-m-icon" aria-hidden />
+                    {t("clinicBooking.selectDate")}
+                  </p>
                   <div className="clinic-cal-nav">
                     <button
                       type="button"
@@ -540,7 +537,10 @@ export default function ClinicBookingPage() {
                 </div>
 
                 <div className="clinic-book-times">
-                  <p className="clinic-panel-label">{t("clinicBooking.selectTime")}</p>
+                  <p className="clinic-panel-label">
+                    <Clock3 size={14} className="clinic-book-m-icon" aria-hidden />
+                    {t("clinicBooking.selectTime")}
+                  </p>
                   {loadingTimes ? (
                     <div className="clinic-time-skeleton" aria-hidden>
                       {Array.from({ length: 8 }).map((_, i) => (
@@ -587,10 +587,16 @@ export default function ClinicBookingPage() {
               </div>
 
               <div className="clinic-book-form">
-                <h2 className="clinic-book-form-title">{t("clinicBooking.yourDetails")}</h2>
+                <h2 className="clinic-book-form-title">
+                  <User size={15} className="clinic-book-m-icon" aria-hidden />
+                  {t("clinicBooking.yourDetails")}
+                </h2>
                 <div className="clinic-book-name-row">
                   <label>
-                    <span>{t("eyeExam.fields.firstName")}</span>
+                    <span className="clinic-book-field-head">
+                      <User size={13} className="clinic-book-m-icon" aria-hidden />
+                      {t("eyeExam.fields.firstName")}
+                    </span>
                     <input
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
@@ -600,7 +606,10 @@ export default function ClinicBookingPage() {
                     {fieldErrors.firstName ? <em>{fieldErrors.firstName}</em> : null}
                   </label>
                   <label>
-                    <span>{t("eyeExam.fields.lastName")}</span>
+                    <span className="clinic-book-field-head">
+                      <User size={13} className="clinic-book-m-icon" aria-hidden />
+                      {t("eyeExam.fields.lastName")}
+                    </span>
                     <input
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
@@ -611,37 +620,21 @@ export default function ClinicBookingPage() {
                   </label>
                 </div>
 
-                <div className="clinic-book-phone-row">
-                  <label className="clinic-book-country">
-                    <span className="sr-only">{t("clinicBooking.countryCode")}</span>
-                    <span className="clinic-book-country-control">
-                      <Phone size={13} aria-hidden />
-                      <select
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
-                        aria-label={t("clinicBooking.countryCode")}
-                      >
-                        {COUNTRY_CODES.map((c) => (
-                          <option key={c.value} value={c.value}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                    </span>
-                  </label>
-                  <label className="clinic-book-phone">
-                    <span className="sr-only">{t("eyeExam.fields.phone")}</span>
-                    <input
-                      type="tel"
-                      value={phoneLocal}
-                      onChange={(e) => setPhoneLocal(e.target.value)}
-                      autoComplete="tel-national"
-                      placeholder={t("clinicBooking.phonePlaceholder")}
-                      required
-                    />
-                    {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
-                  </label>
-                </div>
+                <label className="clinic-book-phone">
+                  <span className="clinic-book-field-head">
+                    <Phone size={13} className="clinic-book-m-icon" aria-hidden />
+                    {t("eyeExam.fields.phone")}
+                  </span>
+                  <input
+                    type="tel"
+                    value={phoneLocal}
+                    onChange={(e) => setPhoneLocal(e.target.value)}
+                    autoComplete="tel-national"
+                    placeholder={t("clinicBooking.phonePlaceholder")}
+                    required
+                  />
+                  {fieldErrors.phone ? <em>{fieldErrors.phone}</em> : null}
+                </label>
               </div>
 
               {error ? <p className="clinic-book-error">{error}</p> : null}
