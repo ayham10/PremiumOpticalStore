@@ -27,6 +27,7 @@ import {
   productsCacheKey,
   promotionsSlidesCacheKey,
 } from "@/lib/public-data-cache";
+import { buildPublicHoursLines } from "@/lib/working-hours";
 
 const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
 
@@ -64,7 +65,11 @@ export default function Navbar() {
   const desktopLinks = MOBILE_LINKS;
 
   const phone = settings?.phone || t("eyeExam.info.whatsappValue");
-  const hours = t("footer.hoursValue");
+  const hourLines = buildPublicHoursLines(
+    settings?.openingHours,
+    (day) => t(`days.${day}`),
+    t("contact.closed"),
+  );
   const city = settings?.city || t("footer.city");
   const instagram = settings?.social?.instagram || "https://instagram.com";
   const whatsappRaw =
@@ -382,7 +387,16 @@ export default function Navbar() {
                 </p>
                 <p>
                   <Clock size={14} aria-hidden />
-                  <span dir="ltr">{hours}</span>
+                  <span className="oyon-footer-hours">
+                    {hourLines.length
+                      ? hourLines.map((line) => (
+                          <span key={line.key}>
+                            {line.label}:{" "}
+                            {line.closed ? line.value : <span dir="ltr">{line.value}</span>}
+                          </span>
+                        ))
+                      : t("footer.hoursValue")}
+                  </span>
                 </p>
                 <p>
                   <Phone size={14} aria-hidden />

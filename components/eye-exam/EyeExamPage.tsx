@@ -15,14 +15,18 @@ import {
   Target,
   UserRound,
 } from "lucide-react";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import EyeExamHeroVideo from "@/components/eye-exam/EyeExamHeroVideo";
+import { buildPublicHoursLines } from "@/lib/working-hours";
+import type { WorkingHours } from "@/lib/types";
 
 type PublicSettings = {
   address?: string;
   city?: string;
   whatsapp?: string;
   phone?: string;
+  openingHours?: WorkingHours[];
 };
 
 function formatWhatsAppDisplay(raw?: string): string {
@@ -59,6 +63,7 @@ const BADGES = [
 
 export default function EyeExamPage() {
   const { t, rtl, dict } = useLocale();
+  const { settings: liveSettings } = useBranding();
   const [settings, setSettings] = useState<PublicSettings | null>(null);
 
   useEffect(() => {
@@ -80,6 +85,12 @@ export default function EyeExamPage() {
     t("eyeExam.info.whatsappValue");
 
   const whatsappHref = `https://wa.me/${(settings?.whatsapp || "9725550180").replace(/\D/g, "")}`;
+
+  const hourLines = buildPublicHoursLines(
+    liveSettings?.openingHours || settings?.openingHours,
+    (day) => t(`days.${day}`),
+    t("contact.closed"),
+  );
 
   const benefits = dict.eyeExam.benefits.items;
 
@@ -157,8 +168,19 @@ export default function EyeExamPage() {
           <div className="eye-exam-info-col">
             <Clock3 className="eye-exam-info-icon" aria-hidden size={20} strokeWidth={1.6} />
             <p className="eye-exam-info-label">{t("eyeExam.info.hours")}</p>
-            <p className="eye-exam-info-value">{t("eyeExam.info.hoursValue")}</p>
-            <p className="eye-exam-info-sub">{t("eyeExam.info.hoursNote")}</p>
+            {hourLines.length ? (
+              hourLines.map((line) => (
+                <p key={line.key} className="eye-exam-info-value">
+                  {line.label}:{" "}
+                  {line.closed ? line.value : <span dir="ltr">{line.value}</span>}
+                </p>
+              ))
+            ) : (
+              <>
+                <p className="eye-exam-info-value">{t("eyeExam.info.hoursValue")}</p>
+                <p className="eye-exam-info-sub">{t("eyeExam.info.hoursNote")}</p>
+              </>
+            )}
           </div>
           <div className="eye-exam-info-col">
             <MapPin className="eye-exam-info-icon" aria-hidden size={20} strokeWidth={1.6} />

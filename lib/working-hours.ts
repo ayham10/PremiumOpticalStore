@@ -76,6 +76,77 @@ export function validateDayPeriods(
 export function formatDayHoursSummary(hours: WorkingHours): string {
   if (hours.closed) return "";
   return getDayPeriods(hours)
-    .map((p) => `${p.open} – ${p.close}`)
-    .join(", ");
+    .map((p) => `${p.open}–${p.close}`)
+    .join(" / ");
+}
+
+function hoursSignature(hours: WorkingHours): string {
+  if (hours.closed) return "closed";
+  return getDayPeriods(hours)
+    .map((p) => `${p.open}-${p.close}`)
+    .join("|");
+}
+
+export type PublicHoursLine = {
+  key: string;
+  startDay: number;
+  endDay: number;
+  label: string;
+  value: string;
+  closed: boolean;
+};
+
+export function formatPeriodsDisplay(
+  hours: WorkingHours,
+  closedLabel: string,
+): string {
+  if (hours.closed) return closedLabel;
+  const summary = formatDayHoursSummary(hours);
+  return summary || closedLabel;
+}
+
+export function buildPublicHoursLines(
+  hours: WorkingHours[] | undefined,
+  dayName: (day: number) => string,
+  closedLabel: string,
+): PublicHoursLine[] {
+  if (!hours?.length) return [];
+
+  const ordered = [...hours].sort((a, b) => a.day - b.day);
+  const groups: {
+    startDay: number;
+    endDay: number;
+    closed: boolean;
+    value: string;
+    signature: string;
+  }[] = [];
+
+  for (const row of ordered) {
+    const signature = hoursSignature(row);
+    const value = formatPeriodsDisplay(row, closedLabel);
+    const last = groups[groups.length - 1];
+    if (last && last.endDay === row.day - 1 && last.signature === signature) {
+      last.endDay = row.day;
+      continue;
+    }
+    groups.push({
+      startDay: row.day,
+      endDay: row.day,
+      closed: Boolean(row.closed),
+      value,
+      signature,
+    });
+  }
+
+  return groups.map((group) => ({
+    key: `${group.startDay}-${group.endDay}`,
+    startDay: group.startDay,
+    endDay: group.endDay,
+    label:
+      group.startDay === group.endDay
+        ? dayName(group.startDay)
+        : `${dayName(group.startDay)} – ${dayName(group.endDay)}`,
+    value: group.value,
+    closed: group.closed,
+  }));
 }

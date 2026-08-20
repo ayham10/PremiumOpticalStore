@@ -4,9 +4,10 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
 import PageAtmosphere from "@/components/PageAtmosphere";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { WorkingHours } from "@/lib/types";
-import { formatDayHoursSummary } from "@/lib/working-hours";
+import { buildPublicHoursLines } from "@/lib/working-hours";
 
 type PublicSettings = {
   storeName: string;
@@ -22,6 +23,7 @@ type PublicSettings = {
 
 export default function ContactPage() {
   const { t } = useLocale();
+  const { settings: liveSettings } = useBranding();
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -214,14 +216,14 @@ export default function ContactPage() {
                   {t("contact.hours")}
                 </h3>
                 <ul className="mt-3 space-y-1.5 text-sm text-[var(--ink-soft)]">
-                  {(settings?.openingHours || []).map((h) => (
-                    <li key={h.day} className="flex justify-between gap-4">
-                      <span>{t(`days.${h.day}`)}</span>
-                      <span>
-                        {h.closed
-                          ? t("contact.closed")
-                          : formatDayHoursSummary(h) || `${h.open} – ${h.close}`}
-                      </span>
+                  {buildPublicHoursLines(
+                    liveSettings?.openingHours || settings?.openingHours,
+                    (day) => t(`days.${day}`),
+                    t("contact.closed"),
+                  ).map((line) => (
+                    <li key={line.key} className="flex justify-between gap-4">
+                      <span>{line.label}</span>
+                      <span dir={line.closed ? undefined : "ltr"}>{line.value}</span>
                     </li>
                   ))}
                 </ul>

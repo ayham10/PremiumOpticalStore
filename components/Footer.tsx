@@ -4,6 +4,7 @@ import { MapPin, Navigation } from "lucide-react";
 import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { buildPublicHoursLines } from "@/lib/working-hours";
 
 const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
 const WAZE_URL =
@@ -14,7 +15,11 @@ export default function Footer() {
   const { branding, settings } = useBranding();
   const phone = settings?.phone || "+972-52-123-4567";
   const city = settings?.city || t("footer.city");
-  const hours = t("footer.hoursValue");
+  const hourLines = buildPublicHoursLines(
+    settings?.openingHours,
+    (day) => t(`days.${day}`),
+    t("contact.closed"),
+  );
   const mapsUrl = settings?.googleMapsLink || MAPS_URL;
 
   return (
@@ -28,7 +33,18 @@ export default function Footer() {
         <div className="oyon-footer-info">
           <p className="oyon-footer-info-row">
             <span className="oyon-footer-label">{t("footer.hours")}</span>
-            <span dir="ltr">{hours}</span>
+            {hourLines.length ? (
+              <span className="oyon-footer-hours">
+                {hourLines.map((line) => (
+                  <span key={line.key}>
+                    {line.label}:{" "}
+                    {line.closed ? line.value : <span dir="ltr">{line.value}</span>}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span dir="ltr">{t("footer.hoursValue")}</span>
+            )}
           </p>
           <p className="oyon-footer-info-row">
             <span className="oyon-footer-label">{t("footer.phone")}</span>

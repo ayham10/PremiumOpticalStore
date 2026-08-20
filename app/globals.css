@@ -8096,6 +8096,10 @@ html[dir="rtl"] .clinic-book-title {
   margin: 0;
 }
 
+.oyon-mobile-meta p:has(.oyon-footer-hours) {
+  align-items: flex-start;
+}
+
 .oyon-mobile-meta a {
   color: inherit;
   text-decoration: none;
@@ -8174,6 +8178,12 @@ html[dir="rtl"] .clinic-book-title {
 .oyon-footer-info a {
   color: inherit;
   text-decoration: none;
+}
+
+.oyon-footer-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
 }
 
 .oyon-footer-show-location {
