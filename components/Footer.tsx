@@ -71,22 +71,28 @@ export default function Footer() {
             )}
           </div>
 
-          <div className="oyon-footer-item">
-            <Phone className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
-            <p className="oyon-footer-item-body">
-              <span className="oyon-footer-kicker">{t("footer.phone")}</span>
+          <div className="oyon-footer-contact">
+            <div className="oyon-footer-contact-row">
+              <div className="oyon-footer-contact-side">
+                <span className="oyon-footer-icon-ring" aria-hidden>
+                  <Phone className="oyon-footer-icon" size={14} strokeWidth={1.75} />
+                </span>
+                <span className="oyon-footer-kicker">{t("footer.phone")}</span>
+              </div>
               <a className="oyon-footer-value" href={phoneHref || undefined} dir="ltr">
                 {phoneDisplay}
               </a>
-            </p>
-          </div>
+            </div>
 
-          <div className="oyon-footer-item">
-            <MapPin className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
-            <p className="oyon-footer-item-body">
-              <span className="oyon-footer-kicker">{t("footer.location")}</span>
+            <div className="oyon-footer-contact-row">
+              <div className="oyon-footer-contact-side">
+                <span className="oyon-footer-icon-ring" aria-hidden>
+                  <MapPin className="oyon-footer-icon" size={14} strokeWidth={1.75} />
+                </span>
+                <span className="oyon-footer-kicker">{t("footer.location")}</span>
+              </div>
               <span className="oyon-footer-value">{city}</span>
-            </p>
+            </div>
           </div>
         </div>
 
