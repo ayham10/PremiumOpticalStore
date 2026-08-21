@@ -8171,6 +8171,7 @@ html[dir="rtl"] .clinic-book-title {
   min-width: 0;
   font-size: 0.9rem;
   color: rgba(245, 245, 245, 0.82);
+  direction: rtl;
 }
 
 .oyon-footer-icon {
@@ -8227,7 +8228,7 @@ html[dir="rtl"] .clinic-book-title {
 .oyon-footer .oyon-footer-hours-card .oyon-footer-hours-value {
   flex: 1;
   min-width: 0;
-  text-align: start;
+  text-align: left;
   color: rgba(248, 248, 248, 0.94);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -8243,7 +8244,7 @@ html[dir="rtl"] .clinic-book-title {
 .oyon-footer .oyon-footer-hours-card .oyon-footer-hours-closed {
   flex: 1;
   min-width: 0;
-  text-align: start;
+  text-align: left;
   color: var(--brand-gold, #d4af37);
   font-weight: 650;
   text-decoration: none;
@@ -8284,11 +8285,17 @@ html[dir="rtl"] .clinic-book-title {
 
 .oyon-footer-item {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 0.65rem;
   margin: 0;
   padding: 0.9rem 0.15rem;
   border-top: 1px solid rgba(212, 175, 55, 0.16);
+}
+
+.oyon-footer .oyon-footer-item .oyon-footer-icon {
+  flex-shrink: 0;
+  margin-top: 0.12rem;
 }
 
 .oyon-footer-hours-card + .oyon-footer-item {
@@ -8297,10 +8304,13 @@ html[dir="rtl"] .clinic-book-title {
 
 .oyon-footer-item-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  align-items: flex-end;
   gap: 0.18rem;
   margin: 0;
   min-width: 0;
+  text-align: right;
 }
 
 .oyon-footer-kicker {
@@ -8349,9 +8359,13 @@ html[dir="rtl"] .clinic-book-title {
 
 .oyon-footer-map-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
   width: 100%;
+}
+
+.oyon-footer-map-actions:has(> :nth-child(3)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .oyon-footer-map-actions:has(> :only-child) {

@@ -22,6 +22,7 @@ export default function Footer() {
     t("contact.closed"),
   );
   const mapsUrl = settings?.googleMapsLink || MAPS_URL;
+  const instagramUrl = settings?.social?.instagram?.trim() || "";
   const phoneDisplay = formatLocalPhone(phone);
   const phoneHref = phoneTelHref(phone);
 
@@ -33,7 +34,7 @@ export default function Footer() {
           <p className="oyon-footer-tagline">{t("footer.tagline")}</p>
         </div>
 
-        <div className="oyon-footer-info">
+        <div className="oyon-footer-info" dir="rtl">
           <div className="oyon-footer-hours-card">
             <p className="oyon-footer-heading">
               <Clock className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
@@ -109,6 +110,30 @@ export default function Footer() {
               <Navigation size={18} strokeWidth={1.75} aria-hidden />
               {t("footer.waze")}
             </a>
+            {instagramUrl ? (
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="oyon-footer-map-btn"
+                aria-label="Instagram"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  aria-hidden
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                </svg>
+                Instagram
+              </a>
+            ) : null}
           </div>
         </div>
       </div>
