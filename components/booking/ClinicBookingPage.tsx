@@ -15,6 +15,7 @@ import {
   User,
 } from "lucide-react";
 import { BookingServiceIcon } from "@/components/admin/BookingServiceIcon";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
   buildMonthGrid,
@@ -65,8 +66,17 @@ function syntheticEmail(phoneCombined: string): string {
   return `booking.${digits}@oyon.guest`;
 }
 
+function whatsappDialDigits(raw?: string | null): string {
+  const digits = (raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0")) return `972${digits.slice(1)}`;
+  if (digits.startsWith("5") && digits.length === 9) return `972${digits}`;
+  return digits;
+}
+
 export default function ClinicBookingPage() {
   const { t, locale, rtl } = useLocale();
+  const { settings } = useBranding();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type");
   const serviceParam = searchParams.get("service");
@@ -291,7 +301,11 @@ export default function ClinicBookingPage() {
       t(`clinicBooking.services.${appointmentType}`)
     : "";
 
-  const whatsappHref = `https://wa.me/9725550180?text=${encodeURIComponent(
+  const whatsappNumber =
+    whatsappDialDigits(settings?.whatsapp) ||
+    whatsappDialDigits(settings?.phone) ||
+    "972521234567";
+  const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
     locale === "ar"
       ? "مرحباً عيون، أود الاستفسار عن حجز موعد."
       : "Hello Oyon, I would like help with booking.",
