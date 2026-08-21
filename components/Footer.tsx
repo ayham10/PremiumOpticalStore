@@ -47,7 +47,18 @@ export default function Footer() {
                     {line.closed ? (
                       <span className="oyon-footer-hours-closed">{line.value}</span>
                     ) : (
-                      <span dir="ltr">{line.value.replaceAll(" / ", " • ")}</span>
+                      <span className="oyon-footer-hours-value" dir="ltr">
+                        {line.value.split(" / ").map((period, index, periods) => (
+                          <span key={`${line.key}-${index}`}>
+                            {period}
+                            {index < periods.length - 1 ? (
+                              <span className="oyon-footer-hours-sep" aria-hidden>
+                                {" • "}
+                              </span>
+                            ) : null}
+                          </span>
+                        ))}
+                      </span>
                     )}
                   </span>
                 ))}

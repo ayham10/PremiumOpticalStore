@@ -8197,6 +8197,58 @@ html[dir="rtl"] .clinic-book-title {
   padding: 0.9rem 1rem 0.95rem;
 }
 
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours {
+  gap: 0;
+  margin-top: 0.7rem;
+}
+
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.52rem 0;
+  min-height: 1.65rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours-line + .oyon-footer-hours-line {
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours-line strong {
+  flex-shrink: 0;
+  font-weight: 650;
+  color: rgba(245, 245, 245, 0.92);
+  text-align: end;
+}
+
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours-value {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+  color: rgba(248, 248, 248, 0.94);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours-sep {
+  color: var(--brand-gold, #d4af37);
+  font-weight: 700;
+  padding-inline: 0.15rem;
+}
+
+.oyon-footer .oyon-footer-hours-card .oyon-footer-hours-closed {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+  color: var(--brand-gold, #d4af37);
+  font-weight: 650;
+  text-decoration: none;
+}
+
 .oyon-footer-hours {
   display: flex;
   flex-direction: column;
@@ -8222,23 +8274,6 @@ html[dir="rtl"] .clinic-book-title {
   color: rgba(245, 245, 245, 0.72);
   text-align: start;
   font-variant-numeric: tabular-nums;
-}
-
-.oyon-footer .oyon-footer-hours {
-  gap: 0;
-}
-
-.oyon-footer .oyon-footer-hours-line {
-  padding: 0.4rem 0;
-}
-
-.oyon-footer .oyon-footer-hours-line + .oyon-footer-hours-line {
-  border-top: 1px solid rgba(212, 175, 55, 0.18);
-}
-
-.oyon-footer .oyon-footer-hours-closed {
-  color: #d4af37;
-  font-weight: 650;
 }
 
 .oyon-footer-hours-fallback {
