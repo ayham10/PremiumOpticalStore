@@ -23,6 +23,7 @@ import {
   groupTimesOfDay,
   resolveClinicTypeFromQuery,
 } from "@/lib/clinic-booking";
+import { whatsappDialDigits } from "@/lib/format";
 import {
   bookingDatesCacheKey,
   bookingServicesCacheKey,
@@ -64,14 +65,6 @@ function isIsraeliMobile(value: string): boolean {
 function syntheticEmail(phoneCombined: string): string {
   const digits = phoneCombined.replace(/\D/g, "") || "guest";
   return `booking.${digits}@oyon.guest`;
-}
-
-function whatsappDialDigits(raw?: string | null): string {
-  const digits = (raw || "").replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("0")) return `972${digits.slice(1)}`;
-  if (digits.startsWith("5") && digits.length === 9) return `972${digits}`;
-  return digits;
 }
 
 export default function ClinicBookingPage() {

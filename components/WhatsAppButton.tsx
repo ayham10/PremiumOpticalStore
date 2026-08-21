@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { whatsappDialDigits } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
 
 const WHATSAPP_MESSAGES: Record<Locale, string> = {
@@ -10,9 +12,16 @@ const WHATSAPP_MESSAGES: Record<Locale, string> = {
   ar: "مرحباً عيون، أود المساعدة بخصوص فحص النظر / النظارات.",
 };
 
-export default function WhatsAppButton({ phone = "9725550180" }: { phone?: string }) {
+export default function WhatsAppButton() {
   const { locale, t } = useLocale();
+  const { settings } = useBranding();
   const message = WHATSAPP_MESSAGES[locale] || WHATSAPP_MESSAGES.en;
+  const phone =
+    whatsappDialDigits(settings?.whatsapp) ||
+    whatsappDialDigits(settings?.phone);
+
+  if (!phone) return null;
+
   const href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
   return (

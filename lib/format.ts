@@ -45,6 +45,14 @@ export function phoneTelHref(raw?: string | null): string {
   return digits ? `tel:${digits}` : "";
 }
 
+export function whatsappDialDigits(raw?: string | null): string {
+  const digits = (raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0")) return `972${digits.slice(1)}`;
+  if (digits.startsWith("5") && digits.length === 9) return `972${digits}`;
+  return digits;
+}
+
 export function slugify(value: string): string {
   return value
     .toLowerCase()
