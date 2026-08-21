@@ -40,14 +40,14 @@ export default function Footer() {
               <span>{t("footer.hours")}</span>
             </p>
             {hourLines.length ? (
-              <div className="oyon-footer-hours">
+              <div className="oyon-footer-hours" dir="rtl">
                 {hourLines.map((line) => (
                   <span key={line.key} className="oyon-footer-hours-line">
                     <strong>{line.label}</strong>
                     {line.closed ? (
-                      <span>{line.value}</span>
+                      <span className="oyon-footer-hours-closed">{line.value}</span>
                     ) : (
-                      <span dir="ltr">{line.value}</span>
+                      <span dir="ltr">{line.value.replaceAll(" / ", " • ")}</span>
                     )}
                   </span>
                 ))}
@@ -63,7 +63,7 @@ export default function Footer() {
             <Phone className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
             <p className="oyon-footer-item-body">
               <span className="oyon-footer-kicker">{t("footer.phone")}</span>
-              <a href={phoneHref || undefined} dir="ltr">
+              <a className="oyon-footer-value" href={phoneHref || undefined} dir="ltr">
                 {phoneDisplay}
               </a>
             </p>
@@ -73,7 +73,7 @@ export default function Footer() {
             <MapPin className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
             <p className="oyon-footer-item-body">
               <span className="oyon-footer-kicker">{t("footer.location")}</span>
-              <span>{city}</span>
+              <span className="oyon-footer-value">{city}</span>
             </p>
           </div>
         </div>

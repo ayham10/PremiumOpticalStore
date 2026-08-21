@@ -8224,6 +8224,23 @@ html[dir="rtl"] .clinic-book-title {
   font-variant-numeric: tabular-nums;
 }
 
+.oyon-footer .oyon-footer-hours {
+  gap: 0;
+}
+
+.oyon-footer .oyon-footer-hours-line {
+  padding: 0.4rem 0;
+}
+
+.oyon-footer .oyon-footer-hours-line + .oyon-footer-hours-line {
+  border-top: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.oyon-footer .oyon-footer-hours-closed {
+  color: #d4af37;
+  font-weight: 650;
+}
+
 .oyon-footer-hours-fallback {
   display: block;
   margin-top: 0.55rem;
@@ -8262,6 +8279,11 @@ html[dir="rtl"] .clinic-book-title {
 .oyon-footer-info a {
   color: inherit;
   text-decoration: none;
+}
+
+.oyon-footer .oyon-footer-value {
+  color: #d4af37;
+  font-weight: 700;
 }
 
 .oyon-footer-show-location {
