@@ -15,6 +15,17 @@ import {
   type WhatsAppSendResult,
 } from "@/lib/whatsapp/provider";
 
+function buildCustomerConfirmationContentVariables(
+  appointment: EyeExamAppointment,
+): Record<string, string> {
+  const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();
+  return {
+    "1": customerName,
+    "2": appointment.appointmentDate,
+    "3": appointment.appointmentTime,
+  };
+}
+
 function buildBookingContentVariables(
   appointment: EyeExamAppointment,
   serviceLabel: string,
@@ -160,6 +171,8 @@ export async function dispatchBookingMessages(
       store.bookingServices || [],
     );
     const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
+    const customerConfirmationVariables =
+      buildCustomerConfirmationContentVariables(appointment);
 
     if (
       bookingMessages.customerConfirmation.enabled &&
@@ -168,7 +181,7 @@ export async function dispatchBookingMessages(
       await sendConfiguredTemplate(appointment, {
         to: appointment.phone,
         templateName: bookingMessages.customerConfirmation.templateName.trim(),
-        contentVariables,
+        contentVariables: customerConfirmationVariables,
         kind: "customer_confirmation",
         smsType: "appointment_confirmation",
       });
