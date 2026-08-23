@@ -13141,8 +13141,8 @@ select.admin-pe-input {
 .admin-bm-card-head {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 0.75rem;
   margin: 0 0 0.8rem;
   direction: rtl;
@@ -13151,12 +13151,14 @@ select.admin-pe-input {
 }
 
 .admin-bm-card-head > .admin-bm-card-title {
-  order: 2;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .admin-bm-card-head > .admin-bm-toggle {
-  order: 1;
-  margin-inline-start: auto;
+  flex: 0 0 auto;
+  direction: ltr;
+  margin-inline-end: 0;
 }
 
 .admin-bm-card-title {
@@ -13179,23 +13181,19 @@ select.admin-pe-input {
 .admin-bm-toggle {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
   gap: 0.55rem;
-  direction: rtl;
   cursor: pointer;
 }
 
 .admin-bm-toggle-label {
-  order: 2;
   color: #a7adb5;
   font-size: 0.82rem;
   font-weight: 600;
   white-space: nowrap;
-  text-align: right;
+  text-align: left;
 }
 
 .admin-bm-switch {
-  order: 1;
   flex-shrink: 0;
 }
 
@@ -13211,8 +13209,9 @@ select.admin-pe-input {
   justify-content: flex-start;
   gap: 0.5rem 0.65rem;
   direction: rtl;
-  align-self: stretch;
-  width: 100%;
+  align-self: flex-end;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .admin-bm-provider-row .admin-bm-select {
@@ -13320,8 +13319,10 @@ select.admin-pe-input {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-  align-self: stretch;
-  width: 100%;
+  align-items: flex-end;
+  align-self: flex-end;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .admin-bm-field {
@@ -13331,7 +13332,9 @@ select.admin-pe-input {
   direction: rtl;
   text-align: right;
   align-items: flex-end;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-end;
 }
 
 .admin-bm-field-label {
@@ -13339,12 +13342,17 @@ select.admin-pe-input {
   align-items: center;
   justify-content: flex-start;
   gap: 0.35rem;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   color: #a7adb5;
   font-size: 0.84rem;
   font-weight: 650;
   text-align: right;
   direction: rtl;
+}
+
+.admin-bm-card > .admin-bm-field {
+  align-self: flex-end;
 }
 
 .admin-bm-select,
@@ -13410,7 +13418,7 @@ select.admin-pe-input {
   }
 
   .admin-bm .admin-bm-card-head {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
   }
 
@@ -13419,7 +13427,7 @@ select.admin-pe-input {
   }
 
   .admin-bm #bm-owner-phone {
-    width: 50%;
-    max-width: 50%;
+    width: min(50%, 13.5rem);
+    max-width: 13.5rem;
   }
 }
