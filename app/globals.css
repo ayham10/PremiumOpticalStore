@@ -470,25 +470,42 @@ html.admin-dark body > * {
   --muted: #77818a;
   --mist: rgba(255, 255, 255, 0.04);
   --paper: #0b0f14;
-  --white: #131a22;
+  --white: #111820;
   --accent: #d4af6a;
   --accent-soft: #e6c58a;
   --accent-wash: rgba(212, 175, 106, 0.14);
   --copper: #d4af6a;
   --copper-soft: #e6c58a;
-  --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.12);
+  --admin-border-gold: rgba(212, 175, 106, 0.3);
+  --line: var(--admin-border-gold);
+  --line-strong: rgba(212, 175, 106, 0.38);
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
   --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.28);
   --success: #5ec49a;
   --warning: #e6c58a;
   --danger: #e07a7a;
-  --glass: rgba(19, 26, 34, 0.88);
+  --glass: rgba(17, 24, 32, 0.88);
   --background: #0b0f14;
   --foreground: #f5f5f5;
   --admin-bg: #0b0f14;
-  --admin-card: #131a22;
-  --admin-elevated: #161d26;
+  --admin-outer: #111820;
+  --admin-inner: #0b1117;
+  --admin-card: #111820;
+  --admin-elevated: #0b1117;
+  --admin-outer-bg: linear-gradient(
+    180deg,
+    rgba(17, 24, 32, 0.97) 0%,
+    rgba(17, 24, 32, 0.93) 100%
+  );
+  --admin-inner-bg:
+    linear-gradient(180deg, rgba(11, 17, 23, 0.98) 0%, rgba(11, 17, 23, 0.94) 100%),
+    linear-gradient(140deg, rgba(212, 175, 106, 0.05) 0%, transparent 55%);
+  --admin-glow-outer:
+    0 10px 28px rgba(0, 0, 0, 0.22),
+    0 0 48px rgba(212, 175, 106, 0.06);
+  --admin-glow-inner:
+    0 6px 18px rgba(0, 0, 0, 0.2),
+    0 0 28px rgba(212, 175, 106, 0.045);
   --admin-font: "Inter", "Noto Sans Arabic", "Noto Sans Hebrew", ui-sans-serif,
     system-ui, sans-serif;
   --brand-heading-font: var(--admin-font);
@@ -559,13 +576,13 @@ html.admin-dark[lang="he"] .admin-auth {
   overflow: hidden;
   padding: 1.85rem 1.45rem 1.6rem;
   border-radius: 20px;
-  border: 1px solid rgba(212, 175, 55, 0.38);
-  background:
-    linear-gradient(180deg, rgba(22, 30, 44, 0.98) 0%, rgba(10, 14, 22, 0.98) 100%);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-outer-bg);
   box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(212, 175, 55, 0.08),
+    var(--admin-glow-outer),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .admin-login-brand {
@@ -810,9 +827,10 @@ body.admin-home-active .admin-main {
   border-radius: 14px;
   padding-inline: 1rem;
   font-size: 0.86rem;
-  background: #12171e;
-  border: 1px solid #2a2f36;
+  background: var(--admin-inner-bg);
+  border: 1px solid var(--admin-border-gold);
   color: #f2f4f6;
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-home-greeting {
@@ -834,6 +852,17 @@ body.admin-home-active .admin-main {
 .admin-home-panel {
   padding: 1rem 1.05rem;
   border-radius: 18px;
+  background: var(--admin-outer-bg) !important;
+  border: 1px solid var(--admin-border-gold) !important;
+  box-shadow: var(--admin-glow-outer) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.admin-home-service-btn {
+  background: var(--admin-inner-bg) !important;
+  border: 1px solid var(--admin-border-gold) !important;
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-home-section-title {
@@ -1176,10 +1205,11 @@ body.admin-home-active .admin-main {
   min-height: 76px;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.38);
-  background:
-    linear-gradient(180deg, rgba(212, 175, 55, 0.08), rgba(21, 26, 33, 0.96));
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-outer-bg);
+  box-shadow: var(--admin-glow-outer);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .abk-stat-icon {
@@ -1221,8 +1251,9 @@ body.admin-home-active .admin-main {
   gap: 6px;
   padding: 5px;
   border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  background: #151a21;
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
 }
 
 .abk-toggle-btn {
@@ -1508,8 +1539,9 @@ body.admin-home-active .admin-main {
   color: #8b93a0;
   font-size: 0.9rem;
   border-radius: 14px;
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  background: #151a21;
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
 }
 
 .abk-table-wrap {
@@ -1534,23 +1566,22 @@ body.admin-home-active .admin-main {
 
 .abk-table td {
   padding: 14px;
-  background:
-    linear-gradient(180deg, rgba(26, 31, 38, 0.98), rgba(21, 26, 33, 1));
-  border-top: 1px solid rgba(212, 175, 55, 0.28);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.28);
+  background: var(--admin-inner-bg);
+  border-top: 1px solid var(--admin-border-gold);
+  border-bottom: 1px solid var(--admin-border-gold);
   color: #f5f1e8;
   font-size: 0.88rem;
   vertical-align: middle;
 }
 
 .abk-table td:first-child {
-  border-inline-start: 1px solid rgba(212, 175, 55, 0.28);
+  border-inline-start: 1px solid var(--admin-border-gold);
   border-start-start-radius: 12px;
   border-end-start-radius: 12px;
 }
 
 .abk-table td:last-child {
-  border-inline-end: 1px solid rgba(212, 175, 55, 0.28);
+  border-inline-end: 1px solid var(--admin-border-gold);
   border-start-end-radius: 12px;
   border-end-end-radius: 12px;
 }
@@ -1673,10 +1704,9 @@ body.admin-home-active .admin-main {
   overflow: hidden;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(212, 175, 55, 0.38);
-  background:
-    linear-gradient(180deg, rgba(26, 36, 52, 0.92), rgba(15, 18, 26, 0.98));
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
   cursor: pointer;
 }
 
@@ -3031,26 +3061,30 @@ body.admin-home-active .admin-main {
 }
 
 .admin-card {
-  background: var(--admin-card, #131a22);
-  border: 1px solid var(--line);
+  background: var(--admin-outer-bg);
+  border: 1px solid var(--admin-border-gold);
   border-radius: 18px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--admin-glow-outer);
   color: var(--ink);
   padding: 1.35rem;
 }
 
 .admin-shell .admin-card {
-  background: linear-gradient(
-    180deg,
-    rgba(24, 32, 48, 0.78) 0%,
-    rgba(14, 18, 28, 0.86) 100%
-  );
-  border-color: rgba(212, 175, 55, 0.2);
-  box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--admin-outer-bg);
+  border-color: var(--admin-border-gold);
+  box-shadow: var(--admin-glow-outer);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+.admin-shell .admin-card-inner,
+.admin-shell .dashboard-recent-card,
+.admin-shell .admin-bm-card,
+.admin-shell .admin-bsvc-card,
+.admin-shell .admin-quick-action {
+  background: var(--admin-inner-bg);
+  border-color: var(--admin-border-gold);
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-shell .admin-card.p-4,
@@ -3206,10 +3240,12 @@ body.admin-home-active .admin-main {
   flex-direction: column;
   gap: 0.85rem;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--admin-card, #131a22);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-outer-bg);
   padding: 1rem 1.1rem;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--admin-glow-outer);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .admin-bookings-search {
@@ -3327,9 +3363,11 @@ body.admin-home-active .admin-main {
 
 .admin-bookings-table-wrap {
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--admin-card, #131a22);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-outer-bg);
+  box-shadow: var(--admin-glow-outer);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
 }
 
@@ -3590,10 +3628,11 @@ body.admin-home-active .admin-main {
   place-items: center;
   min-height: 9.5rem;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--admin-border-gold);
   background:
     radial-gradient(80% 70% at 50% 40%, rgba(212, 175, 106, 0.08), transparent 65%),
-    #0b0f14;
+    var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
   padding: 1.25rem;
 }
 
@@ -3823,8 +3862,9 @@ body.admin-home-active .admin-main {
 }
 
 .admin-shell .dashboard-recent-card {
-  background: var(--admin-elevated, #161d26);
-  border-color: var(--line);
+  background: var(--admin-inner-bg);
+  border-color: var(--admin-border-gold);
+  box-shadow: var(--admin-glow-inner);
   padding: 1rem 1.1rem;
 }
 
@@ -3852,8 +3892,9 @@ body.admin-home-active .admin-main {
 }
 
 .admin-shell .table-mobile-cards tr {
-  background: var(--admin-card, #131a22);
-  box-shadow: none;
+  background: var(--admin-inner-bg);
+  border: 1px solid var(--admin-border-gold);
+  box-shadow: var(--admin-glow-inner);
   padding: 1rem 1.1rem;
   margin-inline: 0;
 }
@@ -3972,13 +4013,13 @@ body.admin-home-active .admin-main {
   gap: 0.85rem;
   min-height: 0;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--admin-card, #131a22);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-inner-bg);
   padding: 0.9rem 1rem;
   color: var(--ink);
   font-weight: 600;
   transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
-  box-shadow: none;
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-quick-action:hover {
@@ -9507,11 +9548,13 @@ button.promo-card {
 
 /* ========== Admin Working Hours (availability) panel ========== */
 .admin-wh-shell {
-  background: var(--admin-card, #131a22);
-  border: 1px solid var(--line);
+  background: var(--admin-outer-bg);
+  border: 1px solid var(--admin-border-gold);
   border-radius: 18px;
   padding: 1rem;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--admin-glow-outer);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 @media (min-width: 640px) {
@@ -10956,12 +10999,11 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   min-width: 0;
   padding: 14px 14px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  background:
-    linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-outer-bg);
+  box-shadow: var(--admin-glow-outer);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .admin-offers-card-top {
@@ -11562,8 +11604,9 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   gap: 0.75rem;
   padding: 0.85rem 0.95rem;
   border-radius: 12px;
-  border: 1px solid var(--line-strong, #2a2f36);
-  background: var(--admin-card, #151a21);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-bsvc-card-main {
@@ -11874,10 +11917,10 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   flex-direction: column;
   overflow: hidden;
   margin: 0;
-  background: #2b2b2b;
-  border: 1.5px solid rgba(212, 175, 55, 0.78);
+  background: var(--admin-outer-bg);
+  border: 1px solid var(--admin-border-gold);
   border-radius: 10px;
-  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.14);
+  box-shadow: var(--admin-glow-outer);
 }
 
 .admin-product-card-media {
@@ -12155,12 +12198,9 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-pe-card {
   padding: 16px;
   border-radius: 16px;
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  background:
-    linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--admin-border-gold);
+  background: var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-pe-card-title {
@@ -12783,12 +12823,11 @@ select.admin-pe-input {
 
 /* ========== Admin Settings (premium OYON) ========== */
 .admin-set .admin-card {
-  background:
-    linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--admin-outer-bg);
+  border: 1px solid var(--admin-border-gold);
+  box-shadow: var(--admin-glow-outer);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .admin-set .admin-settings-tabs {
@@ -13228,9 +13267,9 @@ select.admin-pe-input {
 
 .admin-bm-card {
   position: relative;
-  border: 1px solid rgba(212, 175, 55, 0.14);
+  border: 1px solid var(--admin-border-gold);
   border-radius: 14px;
-  background: rgba(10, 14, 20, 0.55);
+  background: var(--admin-inner-bg);
   padding: 1.15rem 1.15rem 1.25rem;
   width: 100%;
   box-sizing: border-box;
@@ -13240,6 +13279,7 @@ select.admin-pe-input {
   gap: 0.85rem;
   direction: rtl;
   text-align: right;
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-bm-card > .admin-bm-card-head,
