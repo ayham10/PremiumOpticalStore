@@ -13179,15 +13179,69 @@ select.admin-pe-input {
 }
 
 @media (max-width: 639px) {
-  .admin-bm-provider-row {
-    grid-template-columns: 1fr;
+  .admin-bm .admin-bm-provider-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
   }
 
-  .admin-bm-card-head {
+  .admin-bm .admin-bm-provider-row .admin-bm-select {
+    width: min(100%, 12.5rem);
+    max-width: 12.5rem;
+    min-height: 2.25rem;
+    font-size: 0.82rem;
+  }
+
+  .admin-bm .admin-bm-test-btn {
+    align-self: flex-end;
+    min-height: 2.25rem;
+    padding-inline: 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .admin-bm .admin-bm-card-head {
     flex-wrap: wrap;
+    align-items: center;
   }
 
-  .admin-bm-input-narrow {
-    max-width: none;
+  .admin-bm .admin-bm-fields {
+    gap: 0.65rem;
+  }
+
+  .admin-bm .admin-bm-field {
+    align-items: flex-end;
+  }
+
+  .admin-bm .admin-bm-field-label {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .admin-bm .admin-bm-select,
+  .admin-bm .admin-bm-input:not(#bm-owner-phone) {
+    width: min(100%, 12.5rem);
+    max-width: 12.5rem;
+    min-height: 2.25rem;
+    font-size: 0.82rem;
+    align-self: flex-end;
+  }
+
+  .admin-bm #bm-owner-phone {
+    width: 50%;
+    max-width: 50%;
+    min-width: 0;
+    align-self: flex-end;
+    text-align: right;
+  }
+
+  .admin-bm #bm-owner-phone[dir="ltr"] {
+    text-align: right;
+  }
+
+  .admin-bm .admin-bm-input-narrow,
+  .admin-bm #bm-reminder-hours {
+    width: min(50%, 6.5rem);
+    max-width: 6.5rem;
   }
 }
