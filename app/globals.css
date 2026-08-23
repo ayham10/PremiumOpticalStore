@@ -1038,13 +1038,17 @@ body.admin-home-active .admin-main {
   .admin-main {
     --admin-pad-block: 1.35rem;
     --admin-pad-inline: 1.75rem;
-    width: auto;
-    margin-left: 0;
-    margin-right: var(--admin-rail-width);
-    padding-block: var(--admin-pad-block);
-    padding-left: var(--admin-pad-inline);
-    padding-right: var(--admin-pad-inline);
+    display: grid;
+    grid-template-columns:
+      minmax(var(--admin-pad-inline), 1fr)
+      minmax(0, var(--admin-content-max))
+      minmax(var(--admin-pad-inline), 1fr);
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    padding-top: var(--admin-pad-block);
     padding-bottom: 1.75rem;
+    padding-right: var(--admin-rail-width);
     box-sizing: border-box;
   }
 
@@ -1056,30 +1060,33 @@ body.admin-home-active .admin-main {
     padding-bottom: 1.75rem;
   }
 
-  /* Center all page content in the area left of the fixed right rail */
+  /* Shared centered column — all admin pages (Settings reference) */
   .admin-page-frame,
   .admin-main > * {
-    width: min(100%, var(--admin-content-max));
+    grid-column: 2;
+    width: 100%;
     max-width: var(--admin-content-max);
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0;
+    min-width: 0;
     box-sizing: border-box;
   }
 
   .admin-main > .admin-dashboard.admin-home {
-    width: min(100%, var(--admin-content-max));
+    grid-column: 2;
+    width: 100%;
     max-width: var(--admin-content-max);
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0;
   }
 
-  /* Booking Services: fill the shared shell (override inline 980px) */
+  /* Booking Services: fill the shared centered column */
   .admin-main > div[dir="rtl"]:not([class]) > .mx-auto.w-full {
     width: 100%;
     max-width: 100%;
+    margin: 0;
   }
 
   .admin-home {
+    margin: 0;
     gap: 1.35rem;
   }
 
