@@ -13132,25 +13132,43 @@ select.admin-pe-input {
   padding: 1rem 1.05rem 1.05rem;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
 }
 
 .admin-bm-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin: 0 0 0.8rem;
   direction: rtl;
+  align-self: stretch;
+  width: 100%;
+}
+
+.admin-bm-card-head > .admin-bm-card-title {
+  order: 2;
+}
+
+.admin-bm-card-head > .admin-bm-toggle {
+  order: 1;
+  margin-inline-start: auto;
 }
 
 .admin-bm-card-title {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.45rem;
   color: #f3f4f5;
   font-size: 0.98rem;
   font-weight: 650;
   text-align: right;
+  direction: rtl;
 }
 
 .admin-bm-gold-icon {
@@ -13161,19 +13179,23 @@ select.admin-pe-input {
 .admin-bm-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.55rem;
   direction: rtl;
   cursor: pointer;
 }
 
 .admin-bm-toggle-label {
+  order: 2;
   color: #a7adb5;
   font-size: 0.82rem;
   font-weight: 600;
   white-space: nowrap;
+  text-align: right;
 }
 
 .admin-bm-switch {
+  order: 1;
   flex-shrink: 0;
 }
 
@@ -13189,13 +13211,16 @@ select.admin-pe-input {
   justify-content: flex-start;
   gap: 0.5rem 0.65rem;
   direction: rtl;
-  align-self: flex-end;
+  align-self: stretch;
+  width: 100%;
 }
 
 .admin-bm-provider-row .admin-bm-select {
   width: min(100%, 11.5rem);
   max-width: 11.5rem;
   flex: 0 0 auto;
+  text-align: right;
+  direction: rtl;
 }
 
 .admin-bm-test-btn {
@@ -13203,6 +13228,7 @@ select.admin-pe-input {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  direction: rtl;
   min-height: 2.4rem;
   padding: 0.42rem 0.95rem;
   border: 1px solid rgba(212, 175, 55, 0.58) !important;
@@ -13286,12 +13312,16 @@ select.admin-pe-input {
   line-height: 1.5;
   text-align: right;
   direction: rtl;
+  align-self: stretch;
+  width: 100%;
 }
 
 .admin-bm-fields {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+  align-self: stretch;
+  width: 100%;
 }
 
 .admin-bm-field {
@@ -13301,6 +13331,7 @@ select.admin-pe-input {
   direction: rtl;
   text-align: right;
   align-items: flex-end;
+  width: 100%;
 }
 
 .admin-bm-field-label {
@@ -13309,11 +13340,11 @@ select.admin-pe-input {
   justify-content: flex-start;
   gap: 0.35rem;
   width: 100%;
-  align-self: stretch;
   color: #a7adb5;
   font-size: 0.84rem;
   font-weight: 650;
   text-align: right;
+  direction: rtl;
 }
 
 .admin-bm-select,
@@ -13323,6 +13354,7 @@ select.admin-pe-input {
   min-height: 2.4rem;
   font-size: 0.88rem;
   text-align: right;
+  direction: rtl;
   align-self: flex-end;
 }
 
@@ -13354,28 +13386,16 @@ select.admin-pe-input {
   justify-content: flex-start;
 }
 
+.admin-bm-shell > .admin-section-title svg {
+  order: -1;
+}
+
 @media (min-width: 768px) {
   .admin-bm-shell {
     width: 62.5%;
     max-width: 62.5%;
     margin-inline-start: 0;
     margin-inline-end: auto;
-  }
-
-  .admin-bm-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  .admin-bm-card-head,
-  .admin-bm-hint {
-    align-self: stretch;
-    width: 100%;
-  }
-
-  .admin-bm-field {
-    width: 100%;
   }
 }
 
