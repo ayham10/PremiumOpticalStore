@@ -831,14 +831,13 @@ html.admin-dark[lang="he"] .admin-auth {
 }
 
 .admin-main {
-  --admin-content-max: 1280px;
+  --admin-content-max: 1200px;
   --admin-rail-width: 88px;
   --admin-pad-block: 1rem;
   --admin-pad-inline: 1rem;
-  --admin-pad-rail: var(--admin-pad-inline);
   padding-block: var(--admin-pad-block);
   padding-left: var(--admin-pad-inline);
-  padding-right: var(--admin-pad-rail);
+  padding-right: var(--admin-pad-inline);
   width: 100%;
   min-width: 0;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
@@ -1039,11 +1038,12 @@ body.admin-home-active .admin-main {
   .admin-main {
     --admin-pad-block: 1.35rem;
     --admin-pad-inline: 1.75rem;
-    --admin-pad-rail: calc(var(--admin-rail-width) + 1.35rem);
+    width: calc(100% - var(--admin-rail-width));
     padding-block: var(--admin-pad-block);
     padding-left: var(--admin-pad-inline);
-    padding-right: var(--admin-pad-rail);
+    padding-right: var(--admin-pad-inline);
     padding-bottom: 1.75rem;
+    box-sizing: border-box;
   }
 
   body.admin-home-active .admin-shell {
@@ -1054,18 +1054,21 @@ body.admin-home-active .admin-main {
     padding-bottom: 1.75rem;
   }
 
-  /* Shared centered admin content shell — matches Settings page (desktop) */
+  /* Center all page content in the area left of the fixed right rail */
   .admin-page-frame,
   .admin-main > * {
     width: min(100%, var(--admin-content-max));
     max-width: var(--admin-content-max);
-    margin-inline: auto;
+    margin-left: auto;
+    margin-right: auto;
     box-sizing: border-box;
   }
 
   .admin-main > .admin-dashboard.admin-home {
     width: min(100%, var(--admin-content-max));
     max-width: var(--admin-content-max);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   /* Booking Services: fill the shared shell (override inline 980px) */
