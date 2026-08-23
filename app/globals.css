@@ -400,95 +400,60 @@ html.admin-dark body {
   color: #f5f5f5;
 }
 
-/* Layer 1: deep navy base — dark clean center */
+/* Layer 1: premium OYON gold-wave image — fixed full viewport, no distortion */
 html.admin-dark body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse 72% 58% at 50% 46%,
-      #05080d 0%,
-      #05080d 46%,
-      rgba(5, 8, 13, 0.92) 62%,
-      transparent 100%
-    ),
-    radial-gradient(ellipse 130% 95% at 50% 52%, #070b10 0%, transparent 70%),
-    linear-gradient(168deg, #0b1118 0%, #070b10 42%, #05080d 100%);
+  background-color: #05080d;
+  background-image: url("/admin-oyon-gold-background.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center bottom;
 }
 
-/* Layer 2: champagne-gold flowing curves at outer edges */
+/* Layer 2: subtle dark vignette — preserves readable center */
 html.admin-dark body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 1;
   background:
     radial-gradient(
-      ellipse 38% 24% at 90% 6%,
-      rgba(212, 175, 106, 0.11) 0%,
-      rgba(212, 175, 106, 0.04) 38%,
-      transparent 72%
+      ellipse 72% 58% at 50% 44%,
+      rgba(5, 8, 13, 0.5) 0%,
+      rgba(5, 8, 13, 0.22) 48%,
+      transparent 76%
     ),
     radial-gradient(
-      ellipse 52% 34% at 6% 94%,
-      rgba(212, 175, 106, 0.14) 0%,
-      rgba(212, 175, 106, 0.06) 42%,
-      transparent 74%
-    ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' fill='none'%3E%3Cdefs%3E%3Cfilter id='b' x='-60%25' y='-60%25' width='220%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='16'/%3E%3C/filter%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23D4AF6A' stop-opacity='0'/%3E%3Cstop offset='45%25' stop-color='%23E6C58A' stop-opacity='0.75'/%3E%3Cstop offset='100%25' stop-color='%23D4AF6A' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cellipse cx='1240' cy='70' rx='210' ry='88' fill='rgba(212,175,106,0.09)' filter='url(%23b)'/%3E%3Cellipse cx='170' cy='830' rx='300' ry='118' fill='rgba(212,175,106,0.12)' filter='url(%23b)'/%3E%3Cpath d='M-30 710 C 170 610 310 770 500 730 S 900 850 1080 810' stroke='url(%23g)' stroke-width='2.1' opacity='0.24'/%3E%3Cpath d='M-10 770 C 210 670 360 830 540 790 S 940 890 1120 840' stroke='%23E6C58A' stroke-width='1.15' opacity='0.2'/%3E%3Cpath d='M50 830 C 250 750 410 870 590 840 S 870 910 1010 880' stroke='%23D4AF6A' stroke-width='0.85' opacity='0.16'/%3E%3Cpath d='M40 890 C 260 820 430 930 620 900 S 900 960 1040 930' stroke='%23E6C58A' stroke-width='0.65' opacity='0.12'/%3E%3Cpath d='M990 30 C 1130 105 1250 48 1390 125' stroke='%23E6C58A' stroke-width='1.05' opacity='0.17'/%3E%3Cpath d='M1045 82 C 1175 150 1295 95 1435 168' stroke='%23D4AF6A' stroke-width='0.75' opacity='0.13'/%3E%3C/svg%3E")
-    center / cover no-repeat;
-  animation: admin-oyon-gold-drift 56s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-@keyframes admin-oyon-gold-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 1;
-  }
-
-  50% {
-    transform: translate3d(0.4%, -0.25%, 0) scale(1.008);
-    opacity: 0.97;
-  }
+      ellipse 125% 92% at 50% 50%,
+      rgba(5, 8, 13, 0.3) 0%,
+      transparent 68%
+    );
 }
 
 @media (max-width: 767px) {
-  html.admin-dark body::after {
-    opacity: 0.72;
-    background:
-      radial-gradient(
-        ellipse 46% 18% at 92% 4%,
-        rgba(212, 175, 106, 0.08) 0%,
-        transparent 68%
-      ),
-      radial-gradient(
-        ellipse 58% 22% at 8% 96%,
-        rgba(212, 175, 106, 0.1) 0%,
-        transparent 70%
-      ),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 1280' fill='none'%3E%3Cdefs%3E%3Cfilter id='b' x='-60%25' y='-60%25' width='220%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='14'/%3E%3C/filter%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23D4AF6A' stop-opacity='0'/%3E%3Cstop offset='50%25' stop-color='%23E6C58A' stop-opacity='0.7'/%3E%3Cstop offset='100%25' stop-color='%23D4AF6A' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cellipse cx='640' cy='58' rx='150' ry='62' fill='rgba(212,175,106,0.08)' filter='url(%23b)'/%3E%3Cellipse cx='80' cy='1210' rx='210' ry='88' fill='rgba(212,175,106,0.1)' filter='url(%23b)'/%3E%3Cpath d='M-20 1080 C 120 1000 220 1140 360 1100 S 620 1180 700 1150' stroke='url(%23g)' stroke-width='1.8' opacity='0.2'/%3E%3Cpath d='M0 1140 C 140 1060 250 1200 390 1160 S 640 1240 720 1210' stroke='%23E6C58A' stroke-width='1' opacity='0.16'/%3E%3Cpath d='M30 1190 C 170 1120 280 1250 410 1220 S 600 1270 680 1250' stroke='%23D4AF6A' stroke-width='0.75' opacity='0.13'/%3E%3Cpath d='M560 24 C 640 70 700 36 760 78' stroke='%23E6C58A' stroke-width='0.9' opacity='0.14'/%3E%3Cpath d='M590 58 C 665 98 725 64 785 102' stroke='%23D4AF6A' stroke-width='0.65' opacity='0.11'/%3E%3C/svg%3E")
-      center / 100% auto no-repeat;
-    animation-duration: 64s;
+  html.admin-dark body::before {
+    background-position: 32% 100%;
+    background-size: cover;
   }
 
-  @keyframes admin-oyon-gold-drift {
-    0%,
-    100% {
-      transform: translate3d(0, 0, 0) scale(1);
-      opacity: 0.72;
-    }
-
-    50% {
-      transform: translate3d(0.3%, -0.2%, 0) scale(1.006);
-      opacity: 0.68;
-    }
+  html.admin-dark body::after {
+    background:
+      radial-gradient(
+        ellipse 88% 50% at 50% 36%,
+        rgba(5, 8, 13, 0.58) 0%,
+        rgba(5, 8, 13, 0.28) 50%,
+        transparent 78%
+      ),
+      radial-gradient(
+        ellipse 130% 85% at 50% 48%,
+        rgba(5, 8, 13, 0.32) 0%,
+        transparent 70%
+      );
   }
 }
 
