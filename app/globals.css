@@ -10893,15 +10893,19 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
   .admin-wh-grid {
     width: fit-content;
-    max-width: min(100%, 43.75rem);
-    grid-template-columns: 260px minmax(18.75rem, 25rem);
+    max-width: min(100%, calc(260px + 1.35rem + 38rem));
+    grid-template-columns: 260px 38rem;
     align-items: start;
   }
 
   .admin-wh-day {
-    width: 25rem;
+    width: 38rem;
     max-width: 100%;
     border-inline-start-color: rgba(212, 175, 106, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
   }
 
   .admin-wh-day > * {
@@ -10910,12 +10914,72 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     box-sizing: border-box;
   }
 
+  .admin-wh-banner,
+  .admin-wh-slots-head,
+  .admin-wh-booked-hint,
+  .admin-wh-tip {
+    margin-top: 0.75rem;
+  }
+
+  .admin-wh-day-header {
+    border-radius: 16px 16px 0 0;
+  }
+
+  .admin-wh-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 10px 12px 14px;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+  }
+
+  .admin-wh-actions .admin-wh-action {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    white-space: nowrap;
+    padding: 0.38rem 0.42rem;
+    font-size: 0.68rem;
+    gap: 0.28rem;
+  }
+
+  .admin-wh-actions .admin-wh-action svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+
+  /* Single-row action order: Save → Close → Add → Copy other → Copy previous */
+  .admin-wh-actions .admin-wh-action.is-primary {
+    order: 1;
+  }
+
+  .admin-wh-actions .admin-wh-action:nth-child(4) {
+    order: 2;
+  }
+
+  .admin-wh-actions .admin-wh-action:nth-child(3) {
+    order: 3;
+  }
+
+  .admin-wh-actions .admin-wh-action:nth-child(2) {
+    order: 4;
+  }
+
+  .admin-wh-actions .admin-wh-action:nth-child(1) {
+    order: 5;
+  }
+
   .admin-wh-calendar,
   .admin-wh-empty,
   .admin-wh-day-header,
   .admin-wh-actions,
   .admin-wh-slots-head,
   .admin-wh-periods,
+  .admin-wh-banner,
   .admin-wh-banner.is-closed {
     border-color: rgba(212, 175, 106, 0.3);
     background: rgba(12, 17, 22, 0.82);
@@ -10929,6 +10993,18 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   .admin-wh-banner {
     width: 100%;
     max-width: 100%;
+    margin-bottom: 0;
+    border-radius: 16px;
+  }
+
+  .admin-wh-slots-head {
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .admin-wh-periods {
+    margin: 0;
+    border-radius: 0 0 16px 16px;
   }
 
   .admin-wh-banner.is-open {
@@ -10981,6 +11057,9 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
   .admin-wh-booked-hint,
   .admin-wh-tip {
+    width: 100%;
+    margin: 0;
+    border-radius: 12px;
     background: rgba(7, 11, 15, 0.86);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
