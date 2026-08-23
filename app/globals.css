@@ -10884,8 +10884,106 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 }
 
 @media (min-width: 960px) {
+  /* Desktop Work Hours — compact right-grouped panels, gold background visible left */
+  .admin-wh-shell {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .admin-wh-grid {
+    width: fit-content;
+    max-width: min(100%, 43.75rem);
+    grid-template-columns: 260px minmax(18.75rem, 25rem);
+    align-items: start;
+  }
+
   .admin-wh-day {
-    border-inline-start-color: rgba(212, 175, 55, 0.18);
+    width: 25rem;
+    max-width: 100%;
+    border-inline-start-color: rgba(212, 175, 106, 0.3);
+  }
+
+  .admin-wh-day > * {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-wh-calendar,
+  .admin-wh-empty,
+  .admin-wh-day-header,
+  .admin-wh-actions,
+  .admin-wh-slots-head,
+  .admin-wh-periods,
+  .admin-wh-banner.is-closed {
+    border-color: rgba(212, 175, 106, 0.3);
+    background: rgba(12, 17, 22, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.18),
+      0 0 32px rgba(212, 175, 106, 0.05);
+  }
+
+  .admin-wh-banner {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-wh-banner.is-open {
+    border-color: rgba(34, 197, 94, 0.42);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(34, 197, 94, 0.16) 0%,
+        rgba(12, 17, 22, 0.82) 100%
+      );
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .admin-wh-action,
+  .admin-wh-period-row,
+  .admin-wh-period-input,
+  .admin-wh-nav-btn,
+  .admin-wh-day-cell:not(.is-selected),
+  .admin-wh-booked-hint,
+  .admin-wh-tip {
+    border-color: rgba(212, 175, 106, 0.3);
+  }
+
+  .admin-wh-action {
+    background: rgba(7, 11, 15, 0.86);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .admin-wh-period-row {
+    background: rgba(7, 11, 15, 0.86);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .admin-wh-period-input {
+    background: rgba(7, 11, 15, 0.86);
+  }
+
+  .admin-wh-nav-btn {
+    background: rgba(7, 11, 15, 0.86);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .admin-wh-day-cell:not(.is-selected) {
+    background: rgba(7, 11, 15, 0.86);
+  }
+
+  .admin-wh-booked-hint,
+  .admin-wh-tip {
+    background: rgba(7, 11, 15, 0.86);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }
 
