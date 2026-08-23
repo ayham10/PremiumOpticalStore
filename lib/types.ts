@@ -343,6 +343,26 @@ export interface BrandingSettings {
   storeNameStyle: BrandingStoreNameStyle;
 }
 
+export type BookingMessageProvider = "twilio" | "meta" | "console";
+
+export interface BookingMessagesSettings {
+  provider: BookingMessageProvider;
+  customerConfirmation: {
+    enabled: boolean;
+    templateName: string;
+  };
+  ownerNotification: {
+    enabled: boolean;
+    ownerWhatsApp: string;
+    templateName: string;
+  };
+  appointmentReminder: {
+    enabled: boolean;
+    hoursBefore: number;
+    templateName: string;
+  };
+}
+
 export interface StoreSettings {
   storeName: string;
   tagline: string;
@@ -385,6 +405,7 @@ export interface StoreSettings {
     fromNumber?: string;
     enabled: boolean;
   };
+  bookingMessages: BookingMessagesSettings;
   appointmentSlotMinutes: number;
   bookingLeadDays: number;
   currency: string;

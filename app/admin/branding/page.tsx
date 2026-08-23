@@ -7,6 +7,7 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
+import { mergeBookingMessages } from "@/lib/booking-messages";
 import type { StoreSettings } from "@/lib/types";
 
 const EMPTY_SETTINGS: StoreSettings = {
@@ -30,6 +31,7 @@ const EMPTY_SETTINGS: StoreSettings = {
   branding: { ...DEFAULT_BRANDING },
   smtp: {},
   sms: { provider: "console", enabled: true },
+  bookingMessages: mergeBookingMessages(),
   appointmentSlotMinutes: 30,
   bookingLeadDays: 45,
   currency: "ILS",
@@ -52,6 +54,7 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
     social: { ...EMPTY_SETTINGS.social, ...(settings.social || {}) },
     seo: { ...EMPTY_SETTINGS.seo, ...(settings.seo || {}) },
     sms: { ...EMPTY_SETTINGS.sms, ...(settings.sms || {}) },
+    bookingMessages: mergeBookingMessages(settings.bookingMessages),
   };
 }
 

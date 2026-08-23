@@ -32,11 +32,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import BookingMessagesSettingsSection from "@/components/admin/BookingMessagesSettingsSection";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { minutesToTime, parseTimeToMinutes } from "@/lib/appointments";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
+import { mergeBookingMessages } from "@/lib/booking-messages";
 import type { DayHoursPeriod, StoreSettings, WorkingHours } from "@/lib/types";
 import {
   getDayPeriods,
@@ -121,6 +123,7 @@ const EMPTY_SETTINGS: StoreSettings = {
   branding: { ...DEFAULT_BRANDING },
   smtp: {},
   sms: { provider: "console", enabled: true },
+  bookingMessages: mergeBookingMessages(),
   appointmentSlotMinutes: 30,
   bookingLeadDays: 45,
   currency: "ILS",
@@ -145,6 +148,7 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
         ? settings.openingHours
         : EMPTY_SETTINGS.openingHours,
     ),
+    bookingMessages: mergeBookingMessages(settings.bookingMessages),
   };
 }
 
@@ -160,6 +164,9 @@ function AdminSettingsPageInner() {
   const { t } = useLocale();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<StoreSettings>(EMPTY_SETTINGS);
+  const [whatsappTemplates, setWhatsappTemplates] = useState<string[]>([
+    "hello_world",
+  ]);
   const [tab, setTab] = useState<SettingsTab>(() => {
     const raw = searchParams.get("tab");
     const allowed = TABS.map((item) => item.id);
@@ -181,10 +188,18 @@ function AdminSettingsPageInner() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiFetch<StoreSettings | { settings: StoreSettings }>(
-        "/api/settings?admin=1"
-      );
-      setForm(normalizeSettings(data));
+      const data = await apiFetch<
+        | StoreSettings
+        | { settings: StoreSettings; bookingWhatsAppTemplates?: string[] }
+      >("/api/settings?admin=1");
+      if (data && typeof data === "object" && "settings" in data) {
+        setForm(normalizeSettings(data.settings));
+        if (Array.isArray(data.bookingWhatsAppTemplates)) {
+          setWhatsappTemplates(data.bookingWhatsAppTemplates);
+        }
+      } else {
+        setForm(normalizeSettings(data));
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("admin.settings.loadError")
@@ -673,96 +688,66 @@ function AdminSettingsPageInner() {
         ) : null}
 
         {tab === "booking" ? (
-          <section className="admin-card space-y-4 p-5">
-            <h2 className="admin-section-title admin-set-title">
-              <CalendarDays size={16} strokeWidth={1.7} />
-              {t("admin.settings.bookingSms")}
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="label">
-                  {t("admin.settings.slotMinutes")}
-                </label>
-                <input
-                  type="number"
-                  className="input"
-                  min={5}
-                  step={5}
-                  value={form.appointmentSlotMinutes}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      appointmentSlotMinutes: Number(e.target.value) || 30,
-                    }))
-                  }
-                />
+          <>
+            <section className="admin-card space-y-4 p-5">
+              <h2 className="admin-section-title admin-set-title">
+                <CalendarDays size={16} strokeWidth={1.7} />
+                {t("admin.settings.bmBookingRules")}
+              </h2>
+              <div className="admin-bm-rules">
+                <div className="admin-bm-field">
+                  <label className="admin-bm-field-label" htmlFor="set-slot-minutes">
+                    {t("admin.settings.slotMinutes")}
+                  </label>
+                  <input
+                    id="set-slot-minutes"
+                    type="number"
+                    className="input admin-bm-input"
+                    min={5}
+                    step={5}
+                    value={form.appointmentSlotMinutes}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        appointmentSlotMinutes: Number(e.target.value) || 30,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="admin-bm-field">
+                  <label className="admin-bm-field-label" htmlFor="set-lead-days">
+                    {t("admin.settings.leadDays")}
+                  </label>
+                  <input
+                    id="set-lead-days"
+                    type="number"
+                    className="input admin-bm-input"
+                    value={form.bookingLeadDays}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        bookingLeadDays: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
               </div>
-              <div>
-                <label className="label">{t("admin.settings.leadDays")}</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={form.bookingLeadDays}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      bookingLeadDays: Number(e.target.value) || 0,
-                    }))
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">
-                  {t("admin.settings.smsProvider")}
-                </label>
-                <select
-                  className="select"
-                  value={form.sms.provider}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      sms: {
-                        ...f.sms,
-                        provider: e.target
-                          .value as StoreSettings["sms"]["provider"],
-                      },
-                    }))
-                  }
-                >
-                  <option value="console">Console (dev)</option>
-                  <option value="twilio">Twilio</option>
-                  <option value="messagebird">MessageBird</option>
-                  <option value="custom">Custom</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">{t("admin.settings.smsFrom")}</label>
-                <input
-                  className="input"
-                  value={form.sms.fromNumber || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      sms: { ...f.sms, fromNumber: e.target.value },
-                    }))
-                  }
-                />
-              </div>
-              <label className="flex min-h-11 items-center gap-2 text-sm font-medium sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={form.sms.enabled}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      sms: { ...f.sms, enabled: e.target.checked },
-                    }))
-                  }
-                />
-                {t("admin.settings.smsEnabled")}
-              </label>
-            </div>
-          </section>
+            </section>
+
+            <section className="admin-card space-y-4 p-5">
+              <h2 className="admin-section-title admin-set-title">
+                <MessageCircle size={16} strokeWidth={1.7} />
+                {t("admin.settings.bookingSms")}
+              </h2>
+              <BookingMessagesSettingsSection
+                value={form.bookingMessages}
+                templates={whatsappTemplates}
+                onChange={(bookingMessages) =>
+                  setForm((f) => ({ ...f, bookingMessages }))
+                }
+              />
+            </section>
+          </>
         ) : null}
 
         {tab === "seo" ? (

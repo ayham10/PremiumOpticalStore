@@ -7,13 +7,14 @@ import {
   pushActivity,
 } from "@/lib/api/helpers";
 import { mergeBranding } from "@/lib/branding";
+import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/booking-messages";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
 import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export type PublicSettings = Omit<StoreSettings, "smtp"> & {
+export type PublicSettings = Omit<StoreSettings, "smtp" | "bookingMessages"> & {
   sms: {
     enabled: boolean;
     provider?: StoreSettings["sms"]["provider"];
@@ -56,7 +57,10 @@ export async function GET(request: Request) {
 
     if (admin) {
       await requireSession("settings");
-      return NextResponse.json({ settings: data.settings });
+      return NextResponse.json({
+        settings: data.settings,
+        bookingWhatsAppTemplates: getApprovedWhatsAppTemplates(),
+      });
     }
 
     return NextResponse.json(
@@ -104,6 +108,22 @@ export async function PUT(request: Request) {
           ...store.settings.sms,
           ...(patch.sms || {}),
         },
+        bookingMessages: mergeBookingMessages({
+          ...store.settings.bookingMessages,
+          ...(patch.bookingMessages || {}),
+          customerConfirmation: {
+            ...store.settings.bookingMessages?.customerConfirmation,
+            ...(patch.bookingMessages?.customerConfirmation || {}),
+          },
+          ownerNotification: {
+            ...store.settings.bookingMessages?.ownerNotification,
+            ...(patch.bookingMessages?.ownerNotification || {}),
+          },
+          appointmentReminder: {
+            ...store.settings.bookingMessages?.appointmentReminder,
+            ...(patch.bookingMessages?.appointmentReminder || {}),
+          },
+        }),
         content: {
           ...store.settings.content,
           ...(patch.content || {}),

@@ -6,6 +6,7 @@ import {
 } from "@/lib/eye-exam";
 import { createDefaultBookingServices } from "@/lib/booking-services";
 import { newId } from "@/lib/auth";
+import { DEFAULT_BOOKING_MESSAGES } from "@/lib/booking-messages";
 import { DEFAULT_BRANDING } from "@/lib/branding";
 import type {
   AppData,
@@ -73,6 +74,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     provider: "console",
     enabled: true,
   },
+  bookingMessages: { ...DEFAULT_BOOKING_MESSAGES },
   appointmentSlotMinutes: 30,
   bookingLeadDays: 45,
   currency: "ILS",
