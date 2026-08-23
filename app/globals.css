@@ -865,20 +865,6 @@ body.admin-home-active .admin-main {
   background: transparent !important;
 }
 
-/* Unified admin page content frame — matches Dashboard / Bookings alignment */
-.admin-page-frame,
-.admin-main > * {
-  width: 100%;
-  max-width: var(--admin-content-max) !important;
-  margin-inline: auto;
-  box-sizing: border-box;
-}
-
-/* Booking Services inner shell (was 980px inline) */
-.admin-main > div[dir="rtl"]:not([class]) > .mx-auto.w-full {
-  max-width: var(--admin-content-max) !important;
-}
-
 /* Reset page wrappers that previously re-applied their own outer padding */
 .admin-home,
 .admin-bookings-page,
@@ -1066,6 +1052,26 @@ body.admin-home-active .admin-main {
 
   body.admin-home-active .admin-main {
     padding-bottom: 1.75rem;
+  }
+
+  /* Shared centered admin content shell — matches Settings page (desktop) */
+  .admin-page-frame,
+  .admin-main > * {
+    width: min(100%, var(--admin-content-max));
+    max-width: var(--admin-content-max);
+    margin-inline: auto;
+    box-sizing: border-box;
+  }
+
+  .admin-main > .admin-dashboard.admin-home {
+    width: min(100%, var(--admin-content-max));
+    max-width: var(--admin-content-max);
+  }
+
+  /* Booking Services: fill the shared shell (override inline 980px) */
+  .admin-main > div[dir="rtl"]:not([class]) > .mx-auto.w-full {
+    width: 100%;
+    max-width: 100%;
   }
 
   .admin-home {
