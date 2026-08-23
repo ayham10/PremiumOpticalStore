@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, UserRound } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { apiFetch } from "@/lib/admin-api";
@@ -206,6 +206,7 @@ export default function AdminStaffPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
+        icon={UserRound}
         kicker="Team"
         title="Staff"
         description="Manage admin users and team access."

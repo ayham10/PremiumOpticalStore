@@ -1015,21 +1015,20 @@ export default function AdminInventoryPage() {
   return (
     <div style={{ ...pageWrap, overflowX: "hidden" }}>
       {/* Header — ONE cube icon */}
-      <header className="mb-4 md:mb-5">
-        <div className="flex flex-col items-center text-center md:items-start md:text-start">
-          <div className="flex items-center gap-2.5">
-            <h1
-              className="m-0 text-[1.45rem] font-semibold tracking-[-0.02em] md:text-[1.65rem]"
-              style={{ color: "#FFFFFF", lineHeight: 1.35 }}
-            >
+      <header className="admin-page-header mb-4 md:mb-5">
+        <div className="admin-page-header-copy flex flex-col items-center text-center md:items-start md:text-start">
+          <div className="admin-page-title-row">
+            <h1 className="admin-page-title m-0 text-[1.45rem] font-semibold md:text-[1.65rem]">
               المنتجات
             </h1>
-            <Box size={26} strokeWidth={1.45} color={GOLD} aria-hidden />
+            <Box
+              className="admin-page-title-icon"
+              size={26}
+              strokeWidth={1.45}
+              aria-hidden
+            />
           </div>
-          <p
-            className="mb-0 mt-1.5 max-w-[28rem] text-[0.84rem] leading-relaxed md:text-[0.88rem]"
-            style={{ color: MUTED }}
-          >
+          <p className="admin-page-desc mb-0 mt-1.5 max-w-[28rem] text-[0.84rem] md:text-[0.88rem]">
             إدارة المنتجات والمخزون والأسعار والصور
           </p>
         </div>

@@ -335,7 +335,15 @@ export default function AdminPromotionsPage() {
       <div className="admin-offers-inner">
         <header className="admin-offers-header">
           <p className="admin-offers-kicker">{t("admin.promotions.kicker")}</p>
-          <h1 className="admin-offers-title">{t("admin.promotions.title")}</h1>
+          <div className="admin-page-title-row">
+            <h1 className="admin-offers-title">{t("admin.promotions.title")}</h1>
+            <Tag
+              className="admin-page-title-icon"
+              size={26}
+              strokeWidth={1.45}
+              aria-hidden
+            />
+          </div>
           <p className="admin-offers-lead">{t("admin.promotions.description")}</p>
         </header>
 

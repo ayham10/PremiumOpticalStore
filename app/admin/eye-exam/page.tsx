@@ -396,6 +396,7 @@ function AdminEyeExamPageInner() {
     <div className={tab === "appointments" ? "admin-bookings-page" : "space-y-6"}>
       {tab === "availability" ? (
         <AdminPageHeader
+          icon={Clock3}
           title={t("admin.availability.title")}
           description={t("admin.availability.description")}
           actions={

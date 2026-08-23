@@ -279,9 +279,14 @@ export default function BookingsPanel({
     <div className="admin-bookings-panel abk-panel">
       <div className="abk-hero">
         <div className="abk-hero-copy">
-          <div className="abk-hero-title">
+          <div className="abk-hero-title admin-page-title-row">
             <h1>الحجوزات</h1>
-            <CalendarDays size={24} strokeWidth={1.45} color={GOLD} aria-hidden />
+            <CalendarDays
+              className="admin-page-title-icon"
+              size={26}
+              strokeWidth={1.45}
+              aria-hidden
+            />
           </div>
           <p>عرض جميع الحجوزات وإدارتها بسهولة</p>
         </div>

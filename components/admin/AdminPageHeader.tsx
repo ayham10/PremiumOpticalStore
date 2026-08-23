@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  icon?: LucideIcon;
 };
 
 /** Consistent premium page header: title → description → actions */
@@ -15,12 +17,23 @@ export default function AdminPageHeader({
   title,
   description,
   actions,
+  icon: Icon,
 }: Props) {
   return (
     <header className="admin-page-header">
       <div className="admin-page-header-copy">
         {kicker ? <p className="admin-kicker">{kicker}</p> : null}
-        <h1 className="admin-page-title">{title}</h1>
+        <div className="admin-page-title-row">
+          <h1 className="admin-page-title">{title}</h1>
+          {Icon ? (
+            <Icon
+              className="admin-page-title-icon"
+              size={26}
+              strokeWidth={1.45}
+              aria-hidden
+            />
+          ) : null}
+        </div>
         {description ? (
           <p className="admin-page-desc">{description}</p>
         ) : null}

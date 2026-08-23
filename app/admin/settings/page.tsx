@@ -23,6 +23,7 @@ import {
   Plus,
   Save,
   Search,
+  Settings,
   Share2,
   SlidersHorizontal,
   Store,
@@ -343,6 +344,7 @@ function AdminSettingsPageInner() {
   return (
     <div className="admin-set space-y-5">
       <AdminPageHeader
+        icon={Settings}
         title={t("admin.settings.title")}
         description={t("admin.settings.description")}
         actions={

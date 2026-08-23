@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { ImageIcon, Plus, Trash2, Upload } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { apiFetch } from "@/lib/admin-api";
@@ -176,6 +176,7 @@ export default function AdminMediaPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
+        icon={ImageIcon}
         kicker="Library"
         title="Media"
         description="Uploaded images for products, promotions, and the website."

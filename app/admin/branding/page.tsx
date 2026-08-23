@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Palette, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
@@ -110,6 +110,7 @@ export default function AdminBrandingPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
+        icon={Palette}
         kicker="Website"
         title="Branding"
         description="Edit store name, logo, colors, and typography. Preview updates live; save to apply site-wide."

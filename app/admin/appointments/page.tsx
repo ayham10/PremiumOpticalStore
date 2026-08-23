@@ -4,6 +4,7 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  CalendarDays,
   MessageSquare,
   Printer,
   Search,
@@ -154,6 +155,7 @@ export default function AdminAppointmentsPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
+        icon={CalendarDays}
         kicker="Schedule"
         title="Appointments"
         description="Search, filter, and review store appointments."

@@ -11,6 +11,7 @@ import {
 import {
   ArrowDown,
   ArrowUp,
+  ClipboardList,
   Pencil,
   Plus,
   Trash2,
@@ -298,12 +299,20 @@ export default function AdminBookingServicesPage() {
       <div className="mx-auto w-full" style={{ maxWidth: 980 }}>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1
-              className="m-0 text-[1.35rem] font-bold text-white"
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              {t("admin.bookingServices.title")}
-            </h1>
+            <div className="admin-page-title-row">
+              <h1
+                className="m-0 text-[1.35rem] font-bold text-white"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                {t("admin.bookingServices.title")}
+              </h1>
+              <ClipboardList
+                className="admin-page-title-icon"
+                size={26}
+                strokeWidth={1.45}
+                aria-hidden
+              />
+            </div>
             <p className="mt-1 mb-0 text-sm" style={{ color: MUTED }}>
               {t("admin.bookingServices.lead")}
             </p>

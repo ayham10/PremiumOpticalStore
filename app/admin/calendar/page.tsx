@@ -14,7 +14,7 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/admin-api";
 import { cn } from "@/lib/format";
 import type { Appointment, Holiday, StaffMember, StoreSettings } from "@/lib/types";
@@ -198,6 +198,7 @@ export default function AdminCalendarPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
+        icon={CalendarDays}
         kicker="Planning"
         title="Calendar"
         description={`Working hours & holidays respected · slot length ${slotMinutes} min. Select an appointment, then tap a day/slot to reschedule.`}

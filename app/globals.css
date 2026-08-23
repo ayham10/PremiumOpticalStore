@@ -1037,18 +1037,13 @@ body.admin-home-active .admin-main {
 
   .admin-main {
     --admin-pad-block: 1.35rem;
-    --admin-pad-inline: 1.75rem;
-    display: grid;
-    grid-template-columns:
-      minmax(var(--admin-pad-inline), 1fr)
-      minmax(0, var(--admin-content-max))
-      minmax(var(--admin-pad-inline), 1fr);
-    width: 100%;
+    width: calc(100vw - var(--admin-rail-width));
+    max-width: calc(100vw - var(--admin-rail-width));
     margin: 0;
+    margin-right: auto;
     padding: 0;
     padding-top: var(--admin-pad-block);
     padding-bottom: 1.75rem;
-    padding-right: var(--admin-rail-width);
     box-sizing: border-box;
   }
 
@@ -1060,29 +1055,30 @@ body.admin-home-active .admin-main {
     padding-bottom: 1.75rem;
   }
 
-  /* Shared centered column — all admin pages (Settings reference) */
+  /* Center page wrapper inside usable area (screen left → task bar left) */
   .admin-page-frame,
   .admin-main > * {
-    grid-column: 2;
-    width: 100%;
+    width: min(100%, var(--admin-content-max));
     max-width: var(--admin-content-max);
-    margin: 0;
+    margin-left: auto;
+    margin-right: auto;
     min-width: 0;
     box-sizing: border-box;
   }
 
   .admin-main > .admin-dashboard.admin-home {
-    grid-column: 2;
-    width: 100%;
+    width: min(100%, var(--admin-content-max));
     max-width: var(--admin-content-max);
-    margin: 0;
+    margin-left: auto;
+    margin-right: auto;
   }
 
-  /* Booking Services: fill the shared centered column */
+  /* Booking Services: fill the shared centered wrapper */
   .admin-main > div[dir="rtl"]:not([class]) > .mx-auto.w-full {
     width: 100%;
     max-width: 100%;
-    margin: 0;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .admin-home {
@@ -1098,6 +1094,26 @@ body.admin-home-active .admin-main {
     min-height: 7.25rem;
     padding: 1.35rem 1rem 1.25rem;
     gap: 0.95rem;
+  }
+
+  /* Uniform vertical start for every admin page (below OYON / shell chrome) */
+  .admin-page-header,
+  .admin-offers-header,
+  .abk-hero,
+  .admin-main > header:first-child {
+    margin-top: 0;
+  }
+
+  .admin-page-header {
+    margin-bottom: 1rem;
+  }
+
+  .admin-page-title {
+    margin-top: 0;
+  }
+
+  .admin-kicker + .admin-page-title-row .admin-page-title {
+    margin-top: 0.45rem;
   }
 }
 
@@ -1233,7 +1249,7 @@ body.admin-home-active .admin-main {
 .abk-hero-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .abk-hero-title h1 {
@@ -3155,6 +3171,17 @@ body.admin-home-active .admin-main {
   justify-content: space-between;
   gap: 1rem 1.25rem;
   margin-bottom: 0.25rem;
+}
+
+.admin-page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.admin-page-title-icon {
+  flex-shrink: 0;
+  color: #d4af37;
 }
 
 .admin-page-header-copy {

@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
@@ -163,6 +163,7 @@ export default function AdminCustomersPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
+        icon={Users}
         kicker="CRM"
         title="Customers"
         description="Customer records linked to bookings and orders."
