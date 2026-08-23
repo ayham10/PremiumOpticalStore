@@ -831,11 +831,16 @@ html.admin-dark[lang="he"] .admin-auth {
 }
 
 .admin-main {
-  padding: 1.15rem;
+  --admin-content-max: 1280px;
+  --admin-rail-width: 88px;
+  --admin-pad-block: 1rem;
+  --admin-pad-inline: 1rem;
+  padding: var(--admin-pad-block) var(--admin-pad-inline);
   width: 100%;
   min-width: 0;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   background: transparent;
+  box-sizing: border-box;
 }
 
 .admin-shell .admin-main,
@@ -857,16 +862,52 @@ body.admin-home-active .admin-main {
   background: transparent !important;
 }
 
+/* Unified admin page content frame — matches Dashboard / Bookings alignment */
+.admin-page-frame,
+.admin-main > .admin-dashboard,
+.admin-main > .admin-set,
+.admin-main > .admin-offers-page,
+.admin-main > .admin-bookings-page,
+.admin-main > .space-y-5,
+.admin-main > .space-y-6,
+.admin-main > div:not([class]) {
+  width: 100%;
+  max-width: var(--admin-content-max);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.admin-main > .admin-pe-editor {
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+/* Reset page wrappers that previously re-applied their own outer padding */
+.admin-home,
+.admin-bookings-page,
+.admin-offers-page {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0;
+  background: transparent !important;
+  overflow-x: hidden;
+}
+
+.admin-main > div[style*="margin: -1.15rem"],
+.admin-main > div[style*="margin:-1.15rem"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+}
+
 /* ── Admin Home visual polish (mobile-first, desktop overrides) ── */
 .admin-home {
-  margin-top: -1.15rem;
-  margin-inline: auto;
-  margin-bottom: calc(-1.5rem - env(safe-area-inset-bottom, 0px));
+  margin: 0 auto;
   min-height: 100%;
   background: transparent;
-  padding-inline: 1rem;
-  padding-top: 0.85rem;
-  padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
@@ -1014,9 +1055,11 @@ body.admin-home-active .admin-main {
   }
 
   .admin-main {
-    padding: 1.75rem 1.85rem;
-    padding-right: calc(88px + 1.85rem);
-    padding-bottom: 1.85rem;
+    --admin-pad-block: 1.35rem;
+    --admin-pad-inline: 1.75rem;
+    padding: var(--admin-pad-block) var(--admin-pad-inline);
+    padding-right: calc(var(--admin-rail-width) + 1.35rem);
+    padding-bottom: 1.75rem;
   }
 
   body.admin-home-active .admin-shell {
@@ -1024,17 +1067,13 @@ body.admin-home-active .admin-main {
   }
 
   body.admin-home-active .admin-main {
-    padding: 1.35rem 1.75rem;
-    padding-right: calc(88px + 1.35rem);
+    padding: var(--admin-pad-block) var(--admin-pad-inline);
+    padding-right: calc(var(--admin-rail-width) + 1.35rem);
     padding-bottom: 1.75rem;
   }
 
   .admin-home {
     gap: 1.35rem;
-    padding-inline: 1.25rem;
-    padding-top: 1rem;
-    padding-bottom: 0.5rem;
-    margin-bottom: -1.5rem;
   }
 
   .admin-home-services-grid {
@@ -1051,10 +1090,6 @@ body.admin-home-active .admin-main {
 @media (min-width: 1024px) {
   .admin-home {
     gap: 1.55rem;
-    padding-inline: 1.75rem;
-    padding-inline-end: 1.25rem;
-    padding-top: 1.15rem;
-    padding-bottom: 0.75rem;
   }
 
   .admin-home-header {
@@ -1147,34 +1182,13 @@ body.admin-home-active .admin-main {
 }
 
 .admin-bookings-page {
-  margin: -1.15rem;
-  margin-bottom: calc(-1.5rem - env(safe-area-inset-bottom, 0px));
-  min-height: 100%;
-  background: transparent;
-  padding: 1rem;
-  padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
 }
 
-@media (min-width: 768px) {
-  .admin-bookings-page {
-    padding: 1.25rem 1.5rem;
-    padding-right: calc(88px + 1.35rem);
-    padding-bottom: 1.75rem;
-    margin-bottom: -1.5rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .admin-bookings-page {
-    padding: 1.35rem 1.75rem;
-    padding-right: calc(88px + 1.5rem);
-  }
-}
-
 .admin-bookings-panel {
-  max-width: 1280px;
+  max-width: var(--admin-content-max, 1280px);
   margin-inline: auto;
+  width: 100%;
 }
 
 /* Hide native date indicator; keep gold CalendarDays icon (clicks still open picker). */
@@ -11216,18 +11230,13 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
 /* Admin — offers / promotions */
 .admin-offers-page {
-  margin: -1.15rem;
-  margin-bottom: calc(-1.5rem - env(safe-area-inset-bottom, 0px));
-  min-height: 100%;
-  padding: 16px;
-  padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   background: transparent;
 }
 
 .admin-offers-inner {
   width: 100%;
-  max-width: 1180px;
+  max-width: var(--admin-content-max, 1280px);
   margin-inline: auto;
 }
 
@@ -11511,7 +11520,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
 @media (min-width: 768px) {
   .admin-offers-page {
-    padding: 22px 22px calc(2rem + env(safe-area-inset-bottom, 0px));
+    padding: 0;
   }
 
   .admin-offers-header {
