@@ -3,13 +3,21 @@ import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/helpers";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+/** Runtime lookup — avoids Next.js build-time inlining when vars are set only on Vercel. */
+function serverEnv(name: string): string {
+  const value = process.env[name];
+  return typeof value === "string" ? value.trim() : "";
+}
 
 export async function POST() {
   try {
     await requireSession("settings");
 
-    const sid = process.env.TWILIO_ACCOUNT_SID?.trim();
-    const token = process.env.TWILIO_AUTH_TOKEN?.trim();
+    // Expected Vercel env: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
+    const sid = serverEnv("TWILIO_ACCOUNT_SID");
+    const token = serverEnv("TWILIO_AUTH_TOKEN");
 
     if (!sid || !token) {
       return NextResponse.json(
