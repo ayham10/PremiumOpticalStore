@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import AdminDesktopTopBar from "@/components/admin/AdminDesktopTopBar";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type { AdminSession } from "@/lib/types";
@@ -78,7 +79,10 @@ export default function AdminLayout({
   return (
     <div className="admin-shell">
       <AdminSidebar role={session.role} userName={session.name} />
-      <div className="admin-main min-w-0 overflow-x-hidden">{children}</div>
+      <div className="admin-main min-w-0 overflow-x-hidden">
+        <AdminDesktopTopBar userName={session.name} />
+        {children}
+      </div>
     </div>
   );
 }

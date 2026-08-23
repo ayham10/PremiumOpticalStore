@@ -337,7 +337,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="admin-dashboard admin-home mx-auto w-full max-w-[1360px]">
       {/* ── HEADER ── */}
-      <header className="admin-home-header relative flex items-center">
+      <header className="admin-home-header relative flex items-center md:hidden">
         <div
           className="absolute top-1/2 flex -translate-y-1/2 items-center"
           style={{ insetInlineStart: 0 }}
