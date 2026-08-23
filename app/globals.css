@@ -1038,7 +1038,9 @@ body.admin-home-active .admin-main {
   .admin-main {
     --admin-pad-block: 1.35rem;
     --admin-pad-inline: 1.75rem;
-    width: calc(100% - var(--admin-rail-width));
+    width: auto;
+    margin-left: 0;
+    margin-right: var(--admin-rail-width);
     padding-block: var(--admin-pad-block);
     padding-left: var(--admin-pad-inline);
     padding-right: var(--admin-pad-inline);
