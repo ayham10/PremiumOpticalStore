@@ -13030,10 +13030,24 @@ select.admin-pe-input {
 }
 
 /* ========== Admin booking & messages settings ========== */
+.admin-bm-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  direction: rtl;
+}
+
+.admin-bm-tab-title {
+  width: 100%;
+  margin: 0;
+  justify-content: flex-start;
+  text-align: right;
+}
+
 .admin-bm {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1.5rem;
 }
 
 .admin-bm-card {
@@ -13048,7 +13062,7 @@ select.admin-pe-input {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin: 0 0 0.75rem;
   direction: rtl;
 }
 
@@ -13164,18 +13178,6 @@ select.admin-pe-input {
 
 .admin-bm-input-narrow {
   max-width: 8rem;
-}
-
-.admin-bm-rules {
-  display: grid;
-  gap: 0.85rem;
-  direction: rtl;
-}
-
-@media (min-width: 640px) {
-  .admin-bm-rules {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 639px) {
