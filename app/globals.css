@@ -476,36 +476,32 @@ html.admin-dark body > * {
   --accent-wash: rgba(212, 175, 106, 0.14);
   --copper: #d4af6a;
   --copper-soft: #e6c58a;
-  --admin-border-gold: rgba(212, 175, 106, 0.3);
-  --line: var(--admin-border-gold);
-  --line-strong: rgba(212, 175, 106, 0.38);
+  --admin-border-gold: rgba(212, 175, 106, 0.26);
+  --line: rgba(212, 175, 106, 0.24);
+  --line-strong: rgba(212, 175, 106, 0.32);
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
   --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.28);
   --success: #5ec49a;
   --warning: #e6c58a;
   --danger: #e07a7a;
-  --glass: rgba(17, 24, 32, 0.88);
-  --background: #0b0f14;
+  --glass: rgba(12, 17, 22, 0.82);
+  --background: transparent;
   --foreground: #f5f5f5;
-  --admin-bg: #0b0f14;
-  --admin-outer: #111820;
-  --admin-inner: #0b1117;
-  --admin-card: #111820;
-  --admin-elevated: #0b1117;
-  --admin-outer-bg: linear-gradient(
-    180deg,
-    rgba(17, 24, 32, 0.97) 0%,
-    rgba(17, 24, 32, 0.93) 100%
-  );
+  --admin-bg: transparent;
+  --admin-outer: rgba(12, 17, 22, 0.82);
+  --admin-inner: rgba(8, 12, 17, 0.86);
+  --admin-card: rgba(12, 17, 22, 0.82);
+  --admin-elevated: rgba(8, 12, 17, 0.86);
+  --admin-outer-bg: rgba(12, 17, 22, 0.82);
   --admin-inner-bg:
-    linear-gradient(180deg, rgba(11, 17, 23, 0.98) 0%, rgba(11, 17, 23, 0.94) 100%),
-    linear-gradient(140deg, rgba(212, 175, 106, 0.05) 0%, transparent 55%);
+    linear-gradient(140deg, rgba(212, 175, 106, 0.04) 0%, transparent 52%),
+    rgba(8, 12, 17, 0.86);
   --admin-glow-outer:
-    0 10px 28px rgba(0, 0, 0, 0.22),
-    0 0 48px rgba(212, 175, 106, 0.06);
+    0 10px 28px rgba(0, 0, 0, 0.2),
+    0 0 40px rgba(212, 175, 106, 0.05);
   --admin-glow-inner:
-    0 6px 18px rgba(0, 0, 0, 0.2),
-    0 0 28px rgba(212, 175, 106, 0.045);
+    0 6px 18px rgba(0, 0, 0, 0.18),
+    0 0 24px rgba(212, 175, 106, 0.04);
   --admin-font: "Inter", "Noto Sans Arabic", "Noto Sans Hebrew", ui-sans-serif,
     system-ui, sans-serif;
   --brand-heading-font: var(--admin-font);
@@ -517,6 +513,96 @@ html.admin-dark body > * {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
+}
+
+/* ── Admin glass surfaces (semi-transparent over gold-wave bg) ── */
+html.admin-dark .admin-offers-page,
+html.admin-dark .admin-home,
+html.admin-dark .admin-bookings-page,
+html.admin-dark .admin-set,
+html.admin-dark .admin-pe-editor,
+html.admin-dark .admin-main,
+html.admin-dark body > .flex.min-h-screen.items-center.justify-center {
+  background: transparent !important;
+}
+
+html.admin-dark .admin-main > div {
+  background-color: transparent !important;
+}
+
+.admin-auth .admin-card,
+.admin-shell .admin-card,
+.admin-login-card,
+.admin-sidebar,
+.admin-wh-shell,
+.admin-bookings-toolbar,
+.admin-bookings-table-wrap,
+.admin-wh-calendar,
+.admin-wh-empty,
+.admin-wh-day-header,
+.admin-wh-actions,
+.admin-wh-slots-head,
+.admin-wh-periods,
+.admin-wh-banner,
+.admin-set .admin-card,
+.admin-offers-card,
+.admin-wh-shell,
+.admin-product-card,
+.admin-pe-card,
+.abk-stat,
+.admin-favicon-preview,
+.admin-table-wrap,
+.admin-shell .table-mobile-cards tr {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.admin-shell .admin-card-inner,
+.admin-shell .dashboard-recent-card,
+.admin-shell .admin-bm-card,
+.admin-shell .admin-bsvc-card,
+.admin-shell .admin-quick-action,
+.admin-home-service-btn,
+.admin-home-date-btn,
+.admin-set-day,
+.admin-set-subcard,
+.admin-bm-card,
+.abk-card,
+.abk-empty,
+.abk-toggle,
+.abk-btn,
+.abk-ctrl,
+.abk-search input,
+.abk-toggle-btn,
+.admin-wh-action,
+.admin-wh-period-row,
+.admin-wh-period-input,
+.admin-wh-nav-btn,
+.admin-wh-day-cell:not(.is-selected),
+.admin-wh-booked-hint,
+.admin-wh-tip,
+.admin-pe-thumb,
+.admin-bsvc-icon-action,
+.admin-shell .input,
+.admin-shell .select,
+.admin-shell .textarea,
+.admin-auth .input,
+.admin-auth .select,
+.admin-auth .textarea,
+.admin-login-input,
+.admin-set .input,
+.admin-set .select,
+.admin-set .textarea {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html.admin-dark .admin-shell .sticky.top-0,
+html.admin-dark .admin-home-desktop-rail,
+html.admin-dark .admin-shell nav.fixed.inset-x-0.bottom-0 {
+  background: rgba(12, 17, 22, 0.82) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 html.admin-dark[lang="ar"] .admin-shell,
@@ -654,7 +740,7 @@ html.admin-dark[lang="he"] .admin-auth {
   padding-inline-start: 2.35rem;
   border-radius: 12px;
   border: 1px solid rgba(212, 175, 55, 0.22);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #f5f6f7;
   font: inherit;
   font-size: 0.92rem;
@@ -1156,7 +1242,7 @@ body.admin-home-active .admin-main {
   height: 38px;
   box-sizing: border-box;
   border: 1px solid rgba(212, 175, 55, 0.62);
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   border-radius: 8px;
   font-size: 13px;
@@ -1360,7 +1446,7 @@ body.admin-home-active .admin-main {
 }
 
 .abk-ctrl select option {
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #f5f1e8;
 }
 
@@ -1449,7 +1535,7 @@ body.admin-home-active .admin-main {
   height: 32px;
   border-radius: 8px;
   border: 1px solid rgba(212, 175, 55, 0.45);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   cursor: pointer;
 }
@@ -1472,7 +1558,7 @@ body.admin-home-active .admin-main {
   padding: 8px 2px;
   border-radius: 12px;
   border: 1px solid rgba(42, 47, 54, 0.95);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #ffffff;
   cursor: pointer;
 }
@@ -1660,7 +1746,7 @@ body.admin-home-active .admin-main {
   height: 26px;
   border-radius: 7px;
   border: 1px solid rgba(212, 175, 55, 0.55);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   flex-shrink: 0;
 }
@@ -1679,7 +1765,7 @@ body.admin-home-active .admin-main {
   padding: 0;
   border-radius: 7px;
   border: 1px solid rgba(212, 175, 55, 0.55);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   cursor: pointer;
 }
@@ -2115,7 +2201,7 @@ body.admin-home-active .admin-main {
   flex-shrink: 0;
   border-radius: 10px;
   border: 1px solid #2a2f36;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #8a929c;
   cursor: pointer;
 }
@@ -2132,7 +2218,7 @@ body.admin-home-active .admin-main {
   padding: 0.85rem 0.85rem 0.9rem;
   border-radius: 14px;
   border: 1px solid #2a2f36;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .admin-edit-booking-card-title {
@@ -2257,7 +2343,7 @@ body.admin-home-active .admin-main {
   padding: 0.7rem 0.7rem 0.55rem;
   border-radius: 14px;
   border: 1px solid #2a2f36;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -2388,7 +2474,7 @@ body.admin-home-active .admin-main {
   padding: 0 0.85rem;
   border-radius: 10px;
   border: 1px solid #2a2f36;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #e8eaed;
   font-size: 0.8rem;
   font-weight: 650;
@@ -2438,7 +2524,7 @@ body.admin-home-active .admin-main {
   width: min(520px, 100%);
   max-height: min(88dvh, calc(100dvh - 6.5rem));
   overflow: hidden;
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   border: 1px solid rgba(212, 175, 55, 0.28);
   border-radius: 18px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
@@ -2487,7 +2573,7 @@ body.admin-home-active .admin-main {
   flex-shrink: 0;
   border-radius: 10px;
   border: 1px solid rgba(212, 175, 55, 0.35);
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #8b93a0;
   cursor: pointer;
 }
@@ -2568,7 +2654,7 @@ body.admin-home-active .admin-main {
   padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid rgba(42, 47, 54, 0.95);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #f0f1f2;
   text-align: start;
   cursor: pointer;
@@ -2609,7 +2695,7 @@ body.admin-home-active .admin-main {
   padding: 10px;
   border-radius: 12px;
   border: 1px solid rgba(212, 175, 55, 0.28);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .amb-cal-head {
@@ -2637,7 +2723,7 @@ body.admin-home-active .admin-main {
   height: 30px;
   border-radius: 8px;
   border: 1px solid rgba(212, 175, 55, 0.45);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   cursor: pointer;
 }
@@ -2670,7 +2756,7 @@ body.admin-home-active .admin-main {
   height: 32px;
   border-radius: 8px;
   border: 1px solid #2a2f36;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #f0f1f2;
   font-size: 0.78rem;
   font-weight: 650;
@@ -2723,7 +2809,7 @@ body.admin-home-active .admin-main {
   padding: 0 10px;
   border-radius: 10px;
   border: 1px solid rgba(212, 175, 55, 0.45);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   text-align: start;
   cursor: pointer;
@@ -2778,7 +2864,7 @@ body.admin-home-active .admin-main {
   padding: 0 10px;
   border-radius: 10px;
   border: 1px solid rgba(212, 175, 55, 0.35);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .amb-control > svg {
@@ -2836,7 +2922,7 @@ body.admin-home-active .admin-main {
   gap: 8px;
   padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(212, 175, 55, 0.18);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .amb-confirm {
@@ -2863,7 +2949,7 @@ body.admin-home-active .admin-main {
   padding: 0 12px;
   border-radius: 10px;
   border: 1px solid rgba(212, 175, 55, 0.32);
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #e8eaed;
   font-size: 0.8rem;
   font-weight: 650;
@@ -2890,7 +2976,7 @@ body.admin-home-active .admin-main {
   max-width: 420px;
   max-height: 70dvh;
   overflow: hidden;
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   border: 1px solid rgba(212, 175, 55, 0.32);
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -2936,7 +3022,7 @@ body.admin-home-active .admin-main {
   height: 40px;
   border-radius: 10px;
   border: 1px solid #2a2f36;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #f0f1f2;
   font-size: 0.84rem;
   font-weight: 700;
@@ -3060,6 +3146,11 @@ body.admin-home-active .admin-main {
   gap: 0.65rem;
 }
 
+.admin-auth .admin-card {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .admin-card {
   background: var(--admin-outer-bg);
   border: 1px solid var(--admin-border-gold);
@@ -3067,6 +3158,8 @@ body.admin-home-active .admin-main {
   box-shadow: var(--admin-glow-outer);
   color: var(--ink);
   padding: 1.35rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .admin-shell .admin-card {
@@ -3085,6 +3178,8 @@ body.admin-home-active .admin-main {
   background: var(--admin-inner-bg);
   border-color: var(--admin-border-gold);
   box-shadow: var(--admin-glow-inner);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .admin-shell .admin-card.p-4,
@@ -3339,7 +3434,7 @@ body.admin-home-active .admin-main {
 }
 
 .admin-filter-chip-control option {
-  background: #131a22;
+  background: var(--admin-inner-bg);
   color: #f5f5f5;
 }
 
@@ -3460,7 +3555,7 @@ body.admin-home-active .admin-main {
 }
 
 .admin-booking-status option {
-  background: #131a22;
+  background: var(--admin-inner-bg);
   color: #f5f5f5;
 }
 
@@ -3663,7 +3758,7 @@ body.admin-home-active .admin-main {
   overflow: hidden;
   border-radius: 999px;
   border: 1px solid rgba(212, 175, 106, 0.45);
-  background: #0b0f14;
+  background: var(--admin-inner-bg);
 }
 
 .admin-favicon-preview img {
@@ -3949,7 +4044,7 @@ body.admin-home-active .admin-main {
 
 .admin-shell .lang-switch option,
 .admin-auth .lang-switch option {
-  background: #131a22;
+  background: var(--admin-inner-bg);
   color: #f5f5f5;
 }
 
@@ -10469,7 +10564,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-radius: 16px;
     border: 1px solid rgba(212, 175, 55, 0.28);
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
+      rgba(12, 17, 22, 0.82);
     box-shadow:
       0 10px 24px rgba(0, 0, 0, 0.28),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -10544,7 +10639,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-radius: 16px;
     border: 1px solid rgba(212, 175, 55, 0.22);
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
+      rgba(12, 17, 22, 0.82);
   }
 
   .admin-wh-day-header {
@@ -10554,7 +10649,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-bottom: 0;
     border-radius: 16px 16px 0 0;
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.98) 0%, rgba(16, 22, 34, 1) 100%);
+      rgba(12, 17, 22, 0.84);
   }
 
   .admin-wh-day-label {
@@ -10573,7 +10668,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border: 1px solid rgba(212, 175, 55, 0.28);
     border-top: 1px solid rgba(212, 175, 55, 0.14);
     border-radius: 0 0 16px 16px;
-    background: rgba(12, 18, 28, 0.98);
+    background: rgba(12, 17, 22, 0.82);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
     gap: 6px;
   }
@@ -10618,7 +10713,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
   .admin-wh-banner.is-closed {
     border-color: rgba(212, 175, 55, 0.2);
-    background: rgba(16, 22, 34, 0.96);
+    background: rgba(12, 17, 22, 0.82);
   }
 
   .admin-wh-slots-head {
@@ -10628,7 +10723,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-bottom: 0;
     border-radius: 16px 16px 0 0;
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.98) 0%, rgba(16, 22, 34, 1) 100%);
+      rgba(12, 17, 22, 0.84);
   }
 
   .admin-wh-slots-head h3 {
@@ -10643,7 +10738,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border: 1px solid rgba(212, 175, 55, 0.28);
     border-top: 1px solid rgba(212, 175, 55, 0.14);
     border-radius: 0 0 16px 16px;
-    background: rgba(12, 18, 28, 0.98);
+    background: rgba(12, 17, 22, 0.82);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
   }
 
@@ -10669,7 +10764,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     padding: 0.28rem 0.32rem;
     border-radius: 8px;
     border-color: rgba(212, 175, 55, 0.28);
-    background: #0b0e14;
+    background: rgba(8, 12, 17, 0.86);
     font-size: 0.82rem;
   }
 
@@ -10700,7 +10795,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     padding: 8px 10px;
     border-radius: 12px;
     border: 1px solid rgba(212, 175, 55, 0.16);
-    background: rgba(16, 22, 34, 0.9);
+    background: rgba(8, 12, 17, 0.86);
     font-size: 0.7rem;
   }
 
@@ -10709,7 +10804,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     padding: 8px 10px;
     border-radius: 12px;
     border: 1px solid rgba(212, 175, 55, 0.16);
-    background: rgba(16, 22, 34, 0.9);
+    background: rgba(8, 12, 17, 0.86);
     font-size: 0.7rem;
   }
 }
@@ -10728,7 +10823,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-radius: 16px;
     border: 1px solid rgba(212, 175, 55, 0.28);
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
+      rgba(12, 17, 22, 0.82);
     box-shadow:
       0 10px 24px rgba(0, 0, 0, 0.28),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -10782,7 +10877,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-radius: 16px;
     border: 1px solid rgba(212, 175, 55, 0.22);
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.96) 0%, rgba(12, 18, 28, 0.98) 100%);
+      rgba(12, 17, 22, 0.82);
   }
 
   .admin-wh-day-header {
@@ -10792,7 +10887,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-bottom: 0;
     border-radius: 16px 16px 0 0;
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.98) 0%, rgba(16, 22, 34, 1) 100%);
+      rgba(12, 17, 22, 0.84);
   }
 
   .admin-wh-day-label {
@@ -10809,12 +10904,12 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border: 1px solid rgba(212, 175, 55, 0.28);
     border-top: 1px solid rgba(212, 175, 55, 0.14);
     border-radius: 0 0 16px 16px;
-    background: rgba(12, 18, 28, 0.98);
+    background: rgba(12, 17, 22, 0.82);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
   }
 
   .admin-wh-action {
-    background: rgba(11, 14, 20, 0.55);
+    background: rgba(8, 12, 17, 0.86);
   }
 
   .admin-wh-banner {
@@ -10836,7 +10931,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
   .admin-wh-banner.is-closed {
     border-color: rgba(212, 175, 55, 0.2);
-    background: rgba(16, 22, 34, 0.96);
+    background: rgba(12, 17, 22, 0.82);
   }
 
   .admin-wh-slots-head {
@@ -10846,7 +10941,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border-bottom: 0;
     border-radius: 16px 16px 0 0;
     background:
-      linear-gradient(180deg, rgba(26, 36, 54, 0.98) 0%, rgba(16, 22, 34, 1) 100%);
+      rgba(12, 17, 22, 0.84);
   }
 
   .admin-wh-slots-head h3 {
@@ -10860,18 +10955,18 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     border: 1px solid rgba(212, 175, 55, 0.28);
     border-top: 1px solid rgba(212, 175, 55, 0.14);
     border-radius: 0 0 16px 16px;
-    background: rgba(12, 18, 28, 0.98);
+    background: rgba(12, 17, 22, 0.82);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
   }
 
   .admin-wh-period-row {
     border-color: rgba(212, 175, 55, 0.22);
-    background: rgba(11, 14, 20, 0.72);
+    background: rgba(8, 12, 17, 0.86);
   }
 
   .admin-wh-period-input {
     border-color: rgba(212, 175, 55, 0.28);
-    background: #0b0e14;
+    background: rgba(8, 12, 17, 0.86);
   }
 
   .admin-wh-booked-hint,
@@ -10879,7 +10974,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     padding: 10px 12px;
     border-radius: 12px;
     border: 1px solid rgba(212, 175, 55, 0.16);
-    background: rgba(16, 22, 34, 0.9);
+    background: rgba(8, 12, 17, 0.86);
   }
 }
 
@@ -11074,7 +11169,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   padding: 16px;
   padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
-  background: #0b0e14;
+  background: transparent;
 }
 
 .admin-offers-inner {
@@ -11516,7 +11611,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   padding: 0.55rem 0.75rem;
   border-radius: 11px;
   border: 1px solid rgba(212, 175, 55, 0.22);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #f5f6f7;
   font: inherit;
   font-size: 0.88rem;
@@ -11566,7 +11661,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   padding: 0.55rem 0.7rem;
   border-radius: 11px;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #d7dce2;
   font-size: 0.8rem;
   font-weight: 700;
@@ -11625,7 +11720,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   padding: 8px;
   border-radius: 11px;
   border: 1px solid rgba(212, 175, 55, 0.16);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   text-align: start;
   cursor: pointer;
 }
@@ -11642,7 +11737,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 8px;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .admin-offer-product-copy {
@@ -11973,7 +12068,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   height: 38px;
   box-sizing: border-box;
   border: 1px solid rgba(212, 175, 55, 0.65);
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   border-radius: 8px;
   font-size: 13px;
@@ -12012,7 +12107,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 }
 
 .admin-products-ctrl-select option {
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #f5f1e8;
 }
 
@@ -12075,7 +12170,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   padding: 0 14px;
   white-space: nowrap;
   cursor: pointer;
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .admin-products-add svg {
@@ -12212,7 +12307,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   padding: 0;
   border-radius: 6px;
   border: 1px solid rgba(212, 175, 55, 0.55);
-  background: #151a21;
+  background: rgba(8, 12, 17, 0.86);
   color: #d4af37;
   cursor: pointer;
 }
@@ -12461,7 +12556,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   aspect-ratio: 1 / 1;
   border-radius: 12px;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .admin-pe-thumb.is-main {
@@ -12627,7 +12722,7 @@ div.admin-pe-input {
   padding: 0 0.75rem;
   border-radius: 11px;
   border: 1px solid rgba(212, 175, 55, 0.22);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #fff;
   font: inherit;
   outline: none;
@@ -12662,7 +12757,7 @@ select.admin-pe-input {
 }
 
 .admin-pe-input option {
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   color: #fff;
 }
 
@@ -12685,7 +12780,7 @@ select.admin-pe-input {
   padding: 0 6px;
   border-radius: 12px;
   border: 1px solid rgba(212, 175, 55, 0.28);
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
 }
 
 .admin-pe-stepper-btn {
@@ -13102,7 +13197,7 @@ select.admin-pe-input {
 .admin-set .input,
 .admin-set .select,
 .admin-set .textarea {
-  background: #0b0e14;
+  background: rgba(8, 12, 17, 0.86);
   border: 1px solid rgba(212, 175, 55, 0.22);
   color: #fff;
   color-scheme: dark;
@@ -13118,8 +13213,8 @@ select.admin-pe-input {
 .admin-set-subcard {
   padding: 12px;
   border-radius: 14px;
-  border: 1px solid rgba(212, 175, 55, 0.18);
-  background: rgba(11, 14, 20, 0.55);
+  border: 1px solid rgba(212, 175, 106, 0.24);
+  background: var(--admin-inner-bg);
 }
 
 .admin-set-subtitle {
@@ -13141,14 +13236,14 @@ select.admin-pe-input {
   gap: 10px 12px;
   padding: 12px;
   border-radius: 14px;
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  background:
-    linear-gradient(180deg, rgba(18, 26, 40, 0.96) 0%, rgba(11, 14, 20, 0.98) 100%);
+  border: 1px solid rgba(212, 175, 106, 0.24);
+  background: var(--admin-inner-bg);
+  box-shadow: var(--admin-glow-inner);
 }
 
 .admin-set-day.is-closed {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(11, 14, 20, 0.62);
+  border-color: rgba(212, 175, 106, 0.18);
+  background: rgba(8, 12, 17, 0.78);
 }
 
 .admin-set-day-name {
