@@ -688,66 +688,19 @@ function AdminSettingsPageInner() {
         ) : null}
 
         {tab === "booking" ? (
-          <>
-            <section className="admin-card space-y-4 p-5">
-              <h2 className="admin-section-title admin-set-title">
-                <CalendarDays size={16} strokeWidth={1.7} />
-                {t("admin.settings.bmBookingRules")}
-              </h2>
-              <div className="admin-bm-rules">
-                <div className="admin-bm-field">
-                  <label className="admin-bm-field-label" htmlFor="set-slot-minutes">
-                    {t("admin.settings.slotMinutes")}
-                  </label>
-                  <input
-                    id="set-slot-minutes"
-                    type="number"
-                    className="input admin-bm-input"
-                    min={5}
-                    step={5}
-                    value={form.appointmentSlotMinutes}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        appointmentSlotMinutes: Number(e.target.value) || 30,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="admin-bm-field">
-                  <label className="admin-bm-field-label" htmlFor="set-lead-days">
-                    {t("admin.settings.leadDays")}
-                  </label>
-                  <input
-                    id="set-lead-days"
-                    type="number"
-                    className="input admin-bm-input"
-                    value={form.bookingLeadDays}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        bookingLeadDays: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </section>
-
-            <section className="admin-card space-y-4 p-5">
-              <h2 className="admin-section-title admin-set-title">
-                <MessageCircle size={16} strokeWidth={1.7} />
-                {t("admin.settings.bookingSms")}
-              </h2>
-              <BookingMessagesSettingsSection
-                value={form.bookingMessages}
-                templates={whatsappTemplates}
-                onChange={(bookingMessages) =>
-                  setForm((f) => ({ ...f, bookingMessages }))
-                }
-              />
-            </section>
-          </>
+          <section className="admin-card admin-bm-shell space-y-4 p-5">
+            <h2 className="admin-section-title admin-set-title">
+              <MessageCircle size={16} strokeWidth={1.7} />
+              {t("admin.settings.bookingSms")}
+            </h2>
+            <BookingMessagesSettingsSection
+              value={form.bookingMessages}
+              templates={whatsappTemplates}
+              onChange={(bookingMessages) =>
+                setForm((f) => ({ ...f, bookingMessages }))
+              }
+            />
+          </section>
         ) : null}
 
         {tab === "seo" ? (
