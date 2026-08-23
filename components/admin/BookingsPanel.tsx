@@ -173,8 +173,10 @@ export default function BookingsPanel({
     startOfWeekSunday(new Date()),
   );
   const [selectedDay, setSelectedDay] = useState(() => isoLocal(new Date()));
+  const [upcomingOnly, setUpcomingOnly] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const viewingAllDates = viewMode === "list" && !dateFilter;
+  const viewingAllDates = viewMode === "list" && !dateFilter && !upcomingOnly;
+  const viewingUpcoming = viewMode === "list" && upcomingOnly;
 
   function openDatePicker() {
     const input = dateInputRef.current;
@@ -229,9 +231,12 @@ export default function BookingsPanel({
   }, [appointments]);
 
   const visible = useMemo(() => {
+    const today = isoLocal(new Date());
     let rows = [...appointments];
     if (viewMode === "weekly") {
       rows = rows.filter((a) => a.appointmentDate === selectedDay);
+    } else if (upcomingOnly) {
+      rows = rows.filter((a) => a.appointmentDate >= today);
     } else if (dateFilter) {
       rows = rows.filter((a) => a.appointmentDate === dateFilter);
     }
@@ -241,7 +246,7 @@ export default function BookingsPanel({
       return a.appointmentTime.localeCompare(b.appointmentTime);
     });
     return rows;
-  }, [appointments, viewMode, selectedDay, dateFilter]);
+  }, [appointments, viewMode, selectedDay, dateFilter, upcomingOnly]);
 
   function shiftWeek(delta: number) {
     const next = addDays(weekAnchor, delta * 7);
@@ -251,10 +256,18 @@ export default function BookingsPanel({
 
   function viewAllDates() {
     setViewMode("list");
+    setUpcomingOnly(false);
+    onDateFilterChange("");
+  }
+
+  function viewUpcoming() {
+    setViewMode("list");
+    setUpcomingOnly(true);
     onDateFilterChange("");
   }
 
   function applyDate(iso: string) {
+    setUpcomingOnly(false);
     onDateFilterChange(iso);
     if (!iso) return;
     const d = new Date(`${iso}T12:00:00`);
@@ -358,34 +371,7 @@ export default function BookingsPanel({
           />
         </div>
 
-        <label className="abk-ctrl abk-date-ctrl">
-          <button
-            type="button"
-            aria-label="فتح التقويم"
-            onClick={openDatePicker}
-            className="abk-date-icon"
-          >
-            <CalendarDays size={14} strokeWidth={1.55} aria-hidden />
-          </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            className="admin-bookings-date-input abk-date-input"
-            value={dateFilter}
-            onChange={(e) => applyDate(e.target.value)}
-          />
-        </label>
-
-        <button
-          type="button"
-          onClick={viewAllDates}
-          className={`abk-btn${viewingAllDates ? " is-active" : ""}`}
-        >
-          <List size={14} strokeWidth={1.55} />
-          عرض كل التواريخ
-        </button>
-
-        <label className="abk-ctrl">
+        <label className="abk-ctrl abk-service-ctrl">
           <Filter size={14} strokeWidth={1.55} />
           <select
             value={typeFilter}
@@ -405,6 +391,46 @@ export default function BookingsPanel({
             </option>
           </select>
         </label>
+
+        <label className="abk-ctrl abk-date-ctrl">
+          <button
+            type="button"
+            aria-label="فتح التقويم"
+            onClick={openDatePicker}
+            className="abk-date-icon"
+          >
+            <CalendarDays size={14} strokeWidth={1.55} aria-hidden />
+          </button>
+          <span className="abk-date-display" dir="ltr">
+            {dateFilter ? formatDateDisplay(dateFilter) : "dd/mm/yyyy"}
+          </span>
+          <input
+            ref={dateInputRef}
+            type="date"
+            className="admin-bookings-date-input abk-date-input"
+            value={dateFilter}
+            onChange={(e) => applyDate(e.target.value)}
+            aria-label="اختر التاريخ"
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={viewUpcoming}
+          className={`abk-btn${viewingUpcoming ? " is-active" : ""}`}
+        >
+          <CalendarRange size={14} strokeWidth={1.55} />
+          الحجوزات القادمة
+        </button>
+
+        <button
+          type="button"
+          onClick={viewAllDates}
+          className={`abk-btn${viewingAllDates ? " is-active" : ""}`}
+        >
+          <List size={14} strokeWidth={1.55} />
+          عرض كل التواريخ
+        </button>
       </div>
 
       {viewMode === "weekly" ? (
@@ -440,6 +466,7 @@ export default function BookingsPanel({
                   type="button"
                   onClick={() => {
                     setSelectedDay(day.iso);
+                    setUpcomingOnly(false);
                     onDateFilterChange(day.iso);
                   }}
                   className={`abk-week-day${active ? " is-active" : ""}`}
@@ -467,6 +494,8 @@ export default function BookingsPanel({
             <>
               {visible.length} {longDayAr(selectedDay)}
             </>
+          ) : viewingUpcoming ? (
+            <>{visible.length} حجز — الحجوزات القادمة</>
           ) : viewingAllDates ? (
             <>{visible.length} حجز — كل التواريخ</>
           ) : (

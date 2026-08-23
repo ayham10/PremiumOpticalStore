@@ -1188,19 +1188,23 @@ body.admin-home-active .admin-main {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
+  direction: rtl;
 }
 
 .abk-search {
   position: relative;
-  flex: 1 1 16rem;
-  min-width: 0;
+  flex: 0 1 auto;
+  width: fit-content;
+  min-width: 11.5rem;
+  max-width: 15rem;
 }
 
 .abk-search svg {
   position: absolute;
   top: 50%;
-  inset-inline-start: 11px;
+  inset-inline-start: 9px;
   transform: translateY(-50%);
   width: 15px;
   height: 15px;
@@ -1210,8 +1214,10 @@ body.admin-home-active .admin-main {
 
 .abk-search input {
   width: 100%;
-  padding: 0 12px;
-  padding-inline-start: 34px;
+  min-width: 11.5rem;
+  max-width: 15rem;
+  padding: 0 10px;
+  padding-inline-start: 30px;
   color: #f5f1e8;
   font-weight: 500;
   outline: none;
@@ -1224,9 +1230,16 @@ body.admin-home-active .admin-main {
 .abk-ctrl {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  min-width: 0;
+  gap: 5px;
+  padding: 0 8px;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.abk-service-ctrl select {
+  width: auto;
+  max-width: 9.5rem;
 }
 
 .abk-ctrl svg,
@@ -1257,7 +1270,30 @@ body.admin-home-active .admin-main {
 
 .abk-date-ctrl {
   position: relative;
-  min-width: 10.5rem;
+  width: fit-content;
+  min-width: 0;
+  padding: 0 8px;
+  gap: 5px;
+}
+
+.abk-date-display {
+  flex: 0 0 auto;
+  min-width: 5.75rem;
+  color: #d4af37;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.abk-date-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .abk-date-icon {
@@ -1268,6 +1304,14 @@ body.admin-home-active .admin-main {
   padding: 0;
   cursor: pointer;
   color: #d4af37;
+}
+
+.abk-toolbar .abk-btn {
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 10px;
+  font-size: 12.5px;
 }
 
 .abk-week {
@@ -1664,10 +1708,49 @@ body.admin-home-active .admin-main {
 }
 
 @media (max-width: 767px) {
+  .abk-toolbar {
+    gap: 5px;
+  }
+
+  .abk-btn,
+  .abk-ctrl,
+  .abk-search input,
+  .abk-toggle-btn {
+    height: 36px;
+  }
+
   .abk-search {
+    flex: 1 1 9rem;
+    min-width: 8rem;
+    max-width: 12.5rem;
+  }
+
+  .abk-search input {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12.5px;
+  }
+
+  .abk-ctrl,
+  .abk-toolbar .abk-btn {
     flex: 0 0 auto;
-    width: 15.5rem;
-    max-width: calc(100% - 8px);
+    min-width: 0;
+  }
+
+  .abk-date-display {
+    min-width: 5rem;
+    font-size: 12px;
+  }
+
+  .abk-toolbar .abk-btn {
+    font-size: 11.5px;
+    padding: 0 7px;
+  }
+
+  .abk-service-ctrl select {
+    max-width: 6.75rem;
+    font-size: 12px;
   }
 
   .abk-week-grid {
