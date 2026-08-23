@@ -12547,19 +12547,19 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   }
 
   .admin-products-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 8px;
     align-items: stretch;
   }
 
   .admin-product-card {
     height: 100%;
-    border-radius: 12px;
+    border-radius: 6px;
     border: 1px solid rgba(212, 175, 106, 0.3);
     background: rgba(12, 17, 22, 0.58);
     box-shadow:
-      0 8px 22px rgba(0, 0, 0, 0.18),
-      0 0 28px rgba(212, 175, 106, 0.06);
+      0 4px 11px rgba(0, 0, 0, 0.18),
+      0 0 14px rgba(212, 175, 106, 0.06);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
@@ -12572,25 +12572,34 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     background: rgba(18, 22, 28, 0.72);
   }
 
+  .admin-product-card-badge {
+    top: 4px;
+    inset-inline-start: 4px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 8px;
+    line-height: 1.3;
+  }
+
   .admin-product-card-body {
     display: flex;
     flex: 1;
     flex-direction: column;
     gap: 0;
-    padding: 0.65rem 0.7rem 0;
+    padding: 0.33rem 0.35rem 0;
     min-height: 0;
   }
 
   .admin-product-card-heading {
     display: block;
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.28rem;
     text-align: center;
   }
 
   .admin-product-card-name {
     text-align: center;
-    font-size: 12.5px;
-    line-height: 1.35;
+    font-size: 10px;
+    line-height: 1.3;
     -webkit-line-clamp: 2;
   }
 
@@ -12603,7 +12612,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     grid-template-columns: 1fr 1px 1fr;
     align-items: stretch;
     gap: 0;
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.28rem;
   }
 
   .admin-product-card-stat {
@@ -12611,25 +12620,25 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: 0.1rem;
     min-width: 0;
-    padding: 0.15rem 0.35rem;
+    padding: 0.08rem 0.18rem;
     text-align: center;
   }
 
   .admin-product-card-stat-label {
     display: block;
     color: #9aa3ad;
-    font-size: 10px;
+    font-size: 8px;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.15;
   }
 
   .admin-product-card-stat-value {
     color: #fff;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.15;
     font-variant-numeric: tabular-nums;
   }
 
@@ -12642,7 +12651,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     display: block;
     width: 1px;
     align-self: stretch;
-    margin-block: 0.1rem;
+    margin-block: 0.05rem;
     background: rgba(212, 175, 106, 0.34);
   }
 
@@ -12663,10 +12672,10 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.25rem;
     width: 100%;
     margin-top: 0;
-    padding: 0.55rem 0 0.65rem;
+    padding: 0.28rem 0 0.33rem;
     border-top: 1px solid rgba(212, 175, 106, 0.2);
     border-inline-start: none;
   }
@@ -12675,17 +12684,22 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
+    gap: 0.15rem;
     width: auto;
     height: auto;
     padding: 0;
     border: none;
     border-radius: 0;
     background: transparent;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 650;
-    line-height: 1.2;
+    line-height: 1.15;
     cursor: pointer;
+  }
+
+  .admin-product-icon-btn svg {
+    width: 8px;
+    height: 8px;
   }
 
   .admin-product-icon-btn.is-edit,
