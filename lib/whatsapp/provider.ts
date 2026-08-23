@@ -1,122 +1,177 @@
 import { normalizeIsraeliPhone } from "@/lib/eye-exam";
+import { resolveTwilioContentSid } from "@/lib/twilio/content-sids";
+import {
+  getTwilioConfig,
+  isTwilioWhatsAppConfigured,
+  normalizeWhatsAppAddress,
+  twilioBasicAuth,
+  type TwilioConfig,
+} from "@/lib/twilio/config";
 
 export type WhatsAppSendResult = {
   ok: boolean;
-  provider: "meta";
-  status: "sent" | "failed" | "skipped";
+  provider: "twilio";
+  status: "sent" | "failed" | "skipped" | "queued";
   error?: string;
   externalId?: string;
+  templateName?: string;
+  scheduledFor?: string;
 };
 
 export type WhatsAppTemplateMessage = {
   to: string;
   templateName: string;
-  languageCode: string;
-  bodyParameters?: string[];
+  contentVariables?: Record<string, string>;
+  sendAt?: Date;
 };
 
-const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v21.0";
+const TWILIO_MIN_SCHEDULE_LEAD_MS = 15 * 60 * 1000;
+const TWILIO_MAX_SCHEDULE_DAYS = 35;
 
-/** Meta expects international digits only, e.g. 972501234567 (no +). */
-export function formatPhoneForWhatsAppMeta(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  const digitsOnly = trimmed.replace(/\D/g, "");
-  if (/^9725\d{8}$/.test(digitsOnly)) return digitsOnly;
-
-  const normalized = normalizeIsraeliPhone(trimmed);
+/** Normalize Israeli numbers to `whatsapp:+972...` for Twilio. */
+export function formatPhoneForWhatsAppTwilio(input: string): string | null {
+  const normalized = normalizeIsraeliPhone(input);
   if (!normalized) return null;
-
-  const metaDigits = normalized.replace(/^\+/, "");
-  return /^9725\d{8}$/.test(metaDigits) ? metaDigits : null;
+  return normalizeWhatsAppAddress(normalized);
 }
 
 export function sanitizeWhatsAppError(detail: string): string {
   return detail
+    .replace(/Basic\s+[A-Za-z0-9+/=]+/gi, "Basic [redacted]")
     .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
-    .replace(/access_token[=:]\S+/gi, "access_token=[redacted]")
-    .replace(/"access_token"\s*:\s*"[^"]+"/gi, '"access_token":"[redacted]"')
+    .replace(/AC[a-z0-9]{32}/gi, "AC[redacted]")
+    .replace(/SK[a-z0-9]{32}/gi, "SK[redacted]")
+    .replace(/auth[_-]?token[=:]\S+/gi, "auth_token=[redacted]")
     .slice(0, 500);
 }
 
-function getWhatsAppConfig() {
-  return {
-    accessToken: process.env.WHATSAPP_ACCESS_TOKEN?.trim(),
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim(),
-    templateName: process.env.WHATSAPP_TEMPLATE_NAME?.trim() || "hello_world",
-    templateLanguage:
-      process.env.WHATSAPP_TEMPLATE_LANGUAGE?.trim() || "en_US",
-  };
+function parseTwilioError(raw: string): string {
+  if (!raw) return "";
+  try {
+    const json = JSON.parse(raw) as { message?: string; more_info?: string };
+    return json.message || json.more_info || raw;
+  } catch {
+    return raw;
+  }
 }
 
-export function isWhatsAppConfigured(): boolean {
-  const { accessToken, phoneNumberId } = getWhatsAppConfig();
-  return Boolean(accessToken && phoneNumberId);
+function canScheduleAt(sendAt: Date, now = new Date()): boolean {
+  const min = now.getTime() + TWILIO_MIN_SCHEDULE_LEAD_MS;
+  const max =
+    now.getTime() + TWILIO_MAX_SCHEDULE_DAYS * 24 * 60 * 60 * 1000;
+  const ts = sendAt.getTime();
+  return ts >= min && ts <= max;
 }
+
+export { isTwilioWhatsAppConfigured as isWhatsAppConfigured };
 
 export async function sendWhatsAppTemplate(
   message: WhatsAppTemplateMessage,
 ): Promise<WhatsAppSendResult> {
-  const config = getWhatsAppConfig();
-  const to = formatPhoneForWhatsAppMeta(message.to);
+  const config = getTwilioConfig();
+  const to = formatPhoneForWhatsAppTwilio(message.to);
+  const templateName = message.templateName.trim();
 
   if (!to) {
     return {
       ok: false,
-      provider: "meta",
+      provider: "twilio",
       status: "failed",
       error: "Invalid recipient phone number for WhatsApp",
+      templateName,
     };
   }
 
-  if (!config.accessToken || !config.phoneNumberId) {
+  if (!config) {
     return {
       ok: false,
-      provider: "meta",
+      provider: "twilio",
       status: "skipped",
-      error: "WhatsApp credentials are not configured",
+      error: "Twilio WhatsApp credentials are not configured",
+      templateName,
     };
   }
 
-  const template: Record<string, unknown> = {
-    name: message.templateName || config.templateName,
-    language: { code: message.languageCode || config.templateLanguage },
-  };
-
-  if (message.bodyParameters?.length) {
-    template.components = [
-      {
-        type: "body",
-        parameters: message.bodyParameters.map((text) => ({
-          type: "text",
-          text,
-        })),
-      },
-    ];
+  const contentSid = resolveTwilioContentSid(templateName);
+  if (!contentSid) {
+    return {
+      ok: false,
+      provider: "twilio",
+      status: "failed",
+      error: `No Twilio Content SID mapped for template "${templateName}"`,
+      templateName,
+    };
   }
 
-  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${config.phoneNumberId}/messages`;
+  const params = new URLSearchParams({
+    From: config.whatsappFrom,
+    To: to,
+    ContentSid: contentSid,
+  });
+
+  if (message.contentVariables && Object.keys(message.contentVariables).length) {
+    params.set("ContentVariables", JSON.stringify(message.contentVariables));
+  }
+
+  let scheduledFor: string | undefined;
+  if (message.sendAt) {
+    if (!canScheduleAt(message.sendAt)) {
+      return {
+        ok: false,
+        provider: "twilio",
+        status: "skipped",
+        error: "Reminder send time is outside Twilio scheduling window",
+        templateName,
+        scheduledFor: message.sendAt.toISOString(),
+      };
+    }
+    scheduledFor = message.sendAt.toISOString();
+    params.set("ScheduleType", "fixed");
+    params.set("SendAt", scheduledFor);
+  }
+
+  return postTwilioWhatsAppMessage(config, params, {
+    templateName,
+    scheduledFor,
+  });
+}
+
+async function postTwilioWhatsAppMessage(
+  config: TwilioConfig,
+  params: URLSearchParams,
+  meta: { templateName: string; scheduledFor?: string },
+): Promise<WhatsAppSendResult> {
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
+    config.accountSid,
+  )}/Messages.json`;
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.accessToken}`,
-        "Content-Type": "application/json",
+        Authorization: `Basic ${twilioBasicAuth(config)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to,
-        type: "template",
-        template,
-      }),
+      body: params,
+      cache: "no-store",
     });
 
     const raw = await response.text().catch(() => "");
-    let json: { messages?: Array<{ id?: string }>; error?: { message?: string } } =
-      {};
+    if (!response.ok) {
+      const detail = sanitizeWhatsAppError(
+        parseTwilioError(raw) || `Twilio WhatsApp API error ${response.status}`,
+      );
+      return {
+        ok: false,
+        provider: "twilio",
+        status: "failed",
+        error: detail,
+        templateName: meta.templateName,
+        scheduledFor: meta.scheduledFor,
+      };
+    }
+
+    let json: { sid?: string; status?: string } = {};
     if (raw) {
       try {
         json = JSON.parse(raw) as typeof json;
@@ -125,71 +180,61 @@ export async function sendWhatsAppTemplate(
       }
     }
 
-    if (!response.ok) {
-      const detail =
-        json.error?.message ||
-        sanitizeWhatsAppError(raw) ||
-        `Meta WhatsApp API error ${response.status}`;
-      return {
-        ok: false,
-        provider: "meta",
-        status: "failed",
-        error: detail,
-      };
-    }
+    const queued =
+      meta.scheduledFor != null || json.status === "scheduled" || json.status === "queued";
 
     return {
       ok: true,
-      provider: "meta",
-      status: "sent",
-      externalId: json.messages?.[0]?.id,
+      provider: "twilio",
+      status: queued ? "queued" : "sent",
+      externalId: json.sid,
+      templateName: meta.templateName,
+      scheduledFor: meta.scheduledFor,
     };
   } catch (error) {
     return {
       ok: false,
-      provider: "meta",
+      provider: "twilio",
       status: "failed",
       error:
         error instanceof Error
           ? sanitizeWhatsAppError(error.message)
           : "WhatsApp send failed",
+      templateName: meta.templateName,
+      scheduledFor: meta.scheduledFor,
     };
   }
 }
 
-export async function sendWhatsAppBookingConfirmation(opts: {
-  to: string;
-  appointmentId: string;
-}): Promise<WhatsAppSendResult> {
-  const config = getWhatsAppConfig();
-
-  return sendWhatsAppTemplate({
-    to: opts.to,
-    templateName: config.templateName,
-    languageCode: config.templateLanguage,
-  });
-}
-
 export function logWhatsAppBookingResult(
   result: WhatsAppSendResult,
-  opts: { appointmentId: string; to: string },
+  opts: {
+    appointmentId: string;
+    to: string;
+    kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
+  },
 ): void {
-  const recipient = formatPhoneForWhatsAppMeta(opts.to) || "[invalid]";
+  const recipient = formatPhoneForWhatsAppTwilio(opts.to) || "[invalid]";
+  const base = {
+    appointmentId: opts.appointmentId,
+    to: recipient,
+    kind: opts.kind,
+    template: result.templateName,
+    scheduledFor: result.scheduledFor,
+  };
+
   if (result.ok) {
-    console.info("[WhatsApp] booking confirmation sent", {
-      appointmentId: opts.appointmentId,
-      to: recipient,
+    console.info("[WhatsApp] booking message sent", {
+      ...base,
       messageId: result.externalId,
-      template: process.env.WHATSAPP_TEMPLATE_NAME || "hello_world",
+      status: result.status,
     });
     return;
   }
 
-  console.error("[WhatsApp] booking confirmation failed", {
-    appointmentId: opts.appointmentId,
-    to: recipient,
+  console.error("[WhatsApp] booking message failed", {
+    ...base,
     status: result.status,
     error: result.error ? sanitizeWhatsAppError(result.error) : "Unknown error",
-    template: process.env.WHATSAPP_TEMPLATE_NAME || "hello_world",
   });
 }

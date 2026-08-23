@@ -29,10 +29,7 @@ import {
 } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms/provider";
-import {
-  logWhatsAppBookingResult,
-  sendWhatsAppBookingConfirmation,
-} from "@/lib/whatsapp/provider";
+import { dispatchBookingMessages } from "@/lib/booking-messaging";
 import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -233,22 +230,7 @@ export async function POST(request: Request) {
 
     const saved = savedAppointment;
 
-    try {
-      const whatsappResult = await sendWhatsAppBookingConfirmation({
-        to: saved.phone,
-        appointmentId: saved.id,
-      });
-      logWhatsAppBookingResult(whatsappResult, {
-        appointmentId: saved.id,
-        to: saved.phone,
-      });
-    } catch (error) {
-      console.error("[WhatsApp] booking confirmation unexpected error", {
-        appointmentId: saved.id,
-        error:
-          error instanceof Error ? error.message : "Unexpected WhatsApp error",
-      });
-    }
+    void dispatchBookingMessages(saved);
 
     return NextResponse.json(
       {

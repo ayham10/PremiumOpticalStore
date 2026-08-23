@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/helpers";
+import { getTwilioConfig, serverEnv, twilioBasicAuth } from "@/lib/twilio/config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-/** Runtime lookup — avoids Next.js build-time inlining when vars are set only on Vercel. */
-function serverEnv(name: string): string {
-  const value = process.env[name];
-  return typeof value === "string" ? value.trim() : "";
-}
 
 export async function POST() {
   try {
     await requireSession("settings");
 
-    // Expected Vercel env: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
     const sid = serverEnv("TWILIO_ACCOUNT_SID");
     const token = serverEnv("TWILIO_AUTH_TOKEN");
 
@@ -33,7 +27,11 @@ export async function POST() {
       `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}.json`,
       {
         headers: {
-          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+          Authorization: `Basic ${twilioBasicAuth({
+            accountSid: sid,
+            authToken: token,
+            whatsappFrom: "",
+          })}`,
         },
         cache: "no-store",
       },
@@ -52,9 +50,12 @@ export async function POST() {
       );
     }
 
+    const config = getTwilioConfig();
+
     return NextResponse.json({
       ok: true,
       message: "Twilio connection successful.",
+      whatsappConfigured: Boolean(config?.whatsappFrom),
     });
   } catch (error) {
     return handleRouteError(error);

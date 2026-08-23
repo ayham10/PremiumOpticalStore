@@ -117,6 +117,47 @@ export function nowTimeInJerusalem(now = new Date()): string {
   }).format(now);
 }
 
+/** Wall-clock appointment start in Asia/Jerusalem as a UTC instant. */
+export function jerusalemWallClockToUtc(
+  isoDate: string,
+  time: string,
+): Date | null {
+  if (!isValidIsoDate(isoDate)) return null;
+  if (parseTimeToMinutes(time) == null) return null;
+
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute);
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: EYE_EXAM_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  for (let offsetMin = -14 * 60; offsetMin <= 14 * 60; offsetMin++) {
+    const candidate = new Date(utcGuess + offsetMin * 60_000);
+    const parts = formatter.formatToParts(candidate);
+    const get = (type: string) =>
+      Number(parts.find((part) => part.type === type)?.value);
+    if (
+      get("year") === year &&
+      get("month") === month &&
+      get("day") === day &&
+      get("hour") === hour &&
+      get("minute") === minute
+    ) {
+      return candidate;
+    }
+  }
+
+  return new Date(utcGuess);
+}
+
 export function isValidIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [y, m, d] = value.split("-").map(Number);
