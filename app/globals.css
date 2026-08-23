@@ -11271,11 +11271,13 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   min-width: 0;
   padding: 14px 14px 12px;
   border-radius: 16px;
-  border: 1px solid var(--admin-border-gold);
-  background: var(--admin-outer-bg);
-  box-shadow: var(--admin-glow-outer);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 106, 0.28);
+  background: rgba(12, 17, 22, 0.78);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.18),
+    0 0 28px rgba(212, 175, 106, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .admin-offers-card-top {
@@ -11402,20 +11404,28 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
 .admin-offers-empty {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  min-height: 118px;
-  margin-top: 14px;
-  padding: 22px 16px;
-  border-radius: 16px;
+  min-height: 0;
+  margin-top: 10px;
+  padding: 9px 14px;
+  border-radius: 14px;
   border: 1.5px dashed rgba(212, 175, 55, 0.48);
-  background: rgba(212, 175, 55, 0.05);
+  background: rgba(12, 17, 22, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #d4af37;
   cursor: pointer;
   text-align: center;
+}
+
+.admin-offers-empty:has(.admin-offers-empty-lead) {
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
 }
 
 .admin-offers-empty:hover {
@@ -11426,12 +11436,13 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-offers-empty-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid rgba(212, 175, 55, 0.45);
-  background: rgba(11, 14, 20, 0.45);
+  background: rgba(8, 12, 17, 0.72);
   color: #d4af37;
+  flex-shrink: 0;
 }
 
 .admin-offers-empty-title {
@@ -11482,8 +11493,12 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   }
 
   .admin-offers-empty {
-    min-height: 132px;
-    margin-top: 16px;
+    margin-top: 12px;
+    padding: 8px 14px;
+  }
+
+  .admin-offers-empty:has(.admin-offers-empty-lead) {
+    padding: 11px 14px;
   }
 }
 
@@ -13197,7 +13212,7 @@ select.admin-pe-input {
 .admin-set .input,
 .admin-set .select,
 .admin-set .textarea {
-  background: rgba(8, 12, 17, 0.86);
+  background: var(--admin-inner-bg);
   border: 1px solid rgba(212, 175, 55, 0.22);
   color: #fff;
   color-scheme: dark;
@@ -13499,6 +13514,47 @@ select.admin-pe-input {
 
   .admin-set-period {
     grid-template-columns: max-content max-content 2rem;
+  }
+
+  /* Settings → Social Networks (desktop only) */
+  .admin-set .admin-card:has([id^="set-social-"]) {
+    width: fit-content;
+    max-width: min(100%, 36rem);
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    background: rgba(12, 17, 22, 0.72);
+    border-color: rgba(212, 175, 106, 0.24);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .admin-set .admin-card:has([id^="set-social-"]) > .grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.85rem;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .admin-set .admin-card:has([id^="set-social-"]) > .grid > div {
+    display: grid;
+    grid-template-columns: minmax(6.75rem, auto) 18.5rem;
+    align-items: center;
+    gap: 0.65rem 0.85rem;
+    width: 100%;
+  }
+
+  .admin-set .admin-card:has([id^="set-social-"]) .admin-set-label {
+    margin: 0;
+    justify-self: end;
+    text-align: right;
+  }
+
+  .admin-set .admin-card:has([id^="set-social-"]) .input {
+    width: 18.5rem;
+    max-width: 100%;
+    text-align: right;
+    direction: rtl;
   }
 }
 
