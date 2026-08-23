@@ -5717,16 +5717,10 @@ html[dir="rtl"] .catalogue-sort-select {
 .product-related-card,
 .promo-product-card,
 .frames-product-skeleton {
-  --catalog-frame-gold: #d4af37;
-  --catalog-frame-glow:
-    0 0 8px rgba(212, 175, 55, 0.75),
-    0 0 18px rgba(212, 175, 55, 0.35);
-  --catalog-frame-inner:
-    inset 0 1px 0 rgba(255, 235, 190, 0.14),
-    inset 0 0 0 1px rgba(212, 175, 55, 0.2);
-  --catalog-frame-glow-hover:
-    0 0 10px rgba(212, 175, 55, 0.82),
-    0 0 22px rgba(212, 175, 55, 0.42);
+  --catalog-frame-border: rgba(212, 175, 106, 0.55);
+  --catalog-frame-border-hover: rgba(212, 175, 106, 0.68);
+  --catalog-frame-glow: 0 0 8px rgba(212, 175, 106, 0.16);
+  --catalog-frame-glow-hover: 0 0 10px rgba(212, 175, 106, 0.22);
   --catalog-price-gold: #e8c56a;
 }
 
@@ -5737,9 +5731,9 @@ html[dir="rtl"] .catalogue-sort-select {
   min-width: 0;
   overflow: hidden;
   border-radius: var(--catalog-card-radius);
-  border: 3px solid var(--catalog-frame-gold);
+  border: 1px solid var(--catalog-frame-border);
   background: #0a0c0f;
-  box-shadow: var(--catalog-frame-glow), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow);
   transition:
     border-color 0.25s ease,
     transform 0.25s ease,
@@ -5748,9 +5742,9 @@ html[dir="rtl"] .catalogue-sort-select {
 
 .frames-product-card:hover,
 .frames-product-card:focus-within {
-  border-color: #dfc061;
+  border-color: var(--catalog-frame-border-hover);
   transform: translateY(-2px);
-  box-shadow: var(--catalog-frame-glow-hover), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow-hover);
 }
 
 .frames-product-media {
@@ -5847,11 +5841,11 @@ html[dir="rtl"] .catalogue-sort-select {
 .frames-product-skeleton {
   aspect-ratio: 1 / 1.35;
   border-radius: 14px;
-  border: 3px solid var(--catalog-frame-gold);
+  border: 1px solid var(--catalog-frame-border);
   background: linear-gradient(90deg, #0a0c0f 25%, #12161c 50%, #0a0c0f 75%);
   background-size: 200% 100%;
   animation: catalogue-shimmer 1.2s ease-in-out infinite;
-  box-shadow: var(--catalog-frame-glow), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow);
 }
 
 @keyframes catalogue-shimmer {
@@ -6406,9 +6400,9 @@ main.product-main {
   min-width: 0;
   overflow: hidden;
   border-radius: 14px;
-  border: 3px solid var(--catalog-frame-gold);
+  border: 1px solid var(--catalog-frame-border);
   background: #0a0c0f;
-  box-shadow: var(--catalog-frame-glow), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow);
   transition:
     border-color 0.25s ease,
     transform 0.25s ease,
@@ -6429,9 +6423,9 @@ main.product-main {
 
 .product-related-card:hover,
 .product-related-card:focus-within {
-  border-color: #dfc061;
+  border-color: var(--catalog-frame-border-hover);
   transform: translateY(-2px);
-  box-shadow: var(--catalog-frame-glow-hover), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow-hover);
 }
 
 .product-related-media {
@@ -9383,9 +9377,9 @@ a.store-filter-chip {
   gap: 0;
   overflow: hidden;
   border-radius: 14px;
-  border: 3px solid var(--catalog-frame-gold);
+  border: 1px solid var(--catalog-frame-border);
   background: #0a0c0f;
-  box-shadow: var(--catalog-frame-glow), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow);
   transition:
     border-color 0.25s ease,
     transform 0.25s ease,
@@ -9394,9 +9388,9 @@ a.store-filter-chip {
 
 .promo-product-card:hover,
 .promo-product-card:focus-within {
-  border-color: #dfc061;
+  border-color: var(--catalog-frame-border-hover);
   transform: translateY(-2px);
-  box-shadow: var(--catalog-frame-glow-hover), var(--catalog-frame-inner);
+  box-shadow: var(--catalog-frame-glow-hover);
 }
 
 @media (min-width: 768px) {
