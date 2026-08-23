@@ -396,8 +396,44 @@ p {
 /* ── Admin premium dark theme (scoped; public site unchanged) ── */
 html.admin-dark,
 html.admin-dark body {
-  background: #0b0f14 !important;
+  background-color: #070a10 !important;
   color: #f5f5f5;
+}
+
+html.admin-dark body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(128deg, rgba(212, 175, 55, 0.055) 0%, transparent 42%),
+    linear-gradient(308deg, rgba(212, 175, 106, 0.04) 0%, transparent 46%),
+    radial-gradient(78% 58% at 100% 0%, rgba(212, 175, 106, 0.09), transparent 58%),
+    radial-gradient(62% 48% at 0% 100%, rgba(20, 30, 48, 0.62), transparent 64%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.014) 0 1px,
+      transparent 1px 28px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.01) 0 1px,
+      transparent 1px 28px
+    ),
+    repeating-linear-gradient(
+      60deg,
+      transparent 0,
+      transparent 42px,
+      rgba(212, 175, 55, 0.012) 42px,
+      rgba(212, 175, 55, 0.012) 43px
+    ),
+    linear-gradient(180deg, #0a0f18 0%, #070a10 48%, #060910 100%);
+}
+
+html.admin-dark body > * {
+  position: relative;
+  z-index: 1;
 }
 
 .admin-shell,
@@ -477,9 +513,7 @@ html.admin-dark[lang="he"] .admin-auth {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(70% 45% at 0% 0%, rgba(212, 175, 106, 0.05), transparent 55%),
-    var(--admin-bg);
+  background: transparent;
   overflow-x: hidden;
 }
 
@@ -490,11 +524,7 @@ html.admin-dark[lang="he"] .admin-auth {
   align-items: center;
   justify-content: center;
   padding: 1.5rem 1rem;
-  background:
-    radial-gradient(80% 55% at 50% 0%, rgba(212, 175, 55, 0.16), transparent 58%),
-    radial-gradient(45% 40% at 100% 100%, rgba(26, 36, 54, 0.55), transparent 62%),
-    radial-gradient(40% 35% at 0% 85%, rgba(212, 175, 55, 0.06), transparent 55%),
-    #070a10;
+  background: transparent;
 }
 
 .admin-login-card {
@@ -676,6 +706,15 @@ html.admin-dark[lang="he"] .admin-auth {
   width: 100%;
   min-width: 0;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+}
+
+.admin-shell .admin-main,
+.admin-shell .admin-home,
+.admin-shell .admin-bookings-page,
+.admin-shell .admin-set,
+body.admin-home-active .admin-shell .admin-main {
+  background: transparent !important;
 }
 
 /* Dashboard home: full-bleed chrome (no desktop sidebar column) */
@@ -686,7 +725,7 @@ body.admin-home-active .admin-shell {
 body.admin-home-active .admin-main {
   padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
   min-height: 100dvh;
-  background: #0b0f14;
+  background: transparent !important;
 }
 
 /* ── Admin Home visual polish (mobile-first, desktop overrides) ── */
@@ -695,7 +734,7 @@ body.admin-home-active .admin-main {
   margin-inline: auto;
   margin-bottom: calc(-1.5rem - env(safe-area-inset-bottom, 0px));
   min-height: 100%;
-  background: #0b0f14;
+  background: transparent;
   padding-inline: 1rem;
   padding-top: 0.85rem;
   padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
@@ -975,7 +1014,7 @@ body.admin-home-active .admin-main {
   margin: -1.15rem;
   margin-bottom: calc(-1.5rem - env(safe-area-inset-bottom, 0px));
   min-height: 100%;
-  background: #0b0e14;
+  background: transparent;
   padding: 1rem;
   padding-bottom: calc(5.85rem + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
@@ -2972,6 +3011,20 @@ body.admin-home-active .admin-main {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
   color: var(--ink);
   padding: 1.35rem;
+}
+
+.admin-shell .admin-card {
+  background: linear-gradient(
+    180deg,
+    rgba(24, 32, 48, 0.78) 0%,
+    rgba(14, 18, 28, 0.86) 100%
+  );
+  border-color: rgba(212, 175, 55, 0.2);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .admin-shell .admin-card.p-4,
@@ -13121,6 +13174,10 @@ select.admin-pe-input {
   padding: 1.5rem 1.35rem;
 }
 
+.admin-bm-shell > * {
+  margin-top: 0;
+}
+
 .admin-bm-shell > .admin-section-title {
   width: 100%;
   margin: 0 0 0.25rem;
@@ -13157,19 +13214,17 @@ select.admin-pe-input {
 }
 
 .admin-bm-card-head {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: nowrap;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin: 0;
   direction: rtl;
   align-self: stretch;
   width: 100%;
-}
-
-.admin-bm-card-head:not(:has(.admin-bm-toggle)) {
-  justify-content: flex-start;
+  min-height: 2rem;
 }
 
 .admin-bm-card-head > .admin-bm-card-title {
@@ -13177,10 +13232,17 @@ select.admin-pe-input {
   min-width: 0;
 }
 
+.admin-bm-card-head:has(.admin-bm-toggle) > .admin-bm-card-title {
+  width: 100%;
+}
+
 .admin-bm-card-head > .admin-bm-toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   flex: 0 0 auto;
   direction: ltr;
-  margin-inline-end: 0;
 }
 
 .admin-bm-card-title {
@@ -13351,7 +13413,7 @@ select.admin-pe-input {
 .admin-bm-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
   direction: rtl;
   text-align: right;
   align-items: flex-end;
@@ -13365,8 +13427,8 @@ select.admin-pe-input {
   align-items: center;
   justify-content: flex-start;
   gap: 0.35rem;
-  width: auto;
-  max-width: 100%;
+  width: 100%;
+  max-width: 13.5rem;
   color: #a7adb5;
   font-size: 0.84rem;
   font-weight: 650;
