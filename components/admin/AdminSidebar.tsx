@@ -306,41 +306,52 @@ function MobileBottomNav({
   );
 }
 
-/** Desktop-only vertical rail — physical RIGHT side (dashboard home) */
-function DashboardDesktopRail({
+/** Desktop-only vertical rail — fixed physical RIGHT on all admin pages */
+function AdminDesktopRail({
+  role,
   onMore,
   moreOpen,
 }: {
+  role: UserRole;
   onMore: () => void;
   moreOpen: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
+  const { t } = useLocale();
+  const links = NAV.filter((item) => hasPermission(role, item.permission));
 
   return (
     <nav
-      className="admin-home-desktop-rail fixed top-0 bottom-0 z-40 hidden border-s md:flex md:flex-col"
+      className="admin-home-desktop-rail admin-desktop-rail fixed top-0 bottom-0 z-40 hidden border-s md:flex md:flex-col"
       style={{
         right: 0,
         width: RAIL_W,
         background: "rgba(11,15,20,0.97)",
         borderColor: BORDER,
         backdropFilter: "blur(14px)",
-        paddingTop: 18,
-        paddingBottom: 18,
+        paddingTop: 14,
+        paddingBottom: 14,
       }}
       aria-label="التنقل الجانبي"
     >
-      <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-1">
-        {BOTTOM_NAV.map((item) => {
-          const active = !moreOpen && item.match(pathname, tab);
+      <div className="admin-desktop-rail-scroll flex min-h-0 flex-1 flex-col items-center gap-1 px-1 py-1">
+        {links.map((item) => {
+          const active =
+            !moreOpen &&
+            (item.match
+              ? item.match(pathname, tab)
+              : item.exact
+                ? pathname === item.href
+                : pathname === item.href.split("?")[0] ||
+                  pathname.startsWith(`${item.href.split("?")[0]}/`));
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex w-full flex-col items-center justify-center gap-1.5 rounded-[14px] px-1 py-2.5 no-underline"
+              className="admin-desktop-rail-link flex w-full flex-col items-center justify-center gap-1 rounded-[14px] px-1 py-2 no-underline"
               style={
                 active
                   ? {
@@ -351,15 +362,15 @@ function DashboardDesktopRail({
               }
             >
               <Icon
-                size={22}
+                size={20}
                 strokeWidth={1.45}
                 color={active ? GOLD : "#C8CDD4"}
               />
               <span
-                className="text-center text-[0.58rem] font-semibold leading-tight"
+                className="admin-desktop-rail-label text-center font-semibold leading-tight"
                 style={{ color: active ? GOLD : "#C8CDD4" }}
               >
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </Link>
           );
@@ -367,7 +378,7 @@ function DashboardDesktopRail({
         <button
           type="button"
           onClick={onMore}
-          className="flex w-full flex-col items-center justify-center gap-1.5 rounded-[14px] px-1 py-2.5"
+          className="admin-desktop-rail-link flex w-full flex-col items-center justify-center gap-1 rounded-[14px] px-1 py-2"
           style={{
             background: moreOpen
               ? "radial-gradient(circle at 50% 35%, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.06) 55%, transparent 75%)"
@@ -377,12 +388,12 @@ function DashboardDesktopRail({
           }}
         >
           <MoreHorizontal
-            size={22}
+            size={20}
             strokeWidth={1.45}
             color={moreOpen ? GOLD : "#C8CDD4"}
           />
           <span
-            className="text-center text-[0.58rem] font-semibold leading-tight"
+            className="admin-desktop-rail-label text-center font-semibold leading-tight"
             style={{ color: moreOpen ? GOLD : "#C8CDD4" }}
           >
             المزيد
@@ -440,7 +451,7 @@ function AdminSidebarInner({
   }, []);
 
   return (
-    <div className={cn("relative z-40", useRailChrome ? "" : "md:contents")}>
+    <div className="relative z-40 md:contents">
       {!useRailChrome ? (
         <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[rgba(11,15,20,0.92)] px-4 py-3 backdrop-blur md:hidden">
           <BrandMark branding={branding} href="/admin" size="sm" />
@@ -466,26 +477,17 @@ function AdminSidebarInner({
         />
       )}
 
-      {!useRailChrome ? (
-        <div className="hidden h-full md:block">
-          <Suspense fallback={null}>
-            <SidebarNav role={role} />
-          </Suspense>
-        </div>
-      ) : null}
-
       <Suspense fallback={null}>
         <MobileBottomNav onMore={() => setOpen(true)} moreOpen={open} />
       </Suspense>
 
-      {useRailChrome ? (
-        <Suspense fallback={null}>
-          <DashboardDesktopRail
-            onMore={() => setOpen(true)}
-            moreOpen={open}
-          />
-        </Suspense>
-      ) : null}
+      <Suspense fallback={null}>
+        <AdminDesktopRail
+          role={role}
+          onMore={() => setOpen(true)}
+          moreOpen={open}
+        />
+      </Suspense>
 
       {open ? (
         <div className="fixed inset-0 z-50">

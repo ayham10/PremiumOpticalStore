@@ -11,38 +11,6 @@ type Props = {
   onDelete: () => void;
 };
 
-function ActionButtons({
-  canDelete,
-  onEdit,
-  onDelete,
-}: {
-  canDelete: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div className="admin-product-card-actions">
-      <button
-        type="button"
-        onClick={onEdit}
-        aria-label="تعديل"
-        className="admin-product-icon-btn"
-      >
-        <Pencil size={13} strokeWidth={1.6} />
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={!canDelete}
-        aria-label="حذف"
-        className="admin-product-icon-btn is-danger"
-      >
-        <Trash2 size={13} strokeWidth={1.6} />
-      </button>
-    </div>
-  );
-}
-
 export default function AdminProductCard({
   product,
   canDelete,
@@ -73,6 +41,23 @@ export default function AdminProductCard({
             <span className="admin-product-card-badge-inline">نشط</span>
           ) : null}
         </div>
+
+        <div className="admin-product-card-stats">
+          <div className="admin-product-card-stat admin-product-card-stat--stock">
+            <span className="admin-product-card-stat-label">المخزون</span>
+            <span className="admin-product-card-stat-value">
+              {product.stockQuantity}
+            </span>
+          </div>
+          <div className="admin-product-card-stat-divider" aria-hidden="true" />
+          <div className="admin-product-card-stat admin-product-card-stat--price">
+            <span className="admin-product-card-stat-label">السعر</span>
+            <span className="admin-product-card-stat-value admin-product-card-price">
+              {formatPrice(product.sellingPrice)}
+            </span>
+          </div>
+        </div>
+
         <div className="admin-product-card-footer">
           <div className="admin-product-card-meta">
             <p className="admin-product-card-price">
@@ -82,11 +67,27 @@ export default function AdminProductCard({
               المخزون: {product.stockQuantity}
             </p>
           </div>
-          <ActionButtons
-            canDelete={canDelete}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
+          <div className="admin-product-card-actions">
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label="تعديل"
+              className="admin-product-icon-btn admin-product-action is-edit"
+            >
+              <Pencil size={13} strokeWidth={1.6} />
+              <span className="admin-product-action-label">تعديل</span>
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={!canDelete}
+              aria-label="حذف"
+              className="admin-product-icon-btn is-danger admin-product-action is-delete"
+            >
+              <Trash2 size={13} strokeWidth={1.6} />
+              <span className="admin-product-action-label">حذف</span>
+            </button>
+          </div>
         </div>
       </div>
     </article>
