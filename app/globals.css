@@ -9795,49 +9795,72 @@ button.promo-card {
     border-radius: 0 0 14px 14px;
   }
 
-  .promo-page .promo-hero-copy {
+  .promo-page .promo-slide-hero .promo-hero-copy,
+  .promo-page .promo-slide-hero .promo-hero-copy.wrap {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    left: auto;
+    right: 0;
+    width: auto;
+    max-width: min(74%, 18rem);
+    margin-inline: 0;
+    margin-inline-start: auto;
     padding: 0.72rem 1rem 0.82rem;
-    text-align: start;
+    direction: rtl;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
   }
 
   .promo-page .promo-hero-eyebrow {
     margin: 0;
+    width: 100%;
     color: var(--promo-champagne);
     font-size: 0.68rem;
     font-weight: 650;
     letter-spacing: 0.02em;
     line-height: 1.2;
+    text-align: right;
   }
 
   .promo-page .promo-hero-title {
     margin: 0.42rem 0 0;
+    width: 100%;
     color: var(--promo-champagne);
     font-size: clamp(2.25rem, 9.5vw, 2.5rem);
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.02em;
+    text-align: right;
   }
 
   .promo-page .promo-hero-lead {
     margin: 0.5rem 0 0;
     max-width: none;
+    width: 100%;
     color: rgba(255, 255, 255, 0.92);
     font-size: 0.875rem;
     font-weight: 550;
     line-height: 1.35;
+    text-align: right;
   }
 
   .promo-page .promo-slide-desc {
     margin: 0.5rem 0 0;
     max-width: none;
+    width: 100%;
     color: rgba(255, 255, 255, 0.78);
     font-size: 0.84rem;
     line-height: 1.45;
+    text-align: right;
     -webkit-line-clamp: 3;
   }
 
   .promo-page .promo-slide-code {
     margin: 0.55rem 0 0;
+    width: 100%;
+    text-align: right;
     font-size: 0;
     line-height: 0;
     color: transparent;
@@ -9857,10 +9880,14 @@ button.promo-card {
     font-weight: 700;
     letter-spacing: 0.06em;
     line-height: 1;
+    margin-inline-start: auto;
   }
 
   .promo-page .promo-slide-until,
   .promo-page .promo-card-until.promo-slide-until {
+    align-self: flex-end;
+    justify-content: flex-end;
+    width: 100%;
     margin: 0.5rem 0 0;
     gap: 0.3rem;
     color: rgba(255, 255, 255, 0.62);
@@ -10009,7 +10036,6 @@ button.promo-card {
     font-weight: 800;
   }
 
-  html[dir="rtl"] .promo-page .promo-hero-copy,
   html[dir="rtl"] .promo-page .promo-product-name {
     text-align: start;
   }
