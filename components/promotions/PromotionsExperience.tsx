@@ -394,7 +394,14 @@ function PromoProductCard({
           />
         </Link>
         {hasDiscount ? (
-          <span className="promo-product-discount-badge">{badge}</span>
+          <span className="promo-product-discount-badge" aria-label={badge}>
+            <span className="promo-product-discount-badge-kicker">
+              {t("offersPage.offBadge")}
+            </span>
+            <span className="promo-product-discount-badge-value">
+              {badge.replace(/^-/, "")}
+            </span>
+          </span>
         ) : null}
       </div>
       <Link href={`/product/${product.slug}`} className="promo-product-name">

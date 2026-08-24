@@ -9749,12 +9749,270 @@ html[dir="rtl"] .promo-product-name {
   border: 1px solid rgba(212, 175, 106, 0.45);
 }
 
+.promo-product-discount-badge-kicker {
+  display: none;
+}
+
+.promo-product-discount-badge-value {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+@media (min-width: 768px) {
+  .promo-product-discount-badge {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    gap: 0;
+    border-radius: 999px;
+    background: rgba(11, 15, 20, 0.82);
+    box-shadow: none;
+  }
+}
+
 button.promo-card {
   appearance: none;
   font: inherit;
   color: inherit;
   text-align: start;
   cursor: pointer;
+}
+
+/* ========== Promotions page — mobile offer details polish ========== */
+@media (max-width: 767px) {
+  .promo-page {
+    --promo-champagne: #e7b85c;
+    --promo-champagne-soft: rgba(231, 184, 92, 0.42);
+    --promo-champagne-glow: rgba(231, 184, 92, 0.14);
+  }
+
+  .promo-page .promo-slide-hero {
+    border-radius: 0 0 14px 14px;
+  }
+
+  .promo-page .promo-hero-copy {
+    padding: 0.72rem 1rem 0.82rem;
+    text-align: start;
+  }
+
+  .promo-page .promo-hero-eyebrow {
+    margin: 0;
+    color: var(--promo-champagne);
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  .promo-page .promo-hero-title {
+    margin: 0.42rem 0 0;
+    color: var(--promo-champagne);
+    font-size: clamp(2.25rem, 9.5vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .promo-page .promo-hero-lead {
+    margin: 0.5rem 0 0;
+    max-width: none;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.875rem;
+    font-weight: 550;
+    line-height: 1.35;
+  }
+
+  .promo-page .promo-slide-desc {
+    margin: 0.5rem 0 0;
+    max-width: none;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.84rem;
+    line-height: 1.45;
+    -webkit-line-clamp: 3;
+  }
+
+  .promo-page .promo-slide-code {
+    margin: 0.55rem 0 0;
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+  }
+
+  .promo-page .promo-slide-code strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    border: 1px solid rgba(231, 184, 92, 0.58);
+    background: rgba(11, 15, 20, 0.55);
+    color: var(--promo-champagne);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+  }
+
+  .promo-page .promo-slide-until,
+  .promo-page .promo-card-until.promo-slide-until {
+    margin: 0.5rem 0 0;
+    gap: 0.3rem;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .promo-page .promo-slide-until svg,
+  .promo-page .promo-card-until.promo-slide-until svg {
+    width: 12px;
+    height: 12px;
+    color: var(--promo-champagne);
+    flex-shrink: 0;
+  }
+
+  .promo-page .promo-products-section {
+    padding-top: 1.35rem;
+  }
+
+  .promo-page .promo-section-head {
+    gap: 0.65rem;
+    margin-top: 1.15rem;
+    margin-bottom: 1.15rem;
+  }
+
+  .promo-page .promo-section-head h2 {
+    font-size: 1.02rem;
+    font-weight: 700;
+  }
+
+  .promo-page .promo-section-rule {
+    width: min(3.25rem, 14vw);
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(231, 184, 92, 0.55),
+      transparent
+    );
+  }
+
+  .promo-page .promo-product-card {
+    width: min(42vw, 180px);
+    border-radius: 12px;
+    border: 1.75px solid rgba(231, 184, 92, 0.62);
+    background: #0a0c0f;
+    box-shadow:
+      0 0 0 1px rgba(231, 184, 92, 0.08),
+      0 6px 16px rgba(0, 0, 0, 0.28),
+      0 0 14px var(--promo-champagne-glow);
+  }
+
+  .promo-page .promo-product-card:hover,
+  .promo-page .promo-product-card:focus-within {
+    border-color: rgba(231, 184, 92, 0.72);
+    box-shadow:
+      0 0 0 1px rgba(231, 184, 92, 0.1),
+      0 8px 18px rgba(0, 0, 0, 0.32),
+      0 0 16px rgba(231, 184, 92, 0.18);
+    transform: none;
+  }
+
+  .promo-page .promo-product-media {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .promo-page .promo-product-discount-badge {
+    top: 0;
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.08rem;
+    width: 52px;
+    min-width: 52px;
+    height: 40px;
+    padding: 0.2rem 0.35rem 0.24rem;
+    border: none;
+    border-radius: 0 12px 0 18px;
+    background: linear-gradient(
+      145deg,
+      #efd38a 0%,
+      #e7b85c 52%,
+      #c8943f 100%
+    );
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    color: #fff;
+    letter-spacing: 0;
+  }
+
+  .promo-page .promo-product-discount-badge-kicker {
+    display: block;
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 650;
+    line-height: 1.05;
+  }
+
+  .promo-page .promo-product-discount-badge-value {
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .promo-page .promo-product-name {
+    padding: 0.5rem 0.55rem 0;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 650;
+    line-height: 1.3;
+    background: #07090c;
+  }
+
+  .promo-page .promo-product-prices {
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 0.12rem;
+    padding: 0.12rem 0.55rem 0.62rem;
+    background: #07090c;
+    border-top: none;
+  }
+
+  .promo-page .promo-product-price-now {
+    order: 1;
+    color: var(--promo-champagne);
+    font-size: 1.06rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .promo-page .promo-product-price-was {
+    order: 2;
+    color: #8a9199;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+
+  .promo-page .promo-product-price {
+    color: var(--promo-champagne);
+    font-size: 1.06rem;
+    font-weight: 800;
+  }
+
+  html[dir="rtl"] .promo-page .promo-hero-copy,
+  html[dir="rtl"] .promo-page .promo-product-name {
+    text-align: start;
+  }
 }
 
 /* ========== Admin Working Hours (availability) panel ========== */
