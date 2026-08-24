@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { newId } from "@/lib/auth";
 import {
   handleRouteError,
@@ -230,7 +230,9 @@ export async function POST(request: Request) {
 
     const saved = savedAppointment;
 
-    void dispatchBookingMessages(saved);
+    after(async () => {
+      await dispatchBookingMessages(saved);
+    });
 
     return NextResponse.json(
       {

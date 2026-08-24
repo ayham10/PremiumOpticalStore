@@ -15,6 +15,8 @@ import {
   type WhatsAppSendResult,
 } from "@/lib/whatsapp/provider";
 
+const CUSTOMER_CONFIRMATION_TEMPLATE = "oyon_booking_confirmation";
+
 function buildCustomerConfirmationContentVariables(
   appointment: EyeExamAppointment,
 ): Record<string, string> {
@@ -174,13 +176,10 @@ export async function dispatchBookingMessages(
     const customerConfirmationVariables =
       buildCustomerConfirmationContentVariables(appointment);
 
-    if (
-      bookingMessages.customerConfirmation.enabled &&
-      bookingMessages.customerConfirmation.templateName.trim()
-    ) {
+    if (bookingMessages.customerConfirmation.enabled) {
       await sendConfiguredTemplate(appointment, {
         to: appointment.phone,
-        templateName: bookingMessages.customerConfirmation.templateName.trim(),
+        templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
         contentVariables: customerConfirmationVariables,
         kind: "customer_confirmation",
         smsType: "appointment_confirmation",
