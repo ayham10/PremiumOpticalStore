@@ -31,6 +31,27 @@ function buildCustomerConfirmationContentVariables(
   };
 }
 
+function buildOwnerNotificationContentVariables(
+  appointment: EyeExamAppointment,
+  serviceLabel: string,
+): Record<string, string> {
+  const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();
+  const dateLabel = formatEyeExamDateDisplay(appointment.appointmentDate);
+
+  return {
+    "1": customerName,
+    "2": dateLabel,
+    "3": appointment.appointmentTime,
+    "4": appointment.phone,
+    "5": serviceLabel,
+    customer_name: customerName,
+    appointment_date: dateLabel,
+    appointment_time: appointment.appointmentTime,
+    customer_phone: appointment.phone,
+    service_name: serviceLabel,
+  };
+}
+
 function buildBookingContentVariables(
   appointment: EyeExamAppointment,
   serviceLabel: string,
@@ -255,6 +276,10 @@ export async function dispatchBookingMessages(
       store.bookingServices || [],
     );
     const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
+    const ownerContentVariables = buildOwnerNotificationContentVariables(
+      appointment,
+      serviceLabel,
+    );
     const customerConfirmationVariables =
       buildCustomerConfirmationContentVariables(appointment);
 
@@ -278,7 +303,7 @@ export async function dispatchBookingMessages(
       await sendConfiguredTemplate(appointment, {
         to: ownerWhatsApp,
         templateName: bookingMessages.ownerNotification.templateName.trim(),
-        contentVariables,
+        contentVariables: ownerContentVariables,
         kind: "owner_notification",
         smsType: "custom",
         note: "owner",
