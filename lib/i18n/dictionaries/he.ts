@@ -1114,10 +1114,10 @@ const he: Dictionary = {
       bmBookingRules: "כללי הזמנה",
       bmProvider: "ספק הודעות",
       bmProviderConsole: "מצב פיתוח (Console)",
-      bmProviderMeta: "Meta WhatsApp Cloud API",
+      bmProviderMeta: "META API",
       bmProviderHint:
-        "פרטי Meta WhatsApp מוגדרים בשרת בלבד — לא מוצגים כאן.",
-      bmMetaTest: "בדיקת חיבור Meta",
+        "פרטי Meta WhatsApp Cloud API מוגדרים בשרת בלבד — לא מוצגים כאן.",
+      bmMetaTest: "Test Meta Connection",
       bmMetaTesting: "בודק…",
       bmMetaTestSuccess: "החיבור ל-Meta WhatsApp Cloud API הצליח.",
       bmMetaTestError: "בדיקת חיבור Meta נכשלה.",

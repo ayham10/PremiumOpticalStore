@@ -1472,9 +1472,9 @@ const en: Dictionary = {
       bmBookingRules: "Booking rules",
       bmProvider: "Message provider",
       bmProviderConsole: "Console (dev)",
-      bmProviderMeta: "Meta WhatsApp Cloud API",
+      bmProviderMeta: "META API",
       bmProviderHint:
-        "Meta WhatsApp credentials are configured on the server only — never shown here.",
+        "Meta WhatsApp Cloud API credentials are configured on the server only — never shown here.",
       bmMetaTest: "Test Meta Connection",
       bmMetaTesting: "Testing…",
       bmMetaTestSuccess: "Meta WhatsApp Cloud API connected.",

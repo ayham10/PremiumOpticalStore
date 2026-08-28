@@ -100,6 +100,10 @@ export default function BookingMessagesSettingsSection({
     message: string;
   } | null>(null);
 
+  const resolvedProvider =
+    value.provider === "twilio" ? "meta" : value.provider;
+  const isMetaProvider = resolvedProvider === "meta";
+
   async function testMetaConnection() {
     setTesting(true);
     setTestResult(null);
@@ -142,13 +146,14 @@ export default function BookingMessagesSettingsSection({
         <div className="admin-bm-provider-row">
           <select
             className="select admin-bm-select"
-            value={value.provider}
-            onChange={(e) =>
+            value={resolvedProvider}
+            onChange={(e) => {
+              setTestResult(null);
               onChange({
                 ...value,
                 provider: e.target.value as BookingMessagesSettings["provider"],
-              })
-            }
+              });
+            }}
           >
             <option value="meta">{t("admin.settings.bmProviderMeta")}</option>
             <option value="console">{t("admin.settings.bmProviderConsole")}</option>
@@ -157,7 +162,7 @@ export default function BookingMessagesSettingsSection({
             type="button"
             className="btn btn-ghost admin-bm-test-btn"
             onClick={() => void testMetaConnection()}
-            disabled={testing || value.provider !== "meta"}
+            disabled={testing || !isMetaProvider}
           >
             <Zap size={14} strokeWidth={1.75} aria-hidden />
             {testing ? t("admin.settings.bmMetaTesting") : t("admin.settings.bmMetaTest")}
@@ -171,7 +176,9 @@ export default function BookingMessagesSettingsSection({
             {testResult.message}
           </p>
         ) : null}
-        <p className="admin-bm-hint">{t("admin.settings.bmProviderHint")}</p>
+        <p className="admin-bm-hint">
+          {isMetaProvider ? t("admin.settings.bmProviderHint") : null}
+        </p>
       </section>
 
       <section className="admin-bm-card">
