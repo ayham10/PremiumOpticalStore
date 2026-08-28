@@ -2,11 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "next build",
-  "installCommand": "npm install",
-  "crons": [
-    {
-      "path": "/api/cron/whatsapp-reminders",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  "installCommand": "npm install"
 }
