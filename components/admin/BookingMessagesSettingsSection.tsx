@@ -100,30 +100,30 @@ export default function BookingMessagesSettingsSection({
     message: string;
   } | null>(null);
 
-  async function testTwilio() {
+  async function testMetaConnection() {
     setTesting(true);
     setTestResult(null);
     try {
       const data = await apiFetch<{ ok: boolean; message?: string; error?: string }>(
-        "/api/settings/test-twilio",
+        "/api/settings/test-meta",
         { method: "POST" },
       );
       if (data.ok) {
         setTestResult({
           ok: true,
-          message: data.message || t("admin.settings.bmTwilioTestSuccess"),
+          message: data.message || t("admin.settings.bmMetaTestSuccess"),
         });
       } else {
         setTestResult({
           ok: false,
-          message: data.error || t("admin.settings.bmTwilioTestError"),
+          message: data.error || t("admin.settings.bmMetaTestError"),
         });
       }
     } catch (err) {
       setTestResult({
         ok: false,
         message:
-          err instanceof Error ? err.message : t("admin.settings.bmTwilioTestError"),
+          err instanceof Error ? err.message : t("admin.settings.bmMetaTestError"),
       });
     } finally {
       setTesting(false);
@@ -150,18 +150,17 @@ export default function BookingMessagesSettingsSection({
               })
             }
           >
-            <option value="twilio">Twilio</option>
-            <option value="meta">Meta WhatsApp Cloud</option>
+            <option value="meta">{t("admin.settings.bmProviderMeta")}</option>
             <option value="console">{t("admin.settings.bmProviderConsole")}</option>
           </select>
           <button
             type="button"
             className="btn btn-ghost admin-bm-test-btn"
-            onClick={() => void testTwilio()}
-            disabled={testing || value.provider !== "twilio"}
+            onClick={() => void testMetaConnection()}
+            disabled={testing || value.provider !== "meta"}
           >
             <Zap size={14} strokeWidth={1.75} aria-hidden />
-            {testing ? t("admin.settings.bmTwilioTesting") : t("admin.settings.bmTwilioTest")}
+            {testing ? t("admin.settings.bmMetaTesting") : t("admin.settings.bmMetaTest")}
           </button>
         </div>
         {testResult ? (

@@ -1,16 +1,9 @@
 import { normalizeIsraeliPhone } from "@/lib/eye-exam";
-import { resolveTwilioContentSid } from "@/lib/twilio/content-sids";
-import {
-  getTwilioConfig,
-  isTwilioWhatsAppConfigured,
-  normalizeWhatsAppAddress,
-  twilioBasicAuth,
-  type TwilioConfig,
-} from "@/lib/twilio/config";
+import { serverEnv } from "@/lib/twilio/config";
 
 export type WhatsAppSendResult = {
   ok: boolean;
-  provider: "twilio";
+  provider: "meta";
   status: "sent" | "failed" | "skipped" | "queued";
   error?: string;
   externalId?: string;
@@ -22,156 +15,164 @@ export type WhatsAppTemplateMessage = {
   to: string;
   templateName: string;
   contentVariables?: Record<string, string>;
+  languageCode?: string;
   sendAt?: Date;
 };
 
-const TWILIO_MIN_SCHEDULE_LEAD_MS = 15 * 60 * 1000;
-const TWILIO_MAX_SCHEDULE_DAYS = 35;
+const GRAPH_API_VERSION = serverEnv("WHATSAPP_GRAPH_API_VERSION") || "v26.0";
 
-/** Normalize Israeli numbers to `whatsapp:+972...` for Twilio. */
-export function formatPhoneForWhatsAppTwilio(input: string): string | null {
-  const normalized = normalizeIsraeliPhone(input);
+export type MetaWhatsAppConfig = {
+  accessToken: string;
+  phoneNumberId: string;
+  wabaId: string;
+  templateLanguage: string;
+};
+
+/** Meta expects international digits only, e.g. 972501234567 (no +). */
+export function formatPhoneForWhatsAppMeta(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const digitsOnly = trimmed.replace(/\D/g, "");
+  if (/^9725\d{8}$/.test(digitsOnly)) return digitsOnly;
+
+  const normalized = normalizeIsraeliPhone(trimmed);
   if (!normalized) return null;
-  return normalizeWhatsAppAddress(normalized);
+
+  const metaDigits = normalized.replace(/^\+/, "");
+  return /^9725\d{8}$/.test(metaDigits) ? metaDigits : null;
 }
 
 export function sanitizeWhatsAppError(detail: string): string {
   return detail
-    .replace(/Basic\s+[A-Za-z0-9+/=]+/gi, "Basic [redacted]")
     .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
-    .replace(/AC[a-z0-9]{32}/gi, "AC[redacted]")
-    .replace(/SK[a-z0-9]{32}/gi, "SK[redacted]")
-    .replace(/auth[_-]?token[=:]\S+/gi, "auth_token=[redacted]")
+    .replace(/access_token[=:]\S+/gi, "access_token=[redacted]")
+    .replace(/"access_token"\s*:\s*"[^"]+"/gi, '"access_token":"[redacted]"')
     .slice(0, 500);
 }
 
-function parseTwilioError(raw: string): string {
-  if (!raw) return "";
-  try {
-    const json = JSON.parse(raw) as { message?: string; more_info?: string };
-    return json.message || json.more_info || raw;
-  } catch {
-    return raw;
+export function getMetaWhatsAppConfig(): MetaWhatsAppConfig {
+  return {
+    accessToken: serverEnv("WHATSAPP_ACCESS_TOKEN"),
+    phoneNumberId: serverEnv("WHATSAPP_PHONE_NUMBER_ID"),
+    wabaId: serverEnv("WHATSAPP_BUSINESS_ACCOUNT_ID"),
+    templateLanguage: serverEnv("WHATSAPP_TEMPLATE_LANGUAGE") || "en_US",
+  };
+}
+
+export function isWhatsAppConfigured(): boolean {
+  const { accessToken, phoneNumberId } = getMetaWhatsAppConfig();
+  return Boolean(accessToken && phoneNumberId);
+}
+
+export function metaGraphUrl(path: string): string {
+  const normalized = path.startsWith("/") ? path.slice(1) : path;
+  return `https://graph.facebook.com/${GRAPH_API_VERSION}/${normalized}`;
+}
+
+function contentVariablesToBodyParameters(
+  variables?: Record<string, string>,
+): string[] | undefined {
+  if (!variables || !Object.keys(variables).length) return undefined;
+
+  const numericKeys = Object.keys(variables)
+    .filter((key) => /^\d+$/.test(key))
+    .sort((a, b) => Number(a) - Number(b));
+
+  if (numericKeys.length) {
+    const values = numericKeys
+      .map((key) => variables[key]?.trim() ?? "")
+      .filter(Boolean);
+    return values.length ? values : undefined;
   }
-}
 
-function canScheduleAt(sendAt: Date, now = new Date()): boolean {
-  const min = now.getTime() + TWILIO_MIN_SCHEDULE_LEAD_MS;
-  const max =
-    now.getTime() + TWILIO_MAX_SCHEDULE_DAYS * 24 * 60 * 60 * 1000;
-  const ts = sendAt.getTime();
-  return ts >= min && ts <= max;
+  const values = Object.values(variables)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return values.length ? values : undefined;
 }
-
-export { isTwilioWhatsAppConfigured as isWhatsAppConfigured };
 
 export async function sendWhatsAppTemplate(
   message: WhatsAppTemplateMessage,
 ): Promise<WhatsAppSendResult> {
-  const config = getTwilioConfig();
-  const to = formatPhoneForWhatsAppTwilio(message.to);
+  const config = getMetaWhatsAppConfig();
+  const to = formatPhoneForWhatsAppMeta(message.to);
   const templateName = message.templateName.trim();
 
   if (!to) {
     return {
       ok: false,
-      provider: "twilio",
+      provider: "meta",
       status: "failed",
       error: "Invalid recipient phone number for WhatsApp",
       templateName,
     };
   }
 
-  if (!config) {
+  if (!config.accessToken || !config.phoneNumberId) {
     return {
       ok: false,
-      provider: "twilio",
+      provider: "meta",
       status: "skipped",
-      error: "Twilio WhatsApp credentials are not configured",
+      error: "Meta WhatsApp credentials are not configured",
       templateName,
     };
   }
 
-  const contentSid = resolveTwilioContentSid(templateName);
-  if (!contentSid) {
+  if (message.sendAt && message.sendAt.getTime() > Date.now() + 60_000) {
     return {
-      ok: false,
-      provider: "twilio",
-      status: "failed",
-      error: `No Twilio Content SID mapped for template "${templateName}"`,
+      ok: true,
+      provider: "meta",
+      status: "queued",
       templateName,
+      scheduledFor: message.sendAt.toISOString(),
     };
   }
 
-  const params = new URLSearchParams({
-    From: config.whatsappFrom,
-    To: to,
-    ContentSid: contentSid,
-  });
+  const template: Record<string, unknown> = {
+    name: templateName,
+    language: {
+      code: message.languageCode || config.templateLanguage,
+    },
+  };
 
-  if (message.contentVariables && Object.keys(message.contentVariables).length) {
-    params.set("ContentVariables", JSON.stringify(message.contentVariables));
+  const bodyParameters = contentVariablesToBodyParameters(message.contentVariables);
+  if (bodyParameters?.length) {
+    template.components = [
+      {
+        type: "body",
+        parameters: bodyParameters.map((text) => ({
+          type: "text",
+          text,
+        })),
+      },
+    ];
   }
 
-  let scheduledFor: string | undefined;
-  if (message.sendAt) {
-    if (!canScheduleAt(message.sendAt)) {
-      return {
-        ok: false,
-        provider: "twilio",
-        status: "skipped",
-        error: "Reminder send time is outside Twilio scheduling window",
-        templateName,
-        scheduledFor: message.sendAt.toISOString(),
-      };
-    }
-    scheduledFor = message.sendAt.toISOString();
-    params.set("ScheduleType", "fixed");
-    params.set("SendAt", scheduledFor);
-  }
-
-  return postTwilioWhatsAppMessage(config, params, {
-    templateName,
-    scheduledFor,
-  });
-}
-
-async function postTwilioWhatsAppMessage(
-  config: TwilioConfig,
-  params: URLSearchParams,
-  meta: { templateName: string; scheduledFor?: string },
-): Promise<WhatsAppSendResult> {
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
-    config.accountSid,
-  )}/Messages.json`;
+  const url = metaGraphUrl(`${config.phoneNumberId}/messages`);
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${twilioBasicAuth(config)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${config.accessToken}`,
+        "Content-Type": "application/json",
       },
-      body: params,
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "template",
+        template,
+      }),
       cache: "no-store",
     });
 
     const raw = await response.text().catch(() => "");
-    if (!response.ok) {
-      const detail = sanitizeWhatsAppError(
-        parseTwilioError(raw) || `Twilio WhatsApp API error ${response.status}`,
-      );
-      return {
-        ok: false,
-        provider: "twilio",
-        status: "failed",
-        error: detail,
-        templateName: meta.templateName,
-        scheduledFor: meta.scheduledFor,
-      };
-    }
-
-    let json: { sid?: string; status?: string } = {};
+    let json: {
+      messages?: Array<{ id?: string }>;
+      error?: { message?: string };
+    } = {};
     if (raw) {
       try {
         json = JSON.parse(raw) as typeof json;
@@ -180,28 +181,40 @@ async function postTwilioWhatsAppMessage(
       }
     }
 
-    const queued =
-      meta.scheduledFor != null || json.status === "scheduled" || json.status === "queued";
+    if (!response.ok) {
+      const detail =
+        json.error?.message ||
+        sanitizeWhatsAppError(raw) ||
+        `Meta WhatsApp API error ${response.status}`;
+      return {
+        ok: false,
+        provider: "meta",
+        status: "failed",
+        error: detail,
+        templateName,
+        scheduledFor: message.sendAt?.toISOString(),
+      };
+    }
 
     return {
       ok: true,
-      provider: "twilio",
-      status: queued ? "queued" : "sent",
-      externalId: json.sid,
-      templateName: meta.templateName,
-      scheduledFor: meta.scheduledFor,
+      provider: "meta",
+      status: "sent",
+      externalId: json.messages?.[0]?.id,
+      templateName,
+      scheduledFor: message.sendAt?.toISOString(),
     };
   } catch (error) {
     return {
       ok: false,
-      provider: "twilio",
+      provider: "meta",
       status: "failed",
       error:
         error instanceof Error
           ? sanitizeWhatsAppError(error.message)
           : "WhatsApp send failed",
-      templateName: meta.templateName,
-      scheduledFor: meta.scheduledFor,
+      templateName,
+      scheduledFor: message.sendAt?.toISOString(),
     };
   }
 }
@@ -214,7 +227,7 @@ export function logWhatsAppBookingResult(
     kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
   },
 ): void {
-  const recipient = formatPhoneForWhatsAppTwilio(opts.to) || "[invalid]";
+  const recipient = formatPhoneForWhatsAppMeta(opts.to) || "[invalid]";
   const base = {
     appointmentId: opts.appointmentId,
     to: recipient,

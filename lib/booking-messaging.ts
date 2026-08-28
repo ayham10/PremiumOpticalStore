@@ -7,7 +7,7 @@ import {
   jerusalemWallClockToUtc,
 } from "@/lib/eye-exam";
 import type { SmsResult } from "@/lib/sms/provider";
-import type { EyeExamAppointment } from "@/lib/types";
+import type { AppData, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 import {
   logWhatsAppBookingResult,
@@ -15,7 +15,10 @@ import {
   type WhatsAppSendResult,
 } from "@/lib/whatsapp/provider";
 
-const CUSTOMER_CONFIRMATION_TEMPLATE = "oyon_booking_confirmation";
+const CUSTOMER_CONFIRMATION_TEMPLATE =
+  "oyon_booking_confirmation_hx716fcfd9ac41ae0e332e569b9b4fbc39";
+
+const REMINDER_GRACE_MS = 30 * 60 * 1000;
 
 function buildCustomerConfirmationContentVariables(
   appointment: EyeExamAppointment,
@@ -78,6 +81,28 @@ function toSmsResult(result: WhatsAppSendResult): SmsResult {
   };
 }
 
+function reminderAlreadySent(store: AppData, appointmentId: string): boolean {
+  return store.smsLogs.some(
+    (log) =>
+      log.appointmentId === appointmentId &&
+      log.type === "appointment_reminder" &&
+      log.status === "sent",
+  );
+}
+
+function computeReminderSendAt(
+  appointment: EyeExamAppointment,
+  hoursBefore: number,
+): Date | null {
+  const appointmentStart = jerusalemWallClockToUtc(
+    appointment.appointmentDate,
+    appointment.appointmentTime,
+  );
+  if (!appointmentStart) return null;
+
+  return new Date(appointmentStart.getTime() - hoursBefore * 60 * 60 * 1000);
+}
+
 async function logWhatsAppAttempt(
   appointment: EyeExamAppointment,
   opts: {
@@ -117,6 +142,7 @@ async function sendConfiguredTemplate(
     smsType: "appointment_confirmation" | "appointment_reminder" | "custom";
     sendAt?: Date;
     note?: string;
+    logDeferredReminder?: boolean;
   },
 ): Promise<void> {
   const result = await sendWhatsAppTemplate({
@@ -132,6 +158,10 @@ async function sendConfiguredTemplate(
     kind: opts.kind,
   });
 
+  if (result.status === "queued" && opts.sendAt && !opts.logDeferredReminder) {
+    return;
+  }
+
   await logWhatsAppAttempt(appointment, {
     to: opts.to,
     type: opts.smsType,
@@ -141,8 +171,60 @@ async function sendConfiguredTemplate(
   });
 }
 
+async function sendAppointmentReminder(
+  appointment: EyeExamAppointment,
+  store: AppData,
+  bookingMessages: ReturnType<typeof mergeBookingMessages>,
+): Promise<boolean> {
+  const reminderTemplate = bookingMessages.appointmentReminder.templateName.trim();
+  if (!reminderTemplate || reminderAlreadySent(store, appointment.id)) {
+    return false;
+  }
+
+  const hoursBefore = Math.max(
+    1,
+    Math.min(168, bookingMessages.appointmentReminder.hoursBefore || 24),
+  );
+  const sendAt = computeReminderSendAt(appointment, hoursBefore);
+  if (!sendAt) {
+    console.error("[WhatsApp] reminder skipped — invalid appointment time", {
+      appointmentId: appointment.id,
+      date: appointment.appointmentDate,
+      time: appointment.appointmentTime,
+    });
+    return false;
+  }
+
+  const now = Date.now();
+  if (sendAt.getTime() > now + 60_000) {
+    return false;
+  }
+  if (sendAt.getTime() + REMINDER_GRACE_MS < now) {
+    return false;
+  }
+
+  const serviceLabel = resolveServiceLabel(
+    appointment,
+    store.bookingServices || [],
+  );
+  const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
+
+  await sendConfiguredTemplate(appointment, {
+    to: appointment.phone,
+    templateName: reminderTemplate,
+    contentVariables,
+    kind: "appointment_reminder",
+    smsType: "appointment_reminder",
+    sendAt,
+    note: `${hoursBefore}h before`,
+    logDeferredReminder: true,
+  });
+
+  return true;
+}
+
 /**
- * Dispatch Twilio WhatsApp messages after a booking is saved.
+ * Dispatch Meta WhatsApp messages after a booking is saved.
  * Never throws — messaging failures must not affect the booking.
  */
 export async function dispatchBookingMessages(
@@ -154,13 +236,13 @@ export async function dispatchBookingMessages(
     const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
 
     if (bookingMessages.provider === "console") {
-      console.info("[WhatsApp] console provider — skipping Twilio send", {
+      console.info("[WhatsApp] console provider — skipping send", {
         appointmentId: appointment.id,
       });
       return;
     }
 
-    if (bookingMessages.provider !== "twilio") {
+    if (bookingMessages.provider !== "meta") {
       console.info("[WhatsApp] unsupported provider — skipping", {
         appointmentId: appointment.id,
         provider: bookingMessages.provider,
@@ -203,36 +285,25 @@ export async function dispatchBookingMessages(
       });
     }
 
-    const reminderTemplate =
-      bookingMessages.appointmentReminder.templateName.trim();
-    if (bookingMessages.appointmentReminder.enabled && reminderTemplate) {
-      const appointmentStart = jerusalemWallClockToUtc(
-        appointment.appointmentDate,
-        appointment.appointmentTime,
-      );
+    if (bookingMessages.appointmentReminder.enabled) {
       const hoursBefore = Math.max(
         1,
         Math.min(168, bookingMessages.appointmentReminder.hoursBefore || 24),
       );
+      const sendAt = computeReminderSendAt(appointment, hoursBefore);
 
-      if (!appointmentStart) {
+      if (!sendAt) {
         console.error("[WhatsApp] reminder skipped — invalid appointment time", {
           appointmentId: appointment.id,
           date: appointment.appointmentDate,
           time: appointment.appointmentTime,
         });
+      } else if (sendAt.getTime() <= Date.now() + 60_000) {
+        await sendAppointmentReminder(appointment, store, bookingMessages);
       } else {
-        const sendAt = new Date(
-          appointmentStart.getTime() - hoursBefore * 60 * 60 * 1000,
-        );
-        await sendConfiguredTemplate(appointment, {
-          to: appointment.phone,
-          templateName: reminderTemplate,
-          contentVariables,
-          kind: "appointment_reminder",
-          smsType: "appointment_reminder",
-          sendAt,
-          note: `${hoursBefore}h before`,
+        console.info("[WhatsApp] reminder scheduled for later delivery", {
+          appointmentId: appointment.id,
+          sendAt: sendAt.toISOString(),
         });
       }
     }
@@ -242,4 +313,35 @@ export async function dispatchBookingMessages(
       error: error instanceof Error ? error.message : "dispatch failed",
     });
   }
+}
+
+/** Send due appointment reminders (Meta has no native schedule API). */
+export async function processDueAppointmentReminders(): Promise<{
+  checked: number;
+  sent: number;
+}> {
+  invalidateStoreCache();
+  const { data: store } = await getStore();
+  const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
+
+  if (
+    bookingMessages.provider !== "meta" ||
+    !bookingMessages.appointmentReminder.enabled
+  ) {
+    return { checked: 0, sent: 0 };
+  }
+
+  let sent = 0;
+  const appointments = store.eyeExamAppointments || [];
+  for (const appointment of appointments) {
+    if (appointment.status !== "confirmed") continue;
+    const didSend = await sendAppointmentReminder(
+      appointment,
+      store,
+      bookingMessages,
+    );
+    if (didSend) sent += 1;
+  }
+
+  return { checked: appointments.length, sent };
 }
