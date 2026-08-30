@@ -39,6 +39,23 @@ function logStatusUpdate(status: MetaWebhookStatus): void {
   const primaryError = status.errors?.[0];
   const errorDetails = primaryError?.error_data?.details;
 
+  if (status.status === "failed") {
+    for (const error of status.errors || []) {
+      console.error("[WhatsApp Webhook] delivery failed — Meta error", {
+        messageId: status.id || "[unknown]",
+        recipientId: status.recipient_id || "[unknown]",
+        timestamp: status.timestamp || "[unknown]",
+        error: {
+          code: error.code ?? null,
+          title: error.title ?? null,
+          message: error.message ?? null,
+          error_data: error.error_data ?? null,
+          details: error.error_data?.details ?? null,
+        },
+      });
+    }
+  }
+
   console.info("[WhatsApp Webhook] message status update", {
     messageId: status.id || "[unknown]",
     recipientId: status.recipient_id || "[unknown]",
@@ -82,6 +99,8 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
+
+  console.info("[WhatsApp Webhook RAW]", JSON.stringify(payload, null, 2));
 
   if (payload.object !== "whatsapp_business_account") {
     console.warn("[WhatsApp Webhook] ignored unsupported payload object", {
