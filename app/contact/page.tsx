@@ -211,6 +211,10 @@ export default function ContactPage() {
                   >
                     {settings?.email || "hello@oyon.optics"}
                   </a>
+                  <p className="oyon-footer-legal-name">OYON Optics | עיון אופטיקה</p>
+                  <p className="oyon-footer-legal-reg" dir="rtl">
+                    שם העסק הרשום: עיון אופטיקה
+                  </p>
                 </div>
 
                 <div className="oyon-footer-hours-card">

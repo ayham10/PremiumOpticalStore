@@ -8841,6 +8841,28 @@ html[dir="rtl"] .clinic-book-title {
   padding-block: 0.95rem;
 }
 
+.oyon-footer-legal-name {
+  margin: 0 0 0.2rem;
+  color: rgba(212, 175, 106, 0.78);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.oyon-footer-legal-reg {
+  margin: 0 0 0.55rem;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.oyon-contact-aside .oyon-footer-legal-name {
+  margin-top: 0.65rem;
+}
+
+.oyon-contact-aside .oyon-footer-legal-reg {
+  margin-bottom: 0;
+}
+
 .oyon-contact-aside {
   background: #070a0d;
   color: #f5f5f5;
