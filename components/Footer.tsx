@@ -148,7 +148,7 @@ export default function Footer() {
         <div className="wrap">
           <p className="oyon-footer-legal-name">OYON Optics | עיון אופטיקה</p>
           <p className="oyon-footer-legal-reg" dir="rtl">
-            שם העסק הרשום: עיון אופטיקה
+            שם העוסק הרשום: דגש ענאן | כינוי העסק: עיון אופטיקה
           </p>
           <p>{t("footer.copyright", { year: 2026 })}</p>
         </div>
