@@ -40,6 +40,14 @@ function requireApiKey(req, res, next) {
   return next();
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 app.get("/health", (_req, res) => {
   const status = getStatusPayload();
   res.json({
@@ -56,6 +64,39 @@ app.get("/status", (_req, res) => {
 
 app.get("/qr", (_req, res) => {
   res.json(getQrPayload());
+});
+
+app.get("/qr-view", (_req, res) => {
+  const qr = getQrPayload();
+  const status = getStatusPayload();
+
+  const body = qr.qrDataUrl
+    ? `<img src="${escapeHtml(qr.qrDataUrl)}" alt="WhatsApp QR code" width="320" height="320" />`
+    : `<p>No QR code is currently available.</p>
+       <p><strong>Status:</strong> ${escapeHtml(status.status)}</p>
+       ${status.lastError ? `<p><strong>Last error:</strong> ${escapeHtml(status.lastError)}</p>` : ""}`;
+
+  res.type("html").send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OYON WhatsApp QR</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #070a0d; color: #f5f5f5; margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    main { text-align: center; max-width: 420px; }
+    h1 { color: #d4af6a; font-size: 1.1rem; font-weight: 600; letter-spacing: 0.04em; }
+    p { color: #b8bec6; line-height: 1.5; }
+    img { border: 1px solid rgba(212, 175, 106, 0.35); border-radius: 12px; background: #fff; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>WhatsApp Web QR</h1>
+    ${body}
+  </main>
+</body>
+</html>`);
 });
 
 app.post("/send", requireApiKey, async (req, res) => {
