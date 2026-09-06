@@ -20,17 +20,13 @@ let client = null;
 let initPromise = null;
 let staleChromiumLocksCleanedUp = false;
 
-/** Railway-safe Chromium flags; avoid aggressive opts that stall WhatsApp Web. */
+/** Essential container flags for Puppeteer Chrome for Testing. */
 const PUPPETEER_CHROMIUM_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
   "--disable-gpu",
   "--no-first-run",
-  // Keep the headless WhatsApp tab from being throttled as "background".
-  "--disable-background-timer-throttling",
-  "--disable-backgrounding-occluded-windows",
-  "--disable-renderer-backgrounding",
 ];
 
 function getStatusPayload() {
@@ -107,18 +103,41 @@ async function cleanupStaleChromiumLocksOnce() {
 
 function buildPuppeteerConfig() {
   const puppeteer = {
-    // Puppeteer 24 + Debian Chromium: use modern headless (--headless=new).
-    // Classic shell headless can leave WhatsApp Web "ready" while evaluate/send stall.
     headless: config.puppeteerHeadlessMode,
     protocolTimeout: config.protocolTimeoutMs,
     args: PUPPETEER_CHROMIUM_ARGS,
   };
 
+  // Optional override for local debugging only. Production uses Puppeteer's
+  // bundled Chrome for Testing from PUPPETEER_CACHE_DIR.
   if (config.puppeteerExecutablePath) {
     puppeteer.executablePath = config.puppeteerExecutablePath;
   }
 
   return puppeteer;
+}
+
+function getResolvedBrowserInfo() {
+  if (config.puppeteerExecutablePath) {
+    return {
+      source: "PUPPETEER_EXECUTABLE_PATH",
+      executablePath: config.puppeteerExecutablePath,
+    };
+  }
+
+  try {
+    const puppeteer = require("puppeteer");
+    return {
+      source: "puppeteer-cache",
+      executablePath: puppeteer.executablePath(),
+    };
+  } catch (error) {
+    return {
+      source: "unknown",
+      executablePath: null,
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    };
+  }
 }
 
 function withTimeout(promise, timeoutMs, timeoutMessage, statusCode = 504) {
@@ -214,6 +233,13 @@ async function createWhatsAppClient() {
   try {
     ensureAuthDirectory();
     await cleanupStaleChromiumLocksOnce();
+
+    const browserInfo = getResolvedBrowserInfo();
+    console.info("[whatsapp-web] launching browser", {
+      source: browserInfo.source,
+      headlessMode: config.puppeteerHeadlessMode,
+      cacheDir: process.env.PUPPETEER_CACHE_DIR || null,
+    });
 
     client = new Client({
       authStrategy: new LocalAuth({

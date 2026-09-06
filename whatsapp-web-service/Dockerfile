@@ -1,52 +1,31 @@
 FROM node:20-bookworm-slim
 
-# Chromium and libraries required by Puppeteer / whatsapp-web.js on Linux.
+# Locale and dbus help Chrome for Testing start cleanly in containers.
+ENV LANG=en_US.UTF-8
+ENV DBUS_SESSION_BUS_ADDRESS=autolaunch:
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
-    chromium \
+    dbus \
+    fonts-freefont-ttf \
     fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV WWEBJS_AUTH_DATA_PATH=/data/wwebjs-auth
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
+
+# Install the Chrome for Testing build pinned to Puppeteer 24.38.0,
+# plus the OS libraries required for that exact browser build.
+RUN npx puppeteer browsers install chrome --install-deps \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY src ./src
 

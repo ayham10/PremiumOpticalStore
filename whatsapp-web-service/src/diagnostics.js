@@ -38,6 +38,19 @@ function getPackageVersion(packageName) {
   }
 }
 
+function getPuppeteerExecutablePath() {
+  if (config.puppeteerExecutablePath) {
+    return config.puppeteerExecutablePath;
+  }
+
+  try {
+    const puppeteer = require("puppeteer");
+    return puppeteer.executablePath();
+  } catch {
+    return null;
+  }
+}
+
 function getChromiumVersion(executablePath) {
   if (!executablePath) {
     return null;
@@ -97,19 +110,23 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
       browserConnected: null,
       processRunning: null,
       pid: null,
-      version: getChromiumVersion(config.puppeteerExecutablePath),
+      version: getChromiumVersion(getPuppeteerExecutablePath()),
     },
     runtime: {
       headlessMode: config.puppeteerHeadlessMode,
       protocolTimeoutMs: config.protocolTimeoutMs,
       sendMessageTimeoutMs: config.sendMessageTimeoutMs,
-      puppeteerExecutablePath: config.puppeteerExecutablePath || null,
+      browserSource: config.puppeteerExecutablePath
+        ? "PUPPETEER_EXECUTABLE_PATH"
+        : "puppeteer-cache",
+      puppeteerCacheDir: process.env.PUPPETEER_CACHE_DIR || null,
     },
     compatibility: {
       whatsappWebJs: getPackageVersion("whatsapp-web.js"),
       puppeteer: getPackageVersion("puppeteer"),
+      expectedChromeForTesting: "146.0.7680.31",
       note:
-        "Puppeteer 24 expects modern headless (--headless=new). Classic headless shell mode can leave WhatsApp Web partially loaded while page.evaluate/sendMessage stall.",
+        "Use Puppeteer's bundled Chrome for Testing (matching Puppeteer 24.38.0). Debian system Chromium is not compatible with page.evaluate on WhatsApp Web.",
     },
   };
 

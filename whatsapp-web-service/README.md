@@ -88,10 +88,10 @@ Recommended setup:
    - `PORT` (Railway injects this automatically)
    - `WHATSAPP_WEB_SERVICE_API_KEY`
    - `WWEBJS_AUTH_DATA_PATH=/data/wwebjs-auth`
-   - `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` if using a Chromium-enabled image
+   - Do **not** set `PUPPETEER_EXECUTABLE_PATH` or skip-download flags in production; Docker installs Puppeteer's Chrome for Testing automatically.
 3. Attach a persistent volume at `/data/wwebjs-auth`.
-4. Use a Linux-compatible Node image with Chromium dependencies installed.
-5. Keep Puppeteer flags from `src/client.js` (`--no-sandbox`, `--disable-dev-shm-usage`, etc.) for containerized Linux.
+4. Use the provided `Dockerfile`, which runs `npx puppeteer browsers install chrome --install-deps`.
+5. Keep Puppeteer container flags from `src/client.js` (`--no-sandbox`, `--disable-dev-shm-usage`, etc.).
 
 Suggested start command:
 
