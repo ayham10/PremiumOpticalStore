@@ -10,4 +10,8 @@ module.exports = {
   apiKey: env("WHATSAPP_WEB_SERVICE_API_KEY"),
   authDataPath: env("WWEBJS_AUTH_DATA_PATH", "./data/wwebjs-auth"),
   puppeteerExecutablePath: env("PUPPETEER_EXECUTABLE_PATH"),
+  protocolTimeoutMs:
+    Number(env("PUPPETEER_PROTOCOL_TIMEOUT_MS", "120000")) || 120000,
+  sendMessageTimeoutMs:
+    Number(env("WHATSAPP_SEND_TIMEOUT_MS", "90000")) || 90000,
 };

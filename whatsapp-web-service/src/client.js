@@ -16,25 +16,17 @@ let client = null;
 let initPromise = null;
 let staleChromiumLocksCleanedUp = false;
 
-/** Low-memory Chromium flags for headless Railway containers. */
+/** Railway-safe Chromium flags; avoid aggressive opts that stall WhatsApp Web. */
 const PUPPETEER_CHROMIUM_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
   "--disable-gpu",
-  "--disable-software-rasterizer",
-  "--disable-extensions",
-  "--disable-background-networking",
+  "--no-first-run",
+  // Keep the headless WhatsApp tab from being throttled as "background".
   "--disable-background-timer-throttling",
   "--disable-backgrounding-occluded-windows",
   "--disable-renderer-backgrounding",
-  "--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter",
-  "--no-first-run",
-  "--no-default-browser-check",
-  "--mute-audio",
-  // Additional safe container flags retained from the prior Railway setup.
-  "--no-zygote",
-  "--disable-accelerated-2d-canvas",
 ];
 
 function getStatusPayload() {
@@ -113,6 +105,7 @@ function buildPuppeteerConfig() {
   const puppeteer = {
     // Use classic headless mode for system Chromium in Railway containers (no X11).
     headless: "shell",
+    protocolTimeout: config.protocolTimeoutMs,
     args: PUPPETEER_CHROMIUM_ARGS,
   };
 
@@ -121,6 +114,41 @@ function buildPuppeteerConfig() {
   }
 
   return puppeteer;
+}
+
+function withTimeout(promise, timeoutMs, timeoutMessage, statusCode = 504) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const error = new Error(timeoutMessage);
+      error.statusCode = statusCode;
+      reject(error);
+    }, timeoutMs);
+
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+function normalizeSendError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    message.includes("Runtime.callFunctionOn timed out") ||
+    message.includes("protocolTimeout")
+  ) {
+    const timeoutError = new Error("WhatsApp Web did not respond in time");
+    timeoutError.statusCode = 504;
+    return timeoutError;
+  }
+
+  return error;
 }
 
 function attachClientEvents(activeClient) {
@@ -225,11 +253,42 @@ async function sendTextMessage(to, message) {
     throw error;
   }
 
-  const result = await activeClient.sendMessage(chatId, text);
-  return {
-    chatId,
-    messageId: result?.id?._serialized || result?.id || null,
-  };
+  const startedAt = Date.now();
+  console.info("[whatsapp-web] send started", {
+    messageLength: text.length,
+    timeoutMs: config.sendMessageTimeoutMs,
+  });
+
+  try {
+    const result = await withTimeout(
+      activeClient.sendMessage(chatId, text),
+      config.sendMessageTimeoutMs,
+      "WhatsApp Web did not respond in time",
+      504,
+    );
+
+    console.info("[whatsapp-web] send succeeded", {
+      durationMs: Date.now() - startedAt,
+      messageLength: text.length,
+    });
+
+    return {
+      chatId,
+      messageId: result?.id?._serialized || result?.id || null,
+    };
+  } catch (error) {
+    const normalizedError = normalizeSendError(error);
+    console.error("[whatsapp-web] send failed", {
+      durationMs: Date.now() - startedAt,
+      statusCode: normalizedError.statusCode || 500,
+      error: sanitizeError(
+        normalizedError instanceof Error
+          ? normalizedError.message
+          : String(normalizedError),
+      ),
+    });
+    throw normalizedError;
+  }
 }
 
 module.exports = {
