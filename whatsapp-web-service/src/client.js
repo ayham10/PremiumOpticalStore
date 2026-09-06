@@ -20,6 +20,28 @@ let client = null;
 let initPromise = null;
 let staleChromiumLocksCleanedUp = false;
 
+const MAX_INIT_ATTEMPTS = 3;
+const INIT_RETRY_DELAY_MS = 4000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableInitError(error) {
+  const message = sanitizeError(
+    error instanceof Error ? error.message : String(error),
+  );
+
+  return (
+    /execution context was destroyed/i.test(message) ||
+    /context was destroyed/i.test(message) ||
+    /frame was detached/i.test(message) ||
+    /target closed/i.test(message) ||
+    /cannot find context with specified id/i.test(message) ||
+    /protocol error \(runtime\.callfunctionon\)/i.test(message)
+  );
+}
+
 /** Essential container flags for Puppeteer Chrome for Testing. */
 const PUPPETEER_CHROMIUM_ARGS = [
   "--no-sandbox",
@@ -180,38 +202,54 @@ function attachClientEvents(activeClient) {
     connectionStatus = "QR_REQUIRED";
     lastError = null;
     await setQr(qr);
-    console.info("[whatsapp-web] QR code updated — scan to authenticate");
+    console.info("[whatsapp-web] QR_RECEIVED");
   });
 
   activeClient.on("authenticated", () => {
     connectionStatus = "AUTHENTICATED";
     lastError = null;
     clearQr();
-    console.info("[whatsapp-web] authenticated");
+    console.info("[whatsapp-web] AUTHENTICATED");
   });
 
   activeClient.on("ready", () => {
     connectionStatus = "READY";
     lastError = null;
     clearQr();
-    console.info("[whatsapp-web] client ready");
+    console.info("[whatsapp-web] READY");
   });
 
   activeClient.on("disconnected", (reason) => {
     connectionStatus = "DISCONNECTED";
     lastError = sanitizeError(reason || "disconnected");
     clearQr();
-    console.warn("[whatsapp-web] disconnected", { reason: lastError });
+    console.warn("[whatsapp-web] DISCONNECTED", { reason: lastError });
   });
 
   activeClient.on("auth_failure", (message) => {
     connectionStatus = "AUTH_FAILURE";
     lastError = sanitizeError(message || "auth_failure");
     clearQr();
-    console.error("[whatsapp-web] authentication failed", {
+    console.error("[whatsapp-web] AUTH_FAILURE", {
       error: lastError,
     });
   });
+}
+
+async function destroyFailedClient(activeClient) {
+  if (!activeClient) {
+    return;
+  }
+
+  try {
+    if (typeof activeClient.destroy === "function") {
+      await activeClient.destroy();
+    }
+  } catch (error) {
+    console.warn("[whatsapp-web] failed to destroy client during init cleanup", {
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    });
+  }
 }
 
 async function initializeWhatsAppClient() {
@@ -230,31 +268,80 @@ async function createWhatsAppClient() {
   connectionStatus = "INITIALIZING";
   lastError = null;
 
-  try {
-    ensureAuthDirectory();
-    await cleanupStaleChromiumLocksOnce();
+  ensureAuthDirectory();
+  await cleanupStaleChromiumLocksOnce();
 
-    const browserInfo = getResolvedBrowserInfo();
-    console.info("[whatsapp-web] launching browser", {
-      source: browserInfo.source,
-      headlessMode: config.puppeteerHeadlessMode,
-      cacheDir: process.env.PUPPETEER_CACHE_DIR || null,
+  const browserInfo = getResolvedBrowserInfo();
+  console.info("[whatsapp-web] launching browser", {
+    source: browserInfo.source,
+    headlessMode: config.puppeteerHeadlessMode,
+    cacheDir: process.env.PUPPETEER_CACHE_DIR || null,
+  });
+
+  let lastInitError = null;
+
+  for (let attempt = 1; attempt <= MAX_INIT_ATTEMPTS; attempt += 1) {
+    connectionStatus = "INITIALIZING";
+    console.info("[whatsapp-web] initialization attempt", {
+      attempt,
+      maxAttempts: MAX_INIT_ATTEMPTS,
     });
 
-    client = new Client({
-      authStrategy: new LocalAuth({
-        dataPath: path.resolve(config.authDataPath),
-      }),
-      puppeteer: buildPuppeteerConfig(),
-    });
+    if (client) {
+      await destroyFailedClient(client);
+      client = null;
+    }
 
-    attachClientEvents(client);
-    await client.initialize();
-  } catch (error) {
-    connectionStatus = "DISCONNECTED";
-    lastError = sanitizeError(error instanceof Error ? error.message : error);
-    console.error("[whatsapp-web] client setup failed", { error: lastError });
+    try {
+      client = new Client({
+        authStrategy: new LocalAuth({
+          dataPath: path.resolve(config.authDataPath),
+        }),
+        puppeteer: buildPuppeteerConfig(),
+      });
+
+      attachClientEvents(client);
+      await client.initialize();
+
+      console.info("[whatsapp-web] initialization succeeded", { attempt });
+      return client;
+    } catch (error) {
+      lastInitError = error;
+      const detail = sanitizeError(
+        error instanceof Error ? error.message : String(error),
+      );
+      console.error("[whatsapp-web] initialization failed", {
+        attempt,
+        error: detail,
+      });
+
+      await destroyFailedClient(client);
+      client = null;
+
+      const shouldRetry =
+        attempt < MAX_INIT_ATTEMPTS && isRetryableInitError(error);
+      if (!shouldRetry) {
+        break;
+      }
+
+      console.warn("[whatsapp-web] retry scheduled", {
+        attempt,
+        nextAttempt: attempt + 1,
+        delayMs: INIT_RETRY_DELAY_MS,
+        reason: detail,
+      });
+      await sleep(INIT_RETRY_DELAY_MS);
+    }
   }
+
+  connectionStatus = "DISCONNECTED";
+  lastError = sanitizeError(
+    lastInitError instanceof Error ? lastInitError.message : String(lastInitError),
+  );
+  console.error("[whatsapp-web] initialization exhausted retries", {
+    attempts: MAX_INIT_ATTEMPTS,
+    error: lastError,
+  });
 
   return client;
 }
