@@ -11,7 +11,29 @@ let latestQrRaw = null;
 let latestQrDataUrl = null;
 let lastError = null;
 let client = null;
-let initializing = false;
+/** @type {Promise<import("whatsapp-web.js").Client | null> | null} */
+let initPromise = null;
+
+/** Low-memory Chromium flags for headless Railway containers. */
+const PUPPETEER_CHROMIUM_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--disable-software-rasterizer",
+  "--disable-extensions",
+  "--disable-background-networking",
+  "--disable-background-timer-throttling",
+  "--disable-backgrounding-occluded-windows",
+  "--disable-renderer-backgrounding",
+  "--disable-features=Translate,BackForwardCache,AcceptCHFrame,MediaRouter",
+  "--no-first-run",
+  "--no-default-browser-check",
+  "--mute-audio",
+  // Additional safe container flags retained from the prior Railway setup.
+  "--no-zygote",
+  "--disable-accelerated-2d-canvas",
+];
 
 function getStatusPayload() {
   return {
@@ -64,19 +86,9 @@ function ensureAuthDirectory() {
 }
 
 function buildPuppeteerConfig() {
-  const args = [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-accelerated-2d-canvas",
-    "--no-first-run",
-    "--no-zygote",
-    "--disable-gpu",
-  ];
-
   const puppeteer = {
     headless: true,
-    args,
+    args: PUPPETEER_CHROMIUM_ARGS,
   };
 
   if (config.puppeteerExecutablePath) {
@@ -126,11 +138,18 @@ function attachClientEvents(activeClient) {
 }
 
 async function initializeWhatsAppClient() {
-  if (client || initializing) {
+  if (client) {
     return client;
   }
 
-  initializing = true;
+  if (!initPromise) {
+    initPromise = createWhatsAppClient();
+  }
+
+  return initPromise;
+}
+
+async function createWhatsAppClient() {
   connectionStatus = "INITIALIZING";
   lastError = null;
 
@@ -145,18 +164,11 @@ async function initializeWhatsAppClient() {
     });
 
     attachClientEvents(client);
-
-    client.initialize().catch((error) => {
-      connectionStatus = "DISCONNECTED";
-      lastError = sanitizeError(error instanceof Error ? error.message : error);
-      console.error("[whatsapp-web] initialize failed", { error: lastError });
-    });
+    await client.initialize();
   } catch (error) {
     connectionStatus = "DISCONNECTED";
     lastError = sanitizeError(error instanceof Error ? error.message : error);
     console.error("[whatsapp-web] client setup failed", { error: lastError });
-  } finally {
-    initializing = false;
   }
 
   return client;
