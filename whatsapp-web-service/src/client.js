@@ -52,16 +52,23 @@ function isRetryableInitError(error) {
   );
 }
 
-/** Railway container flags + headless anti-throttling (prevents renderer suspension). */
+/** Railway essentials + conservative memory caps (no renderer-risky flags). */
 const PUPPETEER_CHROMIUM_ARGS = [
+  // Required in Railway/Docker
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
+  // Headless: skip GPU process (standard with Puppeteer Chrome for Testing)
   "--disable-gpu",
+  // One-time / audio cruft
   "--no-first-run",
-  "--disable-background-timer-throttling",
-  "--disable-backgrounding-occluded-windows",
-  "--disable-renderer-backgrounding",
+  "--no-default-browser-check",
+  "--mute-audio",
+  // Cap disk/media caches to reduce memory-mapped RSS
+  "--disk-cache-size=33554432",
+  "--media-cache-size=4194304",
+  // Standard Docker headless pairing with --disable-gpu; avoids extra zygote process
+  "--no-zygote",
 ];
 
 function getStatusPayload() {
@@ -139,7 +146,8 @@ async function cleanupStaleChromiumLocksOnce() {
 function buildPuppeteerConfig() {
   const puppeteer = {
     headless: config.puppeteerHeadlessMode,
-    defaultViewport: null,
+    // Smaller viewport reduces renderer compositor/layer memory (~603 MB observed).
+    defaultViewport: { width: 1280, height: 720 },
     protocolTimeout: config.protocolTimeoutMs,
     args: PUPPETEER_CHROMIUM_ARGS,
   };
