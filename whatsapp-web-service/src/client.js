@@ -11,6 +11,7 @@ const {
   collectProcessDiagnostics,
   collectRendererDiagnostics,
   fastPagePing,
+  logContainerResources,
 } = require("./diagnostics");
 
 /** @type {"INITIALIZING"|"QR_REQUIRED"|"AUTHENTICATED"|"READY"|"DISCONNECTED"|"AUTH_FAILURE"} */
@@ -195,11 +196,11 @@ function startPageKeepAlive(activeClient) {
       const ping = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
       if (!ping.responsive) {
         const renderer = await collectRendererDiagnostics(activeClient);
+        logContainerResources(activeClient, "keepalive-failure");
         console.warn("[whatsapp-web] page keepalive unresponsive", {
           durationMs: ping.durationMs,
           error: ping.error,
           cacheMode: config.whatsappWebCacheMode,
-          ...collectProcessDiagnostics(),
           renderer,
         });
       }
@@ -209,10 +210,10 @@ function startPageKeepAlive(activeClient) {
 
 async function logBrowserSnapshot(activeClient, label) {
   const snapshot = await collectBrowserSnapshot(activeClient);
+  logContainerResources(activeClient, label);
   console.info("[whatsapp-web] browser snapshot", {
     label,
     ...snapshot,
-    ...collectProcessDiagnostics(),
   });
   return snapshot;
 }
@@ -325,6 +326,7 @@ function attachClientEvents(activeClient) {
     });
     await pruneExtraBrowserPages(activeClient);
     await logBrowserSnapshot(activeClient, "ready");
+    logContainerResources(activeClient, "ready");
 
     const immediatePing = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
     const rendererAtReady = await collectRendererDiagnostics(activeClient);
@@ -336,8 +338,8 @@ function attachClientEvents(activeClient) {
       loadedWebVersion: rendererAtReady.loadedWebVersion,
       loadedWebVersionError: rendererAtReady.loadedWebVersionError,
       cacheMode: config.whatsappWebCacheMode,
-      chromeChildCount: rendererAtReady.chromeChildren.length,
-      ...collectProcessDiagnostics(),
+      chromeProcessCount: rendererAtReady.chromeProcessTree?.processCount ?? 0,
+      ...collectProcessDiagnostics(activeClient),
     });
 
     startPageKeepAlive(activeClient);
@@ -516,6 +518,7 @@ async function waitForReady(activeClient, timeoutMs) {
 }
 
 async function performControlledRecovery() {
+  logContainerResources(client, "recovery-before");
   console.warn("[whatsapp-web] recovery started");
 
   await destroyFailedClient(client);
@@ -556,7 +559,7 @@ async function ensurePageResponsiveForSend(activeClient, options = {}) {
       ping: lastPing.ping,
       durationMs: lastPing.durationMs,
       error: lastPing.error,
-      ...collectProcessDiagnostics(),
+      ...collectProcessDiagnostics(currentClient),
     });
 
     if (lastPing.responsive) {
@@ -585,7 +588,7 @@ async function ensurePageResponsiveForSend(activeClient, options = {}) {
     ping: lastPing.ping,
     durationMs: lastPing.durationMs,
     error: lastPing.error,
-    ...collectProcessDiagnostics(),
+    ...collectProcessDiagnostics(currentClient),
   });
 
   if (!lastPing.responsive) {
@@ -630,9 +633,11 @@ async function sendTextMessage(to, message) {
   }
 
   const startedAt = Date.now();
+  logContainerResources(activeClient, "send-before");
   console.info("[whatsapp-web] send started", {
     messageLength: text.length,
     timeoutMs: config.sendMessageTimeoutMs,
+    ...collectProcessDiagnostics(activeClient),
   });
 
   try {
@@ -645,7 +650,7 @@ async function sendTextMessage(to, message) {
     console.info("[whatsapp-web] sendMessage started", {
       messageLength: text.length,
       recovered: Boolean(health.recovered),
-      ...collectProcessDiagnostics(),
+      ...collectProcessDiagnostics(activeClientForSend),
     });
 
     const result = await withTimeout(
@@ -656,6 +661,7 @@ async function sendTextMessage(to, message) {
     );
 
     await logBrowserSnapshot(activeClientForSend, "send-complete");
+    logContainerResources(activeClientForSend, "send-after");
 
     console.info("[whatsapp-web] sendMessage succeeded", {
       durationMs: Date.now() - startedAt,
@@ -667,6 +673,7 @@ async function sendTextMessage(to, message) {
       messageId: result?.id?._serialized || result?.id || null,
     };
   } catch (error) {
+    logContainerResources(activeClient, "send-after-failure");
     const normalizedError = normalizeSendError(error);
     console.error("[whatsapp-web] sendMessage failed", {
       durationMs: Date.now() - startedAt,

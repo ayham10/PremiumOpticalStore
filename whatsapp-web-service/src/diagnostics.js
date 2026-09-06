@@ -1,6 +1,11 @@
 const { execFileSync } = require("child_process");
-const os = require("os");
 const config = require("./config");
+const {
+  collectChromeProcessTree,
+  collectContainerResourceSnapshot,
+  summarizeContainerResources,
+  logContainerResources,
+} = require("./containerResources");
 
 const DIAGNOSTICS_EVAL_TIMEOUT_MS = 10000;
 const PRE_SEND_PING_TIMEOUT_MS = 3000;
@@ -53,46 +58,14 @@ function getPuppeteerExecutablePath() {
   }
 }
 
-function collectProcessDiagnostics() {
-  const memory = process.memoryUsage();
-  return {
-    nodeHeapUsedMb: Math.round(memory.heapUsed / 1024 / 1024),
-    nodeRssMb: Math.round(memory.rss / 1024 / 1024),
-    systemFreeMb: Math.round(os.freemem() / 1024 / 1024),
-    systemTotalMb: Math.round(os.totalmem() / 1024 / 1024),
-  };
+function collectProcessDiagnostics(activeClient) {
+  return summarizeContainerResources(
+    collectContainerResourceSnapshot(activeClient),
+  );
 }
 
 function collectChromeChildProcesses(browserPid) {
-  if (!browserPid) {
-    return [];
-  }
-
-  try {
-    const output = execFileSync(
-      "ps",
-      ["-o", "pid=,stat=,rss=,comm=", "--ppid", String(browserPid)],
-      { encoding: "utf8", timeout: 2000 },
-    );
-    return output
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const match = line.trim().match(/^(\d+)\s+(\S+)\s+(\d+)\s+(.+)$/);
-        if (!match) {
-          return { raw: line.trim() };
-        }
-        return {
-          pid: Number(match[1]),
-          stat: match[2],
-          rssKb: Number(match[3]),
-          command: match[4],
-        };
-      });
-  } catch {
-    return [];
-  }
+  return collectChromeProcessTree(browserPid).processes;
 }
 
 async function collectRendererDiagnostics(activeClient) {
@@ -103,6 +76,7 @@ async function collectRendererDiagnostics(activeClient) {
     browserProcessRunning: null,
     browserPid: null,
     chromeChildren: [],
+    chromeProcessTree: null,
     mainPageUrl: null,
     mainPageClosed: page ? page.isClosed() : null,
     targetSummary: [],
@@ -110,6 +84,9 @@ async function collectRendererDiagnostics(activeClient) {
     loadedWebVersionError: null,
     cacheMode: config.whatsappWebCacheMode,
     pinnedWebVersion: config.whatsappWebVersion,
+    containerResources: summarizeContainerResources(
+      collectContainerResourceSnapshot(activeClient),
+    ),
   };
 
   if (!browser) {
@@ -121,9 +98,8 @@ async function collectRendererDiagnostics(activeClient) {
   if (browserProcess) {
     diagnostics.browserPid = browserProcess.pid ?? null;
     diagnostics.browserProcessRunning = browserProcess.exitCode == null;
-    diagnostics.chromeChildren = collectChromeChildProcesses(
-      browserProcess.pid,
-    );
+    diagnostics.chromeProcessTree = collectChromeProcessTree(browserProcess.pid);
+    diagnostics.chromeChildren = diagnostics.chromeProcessTree.processes;
   }
 
   if (page && !page.isClosed()) {
@@ -434,7 +410,7 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
       webCacheMode: config.whatsappWebCacheMode,
       pinnedWhatsAppWebVersion: config.whatsappWebVersion,
       note:
-        "Default webCacheMode=live loads current HTML from web.whatsapp.com. Set WHATSAPP_WEB_CACHE_MODE=pinned only for A/B comparison.",
+        "Container memory is read from cgroup memory.current/memory.max (not os.freemem). Chrome RSS is summed across the full browser process tree.",
     },
   };
 
@@ -536,6 +512,9 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
 
   diagnostics.responsive = isPreSendResponsive(diagnostics);
   diagnostics.renderer = await collectRendererDiagnostics(activeClient);
+  diagnostics.containerResources = summarizeContainerResources(
+    collectContainerResourceSnapshot(activeClient),
+  );
 
   return diagnostics;
 }
@@ -550,5 +529,6 @@ module.exports = {
   collectRendererDiagnostics,
   fastPagePing,
   isPreSendResponsive,
+  logContainerResources,
   summarizeDiagnosticsForLog,
 };
