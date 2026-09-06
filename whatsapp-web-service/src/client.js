@@ -52,26 +52,22 @@ function isRetryableInitError(error) {
   );
 }
 
-/** Railway essentials + safe headless memory limits (no networking/timer throttling). */
+/** Railway essentials + conservative memory caps (no renderer-risky flags). */
 const PUPPETEER_CHROMIUM_ARGS = [
   // Required in Railway/Docker
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
-  // Headless: avoid GPU process and software rasterizer fallback
+  // Headless: skip GPU process (standard with Puppeteer Chrome for Testing)
   "--disable-gpu",
-  "--disable-software-rasterizer",
-  "--disable-accelerated-2d-canvas",
   // One-time / audio cruft
   "--no-first-run",
   "--no-default-browser-check",
   "--mute-audio",
-  // Features WhatsApp Web does not need
-  "--disable-features=Translate,BackForwardCache,MediaRouter",
-  // Cap disk/media caches to reduce RSS from memory-mapped cache
+  // Cap disk/media caches to reduce memory-mapped RSS
   "--disk-cache-size=33554432",
   "--media-cache-size=4194304",
-  // Fewer child processes in containers (~30–50 MB saved)
+  // Standard Docker headless pairing with --disable-gpu; avoids extra zygote process
   "--no-zygote",
 ];
 
