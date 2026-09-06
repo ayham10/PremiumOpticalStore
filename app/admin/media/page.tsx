@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageIcon, Plus, Trash2, Upload } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -15,6 +15,25 @@ const FOLDERS: MediaItem["folder"][] = [
   "promotions",
   "general",
 ];
+
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
+
+function fileMime(file: File): string {
+  if (file.type) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "mp4") return "video/mp4";
+  if (ext === "webm") return "video/webm";
+  return file.type;
+}
 
 function unwrapList<T>(data: unknown, keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -42,6 +61,7 @@ export default function AdminMediaPage() {
   const [type, setType] = useState<"image" | "video">("image");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const uploadInputEl = useRef<HTMLInputElement | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,21 +130,51 @@ export default function AdminMediaPage() {
   async function onUpload(file: File) {
     setUploading(true);
     setMessage("");
+
+    const allowed =
+      type === "video" ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
+    const mime = fileMime(file);
+    if (!allowed.has(mime)) {
+      setMessage(
+        type === "video"
+          ? "Use MP4 or WebM video only"
+          : "Use JPG, PNG, or WebP only",
+      );
+      setUploading(false);
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
+      return;
+    }
+    if (file.size <= 0) {
+      setMessage("File is empty");
+      setUploading(false);
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setMessage("File exceeds 12 MB limit");
+      setUploading(false);
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
+      return;
+    }
+
     try {
       const body = new FormData();
       body.append("file", file);
       body.append("folder", newFolder);
+      body.append("alt", alt.trim() || file.name.replace(/\.[^.]+$/, ""));
       const res = await fetch("/api/storage/upload", {
         method: "POST",
         body,
+        credentials: "same-origin",
       });
-      if (!res.ok) {
-        throw new Error("Upload endpoint unavailable — paste a URL instead");
-      }
       const data = (await res.json()) as {
         url?: string;
         media?: MediaItem;
+        error?: string;
       };
+      if (!res.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
       if (data.media) {
         setItems((prev) => [data.media!, ...prev]);
       } else if (data.url) {
@@ -135,8 +185,8 @@ export default function AdminMediaPage() {
             body: JSON.stringify({
               url: data.url,
               folder: newFolder,
-              type: file.type.startsWith("video") ? "video" : "image",
-              alt: file.name,
+              type: mime.startsWith("video/") ? "video" : "image",
+              alt: alt.trim() || file.name.replace(/\.[^.]+$/, ""),
             }),
           }
         );
@@ -145,13 +195,18 @@ export default function AdminMediaPage() {
             ? created.media
             : (created as MediaItem);
         setItems((prev) => [row, ...prev]);
+      } else {
+        throw new Error("Upload succeeded but no media record was returned");
       }
       setMessage("Upload complete");
       setModalOpen(false);
+      setUrl("");
+      setAlt("");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
     }
   }
 
@@ -335,8 +390,13 @@ export default function AdminMediaPage() {
               <Upload size={16} />
               {uploading ? "Uploading…" : "Upload file"}
               <input
+                ref={uploadInputEl}
                 type="file"
-                accept="image/*,video/*"
+                accept={
+                  type === "video"
+                    ? "video/mp4,video/webm"
+                    : "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                }
                 className="hidden"
                 disabled={uploading}
                 onChange={(e) => {

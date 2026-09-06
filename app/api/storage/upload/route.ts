@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { newId, requireSession } from "@/lib/auth";
 import {
   generateFilename,
+  inferContentType,
+  isAllowedUploadMime,
   supabaseServerConfig,
   uploadMedia,
 } from "@/lib/storage";
@@ -41,9 +43,9 @@ export async function POST(request: Request) {
       return jsonError("File exceeds 12MB limit", 413);
     }
 
-    const contentType = file.type || "application/octet-stream";
-    if (!contentType.startsWith("image/") && !contentType.startsWith("video/")) {
-      return jsonError("Only image and video uploads are supported", 400);
+    const contentType = inferContentType(file.name, file.type);
+    if (!isAllowedUploadMime(contentType)) {
+      return jsonError("Only JPG, PNG, WebP images and MP4/WebM videos are supported", 400);
     }
 
     const slug =

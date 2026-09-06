@@ -28,6 +28,82 @@ const MIME_EXT: Record<string, string> = {
   "video/webm": "webm",
 };
 
+export const ALLOWED_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+
+export const ALLOWED_VIDEO_MIMES = new Set(["video/mp4", "video/webm"]);
+
+const EXT_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  mp4: "video/mp4",
+  webm: "video/webm",
+};
+
+let mediaBucketEnsured = false;
+
+export function inferContentType(filename: string, declared?: string): string {
+  const normalized = (declared || "").toLowerCase().trim();
+  if (normalized && normalized !== "application/octet-stream") {
+    return normalized;
+  }
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  return EXT_MIME[ext] || normalized || "application/octet-stream";
+}
+
+export function isAllowedUploadMime(contentType: string): boolean {
+  const mime = contentType.toLowerCase();
+  return ALLOWED_IMAGE_MIMES.has(mime) || ALLOWED_VIDEO_MIMES.has(mime);
+}
+
+export async function ensureMediaBucket(): Promise<void> {
+  if (mediaBucketEnsured) return;
+
+  const config = supabaseServerConfig();
+  if (!config) throw new Error("Supabase is not configured");
+
+  const bucketUrl = `${config.url}/storage/v1/bucket/${MEDIA_BUCKET}`;
+  const existing = await fetch(bucketUrl, {
+    headers: supabaseHeaders(config),
+    cache: "no-store",
+  });
+
+  if (existing.ok) {
+    mediaBucketEnsured = true;
+    return;
+  }
+
+  const create = await fetch(`${config.url}/storage/v1/bucket`, {
+    method: "POST",
+    headers: {
+      ...supabaseHeaders(config),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: MEDIA_BUCKET,
+      name: MEDIA_BUCKET,
+      public: true,
+    }),
+  });
+
+  if (!create.ok && create.status !== 409) {
+    const detail = await create.text().catch(() => "");
+    throw new Error(
+      `Failed to ensure media bucket (${create.status})${
+        detail ? `: ${detail}` : ""
+      }`
+    );
+  }
+
+  mediaBucketEnsured = true;
+}
+
 export function extensionFromMime(mime: string): string {
   return MIME_EXT[mime.toLowerCase()] || "bin";
 }
@@ -69,6 +145,8 @@ export async function uploadMedia(
   const config = supabaseServerConfig();
   if (!config) throw new Error("Supabase is not configured");
 
+  await ensureMediaBucket();
+
   const path = filename.replace(/^\/+/, "");
   const url = `${config.url}/storage/v1/object/${MEDIA_BUCKET}/${path}`;
 
@@ -79,7 +157,7 @@ export async function uploadMedia(
       "Content-Type": contentType,
       "x-upsert": "true",
     },
-    body: new Blob([new Uint8Array(file)], { type: contentType }),
+    body: Buffer.from(file),
   });
 
   if (!response.ok) {
