@@ -52,16 +52,27 @@ function isRetryableInitError(error) {
   );
 }
 
-/** Railway container flags + headless anti-throttling (prevents renderer suspension). */
+/** Railway essentials + safe headless memory limits (no networking/timer throttling). */
 const PUPPETEER_CHROMIUM_ARGS = [
+  // Required in Railway/Docker
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
+  // Headless: avoid GPU process and software rasterizer fallback
   "--disable-gpu",
+  "--disable-software-rasterizer",
+  "--disable-accelerated-2d-canvas",
+  // One-time / audio cruft
   "--no-first-run",
-  "--disable-background-timer-throttling",
-  "--disable-backgrounding-occluded-windows",
-  "--disable-renderer-backgrounding",
+  "--no-default-browser-check",
+  "--mute-audio",
+  // Features WhatsApp Web does not need
+  "--disable-features=Translate,BackForwardCache,MediaRouter",
+  // Cap disk/media caches to reduce RSS from memory-mapped cache
+  "--disk-cache-size=33554432",
+  "--media-cache-size=4194304",
+  // Fewer child processes in containers (~30–50 MB saved)
+  "--no-zygote",
 ];
 
 function getStatusPayload() {
@@ -139,7 +150,8 @@ async function cleanupStaleChromiumLocksOnce() {
 function buildPuppeteerConfig() {
   const puppeteer = {
     headless: config.puppeteerHeadlessMode,
-    defaultViewport: null,
+    // Smaller viewport reduces renderer compositor/layer memory (~603 MB observed).
+    defaultViewport: { width: 1280, height: 720 },
     protocolTimeout: config.protocolTimeoutMs,
     args: PUPPETEER_CHROMIUM_ARGS,
   };
