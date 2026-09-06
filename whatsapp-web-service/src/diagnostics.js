@@ -63,6 +63,101 @@ function collectProcessDiagnostics() {
   };
 }
 
+function collectChromeChildProcesses(browserPid) {
+  if (!browserPid) {
+    return [];
+  }
+
+  try {
+    const output = execFileSync(
+      "ps",
+      ["-o", "pid=,stat=,rss=,comm=", "--ppid", String(browserPid)],
+      { encoding: "utf8", timeout: 2000 },
+    );
+    return output
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const match = line.trim().match(/^(\d+)\s+(\S+)\s+(\d+)\s+(.+)$/);
+        if (!match) {
+          return { raw: line.trim() };
+        }
+        return {
+          pid: Number(match[1]),
+          stat: match[2],
+          rssKb: Number(match[3]),
+          command: match[4],
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+async function collectRendererDiagnostics(activeClient) {
+  const browser = activeClient?.pupBrowser;
+  const page = activeClient?.pupPage;
+  const diagnostics = {
+    browserConnected: browser?.isConnected?.() ?? null,
+    browserProcessRunning: null,
+    browserPid: null,
+    chromeChildren: [],
+    mainPageUrl: null,
+    mainPageClosed: page ? page.isClosed() : null,
+    targetSummary: [],
+    loadedWebVersion: null,
+    loadedWebVersionError: null,
+    cacheMode: config.whatsappWebCacheMode,
+    pinnedWebVersion: config.whatsappWebVersion,
+  };
+
+  if (!browser) {
+    return diagnostics;
+  }
+
+  const browserProcess =
+    typeof browser.process === "function" ? browser.process() : null;
+  if (browserProcess) {
+    diagnostics.browserPid = browserProcess.pid ?? null;
+    diagnostics.browserProcessRunning = browserProcess.exitCode == null;
+    diagnostics.chromeChildren = collectChromeChildProcesses(
+      browserProcess.pid,
+    );
+  }
+
+  if (page && !page.isClosed()) {
+    try {
+      diagnostics.mainPageUrl = page.url();
+    } catch {
+      diagnostics.mainPageUrl = null;
+    }
+  }
+
+  if (typeof browser.targets === "function") {
+    diagnostics.targetSummary = browser.targets().map((target) => ({
+      type: target.type(),
+      url: target.url().slice(0, 120),
+    }));
+  }
+
+  if (page && !page.isClosed()) {
+    try {
+      diagnostics.loadedWebVersion = await withTimeout(
+        page.evaluate(() => window.Debug?.VERSION || null),
+        500,
+        "window.Debug.VERSION",
+      );
+    } catch (error) {
+      diagnostics.loadedWebVersionError = sanitizeError(
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
 async function collectBrowserSnapshot(activeClient) {
   const browser = activeClient?.pupBrowser;
   if (!browser) {
@@ -336,9 +431,10 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
       whatsappWebJs: getPackageVersion("whatsapp-web.js"),
       puppeteer: getPackageVersion("puppeteer"),
       expectedChromeForTesting: "146.0.7680.31",
+      webCacheMode: config.whatsappWebCacheMode,
       pinnedWhatsAppWebVersion: config.whatsappWebVersion,
       note:
-        "WhatsApp Web HTML is pinned via local webVersionCache to avoid live-page drift. Page keepalive prevents headless renderer suspension between sends.",
+        "Default webCacheMode=live loads current HTML from web.whatsapp.com. Set WHATSAPP_WEB_CACHE_MODE=pinned only for A/B comparison.",
     },
   };
 
@@ -439,6 +535,7 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
   }
 
   diagnostics.responsive = isPreSendResponsive(diagnostics);
+  diagnostics.renderer = await collectRendererDiagnostics(activeClient);
 
   return diagnostics;
 }
@@ -450,6 +547,7 @@ module.exports = {
   collectPreSendHealthCheck,
   collectBrowserSnapshot,
   collectProcessDiagnostics,
+  collectRendererDiagnostics,
   fastPagePing,
   isPreSendResponsive,
   summarizeDiagnosticsForLog,

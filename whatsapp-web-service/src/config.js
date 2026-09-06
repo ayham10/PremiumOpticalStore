@@ -16,6 +16,9 @@ module.exports = {
     Number(env("PUPPETEER_PROTOCOL_TIMEOUT_MS", "120000")) || 120000,
   sendMessageTimeoutMs:
     Number(env("WHATSAPP_SEND_TIMEOUT_MS", "90000")) || 90000,
+  // live = fetch current HTML from web.whatsapp.com (default, avoids pinned-cache freeze)
+  // pinned = strict local HTML cache via request interception (diagnostic override only)
+  whatsappWebCacheMode: env("WHATSAPP_WEB_CACHE_MODE", "live"),
   whatsappWebVersion: env(
     "WHATSAPP_WEB_VERSION",
     "2.3000.1046816453-alpha",
