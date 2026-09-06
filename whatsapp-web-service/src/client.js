@@ -7,8 +7,9 @@ const { toWhatsAppChatId } = require("./phone");
 const { removeStaleChromiumProfileLocks } = require("./profileLocks");
 const {
   collectWhatsAppDiagnostics,
-  collectPreSendHealthCheck,
-  summarizeDiagnosticsForLog,
+  collectBrowserSnapshot,
+  collectProcessDiagnostics,
+  fastPagePing,
 } = require("./diagnostics");
 
 /** @type {"INITIALIZING"|"QR_REQUIRED"|"AUTHENTICATED"|"READY"|"DISCONNECTED"|"AUTH_FAILURE"} */
@@ -20,12 +21,15 @@ let client = null;
 /** @type {Promise<import("whatsapp-web.js").Client | null> | null} */
 let initPromise = null;
 let staleChromiumLocksCleanedUp = false;
+let pageKeepAliveTimer = null;
 
 const MAX_INIT_ATTEMPTS = 3;
 const INIT_RETRY_DELAY_MS = 4000;
-const MAX_PRE_SEND_HEALTH_ATTEMPTS = 3;
-const PRE_SEND_HEALTH_RETRY_DELAY_MS = 2500;
+const MAX_PRE_SEND_PING_ATTEMPTS = 3;
+const PRE_SEND_PING_RETRY_DELAY_MS = 2500;
 const RECOVERY_READY_TIMEOUT_MS = 120000;
+const PAGE_KEEPALIVE_INTERVAL_MS = 20000;
+const PAGE_KEEPALIVE_TIMEOUT_MS = 3000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,13 +50,11 @@ function isRetryableInitError(error) {
   );
 }
 
-/** Essential container flags for Puppeteer Chrome for Testing. */
+/** Railway container flags only — avoid flags that alter WhatsApp Web scheduling. */
 const PUPPETEER_CHROMIUM_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
-  "--disable-gpu",
-  "--no-first-run",
 ];
 
 function getStatusPayload() {
@@ -130,6 +132,7 @@ async function cleanupStaleChromiumLocksOnce() {
 function buildPuppeteerConfig() {
   const puppeteer = {
     headless: config.puppeteerHeadlessMode,
+    defaultViewport: null,
     protocolTimeout: config.protocolTimeoutMs,
     args: PUPPETEER_CHROMIUM_ARGS,
   };
@@ -141,6 +144,88 @@ function buildPuppeteerConfig() {
   }
 
   return puppeteer;
+}
+
+function buildWhatsAppClientOptions() {
+  return {
+    authStrategy: new LocalAuth({
+      dataPath: path.resolve(config.authDataPath),
+    }),
+    webVersion: config.whatsappWebVersion,
+    webVersionCache: {
+      type: "local",
+      path: config.whatsappWebCachePath,
+      strict: true,
+    },
+    puppeteer: buildPuppeteerConfig(),
+  };
+}
+
+function stopPageKeepAlive() {
+  if (pageKeepAliveTimer) {
+    clearInterval(pageKeepAliveTimer);
+    pageKeepAliveTimer = null;
+  }
+}
+
+function startPageKeepAlive(activeClient) {
+  stopPageKeepAlive();
+
+  pageKeepAliveTimer = setInterval(() => {
+    void (async () => {
+      if (
+        connectionStatus !== "READY" ||
+        !activeClient?.pupPage ||
+        activeClient.pupPage.isClosed()
+      ) {
+        return;
+      }
+
+      const ping = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
+      if (!ping.responsive) {
+        console.warn("[whatsapp-web] page keepalive unresponsive", {
+          durationMs: ping.durationMs,
+          error: ping.error,
+        });
+      }
+    })();
+  }, PAGE_KEEPALIVE_INTERVAL_MS);
+}
+
+async function logBrowserSnapshot(activeClient, label) {
+  const snapshot = await collectBrowserSnapshot(activeClient);
+  console.info("[whatsapp-web] browser snapshot", {
+    label,
+    ...snapshot,
+    ...collectProcessDiagnostics(),
+  });
+  return snapshot;
+}
+
+async function pruneExtraBrowserPages(activeClient) {
+  const browser = activeClient?.pupBrowser;
+  const mainPage = activeClient?.pupPage;
+  if (!browser || !mainPage) {
+    return 0;
+  }
+
+  const pages = await browser.pages();
+  let closedCount = 0;
+
+  for (const page of pages) {
+    if (page === mainPage || page.isClosed()) {
+      continue;
+    }
+
+    const url = page.url();
+    console.warn("[whatsapp-web] closing unexpected browser page", {
+      url,
+    });
+    await page.close().catch(() => {});
+    closedCount += 1;
+  }
+
+  return closedCount;
 }
 
 function getResolvedBrowserInfo() {
@@ -216,14 +301,18 @@ function attachClientEvents(activeClient) {
     console.info("[whatsapp-web] AUTHENTICATED");
   });
 
-  activeClient.on("ready", () => {
+  activeClient.on("ready", async () => {
     connectionStatus = "READY";
     lastError = null;
     clearQr();
     console.info("[whatsapp-web] READY");
+    await pruneExtraBrowserPages(activeClient);
+    await logBrowserSnapshot(activeClient, "ready");
+    startPageKeepAlive(activeClient);
   });
 
   activeClient.on("disconnected", (reason) => {
+    stopPageKeepAlive();
     connectionStatus = "DISCONNECTED";
     lastError = sanitizeError(reason || "disconnected");
     clearQr();
@@ -241,6 +330,8 @@ function attachClientEvents(activeClient) {
 }
 
 async function destroyFailedClient(activeClient) {
+  stopPageKeepAlive();
+
   if (!activeClient) {
     return;
   }
@@ -280,6 +371,8 @@ async function createWhatsAppClient() {
     source: browserInfo.source,
     headlessMode: config.puppeteerHeadlessMode,
     cacheDir: process.env.PUPPETEER_CACHE_DIR || null,
+    webVersion: config.whatsappWebVersion,
+    webVersionCachePath: config.whatsappWebCachePath,
   });
 
   let lastInitError = null;
@@ -297,17 +390,16 @@ async function createWhatsAppClient() {
     }
 
     try {
-      client = new Client({
-        authStrategy: new LocalAuth({
-          dataPath: path.resolve(config.authDataPath),
-        }),
-        puppeteer: buildPuppeteerConfig(),
-      });
+      client = new Client(buildWhatsAppClientOptions());
 
       attachClientEvents(client);
       await client.initialize();
+      await pruneExtraBrowserPages(client);
 
-      console.info("[whatsapp-web] initialization succeeded", { attempt });
+      console.info("[whatsapp-web] initialization succeeded", {
+        attempt,
+        webVersion: config.whatsappWebVersion,
+      });
       return client;
     } catch (error) {
       lastInitError = error;
@@ -391,6 +483,7 @@ async function performControlledRecovery() {
   await destroyFailedClient(client);
   client = null;
   initPromise = null;
+  staleChromiumLocksCleanedUp = false;
 
   const recoveredClient = await createWhatsAppClient();
   if (!recoveredClient) {
@@ -405,10 +498,11 @@ async function performControlledRecovery() {
   return recoveredClient;
 }
 
-async function runPreSendHealthCheckWithRetries(activeClient, options = {}) {
-  const maxAttempts = options.maxAttempts || MAX_PRE_SEND_HEALTH_ATTEMPTS;
+async function ensurePageResponsiveForSend(activeClient, options = {}) {
+  const maxAttempts = options.maxAttempts || MAX_PRE_SEND_PING_ATTEMPTS;
   const allowRecovery = options.allowRecovery !== false;
-  let lastDiagnostics = null;
+  let currentClient = activeClient;
+  let lastPing = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     console.info("[whatsapp-web] pre-send health attempt", {
@@ -416,68 +510,55 @@ async function runPreSendHealthCheckWithRetries(activeClient, options = {}) {
       maxAttempts,
     });
 
-    lastDiagnostics = await collectPreSendHealthCheck(
-      activeClient,
-      connectionStatus,
-    );
-
-    console.info("[whatsapp-web] pre-send health result", {
+    lastPing = await fastPagePing(currentClient);
+    console.info("[whatsapp-web] page responsive check", {
       attempt,
       maxAttempts,
-      responsive: lastDiagnostics.responsive,
-      pageResponsive: lastDiagnostics.responsive ? "responsive" : "unresponsive",
-      ...summarizeDiagnosticsForLog(lastDiagnostics),
-      totalDurationMs: lastDiagnostics.totalDurationMs,
+      responsive: lastPing.responsive ? "responsive" : "unresponsive",
+      ping: lastPing.ping,
+      durationMs: lastPing.durationMs,
+      error: lastPing.error,
+      ...collectProcessDiagnostics(),
     });
 
-    if (lastDiagnostics.responsive) {
-      return { activeClient, diagnostics: lastDiagnostics };
+    if (lastPing.responsive) {
+      return { activeClient: currentClient, recovered: false };
     }
 
     if (attempt < maxAttempts) {
-      console.warn("[whatsapp-web] pre-send health retry scheduled", {
-        attempt,
-        nextAttempt: attempt + 1,
-        delayMs: PRE_SEND_HEALTH_RETRY_DELAY_MS,
-      });
-      await sleep(PRE_SEND_HEALTH_RETRY_DELAY_MS);
+      await sleep(PRE_SEND_PING_RETRY_DELAY_MS);
     }
   }
 
-  if (allowRecovery) {
-    const recoveredClient = await performControlledRecovery();
-    const postRecoveryDiagnostics = await collectPreSendHealthCheck(
-      recoveredClient,
-      connectionStatus,
+  if (!allowRecovery) {
+    const error = new Error(
+      "WhatsApp Web page is not responsive; refusing to send",
     );
-
-    console.info("[whatsapp-web] pre-send health result", {
-      attempt: "post-recovery",
-      responsive: postRecoveryDiagnostics.responsive,
-      pageResponsive: postRecoveryDiagnostics.responsive
-        ? "responsive"
-        : "unresponsive",
-      ...summarizeDiagnosticsForLog(postRecoveryDiagnostics),
-      totalDurationMs: postRecoveryDiagnostics.totalDurationMs,
-    });
-
-    if (postRecoveryDiagnostics.responsive) {
-      return {
-        activeClient: recoveredClient,
-        diagnostics: postRecoveryDiagnostics,
-        recovered: true,
-      };
-    }
-
-    lastDiagnostics = postRecoveryDiagnostics;
+    error.statusCode = 503;
+    throw error;
   }
 
-  const error = new Error(
-    "WhatsApp Web page is not responsive; refusing to send",
-  );
-  error.statusCode = 503;
-  error.diagnostics = summarizeDiagnosticsForLog(lastDiagnostics);
-  throw error;
+  currentClient = await performControlledRecovery();
+  lastPing = await fastPagePing(currentClient);
+
+  console.info("[whatsapp-web] page responsive check", {
+    attempt: "post-recovery",
+    responsive: lastPing.responsive ? "responsive" : "unresponsive",
+    ping: lastPing.ping,
+    durationMs: lastPing.durationMs,
+    error: lastPing.error,
+    ...collectProcessDiagnostics(),
+  });
+
+  if (!lastPing.responsive) {
+    const error = new Error(
+      "WhatsApp Web page is not responsive; refusing to send",
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
+  return { activeClient: currentClient, recovered: true };
 }
 
 async function getDiagnosticsPayload() {
@@ -518,7 +599,7 @@ async function sendTextMessage(to, message) {
 
   try {
     let activeClientForSend = activeClient;
-    const health = await runPreSendHealthCheckWithRetries(activeClientForSend, {
+    const health = await ensurePageResponsiveForSend(activeClientForSend, {
       allowRecovery: true,
     });
     activeClientForSend = health.activeClient;
@@ -526,6 +607,7 @@ async function sendTextMessage(to, message) {
     console.info("[whatsapp-web] sendMessage started", {
       messageLength: text.length,
       recovered: Boolean(health.recovered),
+      ...collectProcessDiagnostics(),
     });
 
     const result = await withTimeout(
@@ -534,6 +616,8 @@ async function sendTextMessage(to, message) {
       "WhatsApp Web did not respond in time",
       504,
     );
+
+    await logBrowserSnapshot(activeClientForSend, "send-complete");
 
     console.info("[whatsapp-web] sendMessage succeeded", {
       durationMs: Date.now() - startedAt,

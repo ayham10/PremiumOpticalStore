@@ -1,8 +1,9 @@
 const { execFileSync } = require("child_process");
+const os = require("os");
 const config = require("./config");
 
 const DIAGNOSTICS_EVAL_TIMEOUT_MS = 10000;
-const PRE_SEND_EVAL_TIMEOUT_MS = 8000;
+const PRE_SEND_PING_TIMEOUT_MS = 3000;
 
 function sanitizeError(message) {
   return String(message || "Unknown error")
@@ -49,6 +50,73 @@ function getPuppeteerExecutablePath() {
     return puppeteer.executablePath();
   } catch {
     return null;
+  }
+}
+
+function collectProcessDiagnostics() {
+  const memory = process.memoryUsage();
+  return {
+    nodeHeapUsedMb: Math.round(memory.heapUsed / 1024 / 1024),
+    nodeRssMb: Math.round(memory.rss / 1024 / 1024),
+    systemFreeMb: Math.round(os.freemem() / 1024 / 1024),
+    systemTotalMb: Math.round(os.totalmem() / 1024 / 1024),
+  };
+}
+
+async function collectBrowserSnapshot(activeClient) {
+  const browser = activeClient?.pupBrowser;
+  if (!browser) {
+    return { pages: [], targets: [], pageCount: 0, targetCount: 0 };
+  }
+
+  const pages = await browser.pages();
+  const pageSummaries = pages.map((page) => ({
+    isMain: page === activeClient.pupPage,
+    closed: page.isClosed(),
+    url: page.isClosed() ? null : page.url(),
+  }));
+
+  const targets = typeof browser.targets === "function"
+    ? browser.targets().map((target) => ({
+        type: target.type(),
+        url: target.url(),
+      }))
+    : [];
+
+  return {
+    pageCount: pageSummaries.length,
+    targetCount: targets.length,
+    pages: pageSummaries,
+    targets,
+  };
+}
+
+async function fastPagePing(activeClient, timeoutMs = PRE_SEND_PING_TIMEOUT_MS) {
+  const page = activeClient?.pupPage;
+  if (!page || page.isClosed()) {
+    return { responsive: false, ping: null, durationMs: 0, error: "page unavailable" };
+  }
+
+  const startedAt = Date.now();
+  try {
+    const ping = await withTimeout(
+      page.evaluate(() => 1 + 1),
+      timeoutMs,
+      "pre-send ping",
+    );
+    return {
+      responsive: ping === 2,
+      ping,
+      durationMs: Date.now() - startedAt,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      responsive: false,
+      ping: null,
+      durationMs: Date.now() - startedAt,
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    };
   }
 }
 
@@ -170,7 +238,7 @@ async function collectPreSendHealthCheck(activeClient, connectionStatus) {
   try {
     diagnostics.pageEvaluate.ping = await withTimeout(
       page.evaluate(() => 1 + 1),
-      PRE_SEND_EVAL_TIMEOUT_MS,
+      PRE_SEND_PING_TIMEOUT_MS,
       "page.evaluate ping",
     );
     diagnostics.pageEvaluate.durationMs = Date.now() - pingStartedAt;
@@ -195,7 +263,7 @@ async function collectPreSendHealthCheck(activeClient, connectionStatus) {
       page.evaluate(
         () => typeof window.Store !== "undefined" && window.Store !== null,
       ),
-      PRE_SEND_EVAL_TIMEOUT_MS,
+      PRE_SEND_PING_TIMEOUT_MS,
       "window.Store check",
     );
   } catch (error) {
@@ -210,7 +278,7 @@ async function collectPreSendHealthCheck(activeClient, connectionStatus) {
   try {
     diagnostics.whatsappClientState = await withTimeout(
       activeClient.getState(),
-      PRE_SEND_EVAL_TIMEOUT_MS,
+      PRE_SEND_PING_TIMEOUT_MS,
       "client.getState()",
     );
   } catch (error) {
@@ -268,8 +336,9 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
       whatsappWebJs: getPackageVersion("whatsapp-web.js"),
       puppeteer: getPackageVersion("puppeteer"),
       expectedChromeForTesting: "146.0.7680.31",
+      pinnedWhatsAppWebVersion: config.whatsappWebVersion,
       note:
-        "Use Puppeteer's bundled Chrome for Testing (matching Puppeteer 24.38.0). Debian system Chromium is not compatible with page.evaluate on WhatsApp Web.",
+        "WhatsApp Web HTML is pinned via local webVersionCache to avoid live-page drift. Page keepalive prevents headless renderer suspension between sends.",
     },
   };
 
@@ -376,9 +445,12 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
 
 module.exports = {
   DIAGNOSTICS_EVAL_TIMEOUT_MS,
-  PRE_SEND_EVAL_TIMEOUT_MS,
+  PRE_SEND_PING_TIMEOUT_MS,
   collectWhatsAppDiagnostics,
   collectPreSendHealthCheck,
+  collectBrowserSnapshot,
+  collectProcessDiagnostics,
+  fastPagePing,
   isPreSendResponsive,
   summarizeDiagnosticsForLog,
 };
