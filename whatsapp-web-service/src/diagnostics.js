@@ -2,6 +2,7 @@ const { execFileSync } = require("child_process");
 const config = require("./config");
 
 const DIAGNOSTICS_EVAL_TIMEOUT_MS = 10000;
+const PRE_SEND_EVAL_TIMEOUT_MS = 8000;
 
 function sanitizeError(message) {
   return String(message || "Unknown error")
@@ -80,7 +81,149 @@ function summarizeDiagnosticsForLog(diagnostics) {
     windowStoreError: diagnostics.windowStore?.error,
     browserConnected: diagnostics.chromium?.browserConnected,
     chromiumProcessRunning: diagnostics.chromium?.processRunning,
+    stepTimingsMs: diagnostics.stepTimingsMs || null,
   };
+}
+
+function isPreSendResponsive(diagnostics) {
+  return (
+    diagnostics.pageEvaluate?.ping === 2 &&
+    !diagnostics.pageEvaluate?.error &&
+    diagnostics.page?.closed === false &&
+    diagnostics.chromium?.browserConnected !== false
+  );
+}
+
+async function collectPreSendHealthCheck(activeClient, connectionStatus) {
+  const startedAt = Date.now();
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    connectionStatus,
+    whatsappClientState: null,
+    whatsappClientStateError: null,
+    page: {
+      exists: false,
+      closed: null,
+      url: null,
+      urlHost: null,
+    },
+    pageEvaluate: {
+      ping: null,
+      durationMs: null,
+      error: null,
+    },
+    windowStore: {
+      exists: null,
+      error: null,
+    },
+    chromium: {
+      browserConnected: null,
+      processRunning: null,
+    },
+    stepTimingsMs: {},
+  };
+
+  if (!activeClient) {
+    diagnostics.error = "WhatsApp client is not initialized";
+    diagnostics.responsive = false;
+    diagnostics.totalDurationMs = Date.now() - startedAt;
+    return diagnostics;
+  }
+
+  const page = activeClient.pupPage;
+  const browser = activeClient.pupBrowser;
+  diagnostics.page.exists = Boolean(page);
+
+  if (browser) {
+    diagnostics.chromium.browserConnected = browser.isConnected();
+    const browserProcess =
+      typeof browser.process === "function" ? browser.process() : null;
+    if (browserProcess) {
+      diagnostics.chromium.processRunning = browserProcess.exitCode == null;
+    }
+  }
+
+  if (!page || page.isClosed()) {
+    diagnostics.page.closed = page ? page.isClosed() : true;
+    diagnostics.error = "Puppeteer page is not available";
+    diagnostics.responsive = false;
+    diagnostics.totalDurationMs = Date.now() - startedAt;
+    return diagnostics;
+  }
+
+  diagnostics.page.closed = false;
+
+  const urlStartedAt = Date.now();
+  try {
+    const url = page.url();
+    diagnostics.page.url = url;
+    diagnostics.page.urlHost = new URL(url).host;
+  } catch (error) {
+    diagnostics.page.urlError = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    diagnostics.stepTimingsMs.pageUrl = Date.now() - urlStartedAt;
+  }
+
+  const pingStartedAt = Date.now();
+  try {
+    diagnostics.pageEvaluate.ping = await withTimeout(
+      page.evaluate(() => 1 + 1),
+      PRE_SEND_EVAL_TIMEOUT_MS,
+      "page.evaluate ping",
+    );
+    diagnostics.pageEvaluate.durationMs = Date.now() - pingStartedAt;
+  } catch (error) {
+    diagnostics.pageEvaluate.error = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+    diagnostics.pageEvaluate.durationMs = Date.now() - pingStartedAt;
+  } finally {
+    diagnostics.stepTimingsMs.pageEvaluatePing = Date.now() - pingStartedAt;
+  }
+
+  if (diagnostics.pageEvaluate.ping !== 2 || diagnostics.pageEvaluate.error) {
+    diagnostics.responsive = false;
+    diagnostics.totalDurationMs = Date.now() - startedAt;
+    return diagnostics;
+  }
+
+  const storeStartedAt = Date.now();
+  try {
+    diagnostics.windowStore.exists = await withTimeout(
+      page.evaluate(
+        () => typeof window.Store !== "undefined" && window.Store !== null,
+      ),
+      PRE_SEND_EVAL_TIMEOUT_MS,
+      "window.Store check",
+    );
+  } catch (error) {
+    diagnostics.windowStore.error = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    diagnostics.stepTimingsMs.windowStore = Date.now() - storeStartedAt;
+  }
+
+  const stateStartedAt = Date.now();
+  try {
+    diagnostics.whatsappClientState = await withTimeout(
+      activeClient.getState(),
+      PRE_SEND_EVAL_TIMEOUT_MS,
+      "client.getState()",
+    );
+  } catch (error) {
+    diagnostics.whatsappClientStateError = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    diagnostics.stepTimingsMs.clientGetState = Date.now() - stateStartedAt;
+  }
+
+  diagnostics.responsive = isPreSendResponsive(diagnostics);
+
+  return diagnostics;
 }
 
 async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
@@ -226,17 +369,16 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
     );
   }
 
-  diagnostics.responsive =
-    diagnostics.pageEvaluate.ping === 2 &&
-    !diagnostics.pageEvaluate.error &&
-    diagnostics.page.closed === false &&
-    diagnostics.chromium.browserConnected !== false;
+  diagnostics.responsive = isPreSendResponsive(diagnostics);
 
   return diagnostics;
 }
 
 module.exports = {
   DIAGNOSTICS_EVAL_TIMEOUT_MS,
+  PRE_SEND_EVAL_TIMEOUT_MS,
   collectWhatsAppDiagnostics,
+  collectPreSendHealthCheck,
+  isPreSendResponsive,
   summarizeDiagnosticsForLog,
 };

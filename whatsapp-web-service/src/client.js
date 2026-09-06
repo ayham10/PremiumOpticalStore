@@ -7,6 +7,7 @@ const { toWhatsAppChatId } = require("./phone");
 const { removeStaleChromiumProfileLocks } = require("./profileLocks");
 const {
   collectWhatsAppDiagnostics,
+  collectPreSendHealthCheck,
   summarizeDiagnosticsForLog,
 } = require("./diagnostics");
 
@@ -22,6 +23,9 @@ let staleChromiumLocksCleanedUp = false;
 
 const MAX_INIT_ATTEMPTS = 3;
 const INIT_RETRY_DELAY_MS = 4000;
+const MAX_PRE_SEND_HEALTH_ATTEMPTS = 3;
+const PRE_SEND_HEALTH_RETRY_DELAY_MS = 2500;
+const RECOVERY_READY_TIMEOUT_MS = 120000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -346,32 +350,139 @@ async function createWhatsAppClient() {
   return client;
 }
 
-async function getDiagnosticsPayload() {
-  const activeClient = await initializeWhatsAppClient();
-  return collectWhatsAppDiagnostics(activeClient, connectionStatus);
+async function waitForReady(activeClient, timeoutMs) {
+  if (connectionStatus === "READY") {
+    return;
+  }
+
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(
+        new Error(
+          `Timed out waiting for READY after recovery (status: ${connectionStatus})`,
+        ),
+      );
+    }, timeoutMs);
+
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      activeClient.removeListener("ready", onReady);
+    };
+
+    if (connectionStatus === "READY") {
+      cleanup();
+      resolve();
+      return;
+    }
+
+    activeClient.on("ready", onReady);
+  });
 }
 
-async function runPreSendDiagnostics(activeClient) {
-  const diagnostics = await collectWhatsAppDiagnostics(
-    activeClient,
-    connectionStatus,
-  );
+async function performControlledRecovery() {
+  console.warn("[whatsapp-web] recovery started");
 
-  console.info("[whatsapp-web] pre-send diagnostics", {
-    ...summarizeDiagnosticsForLog(diagnostics),
-    headlessMode: config.puppeteerHeadlessMode,
-  });
+  await destroyFailedClient(client);
+  client = null;
+  initPromise = null;
 
-  if (!diagnostics.responsive) {
-    const error = new Error(
-      "WhatsApp Web page is not responsive; refusing to send",
-    );
+  const recoveredClient = await createWhatsAppClient();
+  if (!recoveredClient) {
+    const error = new Error("Controlled recovery failed to initialize client");
     error.statusCode = 503;
-    error.diagnostics = summarizeDiagnosticsForLog(diagnostics);
     throw error;
   }
 
-  return diagnostics;
+  await waitForReady(recoveredClient, RECOVERY_READY_TIMEOUT_MS);
+  console.info("[whatsapp-web] recovery READY");
+
+  return recoveredClient;
+}
+
+async function runPreSendHealthCheckWithRetries(activeClient, options = {}) {
+  const maxAttempts = options.maxAttempts || MAX_PRE_SEND_HEALTH_ATTEMPTS;
+  const allowRecovery = options.allowRecovery !== false;
+  let lastDiagnostics = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    console.info("[whatsapp-web] pre-send health attempt", {
+      attempt,
+      maxAttempts,
+    });
+
+    lastDiagnostics = await collectPreSendHealthCheck(
+      activeClient,
+      connectionStatus,
+    );
+
+    console.info("[whatsapp-web] pre-send health result", {
+      attempt,
+      maxAttempts,
+      responsive: lastDiagnostics.responsive,
+      pageResponsive: lastDiagnostics.responsive ? "responsive" : "unresponsive",
+      ...summarizeDiagnosticsForLog(lastDiagnostics),
+      totalDurationMs: lastDiagnostics.totalDurationMs,
+    });
+
+    if (lastDiagnostics.responsive) {
+      return { activeClient, diagnostics: lastDiagnostics };
+    }
+
+    if (attempt < maxAttempts) {
+      console.warn("[whatsapp-web] pre-send health retry scheduled", {
+        attempt,
+        nextAttempt: attempt + 1,
+        delayMs: PRE_SEND_HEALTH_RETRY_DELAY_MS,
+      });
+      await sleep(PRE_SEND_HEALTH_RETRY_DELAY_MS);
+    }
+  }
+
+  if (allowRecovery) {
+    const recoveredClient = await performControlledRecovery();
+    const postRecoveryDiagnostics = await collectPreSendHealthCheck(
+      recoveredClient,
+      connectionStatus,
+    );
+
+    console.info("[whatsapp-web] pre-send health result", {
+      attempt: "post-recovery",
+      responsive: postRecoveryDiagnostics.responsive,
+      pageResponsive: postRecoveryDiagnostics.responsive
+        ? "responsive"
+        : "unresponsive",
+      ...summarizeDiagnosticsForLog(postRecoveryDiagnostics),
+      totalDurationMs: postRecoveryDiagnostics.totalDurationMs,
+    });
+
+    if (postRecoveryDiagnostics.responsive) {
+      return {
+        activeClient: recoveredClient,
+        diagnostics: postRecoveryDiagnostics,
+        recovered: true,
+      };
+    }
+
+    lastDiagnostics = postRecoveryDiagnostics;
+  }
+
+  const error = new Error(
+    "WhatsApp Web page is not responsive; refusing to send",
+  );
+  error.statusCode = 503;
+  error.diagnostics = summarizeDiagnosticsForLog(lastDiagnostics);
+  throw error;
+}
+
+async function getDiagnosticsPayload() {
+  const activeClient = await initializeWhatsAppClient();
+  return collectWhatsAppDiagnostics(activeClient, connectionStatus);
 }
 
 async function sendTextMessage(to, message) {
@@ -406,16 +517,25 @@ async function sendTextMessage(to, message) {
   });
 
   try {
-    await runPreSendDiagnostics(activeClient);
+    let activeClientForSend = activeClient;
+    const health = await runPreSendHealthCheckWithRetries(activeClientForSend, {
+      allowRecovery: true,
+    });
+    activeClientForSend = health.activeClient;
+
+    console.info("[whatsapp-web] sendMessage started", {
+      messageLength: text.length,
+      recovered: Boolean(health.recovered),
+    });
 
     const result = await withTimeout(
-      activeClient.sendMessage(chatId, text),
+      activeClientForSend.sendMessage(chatId, text),
       config.sendMessageTimeoutMs,
       "WhatsApp Web did not respond in time",
       504,
     );
 
-    console.info("[whatsapp-web] send succeeded", {
+    console.info("[whatsapp-web] sendMessage succeeded", {
       durationMs: Date.now() - startedAt,
       messageLength: text.length,
     });
@@ -426,7 +546,7 @@ async function sendTextMessage(to, message) {
     };
   } catch (error) {
     const normalizedError = normalizeSendError(error);
-    console.error("[whatsapp-web] send failed", {
+    console.error("[whatsapp-web] sendMessage failed", {
       durationMs: Date.now() - startedAt,
       statusCode: normalizedError.statusCode || 500,
       error: sanitizeError(
