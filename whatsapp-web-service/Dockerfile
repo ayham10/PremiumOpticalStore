@@ -60,13 +60,9 @@ RUN npm ci --omit=dev
 # Download Puppeteer 24.38.0's pinned Chrome for Testing build only.
 RUN npx puppeteer browsers install chrome
 
-# Pin a known WhatsApp Web HTML build (avoids live-page drift and heavy resync).
-ARG WHATSAPP_WEB_VERSION=2.3000.1046816453-alpha
-RUN mkdir -p /app/.wwebjs_cache \
-  && wget -q -O "/app/.wwebjs_cache/${WHATSAPP_WEB_VERSION}.html" \
-    "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${WHATSAPP_WEB_VERSION}.html"
-
-ENV WHATSAPP_WEB_VERSION=${WHATSAPP_WEB_VERSION}
+# Default: load live WhatsApp Web HTML (no request interception).
+# Set WHATSAPP_WEB_CACHE_MODE=pinned at runtime to use a baked local HTML cache.
+ENV WHATSAPP_WEB_CACHE_MODE=live
 ENV WHATSAPP_WEB_CACHE_PATH=/app/.wwebjs_cache
 
 COPY src ./src

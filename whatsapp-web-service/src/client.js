@@ -9,6 +9,7 @@ const {
   collectWhatsAppDiagnostics,
   collectBrowserSnapshot,
   collectProcessDiagnostics,
+  collectRendererDiagnostics,
   fastPagePing,
 } = require("./diagnostics");
 
@@ -50,11 +51,16 @@ function isRetryableInitError(error) {
   );
 }
 
-/** Railway container flags only — avoid flags that alter WhatsApp Web scheduling. */
+/** Railway container flags + headless anti-throttling (prevents renderer suspension). */
 const PUPPETEER_CHROMIUM_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--no-first-run",
+  "--disable-background-timer-throttling",
+  "--disable-backgrounding-occluded-windows",
+  "--disable-renderer-backgrounding",
 ];
 
 function getStatusPayload() {
@@ -147,18 +153,23 @@ function buildPuppeteerConfig() {
 }
 
 function buildWhatsAppClientOptions() {
-  return {
+  const options = {
     authStrategy: new LocalAuth({
       dataPath: path.resolve(config.authDataPath),
     }),
-    webVersion: config.whatsappWebVersion,
-    webVersionCache: {
+    puppeteer: buildPuppeteerConfig(),
+  };
+
+  if (config.whatsappWebCacheMode === "pinned") {
+    options.webVersion = config.whatsappWebVersion;
+    options.webVersionCache = {
       type: "local",
       path: config.whatsappWebCachePath,
       strict: true,
-    },
-    puppeteer: buildPuppeteerConfig(),
-  };
+    };
+  }
+
+  return options;
 }
 
 function stopPageKeepAlive() {
@@ -183,9 +194,13 @@ function startPageKeepAlive(activeClient) {
 
       const ping = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
       if (!ping.responsive) {
+        const renderer = await collectRendererDiagnostics(activeClient);
         console.warn("[whatsapp-web] page keepalive unresponsive", {
           durationMs: ping.durationMs,
           error: ping.error,
+          cacheMode: config.whatsappWebCacheMode,
+          ...collectProcessDiagnostics(),
+          renderer,
         });
       }
     })();
@@ -305,9 +320,26 @@ function attachClientEvents(activeClient) {
     connectionStatus = "READY";
     lastError = null;
     clearQr();
-    console.info("[whatsapp-web] READY");
+    console.info("[whatsapp-web] READY", {
+      cacheMode: config.whatsappWebCacheMode,
+    });
     await pruneExtraBrowserPages(activeClient);
     await logBrowserSnapshot(activeClient, "ready");
+
+    const immediatePing = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
+    const rendererAtReady = await collectRendererDiagnostics(activeClient);
+    console.info("[whatsapp-web] post-ready health", {
+      responsive: immediatePing.responsive,
+      ping: immediatePing.ping,
+      durationMs: immediatePing.durationMs,
+      error: immediatePing.error,
+      loadedWebVersion: rendererAtReady.loadedWebVersion,
+      loadedWebVersionError: rendererAtReady.loadedWebVersionError,
+      cacheMode: config.whatsappWebCacheMode,
+      chromeChildCount: rendererAtReady.chromeChildren.length,
+      ...collectProcessDiagnostics(),
+    });
+
     startPageKeepAlive(activeClient);
   });
 
@@ -371,7 +403,10 @@ async function createWhatsAppClient() {
     source: browserInfo.source,
     headlessMode: config.puppeteerHeadlessMode,
     cacheDir: process.env.PUPPETEER_CACHE_DIR || null,
-    webVersion: config.whatsappWebVersion,
+    cacheMode: config.whatsappWebCacheMode,
+    webVersion: config.whatsappWebCacheMode === "pinned"
+      ? config.whatsappWebVersion
+      : "live (web.whatsapp.com)",
     webVersionCachePath: config.whatsappWebCachePath,
   });
 
@@ -398,7 +433,10 @@ async function createWhatsAppClient() {
 
       console.info("[whatsapp-web] initialization succeeded", {
         attempt,
-        webVersion: config.whatsappWebVersion,
+        cacheMode: config.whatsappWebCacheMode,
+        webVersion: config.whatsappWebCacheMode === "pinned"
+          ? config.whatsappWebVersion
+          : "live (web.whatsapp.com)",
       });
       return client;
     } catch (error) {
