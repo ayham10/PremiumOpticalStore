@@ -4,6 +4,7 @@ const qrcode = require("qrcode");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const config = require("./config");
 const { toWhatsAppChatId } = require("./phone");
+const { removeStaleChromiumProfileLocks } = require("./profileLocks");
 
 /** @type {"INITIALIZING"|"QR_REQUIRED"|"AUTHENTICATED"|"READY"|"DISCONNECTED"|"AUTH_FAILURE"} */
 let connectionStatus = "INITIALIZING";
@@ -13,6 +14,7 @@ let lastError = null;
 let client = null;
 /** @type {Promise<import("whatsapp-web.js").Client | null> | null} */
 let initPromise = null;
+let staleChromiumLocksCleanedUp = false;
 
 /** Low-memory Chromium flags for headless Railway containers. */
 const PUPPETEER_CHROMIUM_ARGS = [
@@ -85,9 +87,32 @@ function ensureAuthDirectory() {
   fs.mkdirSync(path.resolve(config.authDataPath), { recursive: true });
 }
 
+async function cleanupStaleChromiumLocksOnce() {
+  if (staleChromiumLocksCleanedUp) {
+    return;
+  }
+
+  staleChromiumLocksCleanedUp = true;
+
+  const removed = await removeStaleChromiumProfileLocks(config.authDataPath);
+  if (removed.length === 0) {
+    console.info("[whatsapp-web] no stale Chromium profile locks found at startup", {
+      authDataPath: config.authDataPath,
+    });
+    return;
+  }
+
+  console.info("[whatsapp-web] removed stale Chromium profile locks before startup", {
+    authDataPath: config.authDataPath,
+    removedFiles: [...new Set(removed)],
+    count: removed.length,
+  });
+}
+
 function buildPuppeteerConfig() {
   const puppeteer = {
-    headless: true,
+    // Use classic headless mode for system Chromium in Railway containers (no X11).
+    headless: "shell",
     args: PUPPETEER_CHROMIUM_ARGS,
   };
 
@@ -155,6 +180,7 @@ async function createWhatsAppClient() {
 
   try {
     ensureAuthDirectory();
+    await cleanupStaleChromiumLocksOnce();
 
     client = new Client({
       authStrategy: new LocalAuth({
