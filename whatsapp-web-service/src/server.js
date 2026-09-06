@@ -5,6 +5,7 @@ const {
   sendTextMessage,
   getStatusPayload,
   getQrPayload,
+  getDiagnosticsPayload,
 } = require("./client");
 
 const app = express();
@@ -97,6 +98,26 @@ app.get("/qr-view", (_req, res) => {
   </main>
 </body>
 </html>`);
+});
+
+app.get("/diagnostics", requireApiKey, async (_req, res) => {
+  try {
+    const diagnostics = await getDiagnosticsPayload();
+    res.json({
+      ok: true,
+      service: "oyon-whatsapp-web-service",
+      diagnostics,
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Diagnostics failed";
+    console.error("[whatsapp-web] diagnostics failed", {
+      error: detail.slice(0, 500),
+    });
+    res.status(500).json({
+      ok: false,
+      error: detail,
+    });
+  }
 });
 
 app.post("/send", requireApiKey, async (req, res) => {

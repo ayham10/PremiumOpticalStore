@@ -5,6 +5,10 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const config = require("./config");
 const { toWhatsAppChatId } = require("./phone");
 const { removeStaleChromiumProfileLocks } = require("./profileLocks");
+const {
+  collectWhatsAppDiagnostics,
+  summarizeDiagnosticsForLog,
+} = require("./diagnostics");
 
 /** @type {"INITIALIZING"|"QR_REQUIRED"|"AUTHENTICATED"|"READY"|"DISCONNECTED"|"AUTH_FAILURE"} */
 let connectionStatus = "INITIALIZING";
@@ -103,8 +107,9 @@ async function cleanupStaleChromiumLocksOnce() {
 
 function buildPuppeteerConfig() {
   const puppeteer = {
-    // Use classic headless mode for system Chromium in Railway containers (no X11).
-    headless: "shell",
+    // Puppeteer 24 + Debian Chromium: use modern headless (--headless=new).
+    // Classic shell headless can leave WhatsApp Web "ready" while evaluate/send stall.
+    headless: config.puppeteerHeadlessMode,
     protocolTimeout: config.protocolTimeoutMs,
     args: PUPPETEER_CHROMIUM_ARGS,
   };
@@ -228,6 +233,34 @@ async function createWhatsAppClient() {
   return client;
 }
 
+async function getDiagnosticsPayload() {
+  const activeClient = await initializeWhatsAppClient();
+  return collectWhatsAppDiagnostics(activeClient, connectionStatus);
+}
+
+async function runPreSendDiagnostics(activeClient) {
+  const diagnostics = await collectWhatsAppDiagnostics(
+    activeClient,
+    connectionStatus,
+  );
+
+  console.info("[whatsapp-web] pre-send diagnostics", {
+    ...summarizeDiagnosticsForLog(diagnostics),
+    headlessMode: config.puppeteerHeadlessMode,
+  });
+
+  if (!diagnostics.responsive) {
+    const error = new Error(
+      "WhatsApp Web page is not responsive; refusing to send",
+    );
+    error.statusCode = 503;
+    error.diagnostics = summarizeDiagnosticsForLog(diagnostics);
+    throw error;
+  }
+
+  return diagnostics;
+}
+
 async function sendTextMessage(to, message) {
   const activeClient = await initializeWhatsAppClient();
 
@@ -260,6 +293,8 @@ async function sendTextMessage(to, message) {
   });
 
   try {
+    await runPreSendDiagnostics(activeClient);
+
     const result = await withTimeout(
       activeClient.sendMessage(chatId, text),
       config.sendMessageTimeoutMs,
@@ -296,4 +331,5 @@ module.exports = {
   sendTextMessage,
   getStatusPayload,
   getQrPayload,
+  getDiagnosticsPayload,
 };
