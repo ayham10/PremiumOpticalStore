@@ -14540,7 +14540,7 @@ select.admin-pe-input {
 
 .admin-bm-provider-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem 0.65rem;
@@ -14667,6 +14667,33 @@ select.admin-pe-input {
 .admin-bm-test-btn:disabled {
   opacity: 0.42;
   cursor: not-allowed;
+}
+
+.admin-bm-danger-btn {
+  border-color: rgba(208, 92, 92, 0.55) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(180, 64, 64, 0.2) 0%,
+    rgba(180, 64, 64, 0.08) 100%
+  ) !important;
+  color: #f0b4b4 !important;
+}
+
+.admin-bm-danger-btn svg {
+  color: #e08a8a;
+}
+
+.admin-bm-danger-btn:hover:not(:disabled) {
+  border-color: rgba(224, 110, 110, 0.85) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(180, 64, 64, 0.3) 0%,
+    rgba(180, 64, 64, 0.12) 100%
+  ) !important;
+  color: #ffd0d0 !important;
+  box-shadow:
+    0 0 0 1px rgba(208, 92, 92, 0.16) inset,
+    0 0 14px rgba(180, 64, 64, 0.22);
 }
 
 .admin-bm-test-result {
@@ -14816,5 +14843,9 @@ select.admin-pe-input {
 
   .admin-bm .admin-bm-fields {
     gap: 1rem;
+  }
+
+  .admin-bm-provider-row {
+    flex-wrap: wrap;
   }
 }

@@ -27,6 +27,7 @@ let inFlightClient = null;
 /** @type {Promise<import("whatsapp-web.js").Client | null> | null} */
 let startPromise = null;
 let adminMutationBusy = false;
+let holdNewClient = false;
 let clientGeneration = 0;
 let ownedBrowserPid = null;
 let staleChromiumLocksCleanedUp = false;
@@ -652,6 +653,9 @@ async function initializeWhatsAppClient() {
   if (startPromise) {
     return startPromise;
   }
+  if (holdNewClient) {
+    return null;
+  }
   if (adminMutationBusy) {
     while (adminMutationBusy && !client && !startPromise) {
       await sleep(50);
@@ -667,6 +671,9 @@ async function initializeWhatsAppClient() {
 }
 
 async function startFreshClient() {
+  if (holdNewClient) {
+    return null;
+  }
   if (startPromise) {
     return startPromise;
   }
@@ -820,6 +827,7 @@ async function reconnectWhatsAppClient() {
   }
 
   adminMutationBusy = true;
+  holdNewClient = false;
   const previousReceivedAt = qrReceivedAt;
   try {
     await stopCurrentClient({ clearSession: false });
@@ -852,8 +860,9 @@ async function reconnectWhatsAppClient() {
  * Explicit pairing reset: destroy the client, remove only this service's
  * LocalAuth session directory, then start a new client. Never automatic.
  */
-async function resetWhatsAppSession() {
-  if (connectionStatus === "READY") {
+async function resetWhatsAppSession(options = {}) {
+  const allowReady = options.allowReady === true;
+  if (connectionStatus === "READY" && !allowReady) {
     return { ok: false, refused: true, inProgress: false, status: "READY" };
   }
 
@@ -867,6 +876,7 @@ async function resetWhatsAppSession() {
   }
 
   adminMutationBusy = true;
+  holdNewClient = false;
   const previousReceivedAt = qrReceivedAt;
   try {
     await stopCurrentClient({ clearSession: true });
@@ -884,6 +894,75 @@ async function resetWhatsAppSession() {
       error instanceof Error ? error.message : String(error),
     );
     console.warn("[whatsapp-web] session reset failed", { error: lastError });
+    return {
+      ok: false,
+      refused: false,
+      inProgress: false,
+      status: connectionStatus,
+    };
+  } finally {
+    adminMutationBusy = false;
+  }
+}
+
+async function unlinkWhatsAppClient(activeClient) {
+  if (!activeClient || typeof activeClient.logout !== "function") {
+    return;
+  }
+  try {
+    await Promise.race([activeClient.logout(), sleep(20000)]);
+  } catch (error) {
+    console.warn("[whatsapp-web] client.logout failed", {
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    });
+  }
+}
+
+/**
+ * Unlink the live WhatsApp Web session from the phone, stop Chromium,
+ * and clear LocalAuth. Does not start a new QR until Admin reconnects.
+ */
+async function disconnectWhatsAppSession() {
+  if (connectionStatus !== "READY") {
+    return {
+      ok: false,
+      refused: true,
+      inProgress: false,
+      status: connectionStatus,
+    };
+  }
+
+  if (adminMutationBusy) {
+    return {
+      ok: false,
+      refused: false,
+      inProgress: true,
+      status: connectionStatus,
+    };
+  }
+
+  adminMutationBusy = true;
+  holdNewClient = true;
+  try {
+    const active = client;
+    await unlinkWhatsAppClient(active);
+    await stopCurrentClient({ clearSession: true });
+    holdNewClient = true;
+    connectionStatus = "DISCONNECTED";
+    clearQr();
+    lastError = null;
+    return {
+      ok: true,
+      refused: false,
+      inProgress: false,
+      status: "DISCONNECTED",
+    };
+  } catch (error) {
+    connectionStatus = "DISCONNECTED";
+    lastError = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+    console.warn("[whatsapp-web] disconnect failed", { error: lastError });
     return {
       ok: false,
       refused: false,
@@ -1107,6 +1186,7 @@ module.exports = {
   initializeWhatsAppClient,
   reconnectWhatsAppClient,
   resetWhatsAppSession,
+  disconnectWhatsAppSession,
   sendTextMessage,
   getStatusPayload,
   getQrPayload,

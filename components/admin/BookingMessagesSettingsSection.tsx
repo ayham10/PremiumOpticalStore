@@ -7,10 +7,9 @@ import {
   MessageCircle,
   Phone,
   Plug,
-  QrCode,
   RefreshCw,
-  RotateCw,
   TriangleAlert,
+  Unplug,
   UserRound,
   Zap,
 } from "lucide-react";
@@ -135,10 +134,10 @@ export default function BookingMessagesSettingsSection({
 }: Props) {
   const { t } = useLocale();
   const [testing, setTesting] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [reconnecting, setReconnecting] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"reconnect" | "disconnect" | null>(
+    null,
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
@@ -276,91 +275,34 @@ export default function BookingMessagesSettingsSection({
     }, 4000);
   }
 
-  async function connectWhatsApp() {
-    setConnecting(true);
-    setTestResult(null);
-    try {
-      await loadQr();
-      startPolling(true);
-    } catch (err) {
-      setTestResult({
-        ok: false,
-        message:
-          err instanceof Error
-            ? err.message
-            : t("admin.settings.bmOracleQrError"),
-      });
-    } finally {
-      setConnecting(false);
-    }
-  }
-
-  async function generateFreshQr() {
-    setReconnecting(true);
-    setTestResult(null);
-    const previousReceivedAt = qrReceivedAt;
-    try {
-      await apiFetch<{
-        ok: boolean;
-        status?: string;
-        ready?: boolean;
-        reachable?: boolean;
-        configured?: boolean;
-      }>("/api/settings/whatsapp-web/reconnect", { method: "POST" });
-      applyStatus({
-        status: "INITIALIZING",
-        ready: false,
-        reachable: true,
-        configured: true,
-      });
-      setQrDataUrl(null);
-      setQrReceivedAt(null);
-
-      const deadline = Date.now() + 45000;
-      let foundFreshQr = false;
-      while (Date.now() < deadline) {
-        const data = await loadQr();
-        if (data.ready) {
-          foundFreshQr = true;
-          break;
-        }
-        if (
-          data.qrDataUrl &&
-          data.qrReceivedAt &&
-          data.qrReceivedAt !== previousReceivedAt
-        ) {
-          foundFreshQr = true;
-          break;
-        }
-        await new Promise((resolve) => window.setTimeout(resolve, 2000));
-      }
-
-      startPolling(true);
-      if (!foundFreshQr) {
-        setTestResult({
-          ok: false,
-          message: t("admin.settings.bmOracleFreshQrError"),
-        });
-      }
-    } catch (err) {
-      setTestResult({
-        ok: false,
-        message:
-          err instanceof Error
-            ? err.message
-            : t("admin.settings.bmOracleFreshQrError"),
-      });
-    } finally {
-      setReconnecting(false);
-    }
-  }
-
   async function resetWhatsAppSession() {
-    setResetConfirmOpen(false);
+    const isDisconnect = confirmAction === "disconnect";
+    setConfirmAction(null);
     setResetting(true);
     setTestResult(null);
     const previousReceivedAt = qrReceivedAt;
     try {
+      if (isDisconnect) {
+        const data = await apiFetch<{
+          ok: boolean;
+          status?: string;
+          ready?: boolean;
+          reachable?: boolean;
+          configured?: boolean;
+        }>("/api/settings/whatsapp-web/disconnect", { method: "POST" });
+        applyStatus({
+          status: data.status || "DISCONNECTED",
+          ready: false,
+          reachable: true,
+          configured: true,
+        });
+        setQrDataUrl(null);
+        setQrReceivedAt(null);
+        stopPolling();
+        await loadStatus();
+        return;
+      }
+
       await apiFetch<{
         ok: boolean;
         status?: string;
@@ -409,7 +351,11 @@ export default function BookingMessagesSettingsSection({
         message:
           err instanceof Error
             ? err.message
-            : t("admin.settings.bmOracleResetError"),
+            : t(
+                isDisconnect
+                  ? "admin.settings.bmOracleDisconnectError"
+                  : "admin.settings.bmOracleResetError",
+              ),
       });
     } finally {
       setResetting(false);
@@ -485,43 +431,31 @@ export default function BookingMessagesSettingsSection({
               ? t("admin.settings.bmOracleRefreshing")
               : t("admin.settings.bmOracleRefresh")}
           </button>
-          {!serviceReady ? (
-            <>
-              <button
-                type="button"
-                className="btn btn-ghost admin-bm-test-btn"
-                onClick={() => void connectWhatsApp()}
-                disabled={connecting || reconnecting || resetting}
-              >
-                <QrCode size={14} strokeWidth={1.75} aria-hidden />
-                {connecting
-                  ? t("admin.settings.bmOracleConnecting")
-                  : t("admin.settings.bmOracleConnect")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost admin-bm-test-btn"
-                onClick={() => void generateFreshQr()}
-                disabled={reconnecting || connecting || resetting}
-              >
-                <RotateCw size={14} strokeWidth={1.75} aria-hidden />
-                {reconnecting
-                  ? t("admin.settings.bmOracleFreshQrLoading")
-                  : t("admin.settings.bmOracleFreshQr")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost admin-bm-test-btn"
-                onClick={() => setResetConfirmOpen(true)}
-                disabled={reconnecting || connecting || resetting}
-              >
-                <TriangleAlert size={14} strokeWidth={1.75} aria-hidden />
-                {resetting
-                  ? t("admin.settings.bmOracleResetLoading")
-                  : t("admin.settings.bmOracleReset")}
-              </button>
-            </>
-          ) : null}
+          {serviceReady ? (
+            <button
+              type="button"
+              className="btn btn-ghost admin-bm-test-btn admin-bm-danger-btn"
+              onClick={() => setConfirmAction("disconnect")}
+              disabled={resetting}
+            >
+              <Unplug size={14} strokeWidth={1.75} aria-hidden />
+              {resetting
+                ? t("admin.settings.bmOracleDisconnectLoading")
+                : t("admin.settings.bmOracleDisconnect")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ghost admin-bm-test-btn"
+              onClick={() => setConfirmAction("reconnect")}
+              disabled={resetting}
+            >
+              <TriangleAlert size={14} strokeWidth={1.75} aria-hidden />
+              {resetting
+                ? t("admin.settings.bmOracleResetLoading")
+                : t("admin.settings.bmOracleReset")}
+            </button>
+          )}
         </div>
         {testResult ? (
           <p
@@ -531,11 +465,11 @@ export default function BookingMessagesSettingsSection({
             {testResult.message}
           </p>
         ) : null}
-        {(reconnecting || resetting) && !qrDataUrl ? (
+        {resetting && !qrDataUrl ? (
           <p className="admin-bm-hint">
-            {resetting
-              ? t("admin.settings.bmOracleResetLoading")
-              : t("admin.settings.bmOracleFreshQrLoading")}
+            {serviceReady
+              ? t("admin.settings.bmOracleDisconnectLoading")
+              : t("admin.settings.bmOracleResetLoading")}
           </p>
         ) : null}
         {qrDataUrl && !serviceReady ? (
@@ -555,32 +489,42 @@ export default function BookingMessagesSettingsSection({
       </section>
 
       <AdminModal
-        open={resetConfirmOpen}
-        title={t("admin.settings.bmOracleResetTitle")}
+        open={confirmAction !== null}
+        title={
+          confirmAction === "disconnect"
+            ? t("admin.settings.bmOracleDisconnectTitle")
+            : t("admin.settings.bmOracleResetTitle")
+        }
         onClose={() => {
-          if (!resetting) setResetConfirmOpen(false);
+          if (!resetting) setConfirmAction(null);
         }}
         icon={<TriangleAlert className="admin-bm-gold-icon" size={18} aria-hidden />}
       >
         <p className="admin-bm-hint" style={{ maxWidth: "100%", marginBottom: "1rem" }}>
-          {t("admin.settings.bmOracleResetConfirm")}
+          {confirmAction === "disconnect"
+            ? t("admin.settings.bmOracleDisconnectConfirm")
+            : t("admin.settings.bmOracleResetConfirm")}
         </p>
         <div className="admin-bm-provider-row">
           <button
             type="button"
             className="btn btn-ghost admin-bm-test-btn"
-            onClick={() => setResetConfirmOpen(false)}
+            onClick={() => setConfirmAction(null)}
             disabled={resetting}
           >
             {t("admin.settings.bmOracleResetCancel")}
           </button>
           <button
             type="button"
-            className="btn btn-ghost admin-bm-test-btn"
+            className={`btn btn-ghost admin-bm-test-btn${
+              confirmAction === "disconnect" ? " admin-bm-danger-btn" : ""
+            }`}
             onClick={() => void resetWhatsAppSession()}
             disabled={resetting}
           >
-            {t("admin.settings.bmOracleResetConfirmAction")}
+            {confirmAction === "disconnect"
+              ? t("admin.settings.bmOracleDisconnectConfirmAction")
+              : t("admin.settings.bmOracleResetConfirmAction")}
           </button>
         </div>
       </AdminModal>

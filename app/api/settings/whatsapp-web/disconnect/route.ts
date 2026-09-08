@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/helpers";
-import { resetOracleWhatsAppSession } from "@/lib/whatsapp/oracle-admin";
+import { disconnectOracleWhatsApp } from "@/lib/whatsapp/oracle-admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     await requireSession("settings");
-    const body = (await request.json().catch(() => ({}))) as {
-      allowReady?: boolean;
-    };
-    const result = await resetOracleWhatsAppSession({
-      allowReady: body.allowReady === true,
-    });
+    const result = await disconnectOracleWhatsApp();
     if (!result.configured) {
       return NextResponse.json(
         {
@@ -46,15 +41,9 @@ export async function POST(request: Request) {
           configured: true,
           reachable: result.reachable,
           status: result.status,
-          error:
-            result.status === "READY"
-              ? "WhatsApp is already connected."
-              : "Could not reset the WhatsApp session.",
+          error: "Could not disconnect WhatsApp.",
         },
-        {
-          status: result.status === "READY" ? 409 : 503,
-          headers: { "Cache-Control": "no-store" },
-        },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
       );
     }
     return NextResponse.json(

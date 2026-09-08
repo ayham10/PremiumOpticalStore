@@ -4,6 +4,7 @@ const {
   initializeWhatsAppClient,
   reconnectWhatsAppClient,
   resetWhatsAppSession,
+  disconnectWhatsAppSession,
   sendTextMessage,
   getStatusPayload,
   getQrPayload,
@@ -137,9 +138,11 @@ app.post("/reconnect", requireApiKey, async (_req, res) => {
   }
 });
 
-app.post("/reset-session", requireApiKey, async (_req, res) => {
+app.post("/reset-session", requireApiKey, async (req, res) => {
   try {
-    const result = await resetWhatsAppSession();
+    const result = await resetWhatsAppSession({
+      allowReady: req.body?.allowReady === true,
+    });
     if (result.refused) {
       return res.status(409).json({
         ok: false,
@@ -170,6 +173,43 @@ app.post("/reset-session", requireApiKey, async (_req, res) => {
     return res.status(503).json({
       ok: false,
       error: "Session reset failed",
+    });
+  }
+});
+
+app.post("/disconnect", requireApiKey, async (_req, res) => {
+  try {
+    const result = await disconnectWhatsAppSession();
+    if (result.refused) {
+      return res.status(409).json({
+        ok: false,
+        status: result.status,
+        error: "WhatsApp is not connected",
+      });
+    }
+    if (result.inProgress) {
+      return res.status(409).json({
+        ok: false,
+        status: result.status,
+        error: "Disconnect already in progress",
+      });
+    }
+    if (!result.ok) {
+      return res.status(503).json({
+        ok: false,
+        status: result.status,
+        error: "Disconnect failed",
+      });
+    }
+    return res.json({
+      ok: true,
+      status: result.status,
+    });
+  } catch {
+    console.error("[whatsapp-web] disconnect failed");
+    return res.status(503).json({
+      ok: false,
+      error: "Disconnect failed",
     });
   }
 });

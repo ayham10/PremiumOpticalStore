@@ -277,7 +277,73 @@ export async function reconnectOracleWhatsApp(): Promise<OracleAdminReconnect> {
   }
 }
 
-export async function resetOracleWhatsAppSession(): Promise<OracleAdminReconnect> {
+export async function disconnectOracleWhatsApp(): Promise<OracleAdminReconnect> {
+  const config = getWhatsAppWebServiceConfig();
+  if (!config) {
+    return {
+      ok: false,
+      configured: false,
+      reachable: false,
+      status: "UNCONFIGURED",
+    };
+  }
+
+  try {
+    const response = await fetch(`${config.baseUrl}/disconnect`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-API-Key": config.apiKey,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(RESET_TIMEOUT_MS),
+    });
+    const raw = await response.text().catch(() => "");
+    let json: Record<string, unknown> | null = null;
+    if (raw) {
+      try {
+        json = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        json = null;
+      }
+    }
+
+    const status = isConnectionStatus(json?.status)
+      ? json.status
+      : response.ok
+        ? "DISCONNECTED"
+        : "UNAVAILABLE";
+
+    if (!response.ok) {
+      const inProgress = response.status === 409 && status !== "READY";
+      return {
+        ok: false,
+        configured: true,
+        reachable: true,
+        status,
+        inProgress,
+      };
+    }
+
+    return {
+      ok: true,
+      configured: true,
+      reachable: true,
+      status,
+    };
+  } catch {
+    return {
+      ok: false,
+      configured: true,
+      reachable: false,
+      status: "UNAVAILABLE",
+    };
+  }
+}
+
+export async function resetOracleWhatsAppSession(
+  options: { allowReady?: boolean } = {},
+): Promise<OracleAdminReconnect> {
   const config = getWhatsAppWebServiceConfig();
   if (!config) {
     return {
@@ -293,8 +359,10 @@ export async function resetOracleWhatsAppSession(): Promise<OracleAdminReconnect
       method: "POST",
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         "X-API-Key": config.apiKey,
       },
+      body: JSON.stringify({ allowReady: options.allowReady === true }),
       cache: "no-store",
       signal: AbortSignal.timeout(RESET_TIMEOUT_MS),
     });
