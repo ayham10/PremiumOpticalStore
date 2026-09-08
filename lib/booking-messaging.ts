@@ -10,8 +10,9 @@ import type { SmsResult } from "@/lib/sms/provider";
 import type { AppData, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 import {
+  isWhatsAppWebServiceConfigured,
   logWhatsAppBookingResult,
-  sendWhatsAppTemplate,
+  sendBookingWhatsAppMessage,
   type WhatsAppSendResult,
 } from "@/lib/whatsapp/provider";
 
@@ -102,6 +103,68 @@ function toSmsResult(result: WhatsAppSendResult): SmsResult {
   };
 }
 
+function renderCustomerConfirmationText(
+  appointment: EyeExamAppointment,
+  variables: Record<string, string>,
+  storeName: string,
+): string {
+  const name = variables["1"] || `${appointment.firstName} ${appointment.lastName}`.trim();
+  const date = variables["2"] || appointment.appointmentDate;
+  const time = variables["3"] || appointment.appointmentTime;
+  const brand = storeName.trim() || "OYON";
+
+  if (appointment.language === "he") {
+    return `${brand}: שלום ${name}, התור שלך אושר ל-${date} בשעה ${time}.`;
+  }
+  if (appointment.language === "ar") {
+    return `${brand}: مرحباً ${name}، تم تأكيد موعدك بتاريخ ${date} الساعة ${time}.`;
+  }
+  return `${brand}: Hi ${name}, your booking is confirmed for ${date} at ${time}.`;
+}
+
+function renderOwnerNotificationText(
+  appointment: EyeExamAppointment,
+  variables: Record<string, string>,
+  serviceLabel: string,
+  storeName: string,
+): string {
+  const name = variables["1"] || `${appointment.firstName} ${appointment.lastName}`.trim();
+  const date = variables["2"] || formatEyeExamDateDisplay(appointment.appointmentDate);
+  const time = variables["3"] || appointment.appointmentTime;
+  const phone = variables["4"] || appointment.phone;
+  const service = variables["5"] || serviceLabel;
+  const brand = storeName.trim() || "OYON";
+
+  if (appointment.language === "he") {
+    return `${brand}: הזמנה חדשה — ${name}, ${service}, ${date} בשעה ${time}. טלפון: ${phone}`;
+  }
+  if (appointment.language === "ar") {
+    return `${brand}: حجز جديد — ${name}، ${service}، ${date} الساعة ${time}. الهاتف: ${phone}`;
+  }
+  return `${brand}: New booking — ${name}, ${service}, ${date} at ${time}. Phone: ${phone}`;
+}
+
+function renderReminderText(
+  appointment: EyeExamAppointment,
+  variables: Record<string, string>,
+  serviceLabel: string,
+  storeName: string,
+): string {
+  const name = variables.customer_name || `${appointment.firstName} ${appointment.lastName}`.trim();
+  const date = variables.appointment_date || formatEyeExamDateDisplay(appointment.appointmentDate);
+  const time = variables.appointment_time || appointment.appointmentTime;
+  const service = variables.service_name || serviceLabel;
+  const brand = storeName.trim() || "OYON";
+
+  if (appointment.language === "he") {
+    return `${brand}: תזכורת — ${name}, ${service} ב-${date} בשעה ${time}.`;
+  }
+  if (appointment.language === "ar") {
+    return `${brand}: تذكير — ${name}، ${service} بتاريخ ${date} الساعة ${time}.`;
+  }
+  return `${brand}: Reminder — ${name}, ${service} on ${date} at ${time}.`;
+}
+
 function reminderAlreadySent(store: AppData, appointmentId: string): boolean {
   return store.smsLogs.some(
     (log) =>
@@ -161,16 +224,18 @@ async function sendConfiguredTemplate(
     contentVariables: Record<string, string>;
     kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
     smsType: "appointment_confirmation" | "appointment_reminder" | "custom";
+    textMessage: string;
     sendAt?: Date;
     note?: string;
     logDeferredReminder?: boolean;
   },
 ): Promise<void> {
-  const result = await sendWhatsAppTemplate({
+  const result = await sendBookingWhatsAppMessage({
     to: opts.to,
     templateName: opts.templateName,
     contentVariables: opts.contentVariables,
     sendAt: opts.sendAt,
+    textMessage: opts.textMessage,
   });
 
   logWhatsAppBookingResult(result, {
@@ -229,11 +294,18 @@ async function sendAppointmentReminder(
     store.bookingServices || [],
   );
   const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
+  const storeName = store.settings.storeName || "OYON";
 
   await sendConfiguredTemplate(appointment, {
     to: appointment.phone,
     templateName: reminderTemplate,
     contentVariables,
+    textMessage: renderReminderText(
+      appointment,
+      contentVariables,
+      serviceLabel,
+      storeName,
+    ),
     kind: "appointment_reminder",
     smsType: "appointment_reminder",
     sendAt,
@@ -245,7 +317,8 @@ async function sendAppointmentReminder(
 }
 
 /**
- * Dispatch Meta WhatsApp messages after a booking is saved.
+ * Dispatch WhatsApp messages after a booking is saved.
+ * Uses Oracle WhatsApp Web when configured, otherwise Meta templates.
  * Never throws — messaging failures must not affect the booking.
  */
 export async function dispatchBookingMessages(
@@ -275,6 +348,7 @@ export async function dispatchBookingMessages(
       appointment,
       store.bookingServices || [],
     );
+    const storeName = store.settings.storeName || "OYON";
     const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
     const ownerContentVariables = buildOwnerNotificationContentVariables(
       appointment,
@@ -282,12 +356,18 @@ export async function dispatchBookingMessages(
     );
     const customerConfirmationVariables =
       buildCustomerConfirmationContentVariables(appointment);
+    const useWhatsAppWeb = isWhatsAppWebServiceConfigured();
 
     if (bookingMessages.customerConfirmation.enabled) {
       await sendConfiguredTemplate(appointment, {
         to: appointment.phone,
         templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
         contentVariables: customerConfirmationVariables,
+        textMessage: renderCustomerConfirmationText(
+          appointment,
+          customerConfirmationVariables,
+          storeName,
+        ),
         kind: "customer_confirmation",
         smsType: "appointment_confirmation",
       });
@@ -295,15 +375,23 @@ export async function dispatchBookingMessages(
 
     const ownerWhatsApp =
       bookingMessages.ownerNotification.ownerWhatsApp.trim();
+    const ownerTemplate =
+      bookingMessages.ownerNotification.templateName.trim();
     if (
       bookingMessages.ownerNotification.enabled &&
       ownerWhatsApp &&
-      bookingMessages.ownerNotification.templateName.trim()
+      (useWhatsAppWeb || ownerTemplate)
     ) {
       await sendConfiguredTemplate(appointment, {
         to: ownerWhatsApp,
-        templateName: bookingMessages.ownerNotification.templateName.trim(),
+        templateName: ownerTemplate || "owner_notification",
         contentVariables: ownerContentVariables,
+        textMessage: renderOwnerNotificationText(
+          appointment,
+          ownerContentVariables,
+          serviceLabel,
+          storeName,
+        ),
         kind: "owner_notification",
         smsType: "custom",
         note: "owner",

@@ -1,14 +1,22 @@
 import { normalizeIsraeliPhone } from "@/lib/eye-exam";
 import { serverEnv } from "@/lib/twilio/config";
 
+export type WhatsAppProviderName = "meta" | "whatsapp-web";
+
 export type WhatsAppSendResult = {
   ok: boolean;
-  provider: "meta";
+  provider: WhatsAppProviderName;
   status: "sent" | "failed" | "skipped" | "queued";
   error?: string;
   externalId?: string;
   templateName?: string;
   scheduledFor?: string;
+};
+
+export type WhatsAppWebTextMessage = {
+  to: string;
+  message: string;
+  templateName?: string;
 };
 
 export type WhatsAppTemplateMessage = {
@@ -46,9 +54,27 @@ export function formatPhoneForWhatsAppMeta(input: string): string | null {
 export function sanitizeWhatsAppError(detail: string): string {
   return detail
     .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/x-api-key[=:\s]+\S+/gi, "x-api-key=[redacted]")
+    .replace(/api[_-]?key[=:]\S+/gi, "api_key=[redacted]")
     .replace(/access_token[=:]\S+/gi, "access_token=[redacted]")
     .replace(/"access_token"\s*:\s*"[^"]+"/gi, '"access_token":"[redacted]"')
     .slice(0, 500);
+}
+
+export type WhatsAppWebServiceConfig = {
+  baseUrl: string;
+  apiKey: string;
+};
+
+export function getWhatsAppWebServiceConfig(): WhatsAppWebServiceConfig | null {
+  const baseUrl = serverEnv("WHATSAPP_WEB_SERVICE_URL").replace(/\/+$/, "");
+  const apiKey = serverEnv("WHATSAPP_WEB_SERVICE_API_KEY");
+  if (!baseUrl || !apiKey) return null;
+  return { baseUrl, apiKey };
+}
+
+export function isWhatsAppWebServiceConfigured(): boolean {
+  return getWhatsAppWebServiceConfig() !== null;
 }
 
 export function getMetaWhatsAppConfig(): MetaWhatsAppConfig {
@@ -63,6 +89,118 @@ export function getMetaWhatsAppConfig(): MetaWhatsAppConfig {
 export function isWhatsAppConfigured(): boolean {
   const { accessToken, phoneNumberId } = getMetaWhatsAppConfig();
   return Boolean(accessToken && phoneNumberId);
+}
+
+/**
+ * Israeli mobile digits for Oracle POST /send.
+ * Compatible with whatsapp-web-service/src/phone.js (9725XXXXXXXX).
+ */
+export function formatPhoneForWhatsAppWeb(input: string): string | null {
+  return formatPhoneForWhatsAppMeta(input);
+}
+
+export async function sendWhatsAppWebText(
+  message: WhatsAppWebTextMessage,
+): Promise<WhatsAppSendResult> {
+  const config = getWhatsAppWebServiceConfig();
+  const to = formatPhoneForWhatsAppWeb(message.to);
+  const text = message.message.trim();
+  const templateName = message.templateName?.trim();
+
+  if (!to) {
+    return {
+      ok: false,
+      provider: "whatsapp-web",
+      status: "failed",
+      error: "Invalid recipient phone number for WhatsApp",
+      templateName,
+    };
+  }
+
+  if (!text) {
+    return {
+      ok: false,
+      provider: "whatsapp-web",
+      status: "failed",
+      error: "Message text is required",
+      templateName,
+    };
+  }
+
+  if (!config) {
+    return {
+      ok: false,
+      provider: "whatsapp-web",
+      status: "skipped",
+      error: "WhatsApp Web service is not configured",
+      templateName,
+    };
+  }
+
+  try {
+    const response = await fetch(`${config.baseUrl}/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": config.apiKey,
+      },
+      body: JSON.stringify({ to, message: text }),
+      cache: "no-store",
+    });
+
+    const raw = await response.text().catch(() => "");
+    let json: {
+      ok?: boolean;
+      error?: string;
+      messageId?: string;
+      chatId?: string;
+    } = {};
+    if (raw) {
+      try {
+        json = JSON.parse(raw) as typeof json;
+      } catch {
+        json = {};
+      }
+    }
+
+    if (!response.ok || json.ok === false) {
+      const detail =
+        json.error ||
+        sanitizeWhatsAppError(raw) ||
+        `WhatsApp Web service error ${response.status}`;
+      return {
+        ok: false,
+        provider: "whatsapp-web",
+        status: "failed",
+        error: detail,
+        templateName,
+      };
+    }
+
+    const externalId =
+      (typeof json.messageId === "string" && json.messageId) ||
+      (typeof json.chatId === "string" && json.chatId) ||
+      undefined;
+
+    return {
+      ok: true,
+      provider: "whatsapp-web",
+      status: "sent",
+      externalId,
+      templateName,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      provider: "whatsapp-web",
+      status: "failed",
+      error:
+        error instanceof Error
+          ? sanitizeWhatsAppError(error.message)
+          : "WhatsApp Web send failed",
+      templateName,
+    };
+  }
 }
 
 export function metaGraphUrl(path: string): string {
@@ -217,6 +355,38 @@ export async function sendWhatsAppTemplate(
       scheduledFor: message.sendAt?.toISOString(),
     };
   }
+}
+
+export type WhatsAppBookingSendInput = WhatsAppTemplateMessage & {
+  textMessage: string;
+};
+
+/**
+ * Prefer Oracle WhatsApp Web (plain text /send) when configured.
+ * Otherwise keep Meta Cloud API templates as the fallback.
+ */
+export async function sendBookingWhatsAppMessage(
+  message: WhatsAppBookingSendInput,
+): Promise<WhatsAppSendResult> {
+  if (isWhatsAppWebServiceConfigured()) {
+    if (message.sendAt && message.sendAt.getTime() > Date.now() + 60_000) {
+      return {
+        ok: true,
+        provider: "whatsapp-web",
+        status: "queued",
+        templateName: message.templateName.trim(),
+        scheduledFor: message.sendAt.toISOString(),
+      };
+    }
+
+    return sendWhatsAppWebText({
+      to: message.to,
+      message: message.textMessage,
+      templateName: message.templateName,
+    });
+  }
+
+  return sendWhatsAppTemplate(message);
 }
 
 export function logWhatsAppBookingResult(
