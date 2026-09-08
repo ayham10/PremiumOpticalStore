@@ -10,9 +10,11 @@ import {
   QrCode,
   RefreshCw,
   RotateCw,
+  TriangleAlert,
   UserRound,
   Zap,
 } from "lucide-react";
+import AdminModal from "@/components/admin/AdminModal";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import type { BookingMessagesSettings } from "@/lib/types";
@@ -135,6 +137,8 @@ export default function BookingMessagesSettingsSection({
   const [testing, setTesting] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
@@ -351,6 +355,67 @@ export default function BookingMessagesSettingsSection({
     }
   }
 
+  async function resetWhatsAppSession() {
+    setResetConfirmOpen(false);
+    setResetting(true);
+    setTestResult(null);
+    const previousReceivedAt = qrReceivedAt;
+    try {
+      await apiFetch<{
+        ok: boolean;
+        status?: string;
+        ready?: boolean;
+        reachable?: boolean;
+        configured?: boolean;
+      }>("/api/settings/whatsapp-web/reset-session", { method: "POST" });
+      applyStatus({
+        status: "INITIALIZING",
+        ready: false,
+        reachable: true,
+        configured: true,
+      });
+      setQrDataUrl(null);
+      setQrReceivedAt(null);
+
+      const deadline = Date.now() + 45000;
+      let foundFreshQr = false;
+      while (Date.now() < deadline) {
+        const data = await loadQr();
+        if (data.ready) {
+          foundFreshQr = true;
+          break;
+        }
+        if (
+          data.qrDataUrl &&
+          data.qrReceivedAt &&
+          data.qrReceivedAt !== previousReceivedAt
+        ) {
+          foundFreshQr = true;
+          break;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+
+      startPolling(true);
+      if (!foundFreshQr) {
+        setTestResult({
+          ok: false,
+          message: t("admin.settings.bmOracleResetError"),
+        });
+      }
+    } catch (err) {
+      setTestResult({
+        ok: false,
+        message:
+          err instanceof Error
+            ? err.message
+            : t("admin.settings.bmOracleResetError"),
+      });
+    } finally {
+      setResetting(false);
+    }
+  }
+
   async function refreshStatus() {
     setRefreshing(true);
     setTestResult(null);
@@ -426,7 +491,7 @@ export default function BookingMessagesSettingsSection({
                 type="button"
                 className="btn btn-ghost admin-bm-test-btn"
                 onClick={() => void connectWhatsApp()}
-                disabled={connecting || reconnecting}
+                disabled={connecting || reconnecting || resetting}
               >
                 <QrCode size={14} strokeWidth={1.75} aria-hidden />
                 {connecting
@@ -437,12 +502,23 @@ export default function BookingMessagesSettingsSection({
                 type="button"
                 className="btn btn-ghost admin-bm-test-btn"
                 onClick={() => void generateFreshQr()}
-                disabled={reconnecting || connecting}
+                disabled={reconnecting || connecting || resetting}
               >
                 <RotateCw size={14} strokeWidth={1.75} aria-hidden />
                 {reconnecting
                   ? t("admin.settings.bmOracleFreshQrLoading")
                   : t("admin.settings.bmOracleFreshQr")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost admin-bm-test-btn"
+                onClick={() => setResetConfirmOpen(true)}
+                disabled={reconnecting || connecting || resetting}
+              >
+                <TriangleAlert size={14} strokeWidth={1.75} aria-hidden />
+                {resetting
+                  ? t("admin.settings.bmOracleResetLoading")
+                  : t("admin.settings.bmOracleReset")}
               </button>
             </>
           ) : null}
@@ -455,8 +531,12 @@ export default function BookingMessagesSettingsSection({
             {testResult.message}
           </p>
         ) : null}
-        {reconnecting && !qrDataUrl ? (
-          <p className="admin-bm-hint">{t("admin.settings.bmOracleFreshQrLoading")}</p>
+        {(reconnecting || resetting) && !qrDataUrl ? (
+          <p className="admin-bm-hint">
+            {resetting
+              ? t("admin.settings.bmOracleResetLoading")
+              : t("admin.settings.bmOracleFreshQrLoading")}
+          </p>
         ) : null}
         {qrDataUrl && !serviceReady ? (
           <div className="admin-bm-qr">
@@ -473,6 +553,37 @@ export default function BookingMessagesSettingsSection({
         ) : null}
         <p className="admin-bm-hint">{t("admin.settings.bmOracleHint")}</p>
       </section>
+
+      <AdminModal
+        open={resetConfirmOpen}
+        title={t("admin.settings.bmOracleResetTitle")}
+        onClose={() => {
+          if (!resetting) setResetConfirmOpen(false);
+        }}
+        icon={<TriangleAlert className="admin-bm-gold-icon" size={18} aria-hidden />}
+      >
+        <p className="admin-bm-hint" style={{ maxWidth: "100%", marginBottom: "1rem" }}>
+          {t("admin.settings.bmOracleResetConfirm")}
+        </p>
+        <div className="admin-bm-provider-row">
+          <button
+            type="button"
+            className="btn btn-ghost admin-bm-test-btn"
+            onClick={() => setResetConfirmOpen(false)}
+            disabled={resetting}
+          >
+            {t("admin.settings.bmOracleResetCancel")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost admin-bm-test-btn"
+            onClick={() => void resetWhatsAppSession()}
+            disabled={resetting}
+          >
+            {t("admin.settings.bmOracleResetConfirmAction")}
+          </button>
+        </div>
+      </AdminModal>
 
       <section className="admin-bm-card">
         <header className="admin-bm-card-head">

@@ -22,7 +22,8 @@ let qrReceivedAt = null;
 let qrSeq = 0;
 let lastError = null;
 let client = null;
-let reconnectInFlight = false;
+let pairingMutationInFlight = false;
+let clientGeneration = 0;
 /** @type {Promise<import("whatsapp-web.js").Client | null> | null} */
 let initPromise = null;
 let staleChromiumLocksCleanedUp = false;
@@ -132,6 +133,99 @@ function clearQr() {
 
 function ensureAuthDirectory() {
   fs.mkdirSync(path.resolve(config.authDataPath), { recursive: true });
+}
+
+/** LocalAuth default folder when clientId is unset: `{dataPath}/session`. */
+const LOCAL_AUTH_SESSION_DIR_NAME = "session";
+
+function getOwnedLocalAuthSessionDir() {
+  const root = path.resolve(config.authDataPath);
+  const sessionDir = path.resolve(root, LOCAL_AUTH_SESSION_DIR_NAME);
+  const relative = path.relative(root, sessionDir);
+  if (
+    !relative ||
+    relative === "." ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative) ||
+    relative !== LOCAL_AUTH_SESSION_DIR_NAME
+  ) {
+    throw new Error("Refusing to clear a session directory outside LocalAuth data path");
+  }
+  return sessionDir;
+}
+
+function isOwnedLocalAuthSessionDir(candidate) {
+  if (!candidate) {
+    return false;
+  }
+  const root = path.resolve(config.authDataPath);
+  const target = path.resolve(candidate);
+  const relative = path.relative(root, target);
+  return (
+    Boolean(relative) &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative) &&
+    (relative === LOCAL_AUTH_SESSION_DIR_NAME ||
+      relative.startsWith(`${LOCAL_AUTH_SESSION_DIR_NAME}-`))
+  );
+}
+
+async function logoutOwnedLocalAuth(activeClient) {
+  const strategy = activeClient?.authStrategy;
+  if (!strategy || typeof strategy.logout !== "function") {
+    return;
+  }
+  if (!isOwnedLocalAuthSessionDir(strategy.userDataDir)) {
+    return;
+  }
+  try {
+    await strategy.logout();
+  } catch (error) {
+    console.warn("[whatsapp-web] LocalAuth logout failed; will remove session directory", {
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    });
+  }
+}
+
+async function removeOwnedLocalAuthSession() {
+  const sessionDir = getOwnedLocalAuthSessionDir();
+  await fs.promises.rm(sessionDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 4,
+  });
+  console.info("[whatsapp-web] cleared owned LocalAuth session");
+}
+
+async function abandonHungInit(timeoutMs = 2000) {
+  const pendingInit = initPromise;
+  initPromise = null;
+  if (!pendingInit) {
+    return;
+  }
+  try {
+    await Promise.race([pendingInit, sleep(timeoutMs)]);
+  } catch {
+    // Ignore a hung or failed in-flight init.
+  }
+}
+
+async function waitForFreshQr(timeoutMs, previousReceivedAt) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (connectionStatus === "READY") {
+      return true;
+    }
+    if (
+      latestQrDataUrl &&
+      qrReceivedAt &&
+      qrReceivedAt !== previousReceivedAt
+    ) {
+      return true;
+    }
+    await sleep(250);
+  }
+  return false;
 }
 
 async function cleanupStaleChromiumLocksOnce() {
@@ -415,6 +509,7 @@ async function initializeWhatsAppClient() {
 }
 
 async function createWhatsAppClient() {
+  const generation = clientGeneration;
   connectionStatus = "INITIALIZING";
   lastError = null;
 
@@ -434,25 +529,37 @@ async function createWhatsAppClient() {
   });
 
   let lastInitError = null;
+  let activeClient = null;
 
   for (let attempt = 1; attempt <= MAX_INIT_ATTEMPTS; attempt += 1) {
+    if (generation !== clientGeneration) {
+      await destroyFailedClient(activeClient);
+      return null;
+    }
+
     connectionStatus = "INITIALIZING";
     console.info("[whatsapp-web] initialization attempt", {
       attempt,
       maxAttempts: MAX_INIT_ATTEMPTS,
     });
 
-    if (client) {
-      await destroyFailedClient(client);
-      client = null;
+    if (activeClient) {
+      await destroyFailedClient(activeClient);
+      activeClient = null;
     }
 
     try {
-      client = new Client(buildWhatsAppClientOptions());
+      activeClient = new Client(buildWhatsAppClientOptions());
+      attachClientEvents(activeClient);
+      await activeClient.initialize();
 
-      attachClientEvents(client);
-      await client.initialize();
-      await pruneExtraBrowserPages(client);
+      if (generation !== clientGeneration) {
+        await destroyFailedClient(activeClient);
+        return null;
+      }
+
+      await pruneExtraBrowserPages(activeClient);
+      client = activeClient;
 
       console.info("[whatsapp-web] initialization succeeded", {
         attempt,
@@ -461,7 +568,7 @@ async function createWhatsAppClient() {
           ? config.whatsappWebVersion
           : "live (web.whatsapp.com)",
       });
-      return client;
+      return activeClient;
     } catch (error) {
       lastInitError = error;
       const detail = sanitizeError(
@@ -472,11 +579,16 @@ async function createWhatsAppClient() {
         error: detail,
       });
 
-      await destroyFailedClient(client);
-      client = null;
+      await destroyFailedClient(activeClient);
+      activeClient = null;
+      if (generation === clientGeneration && client === activeClient) {
+        client = null;
+      }
 
       const shouldRetry =
-        attempt < MAX_INIT_ATTEMPTS && isRetryableInitError(error);
+        attempt < MAX_INIT_ATTEMPTS &&
+        generation === clientGeneration &&
+        isRetryableInitError(error);
       if (!shouldRetry) {
         break;
       }
@@ -491,16 +603,18 @@ async function createWhatsAppClient() {
     }
   }
 
-  connectionStatus = "DISCONNECTED";
-  lastError = sanitizeError(
-    lastInitError instanceof Error ? lastInitError.message : String(lastInitError),
-  );
-  console.error("[whatsapp-web] initialization exhausted retries", {
-    attempts: MAX_INIT_ATTEMPTS,
-    error: lastError,
-  });
+  if (generation === clientGeneration) {
+    connectionStatus = "DISCONNECTED";
+    lastError = sanitizeError(
+      lastInitError instanceof Error ? lastInitError.message : String(lastInitError),
+    );
+    console.error("[whatsapp-web] initialization exhausted retries", {
+      attempts: MAX_INIT_ATTEMPTS,
+      error: lastError,
+    });
+  }
 
-  return client;
+  return null;
 }
 
 /**
@@ -512,7 +626,7 @@ async function reconnectWhatsAppClient() {
     return { ok: false, refused: true, inProgress: false, status: "READY" };
   }
 
-  if (reconnectInFlight) {
+  if (pairingMutationInFlight) {
     return {
       ok: false,
       refused: false,
@@ -521,29 +635,22 @@ async function reconnectWhatsAppClient() {
     };
   }
 
-  reconnectInFlight = true;
+  pairingMutationInFlight = true;
+  const previousReceivedAt = qrReceivedAt;
   try {
+    clientGeneration += 1;
     clearQr();
     lastError = null;
     connectionStatus = "INITIALIZING";
     stopPageKeepAlive();
-
-    const pendingInit = initPromise;
-    initPromise = null;
-    if (pendingInit) {
-      try {
-        await pendingInit;
-      } catch {
-        // Ignore a failed in-flight init so reconnect can start cleanly.
-      }
-    }
-
+    await abandonHungInit();
     await destroyFailedClient(client);
     client = null;
 
-    const recovered = await createWhatsAppClient();
+    initPromise = createWhatsAppClient();
+    const recovered = await waitForFreshQr(45000, previousReceivedAt);
     return {
-      ok: Boolean(recovered),
+      ok: recovered,
       refused: false,
       inProgress: false,
       status: connectionStatus,
@@ -561,7 +668,68 @@ async function reconnectWhatsAppClient() {
       status: connectionStatus,
     };
   } finally {
-    reconnectInFlight = false;
+    pairingMutationInFlight = false;
+  }
+}
+
+/**
+ * Explicit pairing reset: destroy the client, remove only this service's
+ * LocalAuth session directory, then start a new client. Never automatic.
+ */
+async function resetWhatsAppSession() {
+  if (connectionStatus === "READY") {
+    return { ok: false, refused: true, inProgress: false, status: "READY" };
+  }
+
+  if (pairingMutationInFlight) {
+    return {
+      ok: false,
+      refused: false,
+      inProgress: true,
+      status: connectionStatus,
+    };
+  }
+
+  pairingMutationInFlight = true;
+  const previousReceivedAt = qrReceivedAt;
+  try {
+    clientGeneration += 1;
+    clearQr();
+    lastError = null;
+    connectionStatus = "INITIALIZING";
+    stopPageKeepAlive();
+    await abandonHungInit();
+
+    const existing = client;
+    client = null;
+    await logoutOwnedLocalAuth(existing);
+    await destroyFailedClient(existing);
+    await sleep(400);
+    await removeOwnedLocalAuthSession();
+    staleChromiumLocksCleanedUp = false;
+
+    initPromise = createWhatsAppClient();
+    const recovered = await waitForFreshQr(45000, previousReceivedAt);
+    return {
+      ok: recovered,
+      refused: false,
+      inProgress: false,
+      status: connectionStatus,
+    };
+  } catch (error) {
+    connectionStatus = "DISCONNECTED";
+    lastError = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+    console.warn("[whatsapp-web] session reset failed", { error: lastError });
+    return {
+      ok: false,
+      refused: false,
+      inProgress: false,
+      status: connectionStatus,
+    };
+  } finally {
+    pairingMutationInFlight = false;
   }
 }
 
@@ -774,6 +942,7 @@ async function sendTextMessage(to, message) {
 module.exports = {
   initializeWhatsAppClient,
   reconnectWhatsAppClient,
+  resetWhatsAppSession,
   sendTextMessage,
   getStatusPayload,
   getQrPayload,

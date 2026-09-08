@@ -42,6 +42,7 @@ export type OracleAdminReconnect = {
 
 const FETCH_TIMEOUT_MS = 8000;
 const RECONNECT_TIMEOUT_MS = 60000;
+const RESET_TIMEOUT_MS = 90000;
 
 function isConnectionStatus(value: unknown): value is OracleConnectionStatus {
   return (
@@ -232,6 +233,70 @@ export async function reconnectOracleWhatsApp(): Promise<OracleAdminReconnect> {
       },
       cache: "no-store",
       signal: AbortSignal.timeout(RECONNECT_TIMEOUT_MS),
+    });
+    const raw = await response.text().catch(() => "");
+    let json: Record<string, unknown> | null = null;
+    if (raw) {
+      try {
+        json = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        json = null;
+      }
+    }
+
+    const status = isConnectionStatus(json?.status)
+      ? json.status
+      : response.ok
+        ? "INITIALIZING"
+        : "UNAVAILABLE";
+
+    if (!response.ok) {
+      const inProgress = response.status === 409 && status !== "READY";
+      return {
+        ok: false,
+        configured: true,
+        reachable: true,
+        status: status === "READY" ? "READY" : status,
+        inProgress,
+      };
+    }
+
+    return {
+      ok: true,
+      configured: true,
+      reachable: true,
+      status,
+    };
+  } catch {
+    return {
+      ok: false,
+      configured: true,
+      reachable: false,
+      status: "UNAVAILABLE",
+    };
+  }
+}
+
+export async function resetOracleWhatsAppSession(): Promise<OracleAdminReconnect> {
+  const config = getWhatsAppWebServiceConfig();
+  if (!config) {
+    return {
+      ok: false,
+      configured: false,
+      reachable: false,
+      status: "UNCONFIGURED",
+    };
+  }
+
+  try {
+    const response = await fetch(`${config.baseUrl}/reset-session`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-API-Key": config.apiKey,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(RESET_TIMEOUT_MS),
     });
     const raw = await response.text().catch(() => "");
     let json: Record<string, unknown> | null = null;

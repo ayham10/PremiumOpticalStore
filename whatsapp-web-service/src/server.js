@@ -3,6 +3,7 @@ const config = require("./config");
 const {
   initializeWhatsAppClient,
   reconnectWhatsAppClient,
+  resetWhatsAppSession,
   sendTextMessage,
   getStatusPayload,
   getQrPayload,
@@ -132,6 +133,43 @@ app.post("/reconnect", requireApiKey, async (_req, res) => {
     return res.status(503).json({
       ok: false,
       error: "Reconnect failed",
+    });
+  }
+});
+
+app.post("/reset-session", requireApiKey, async (_req, res) => {
+  try {
+    const result = await resetWhatsAppSession();
+    if (result.refused) {
+      return res.status(409).json({
+        ok: false,
+        status: result.status,
+        error: "Already connected",
+      });
+    }
+    if (result.inProgress) {
+      return res.status(409).json({
+        ok: false,
+        status: result.status,
+        error: "Reset already in progress",
+      });
+    }
+    if (!result.ok) {
+      return res.status(503).json({
+        ok: false,
+        status: result.status,
+        error: "Session reset failed",
+      });
+    }
+    return res.json({
+      ok: true,
+      status: result.status,
+    });
+  } catch {
+    console.error("[whatsapp-web] session reset failed");
+    return res.status(503).json({
+      ok: false,
+      error: "Session reset failed",
     });
   }
 });
