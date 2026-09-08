@@ -18,8 +18,11 @@ const {
 let connectionStatus = "INITIALIZING";
 let latestQrRaw = null;
 let latestQrDataUrl = null;
+let qrReceivedAt = null;
+let qrSeq = 0;
 let lastError = null;
 let client = null;
+let reconnectInFlight = false;
 /** @type {Promise<import("whatsapp-web.js").Client | null> | null} */
 let initPromise = null;
 let staleChromiumLocksCleanedUp = false;
@@ -86,7 +89,8 @@ function getQrPayload() {
     status: connectionStatus,
     qr: latestQrRaw,
     qrDataUrl: latestQrDataUrl,
-    generatedAt: latestQrRaw ? new Date().toISOString() : null,
+    qrReceivedAt,
+    generatedAt: qrReceivedAt,
   };
 }
 
@@ -98,14 +102,21 @@ function sanitizeError(message) {
 }
 
 async function setQr(rawQr) {
+  const seq = ++qrSeq;
   latestQrRaw = rawQr;
+  qrReceivedAt = new Date().toISOString();
   try {
-    latestQrDataUrl = await qrcode.toDataURL(rawQr, {
+    const dataUrl = await qrcode.toDataURL(rawQr, {
       margin: 1,
       width: 320,
     });
+    if (seq === qrSeq) {
+      latestQrDataUrl = dataUrl;
+    }
   } catch (error) {
-    latestQrDataUrl = null;
+    if (seq === qrSeq) {
+      latestQrDataUrl = null;
+    }
     console.error("[whatsapp-web] failed to render QR data URL", {
       error: sanitizeError(error instanceof Error ? error.message : error),
     });
@@ -113,8 +124,10 @@ async function setQr(rawQr) {
 }
 
 function clearQr() {
+  qrSeq += 1;
   latestQrRaw = null;
   latestQrDataUrl = null;
+  qrReceivedAt = null;
 }
 
 function ensureAuthDirectory() {
@@ -490,6 +503,68 @@ async function createWhatsAppClient() {
   return client;
 }
 
+/**
+ * Restart the WhatsApp Web client to request a new pairing QR.
+ * Does not delete LocalAuth/session files. Refuses when already READY.
+ */
+async function reconnectWhatsAppClient() {
+  if (connectionStatus === "READY") {
+    return { ok: false, refused: true, inProgress: false, status: "READY" };
+  }
+
+  if (reconnectInFlight) {
+    return {
+      ok: false,
+      refused: false,
+      inProgress: true,
+      status: connectionStatus,
+    };
+  }
+
+  reconnectInFlight = true;
+  try {
+    clearQr();
+    lastError = null;
+    connectionStatus = "INITIALIZING";
+    stopPageKeepAlive();
+
+    const pendingInit = initPromise;
+    initPromise = null;
+    if (pendingInit) {
+      try {
+        await pendingInit;
+      } catch {
+        // Ignore a failed in-flight init so reconnect can start cleanly.
+      }
+    }
+
+    await destroyFailedClient(client);
+    client = null;
+
+    const recovered = await createWhatsAppClient();
+    return {
+      ok: Boolean(recovered),
+      refused: false,
+      inProgress: false,
+      status: connectionStatus,
+    };
+  } catch (error) {
+    connectionStatus = "DISCONNECTED";
+    lastError = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+    console.warn("[whatsapp-web] reconnect failed", { error: lastError });
+    return {
+      ok: false,
+      refused: false,
+      inProgress: false,
+      status: connectionStatus,
+    };
+  } finally {
+    reconnectInFlight = false;
+  }
+}
+
 async function waitForReady(activeClient, timeoutMs) {
   if (connectionStatus === "READY") {
     return;
@@ -698,6 +773,7 @@ async function sendTextMessage(to, message) {
 
 module.exports = {
   initializeWhatsAppClient,
+  reconnectWhatsAppClient,
   sendTextMessage,
   getStatusPayload,
   getQrPayload,

@@ -2,6 +2,7 @@ const express = require("express");
 const config = require("./config");
 const {
   initializeWhatsAppClient,
+  reconnectWhatsAppClient,
   sendTextMessage,
   getStatusPayload,
   getQrPayload,
@@ -96,6 +97,43 @@ app.get("/qr-view", requireApiKey, (_req, res) => {
   </main>
 </body>
 </html>`);
+});
+
+app.post("/reconnect", requireApiKey, async (_req, res) => {
+  try {
+    const result = await reconnectWhatsAppClient();
+    if (result.refused) {
+      return res.status(409).json({
+        ok: false,
+        status: result.status,
+        error: "Already connected",
+      });
+    }
+    if (result.inProgress) {
+      return res.status(409).json({
+        ok: false,
+        status: result.status,
+        error: "Reconnect already in progress",
+      });
+    }
+    if (!result.ok) {
+      return res.status(503).json({
+        ok: false,
+        status: result.status,
+        error: "Reconnect failed",
+      });
+    }
+    return res.json({
+      ok: true,
+      status: result.status,
+    });
+  } catch {
+    console.error("[whatsapp-web] reconnect failed");
+    return res.status(503).json({
+      ok: false,
+      error: "Reconnect failed",
+    });
+  }
 });
 
 app.get("/diagnostics", requireApiKey, async (_req, res) => {

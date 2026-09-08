@@ -18,7 +18,8 @@ export async function GET() {
         status: qr.status,
         ready: qr.ready,
         qrDataUrl: qr.ready ? null : qr.qrDataUrl,
-        generatedAt: qr.ready ? null : qr.generatedAt,
+        qrReceivedAt: qr.ready ? null : qr.qrReceivedAt,
+        generatedAt: qr.ready ? null : qr.qrReceivedAt,
       },
       {
         status: 200,

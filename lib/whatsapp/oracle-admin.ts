@@ -28,10 +28,20 @@ export type OracleAdminQr = {
   status: OracleConnectionStatus | "UNAVAILABLE" | "UNCONFIGURED";
   ready: boolean;
   qrDataUrl: string | null;
+  qrReceivedAt: string | null;
   generatedAt: string | null;
 };
 
+export type OracleAdminReconnect = {
+  ok: boolean;
+  configured: boolean;
+  reachable: boolean;
+  status: OracleConnectionStatus | "UNAVAILABLE" | "UNCONFIGURED";
+  inProgress?: boolean;
+};
+
 const FETCH_TIMEOUT_MS = 8000;
+const RECONNECT_TIMEOUT_MS = 60000;
 
 function isConnectionStatus(value: unknown): value is OracleConnectionStatus {
   return (
@@ -154,6 +164,7 @@ export async function fetchOracleAdminQr(): Promise<OracleAdminQr> {
       status: "UNCONFIGURED",
       ready: false,
       qrDataUrl: null,
+      qrReceivedAt: null,
       generatedAt: null,
     };
   }
@@ -167,6 +178,7 @@ export async function fetchOracleAdminQr(): Promise<OracleAdminQr> {
       status: "UNAVAILABLE",
       ready: false,
       qrDataUrl: null,
+      qrReceivedAt: null,
       generatedAt: null,
     };
   }
@@ -181,6 +193,12 @@ export async function fetchOracleAdminQr(): Promise<OracleAdminQr> {
     result.json.qrDataUrl.startsWith("data:image/")
       ? result.json.qrDataUrl
       : null;
+  const qrReceivedAt =
+    typeof result.json.qrReceivedAt === "string"
+      ? result.json.qrReceivedAt
+      : typeof result.json.generatedAt === "string"
+        ? result.json.generatedAt
+        : null;
 
   return {
     ok: true,
@@ -189,9 +207,71 @@ export async function fetchOracleAdminQr(): Promise<OracleAdminQr> {
     status,
     ready,
     qrDataUrl,
-    generatedAt:
-      typeof result.json.generatedAt === "string"
-        ? result.json.generatedAt
-        : null,
+    qrReceivedAt: ready ? null : qrReceivedAt,
+    generatedAt: ready ? null : qrReceivedAt,
   };
+}
+
+export async function reconnectOracleWhatsApp(): Promise<OracleAdminReconnect> {
+  const config = getWhatsAppWebServiceConfig();
+  if (!config) {
+    return {
+      ok: false,
+      configured: false,
+      reachable: false,
+      status: "UNCONFIGURED",
+    };
+  }
+
+  try {
+    const response = await fetch(`${config.baseUrl}/reconnect`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-API-Key": config.apiKey,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(RECONNECT_TIMEOUT_MS),
+    });
+    const raw = await response.text().catch(() => "");
+    let json: Record<string, unknown> | null = null;
+    if (raw) {
+      try {
+        json = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        json = null;
+      }
+    }
+
+    const status = isConnectionStatus(json?.status)
+      ? json.status
+      : response.ok
+        ? "INITIALIZING"
+        : "UNAVAILABLE";
+
+    if (!response.ok) {
+      const inProgress = response.status === 409 && status !== "READY";
+      return {
+        ok: false,
+        configured: true,
+        reachable: true,
+        status: status === "READY" ? "READY" : status,
+        inProgress,
+      };
+    }
+
+    return {
+      ok: true,
+      configured: true,
+      reachable: true,
+      status,
+    };
+  } catch {
+    return {
+      ok: false,
+      configured: true,
+      reachable: false,
+      status: "UNAVAILABLE",
+    };
+  }
 }

@@ -9,6 +9,7 @@ import {
   Plug,
   QrCode,
   RefreshCw,
+  RotateCw,
   UserRound,
   Zap,
 } from "lucide-react";
@@ -133,6 +134,7 @@ export default function BookingMessagesSettingsSection({
   const { t } = useLocale();
   const [testing, setTesting] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
@@ -142,6 +144,7 @@ export default function BookingMessagesSettingsSection({
   const [serviceReady, setServiceReady] = useState(false);
   const [serviceReachable, setServiceReachable] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrReceivedAt, setQrReceivedAt] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const pollQrRef = useRef(false);
 
@@ -166,6 +169,7 @@ export default function BookingMessagesSettingsSection({
       setServiceReachable(data.reachable !== false && data.configured !== false);
       if (ready) {
         setQrDataUrl(null);
+        setQrReceivedAt(null);
         stopPolling();
       }
     },
@@ -188,6 +192,7 @@ export default function BookingMessagesSettingsSection({
       setServiceReady(false);
       setServiceReachable(false);
       setQrDataUrl(null);
+      setQrReceivedAt(null);
     }
   }, [applyStatus]);
 
@@ -242,15 +247,21 @@ export default function BookingMessagesSettingsSection({
       reachable?: boolean;
       configured?: boolean;
       qrDataUrl?: string | null;
+      qrReceivedAt?: string | null;
     }>("/api/settings/whatsapp-web/qr");
     applyStatus(data);
     if (data.ready) {
       setQrDataUrl(null);
-      return;
+      setQrReceivedAt(null);
+      return data;
+    }
+    if (data.qrReceivedAt) {
+      setQrReceivedAt(data.qrReceivedAt);
     }
     if (data.qrDataUrl) {
       setQrDataUrl(data.qrDataUrl);
     }
+    return data;
   }
 
   function startPolling(includeQr: boolean) {
@@ -277,6 +288,66 @@ export default function BookingMessagesSettingsSection({
       });
     } finally {
       setConnecting(false);
+    }
+  }
+
+  async function generateFreshQr() {
+    setReconnecting(true);
+    setTestResult(null);
+    const previousReceivedAt = qrReceivedAt;
+    try {
+      await apiFetch<{
+        ok: boolean;
+        status?: string;
+        ready?: boolean;
+        reachable?: boolean;
+        configured?: boolean;
+      }>("/api/settings/whatsapp-web/reconnect", { method: "POST" });
+      applyStatus({
+        status: "INITIALIZING",
+        ready: false,
+        reachable: true,
+        configured: true,
+      });
+      setQrDataUrl(null);
+      setQrReceivedAt(null);
+
+      const deadline = Date.now() + 45000;
+      let foundFreshQr = false;
+      while (Date.now() < deadline) {
+        const data = await loadQr();
+        if (data.ready) {
+          foundFreshQr = true;
+          break;
+        }
+        if (
+          data.qrDataUrl &&
+          data.qrReceivedAt &&
+          data.qrReceivedAt !== previousReceivedAt
+        ) {
+          foundFreshQr = true;
+          break;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+
+      startPolling(true);
+      if (!foundFreshQr) {
+        setTestResult({
+          ok: false,
+          message: t("admin.settings.bmOracleFreshQrError"),
+        });
+      }
+    } catch (err) {
+      setTestResult({
+        ok: false,
+        message:
+          err instanceof Error
+            ? err.message
+            : t("admin.settings.bmOracleFreshQrError"),
+      });
+    } finally {
+      setReconnecting(false);
     }
   }
 
@@ -350,17 +421,30 @@ export default function BookingMessagesSettingsSection({
               : t("admin.settings.bmOracleRefresh")}
           </button>
           {!serviceReady ? (
-            <button
-              type="button"
-              className="btn btn-ghost admin-bm-test-btn"
-              onClick={() => void connectWhatsApp()}
-              disabled={connecting}
-            >
-              <QrCode size={14} strokeWidth={1.75} aria-hidden />
-              {connecting
-                ? t("admin.settings.bmOracleConnecting")
-                : t("admin.settings.bmOracleConnect")}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost admin-bm-test-btn"
+                onClick={() => void connectWhatsApp()}
+                disabled={connecting || reconnecting}
+              >
+                <QrCode size={14} strokeWidth={1.75} aria-hidden />
+                {connecting
+                  ? t("admin.settings.bmOracleConnecting")
+                  : t("admin.settings.bmOracleConnect")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost admin-bm-test-btn"
+                onClick={() => void generateFreshQr()}
+                disabled={reconnecting || connecting}
+              >
+                <RotateCw size={14} strokeWidth={1.75} aria-hidden />
+                {reconnecting
+                  ? t("admin.settings.bmOracleFreshQrLoading")
+                  : t("admin.settings.bmOracleFreshQr")}
+              </button>
+            </>
           ) : null}
         </div>
         {testResult ? (
@@ -370,6 +454,9 @@ export default function BookingMessagesSettingsSection({
           >
             {testResult.message}
           </p>
+        ) : null}
+        {reconnecting && !qrDataUrl ? (
+          <p className="admin-bm-hint">{t("admin.settings.bmOracleFreshQrLoading")}</p>
         ) : null}
         {qrDataUrl && !serviceReady ? (
           <div className="admin-bm-qr">
