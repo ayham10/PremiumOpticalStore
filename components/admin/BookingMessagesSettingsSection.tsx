@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bell,
   Clock,
   MessageCircle,
   Phone,
   Plug,
+  QrCode,
+  RefreshCw,
   UserRound,
   Zap,
 } from "lucide-react";
@@ -88,6 +90,41 @@ function TemplateSelect({
   );
 }
 
+function MessageBodyField({
+  id,
+  label,
+  helper,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  helper: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="admin-bm-field admin-bm-body-field">
+      <label className="admin-bm-field-label" htmlFor={id}>
+        {label}
+      </label>
+      <textarea
+        id={id}
+        className="input admin-bm-input admin-bm-textarea"
+        dir="rtl"
+        lang="ar"
+        rows={10}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <p className="admin-bm-placeholders">{helper}</p>
+    </div>
+  );
+}
+
 export default function BookingMessagesSettingsSection({
   value,
   templates,
@@ -95,44 +132,180 @@ export default function BookingMessagesSettingsSection({
 }: Props) {
   const { t } = useLocale();
   const [testing, setTesting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
     message: string;
   } | null>(null);
+  const [serviceStatus, setServiceStatus] = useState<string>("UNCONFIGURED");
+  const [serviceReady, setServiceReady] = useState(false);
+  const [serviceReachable, setServiceReachable] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const pollRef = useRef<number | null>(null);
+  const pollQrRef = useRef(false);
 
-  const resolvedProvider =
-    value.provider === "twilio" ? "meta" : value.provider;
-  const isMetaProvider = resolvedProvider === "meta";
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
 
-  async function testMetaConnection() {
+  const applyStatus = useCallback(
+    (data: {
+      status?: string;
+      ready?: boolean;
+      reachable?: boolean;
+      configured?: boolean;
+    }) => {
+      const status = data.status || "UNAVAILABLE";
+      const ready = Boolean(data.ready);
+      setServiceStatus(status);
+      setServiceReady(ready);
+      setServiceReachable(data.reachable !== false && data.configured !== false);
+      if (ready) {
+        setQrDataUrl(null);
+        stopPolling();
+      }
+    },
+    [stopPolling],
+  );
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const data = await apiFetch<{
+        ok?: boolean;
+        status?: string;
+        ready?: boolean;
+        reachable?: boolean;
+        configured?: boolean;
+        lastError?: string | null;
+      }>("/api/settings/whatsapp-web/status");
+      applyStatus(data);
+    } catch {
+      setServiceStatus("UNAVAILABLE");
+      setServiceReady(false);
+      setServiceReachable(false);
+      setQrDataUrl(null);
+    }
+  }, [applyStatus]);
+
+  useEffect(() => {
+    void loadStatus();
+    return () => stopPolling();
+  }, [loadStatus, stopPolling]);
+
+  async function testOracleConnection() {
     setTesting(true);
     setTestResult(null);
     try {
-      const data = await apiFetch<{ ok: boolean; message?: string; error?: string }>(
-        "/api/settings/test-meta",
-        { method: "POST" },
-      );
-      if (data.ok) {
-        setTestResult({
-          ok: true,
-          message: data.message || t("admin.settings.bmMetaTestSuccess"),
-        });
-      } else {
-        setTestResult({
-          ok: false,
-          message: data.error || t("admin.settings.bmMetaTestError"),
-        });
-      }
+      const data = await apiFetch<{
+        ok: boolean;
+        message?: string;
+        error?: string;
+        status?: string;
+        ready?: boolean;
+        reachable?: boolean;
+        configured?: boolean;
+      }>("/api/settings/whatsapp-web/status", { method: "POST" });
+      applyStatus(data);
+      setTestResult({
+        ok: Boolean(data.ok),
+        message:
+          data.message ||
+          (data.ok
+            ? t("admin.settings.bmOracleTestSuccess")
+            : t("admin.settings.bmOracleTestError")),
+      });
     } catch (err) {
+      setServiceReachable(false);
+      setServiceReady(false);
+      setServiceStatus("UNAVAILABLE");
       setTestResult({
         ok: false,
         message:
-          err instanceof Error ? err.message : t("admin.settings.bmMetaTestError"),
+          err instanceof Error
+            ? err.message
+            : t("admin.settings.bmOracleTestError"),
       });
     } finally {
       setTesting(false);
     }
   }
+
+  async function loadQr() {
+    const data = await apiFetch<{
+      ok?: boolean;
+      status?: string;
+      ready?: boolean;
+      reachable?: boolean;
+      configured?: boolean;
+      qrDataUrl?: string | null;
+    }>("/api/settings/whatsapp-web/qr");
+    applyStatus(data);
+    if (data.ready) {
+      setQrDataUrl(null);
+      return;
+    }
+    if (data.qrDataUrl) {
+      setQrDataUrl(data.qrDataUrl);
+    }
+  }
+
+  function startPolling(includeQr: boolean) {
+    stopPolling();
+    pollQrRef.current = includeQr;
+    pollRef.current = window.setInterval(() => {
+      void (pollQrRef.current ? loadQr() : loadStatus());
+    }, 4000);
+  }
+
+  async function connectWhatsApp() {
+    setConnecting(true);
+    setTestResult(null);
+    try {
+      await loadQr();
+      startPolling(true);
+    } catch (err) {
+      setTestResult({
+        ok: false,
+        message:
+          err instanceof Error
+            ? err.message
+            : t("admin.settings.bmOracleQrError"),
+      });
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function refreshStatus() {
+    setRefreshing(true);
+    setTestResult(null);
+    try {
+      await loadStatus();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const statusTone = !serviceReachable
+    ? "unavailable"
+    : serviceReady
+      ? "ready"
+      : serviceStatus === "DISCONNECTED" || serviceStatus === "AUTH_FAILURE"
+        ? "down"
+        : "wait";
+
+  const statusLabel =
+    statusTone === "ready"
+      ? t("admin.settings.bmOracleReady")
+      : statusTone === "wait"
+        ? t("admin.settings.bmOracleWaiting")
+        : statusTone === "down"
+          ? t("admin.settings.bmOracleDisconnected")
+          : t("admin.settings.bmOracleUnavailable");
 
   return (
     <div className="admin-bm">
@@ -143,30 +316,52 @@ export default function BookingMessagesSettingsSection({
             {t("admin.settings.bmProvider")}
           </span>
         </header>
+        <div className="admin-bm-field">
+          <span className="admin-bm-field-label">{t("admin.settings.bmProviderName")}</span>
+          <p className="admin-bm-provider-name">
+            {t("admin.settings.bmProviderOracle")}
+          </p>
+        </div>
+        <div className="admin-bm-status-row" role="status">
+          <span className={`admin-bm-status-dot is-${statusTone}`} aria-hidden />
+          <span className="admin-bm-status-label">{statusLabel}</span>
+        </div>
         <div className="admin-bm-provider-row">
-          <select
-            className="select admin-bm-select"
-            value={resolvedProvider}
-            onChange={(e) => {
-              setTestResult(null);
-              onChange({
-                ...value,
-                provider: e.target.value as BookingMessagesSettings["provider"],
-              });
-            }}
-          >
-            <option value="meta">{t("admin.settings.bmProviderMeta")}</option>
-            <option value="console">{t("admin.settings.bmProviderConsole")}</option>
-          </select>
           <button
             type="button"
             className="btn btn-ghost admin-bm-test-btn"
-            onClick={() => void testMetaConnection()}
-            disabled={testing || !isMetaProvider}
+            onClick={() => void testOracleConnection()}
+            disabled={testing}
           >
             <Zap size={14} strokeWidth={1.75} aria-hidden />
-            {testing ? t("admin.settings.bmMetaTesting") : t("admin.settings.bmMetaTest")}
+            {testing
+              ? t("admin.settings.bmOracleTesting")
+              : t("admin.settings.bmOracleTest")}
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost admin-bm-test-btn"
+            onClick={() => void refreshStatus()}
+            disabled={refreshing}
+          >
+            <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
+            {refreshing
+              ? t("admin.settings.bmOracleRefreshing")
+              : t("admin.settings.bmOracleRefresh")}
+          </button>
+          {!serviceReady ? (
+            <button
+              type="button"
+              className="btn btn-ghost admin-bm-test-btn"
+              onClick={() => void connectWhatsApp()}
+              disabled={connecting}
+            >
+              <QrCode size={14} strokeWidth={1.75} aria-hidden />
+              {connecting
+                ? t("admin.settings.bmOracleConnecting")
+                : t("admin.settings.bmOracleConnect")}
+            </button>
+          ) : null}
         </div>
         {testResult ? (
           <p
@@ -176,9 +371,20 @@ export default function BookingMessagesSettingsSection({
             {testResult.message}
           </p>
         ) : null}
-        <p className="admin-bm-hint">
-          {isMetaProvider ? t("admin.settings.bmProviderHint") : null}
-        </p>
+        {qrDataUrl && !serviceReady ? (
+          <div className="admin-bm-qr">
+            <p className="admin-bm-hint">{t("admin.settings.bmOracleQrHint")}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrDataUrl}
+              alt={t("admin.settings.bmOracleQrAlt")}
+              width={280}
+              height={280}
+              className="admin-bm-qr-image"
+            />
+          </div>
+        ) : null}
+        <p className="admin-bm-hint">{t("admin.settings.bmOracleHint")}</p>
       </section>
 
       <section className="admin-bm-card">
@@ -209,6 +415,19 @@ export default function BookingMessagesSettingsSection({
             onChange({
               ...value,
               customerConfirmation: { ...value.customerConfirmation, templateName },
+            })
+          }
+        />
+        <MessageBodyField
+          id="bm-customer-body"
+          label={t("admin.settings.bmMessageBody")}
+          helper={t("admin.settings.bmPlaceholders")}
+          value={value.customerConfirmation.body}
+          disabled={!value.customerConfirmation.enabled}
+          onChange={(body) =>
+            onChange({
+              ...value,
+              customerConfirmation: { ...value.customerConfirmation, body },
             })
           }
         />
@@ -271,6 +490,19 @@ export default function BookingMessagesSettingsSection({
             }
           />
         </div>
+        <MessageBodyField
+          id="bm-owner-body"
+          label={t("admin.settings.bmMessageBody")}
+          helper={t("admin.settings.bmPlaceholders")}
+          value={value.ownerNotification.body}
+          disabled={!value.ownerNotification.enabled}
+          onChange={(body) =>
+            onChange({
+              ...value,
+              ownerNotification: { ...value.ownerNotification, body },
+            })
+          }
+        />
       </section>
 
       <section className="admin-bm-card">
@@ -330,6 +562,19 @@ export default function BookingMessagesSettingsSection({
             }
           />
         </div>
+        <MessageBodyField
+          id="bm-reminder-body"
+          label={t("admin.settings.bmMessageBody")}
+          helper={t("admin.settings.bmPlaceholders")}
+          value={value.appointmentReminder.body}
+          disabled={!value.appointmentReminder.enabled}
+          onChange={(body) =>
+            onChange({
+              ...value,
+              appointmentReminder: { ...value.appointmentReminder, body },
+            })
+          }
+        />
       </section>
     </div>
   );

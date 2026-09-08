@@ -1,5 +1,11 @@
 import { pushSmsLog } from "@/lib/api/helpers";
-import { mergeBookingMessages } from "@/lib/booking-messages";
+import {
+  applyBookingMessagePlaceholders,
+  DEFAULT_APPOINTMENT_REMINDER_BODY,
+  DEFAULT_CUSTOMER_CONFIRMATION_BODY,
+  DEFAULT_OWNER_NOTIFICATION_BODY,
+  mergeBookingMessages,
+} from "@/lib/booking-messages";
 import { pickLocalized } from "@/lib/booking-services";
 import { getStore, invalidateStoreCache, updateStore } from "@/lib/db/store";
 import {
@@ -86,6 +92,25 @@ function resolveServiceLabel(
   return appointment.appointmentType;
 }
 
+function bookingPlaceholderValues(
+  appointment: EyeExamAppointment,
+  serviceLabel: string,
+): {
+  name: string;
+  service: string;
+  date: string;
+  time: string;
+  phone: string;
+} {
+  return {
+    name: `${appointment.firstName} ${appointment.lastName}`.trim(),
+    service: serviceLabel,
+    date: formatEyeExamDateDisplay(appointment.appointmentDate),
+    time: appointment.appointmentTime,
+    phone: appointment.phone,
+  };
+}
+
 function toSmsResult(result: WhatsAppSendResult): SmsResult {
   return {
     ok: result.ok,
@@ -101,68 +126,6 @@ function toSmsResult(result: WhatsAppSendResult): SmsResult {
     error: result.error,
     externalId: result.externalId,
   };
-}
-
-function renderCustomerConfirmationText(
-  appointment: EyeExamAppointment,
-  variables: Record<string, string>,
-  storeName: string,
-): string {
-  const name = variables["1"] || `${appointment.firstName} ${appointment.lastName}`.trim();
-  const date = variables["2"] || appointment.appointmentDate;
-  const time = variables["3"] || appointment.appointmentTime;
-  const brand = storeName.trim() || "OYON";
-
-  if (appointment.language === "he") {
-    return `${brand}: שלום ${name}, התור שלך אושר ל-${date} בשעה ${time}.`;
-  }
-  if (appointment.language === "ar") {
-    return `${brand}: مرحباً ${name}، تم تأكيد موعدك بتاريخ ${date} الساعة ${time}.`;
-  }
-  return `${brand}: Hi ${name}, your booking is confirmed for ${date} at ${time}.`;
-}
-
-function renderOwnerNotificationText(
-  appointment: EyeExamAppointment,
-  variables: Record<string, string>,
-  serviceLabel: string,
-  storeName: string,
-): string {
-  const name = variables["1"] || `${appointment.firstName} ${appointment.lastName}`.trim();
-  const date = variables["2"] || formatEyeExamDateDisplay(appointment.appointmentDate);
-  const time = variables["3"] || appointment.appointmentTime;
-  const phone = variables["4"] || appointment.phone;
-  const service = variables["5"] || serviceLabel;
-  const brand = storeName.trim() || "OYON";
-
-  if (appointment.language === "he") {
-    return `${brand}: הזמנה חדשה — ${name}, ${service}, ${date} בשעה ${time}. טלפון: ${phone}`;
-  }
-  if (appointment.language === "ar") {
-    return `${brand}: حجز جديد — ${name}، ${service}، ${date} الساعة ${time}. الهاتف: ${phone}`;
-  }
-  return `${brand}: New booking — ${name}, ${service}, ${date} at ${time}. Phone: ${phone}`;
-}
-
-function renderReminderText(
-  appointment: EyeExamAppointment,
-  variables: Record<string, string>,
-  serviceLabel: string,
-  storeName: string,
-): string {
-  const name = variables.customer_name || `${appointment.firstName} ${appointment.lastName}`.trim();
-  const date = variables.appointment_date || formatEyeExamDateDisplay(appointment.appointmentDate);
-  const time = variables.appointment_time || appointment.appointmentTime;
-  const service = variables.service_name || serviceLabel;
-  const brand = storeName.trim() || "OYON";
-
-  if (appointment.language === "he") {
-    return `${brand}: תזכורת — ${name}, ${service} ב-${date} בשעה ${time}.`;
-  }
-  if (appointment.language === "ar") {
-    return `${brand}: تذكير — ${name}، ${service} بتاريخ ${date} الساعة ${time}.`;
-  }
-  return `${brand}: Reminder — ${name}, ${service} on ${date} at ${time}.`;
 }
 
 function reminderAlreadySent(store: AppData, appointmentId: string): boolean {
@@ -262,8 +225,15 @@ async function sendAppointmentReminder(
   store: AppData,
   bookingMessages: ReturnType<typeof mergeBookingMessages>,
 ): Promise<boolean> {
+  const reminderBody =
+    bookingMessages.appointmentReminder.body.trim() ||
+    DEFAULT_APPOINTMENT_REMINDER_BODY;
   const reminderTemplate = bookingMessages.appointmentReminder.templateName.trim();
-  if (!reminderTemplate || reminderAlreadySent(store, appointment.id)) {
+  const useWhatsAppWeb = isWhatsAppWebServiceConfigured();
+  if (
+    reminderAlreadySent(store, appointment.id) ||
+    (!useWhatsAppWeb && !reminderTemplate)
+  ) {
     return false;
   }
 
@@ -294,18 +264,13 @@ async function sendAppointmentReminder(
     store.bookingServices || [],
   );
   const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
-  const storeName = store.settings.storeName || "OYON";
+  const placeholders = bookingPlaceholderValues(appointment, serviceLabel);
 
   await sendConfiguredTemplate(appointment, {
     to: appointment.phone,
-    templateName: reminderTemplate,
+    templateName: reminderTemplate || "appointment_reminder",
     contentVariables,
-    textMessage: renderReminderText(
-      appointment,
-      contentVariables,
-      serviceLabel,
-      storeName,
-    ),
+    textMessage: applyBookingMessagePlaceholders(reminderBody, placeholders),
     kind: "appointment_reminder",
     smsType: "appointment_reminder",
     sendAt,
@@ -348,7 +313,7 @@ export async function dispatchBookingMessages(
       appointment,
       store.bookingServices || [],
     );
-    const storeName = store.settings.storeName || "OYON";
+    const placeholders = bookingPlaceholderValues(appointment, serviceLabel);
     const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
     const ownerContentVariables = buildOwnerNotificationContentVariables(
       appointment,
@@ -361,12 +326,14 @@ export async function dispatchBookingMessages(
     if (bookingMessages.customerConfirmation.enabled) {
       await sendConfiguredTemplate(appointment, {
         to: appointment.phone,
-        templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
+        templateName:
+          bookingMessages.customerConfirmation.templateName.trim() ||
+          CUSTOMER_CONFIRMATION_TEMPLATE,
         contentVariables: customerConfirmationVariables,
-        textMessage: renderCustomerConfirmationText(
-          appointment,
-          customerConfirmationVariables,
-          storeName,
+        textMessage: applyBookingMessagePlaceholders(
+          bookingMessages.customerConfirmation.body ||
+            DEFAULT_CUSTOMER_CONFIRMATION_BODY,
+          placeholders,
         ),
         kind: "customer_confirmation",
         smsType: "appointment_confirmation",
@@ -386,11 +353,10 @@ export async function dispatchBookingMessages(
         to: ownerWhatsApp,
         templateName: ownerTemplate || "owner_notification",
         contentVariables: ownerContentVariables,
-        textMessage: renderOwnerNotificationText(
-          appointment,
-          ownerContentVariables,
-          serviceLabel,
-          storeName,
+        textMessage: applyBookingMessagePlaceholders(
+          bookingMessages.ownerNotification.body ||
+            DEFAULT_OWNER_NOTIFICATION_BODY,
+          placeholders,
         ),
         kind: "owner_notification",
         smsType: "custom",

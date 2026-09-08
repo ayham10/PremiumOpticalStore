@@ -350,16 +350,19 @@ export interface BookingMessagesSettings {
   customerConfirmation: {
     enabled: boolean;
     templateName: string;
+    body: string;
   };
   ownerNotification: {
     enabled: boolean;
     ownerWhatsApp: string;
     templateName: string;
+    body: string;
   };
   appointmentReminder: {
     enabled: boolean;
     hoursBefore: number;
     templateName: string;
+    body: string;
   };
 }
 

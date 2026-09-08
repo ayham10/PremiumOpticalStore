@@ -14455,12 +14455,23 @@ select.admin-pe-input {
 .admin-bm-card > .admin-bm-card-head,
 .admin-bm-card > .admin-bm-field,
 .admin-bm-card > .admin-bm-fields,
-.admin-bm-card > .admin-bm-provider-row,
 .admin-bm-card > .admin-bm-test-result,
 .admin-bm-card > .admin-bm-hint {
   width: min(100%, var(--admin-bm-col-width));
   max-width: var(--admin-bm-col-width);
   align-self: flex-start;
+}
+
+.admin-bm-card > .admin-bm-provider-row,
+.admin-bm-card > .admin-bm-status-row,
+.admin-bm-card > .admin-bm-qr {
+  width: 100%;
+  max-width: 100%;
+}
+
+.admin-bm-card > .admin-bm-body-field {
+  width: 100%;
+  max-width: 100%;
 }
 
 .admin-bm-card-head {
@@ -14536,12 +14547,69 @@ select.admin-pe-input {
   direction: rtl;
 }
 
-.admin-bm-provider-row .admin-bm-select {
-  width: min(100%, 11.5rem);
-  max-width: 11.5rem;
-  flex: 0 0 auto;
-  text-align: right;
+.admin-bm-provider-name {
+  margin: 0.15rem 0 0;
+  color: #f5f0e6;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.admin-bm-status-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   direction: rtl;
+}
+
+.admin-bm-status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.admin-bm-status-dot.is-ready {
+  background: #3dcf7a;
+  color: rgba(61, 207, 122, 0.7);
+}
+
+.admin-bm-status-dot.is-wait {
+  background: #e0c05a;
+  color: rgba(224, 192, 90, 0.65);
+}
+
+.admin-bm-status-dot.is-down {
+  background: #e07a7a;
+  color: rgba(224, 122, 122, 0.65);
+}
+
+.admin-bm-status-dot.is-unavailable {
+  background: #d4af6a;
+  color: rgba(212, 175, 106, 0.55);
+}
+
+.admin-bm-status-label {
+  color: #f0ebe3;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.admin-bm-qr {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.admin-bm-qr-image {
+  width: min(100%, 17.5rem);
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 106, 0.35);
+  background: #fff;
+  padding: 0.55rem;
 }
 
 .admin-bm-test-btn {
@@ -14670,6 +14738,27 @@ select.admin-pe-input {
   font-size: 0.88rem;
   text-align: right;
   direction: rtl;
+}
+
+.admin-bm-textarea {
+  min-height: 12.5rem;
+  height: auto;
+  resize: vertical;
+  line-height: 1.7;
+  font-size: 0.92rem;
+  padding: 0.75rem 0.85rem;
+  white-space: pre-wrap;
+}
+
+.admin-bm-placeholders {
+  margin: 0.4rem 0 0;
+  color: rgba(212, 175, 106, 0.78);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  direction: ltr;
+  text-align: right;
+  word-break: break-word;
 }
 
 .admin-bm-input[dir="ltr"] {

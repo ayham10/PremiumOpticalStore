@@ -8,9 +8,10 @@ Do **not** connect booking flows to this service until explicitly approved.
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| GET | `/health` | None | Service health + WhatsApp status summary |
-| GET | `/status` | None | Connection state |
-| GET | `/qr` | None | Latest QR for admin scanning |
+| GET | `/health` | None | Process liveness probe (no QR / session details) |
+| GET | `/status` | API key | Connection state |
+| GET | `/qr` | API key | Latest QR for authenticated Admin proxy |
+| GET | `/qr-view` | API key | HTML QR page (not for public use) |
 | POST | `/send` | API key | Send a plain-text WhatsApp message |
 
 ### Connection states
@@ -52,11 +53,11 @@ npm run dev
 
 Then open:
 
-- `GET http://localhost:3100/health`
-- `GET http://localhost:3100/status`
-- `GET http://localhost:3100/qr`
+- `GET http://localhost:3100/health` (public liveness)
+- `GET http://localhost:3100/status` with `X-API-Key` or `Authorization: Bearer`
+- `GET http://localhost:3100/qr` with the same API key
 
-When status becomes `QR_REQUIRED`, scan the QR from `/qr` (`qrDataUrl` is suitable for an admin UI image).
+When status becomes `QR_REQUIRED`, scan the QR from the OYON Admin panel (server-side proxy of `/qr`). Do not leave `/qr` or `/qr-view` reachable without the API key.
 
 Send test message:
 
@@ -101,14 +102,15 @@ npm start
 
 After deploy:
 
-1. Call `GET /status` until `QR_REQUIRED`.
-2. Display `GET /qr` in the future OYON admin panel.
+1. Call authenticated `GET /status` until `QR_REQUIRED`.
+2. Display authenticated `GET /qr` in the OYON admin panel (never from the public site).
 3. Scan once; session should persist on the mounted volume.
 
 ## Security notes
 
-- Protect `/send` with `WHATSAPP_WEB_SERVICE_API_KEY`.
-- Consider restricting `/qr` and `/status` behind admin auth when integrating with OYON.
+- Protect `/send`, `/status`, `/qr`, `/qr-view`, and `/diagnostics` with `WHATSAPP_WEB_SERVICE_API_KEY` (`X-API-Key` or `Authorization: Bearer`).
+- Keep `/health` public for probes only; it must not return a pairing QR.
+- OYON Admin must proxy status/QR server-side. Never put the API key in browser code.
 - Logs intentionally avoid printing full phone numbers, message bodies, or secrets.
 
 ## Relationship to the main OYON app

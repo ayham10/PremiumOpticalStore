@@ -25,7 +25,7 @@ function requireApiKey(req, res, next) {
     console.error("[whatsapp-web] WHATSAPP_WEB_SERVICE_API_KEY is not configured");
     return res.status(503).json({
       ok: false,
-      error: "Send endpoint is not configured with an API key",
+      error: "API key is not configured",
     });
   }
 
@@ -50,24 +50,22 @@ function escapeHtml(value) {
 }
 
 app.get("/health", (_req, res) => {
-  const status = getStatusPayload();
   res.json({
     ok: true,
     service: "oyon-whatsapp-web-service",
     timestamp: new Date().toISOString(),
-    whatsapp: status,
   });
 });
 
-app.get("/status", (_req, res) => {
+app.get("/status", requireApiKey, (_req, res) => {
   res.json(getStatusPayload());
 });
 
-app.get("/qr", (_req, res) => {
+app.get("/qr", requireApiKey, (_req, res) => {
   res.json(getQrPayload());
 });
 
-app.get("/qr-view", (_req, res) => {
+app.get("/qr-view", requireApiKey, (_req, res) => {
   const qr = getQrPayload();
   const status = getStatusPayload();
 
