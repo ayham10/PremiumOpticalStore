@@ -58,6 +58,48 @@ function isRetryableInitError(error) {
   );
 }
 
+function isLogoutNavigationUrl(url) {
+  return typeof url === "string" && url.includes("post_logout=1");
+}
+
+/**
+ * Decide whether a page that can ping Puppeteer is actually able to send.
+ * Missing WWebJS.getChat means the WhatsApp Store was wiped (navigation) and
+ * needs a fresh Client — never a same-page inject, and never a send.
+ */
+function classifyWhatsAppSendability({
+  pingOk = false,
+  hasGetChat = false,
+  logout = false,
+} = {}) {
+  if (logout) {
+    return {
+      allowSend: false,
+      action: "qr-required",
+      reason: "whatsapp-logout",
+    };
+  }
+  if (pingOk && hasGetChat) {
+    return {
+      allowSend: true,
+      action: "send",
+      reason: null,
+    };
+  }
+  if (pingOk && !hasGetChat) {
+    return {
+      allowSend: false,
+      action: "fresh-client-recovery",
+      reason: "wwebjs-missing",
+    };
+  }
+  return {
+    allowSend: false,
+    action: "fresh-client-recovery",
+    reason: "page-unresponsive",
+  };
+}
+
 function isGenuineWhatsAppLogout(reason) {
   const value = String(reason || "").trim().toUpperCase();
   if (!value) {
@@ -174,6 +216,8 @@ module.exports = {
   isHarmlessPageLifecycleError,
   isDuplicatePageBindingError,
   isGenuineWhatsAppLogout,
+  isLogoutNavigationUrl,
+  classifyWhatsAppSendability,
   isBrowserDisconnectReason,
   isCurrentClientEvent,
   createMutex,

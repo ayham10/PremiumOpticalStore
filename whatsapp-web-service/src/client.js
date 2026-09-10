@@ -21,6 +21,8 @@ const {
   sanitizeError,
   isRetryableInitError,
   isGenuineWhatsAppLogout,
+  isLogoutNavigationUrl,
+  classifyWhatsAppSendability,
   isBrowserDisconnectReason,
   isCurrentClientEvent,
   createMutex,
@@ -32,6 +34,7 @@ const {
   collectProcessDiagnostics,
   collectRendererDiagnostics,
   fastPagePing,
+  checkWhatsAppSendable,
   logContainerResources,
 } = require("./diagnostics");
 
@@ -533,9 +536,38 @@ function startPageKeepAlive(activeClient, generation) {
         return;
       }
 
-      const ping = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
-      if (ping.responsive) {
+      const health = await checkWhatsAppSendable(
+        activeClient,
+        PAGE_KEEPALIVE_TIMEOUT_MS,
+      );
+      const decision = classifyWhatsAppSendability({
+        pingOk: health.pingOk,
+        hasGetChat: health.hasGetChat,
+      });
+      if (decision.allowSend) {
         keepaliveFailures = 0;
+        return;
+      }
+
+      if (decision.reason === "wwebjs-missing") {
+        logLifecycle("warn", "keepalive-wwebjs-missing", {
+          ping: health.ping,
+          durationMs: health.durationMs,
+          error: health.error,
+        });
+        if (connectionStatus === "READY") {
+          connectionStatus = "DISCONNECTED";
+          lastError = health.error || "WWebJS.getChat missing";
+        }
+        try {
+          await performControlledRecovery("keepalive-wwebjs-missing");
+        } catch (error) {
+          logLifecycle("error", "keepalive-recovery-failed", {
+            error: sanitizeError(
+              error instanceof Error ? error.message : String(error),
+            ),
+          });
+        }
         return;
       }
 
@@ -543,8 +575,8 @@ function startPageKeepAlive(activeClient, generation) {
       const renderer = await collectRendererDiagnostics(activeClient);
       logContainerResources(activeClient, "keepalive-failure");
       logLifecycle("warn", "keepalive-unresponsive", {
-        durationMs: ping.durationMs,
-        error: ping.error,
+        durationMs: health.durationMs,
+        error: health.error,
         failures: keepaliveFailures,
         cacheMode: config.whatsappWebCacheMode,
         rendererBrowserConnected: renderer.browserConnected,
@@ -802,13 +834,58 @@ async function onOwnedFrameNavigated(activeClient, generation, frame) {
   } catch {
     return;
   }
-  if (typeof url === "string" && url.includes("post_logout=1")) {
+  if (isLogoutNavigationUrl(url) || isGenuineWhatsAppLogout(url)) {
     await retireClientAfterWhatsAppLogout(
       activeClient,
       generation,
-      "post_logout=1",
+      isLogoutNavigationUrl(url) ? "post_logout=1" : url,
     );
+    return;
   }
+  if (!isMainFrameNavigation(activeClient?.pupPage, frame)) {
+    return;
+  }
+  if (holdNewClient || adminMutationBusy || recoveryPromise || lifecycleMutex.locked) {
+    return;
+  }
+  if (connectionStatus !== "READY") {
+    return;
+  }
+
+  lockClientInject(activeClient);
+  connectionStatus = "DISCONNECTED";
+  lastError = "WhatsApp Web navigated; recovering with a fresh client";
+  logLifecycle("warn", "navigation-store-invalid", {
+    localAuthPreserved: true,
+  });
+  try {
+    await performControlledRecovery("navigation-store-invalid");
+  } catch (error) {
+    logLifecycle("error", "navigation-recovery-failed", {
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    });
+  }
+}
+
+function isMainFrameNavigation(page, frame) {
+  if (!page || !frame) {
+    return false;
+  }
+  try {
+    if (typeof page.mainFrame === "function" && frame === page.mainFrame()) {
+      return true;
+    }
+  } catch {
+    // Ignore CDP errors from a dying page.
+  }
+  try {
+    if (typeof frame.parentFrame === "function" && frame.parentFrame() == null) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 async function retireClientAfterWhatsAppLogout(activeClient, generation, reason) {
@@ -1381,7 +1458,7 @@ async function ensurePageResponsiveForSend(activeClient, options = {}) {
   const maxAttempts = options.maxAttempts || MAX_PRE_SEND_PING_ATTEMPTS;
   const allowRecovery = options.allowRecovery !== false;
   let currentClient = activeClient;
-  let lastPing = null;
+  let lastHealth = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     console.info("[whatsapp-web] pre-send health attempt", {
@@ -1389,19 +1466,29 @@ async function ensurePageResponsiveForSend(activeClient, options = {}) {
       maxAttempts,
     });
 
-    lastPing = await fastPagePing(currentClient);
+    lastHealth = await checkWhatsAppSendable(currentClient);
+    const decision = classifyWhatsAppSendability({
+      pingOk: lastHealth.pingOk,
+      hasGetChat: lastHealth.hasGetChat,
+    });
     console.info("[whatsapp-web] page responsive check", {
       attempt,
       maxAttempts,
-      responsive: lastPing.responsive ? "responsive" : "unresponsive",
-      ping: lastPing.ping,
-      durationMs: lastPing.durationMs,
-      error: lastPing.error,
+      sendable: lastHealth.sendable,
+      pingOk: lastHealth.pingOk,
+      hasGetChat: lastHealth.hasGetChat,
+      action: decision.action,
+      durationMs: lastHealth.durationMs,
+      error: lastHealth.error,
       ...collectProcessDiagnostics(currentClient),
     });
 
-    if (lastPing.responsive) {
+    if (decision.allowSend) {
       return { activeClient: currentClient, recovered: false };
+    }
+
+    if (decision.reason === "wwebjs-missing") {
+      break;
     }
 
     if (attempt < maxAttempts) {
@@ -1409,29 +1496,56 @@ async function ensurePageResponsiveForSend(activeClient, options = {}) {
     }
   }
 
+  const decision = classifyWhatsAppSendability({
+    pingOk: lastHealth?.pingOk,
+    hasGetChat: lastHealth?.hasGetChat,
+  });
+  if (decision.allowSend) {
+    return { activeClient: currentClient, recovered: false };
+  }
+
   if (!allowRecovery) {
     const error = new Error(
-      "WhatsApp Web page is not responsive; refusing to send",
+      decision.reason === "wwebjs-missing"
+        ? "WhatsApp Web Store is not sendable; refusing to send"
+        : "WhatsApp Web page is not responsive; refusing to send",
     );
     error.statusCode = 503;
     throw error;
   }
 
-  currentClient = await performControlledRecovery("pre-send-unresponsive");
-  lastPing = await fastPagePing(currentClient);
+  if (connectionStatus === "READY") {
+    connectionStatus = "DISCONNECTED";
+    lastError = lastHealth?.error || decision.reason || "WhatsApp Store unusable";
+  }
+
+  currentClient = await performControlledRecovery(
+    decision.reason === "wwebjs-missing"
+      ? "pre-send-wwebjs-missing"
+      : "pre-send-unresponsive",
+  );
+  lastHealth = await checkWhatsAppSendable(currentClient);
+  const after = classifyWhatsAppSendability({
+    pingOk: lastHealth.pingOk,
+    hasGetChat: lastHealth.hasGetChat,
+  });
 
   console.info("[whatsapp-web] page responsive check", {
     attempt: "post-recovery",
-    responsive: lastPing.responsive ? "responsive" : "unresponsive",
-    ping: lastPing.ping,
-    durationMs: lastPing.durationMs,
-    error: lastPing.error,
+    sendable: lastHealth.sendable,
+    pingOk: lastHealth.pingOk,
+    hasGetChat: lastHealth.hasGetChat,
+    action: after.action,
+    durationMs: lastHealth.durationMs,
+    error: lastHealth.error,
     ...collectProcessDiagnostics(currentClient),
   });
 
-  if (!lastPing.responsive) {
+  if (!after.allowSend) {
     const error = new Error(
-      "WhatsApp Web page is not responsive; refusing to send",
+      after.reason === "wwebjs-missing"
+        ? "WhatsApp Web Store is not sendable; refusing to send"
+        : "WhatsApp Web page is not responsive; refusing to send",
     );
     error.statusCode = 503;
     throw error;

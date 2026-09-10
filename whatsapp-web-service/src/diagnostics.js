@@ -191,6 +191,60 @@ async function fastPagePing(activeClient, timeoutMs = PRE_SEND_PING_TIMEOUT_MS) 
   }
 }
 
+async function checkWhatsAppSendable(activeClient, timeoutMs = PRE_SEND_PING_TIMEOUT_MS) {
+  const ping = await fastPagePing(activeClient, timeoutMs);
+  const page = activeClient?.pupPage;
+  if (!page || page.isClosed()) {
+    return {
+      sendable: false,
+      pingOk: false,
+      hasGetChat: false,
+      ping: ping.ping,
+      durationMs: ping.durationMs,
+      error: ping.error || "page unavailable",
+    };
+  }
+
+  if (!ping.responsive) {
+    return {
+      sendable: false,
+      pingOk: false,
+      hasGetChat: false,
+      ping: ping.ping,
+      durationMs: ping.durationMs,
+      error: ping.error,
+    };
+  }
+
+  try {
+    const probe = await withTimeout(
+      page.evaluate(
+        () => typeof window.WWebJS?.getChat === "function",
+      ),
+      timeoutMs,
+      "WWebJS.getChat check",
+    );
+    const hasGetChat = probe === true;
+    return {
+      sendable: hasGetChat,
+      pingOk: true,
+      hasGetChat,
+      ping: ping.ping,
+      durationMs: ping.durationMs,
+      error: hasGetChat ? null : "WWebJS.getChat missing",
+    };
+  } catch (error) {
+    return {
+      sendable: false,
+      pingOk: true,
+      hasGetChat: false,
+      ping: ping.ping,
+      durationMs: ping.durationMs,
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+    };
+  }
+}
+
 function getChromiumVersion(executablePath) {
   if (!executablePath) {
     return null;
@@ -218,6 +272,8 @@ function summarizeDiagnosticsForLog(diagnostics) {
     pageEvaluateError: diagnostics.pageEvaluate?.error,
     windowStoreExists: diagnostics.windowStore?.exists,
     windowStoreError: diagnostics.windowStore?.error,
+    wwebjsHasGetChat: diagnostics.wwebjs?.hasGetChat,
+    wwebjsError: diagnostics.wwebjs?.error,
     browserConnected: diagnostics.chromium?.browserConnected,
     chromiumProcessRunning: diagnostics.chromium?.processRunning,
     stepTimingsMs: diagnostics.stepTimingsMs || null,
@@ -229,7 +285,8 @@ function isPreSendResponsive(diagnostics) {
     diagnostics.pageEvaluate?.ping === 2 &&
     !diagnostics.pageEvaluate?.error &&
     diagnostics.page?.closed === false &&
-    diagnostics.chromium?.browserConnected !== false
+    diagnostics.chromium?.browserConnected !== false &&
+    diagnostics.wwebjs?.hasGetChat === true
   );
 }
 
@@ -253,6 +310,10 @@ async function collectPreSendHealthCheck(activeClient, connectionStatus) {
     },
     windowStore: {
       exists: null,
+      error: null,
+    },
+    wwebjs: {
+      hasGetChat: null,
       error: null,
     },
     chromium: {
@@ -345,6 +406,22 @@ async function collectPreSendHealthCheck(activeClient, connectionStatus) {
     diagnostics.stepTimingsMs.windowStore = Date.now() - storeStartedAt;
   }
 
+  const wwebjsStartedAt = Date.now();
+  try {
+    diagnostics.wwebjs.hasGetChat = await withTimeout(
+      page.evaluate(() => typeof window.WWebJS?.getChat === "function"),
+      PRE_SEND_PING_TIMEOUT_MS,
+      "WWebJS.getChat check",
+    );
+  } catch (error) {
+    diagnostics.wwebjs.hasGetChat = false;
+    diagnostics.wwebjs.error = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    diagnostics.stepTimingsMs.wwebjs = Date.now() - wwebjsStartedAt;
+  }
+
   const stateStartedAt = Date.now();
   try {
     diagnostics.whatsappClientState = await withTimeout(
@@ -386,6 +463,10 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
     },
     windowStore: {
       exists: null,
+      error: null,
+    },
+    wwebjs: {
+      hasGetChat: null,
       error: null,
     },
     chromium: {
@@ -499,6 +580,19 @@ async function collectWhatsAppDiagnostics(activeClient, connectionStatus) {
   }
 
   try {
+    diagnostics.wwebjs.hasGetChat = await withTimeout(
+      page.evaluate(() => typeof window.WWebJS?.getChat === "function"),
+      DIAGNOSTICS_EVAL_TIMEOUT_MS,
+      "WWebJS.getChat check",
+    );
+  } catch (error) {
+    diagnostics.wwebjs.hasGetChat = false;
+    diagnostics.wwebjs.error = sanitizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  try {
     diagnostics.whatsappClientState = await withTimeout(
       activeClient.getState(),
       DIAGNOSTICS_EVAL_TIMEOUT_MS,
@@ -528,6 +622,7 @@ module.exports = {
   collectProcessDiagnostics,
   collectRendererDiagnostics,
   fastPagePing,
+  checkWhatsAppSendable,
   isPreSendResponsive,
   logContainerResources,
   summarizeDiagnosticsForLog,

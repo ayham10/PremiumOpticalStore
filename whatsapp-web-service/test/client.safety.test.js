@@ -22,6 +22,9 @@ test("automatic recovery never clears LocalAuth", () => {
   assert.doesNotMatch(recoveryFn, /clearSession:\s*true/);
   assert.doesNotMatch(recoveryFn, /removeOwnedLocalAuthSession/);
   assert.doesNotMatch(recoveryFn, /unlinkWhatsAppClient/);
+  assert.match(source, /pre-send-wwebjs-missing/);
+  assert.match(source, /keepalive-wwebjs-missing/);
+  assert.match(source, /navigation-store-invalid/);
 });
 
 test("explicit reset and disconnect remain the only session-clear paths", () => {
