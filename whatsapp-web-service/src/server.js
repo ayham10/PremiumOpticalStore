@@ -1,4 +1,9 @@
 const express = require("express");
+const { installWhatsAppWebJsGuards, installProcessErrorBoundary } = require("./wwebjsGuard");
+
+installWhatsAppWebJsGuards();
+installProcessErrorBoundary();
+
 const config = require("./config");
 const {
   initializeWhatsAppClient,

@@ -1,7 +1,18 @@
 const fs = require("fs");
 const path = require("path");
 const qrcode = require("qrcode");
+const {
+  installWhatsAppWebJsGuards,
+  wrapClientInject,
+  lockClientInject,
+  installProcessErrorBoundary,
+} = require("./wwebjsGuard");
+
+installWhatsAppWebJsGuards();
+installProcessErrorBoundary();
+
 const { Client } = require("whatsapp-web.js");
+wrapClientInject(Client);
 const config = require("./config");
 const { toWhatsAppChatId } = require("./phone");
 const { removeStaleChromiumProfileLocks } = require("./profileLocks");
@@ -330,6 +341,7 @@ async function terminateOwnedBrowser(pid, { allowKill = true } = {}) {
 async function destroyClientAndWait(activeClient) {
   stopPageKeepAlive();
   tearingDown = true;
+  lockClientInject(activeClient);
   if (!activeClient) {
     const leftover = ownedBrowserPid;
     if (leftover) {
@@ -705,7 +717,7 @@ function attachClientEvents(activeClient, generation) {
       chromeProcessCount: rendererAtReady.chromeProcessTree?.processCount ?? 0,
       ...collectProcessDiagnostics(activeClient),
     });
-
+    disarmLibraryReinjection(activeClient, generation);
     startPageKeepAlive(activeClient, generation);
   });
 
@@ -725,11 +737,7 @@ function attachClientEvents(activeClient, generation) {
     lastError = detail;
 
     if (isGenuineWhatsAppLogout(reason)) {
-      connectionStatus = "QR_REQUIRED";
-      logLifecycle("warn", "whatsapp-logout", {
-        reason: detail,
-        localAuthPreserved: true,
-      });
+      void retireClientAfterWhatsAppLogout(activeClient, generation, detail);
       return;
     }
 
@@ -764,6 +772,79 @@ function attachClientEvents(activeClient, generation) {
       localAuthPreserved: true,
     });
   });
+}
+
+function disarmLibraryReinjection(activeClient, generation) {
+  const page = activeClient?.pupPage;
+  lockClientInject(activeClient);
+  if (!page) {
+    return;
+  }
+  try {
+    if (typeof page.removeAllListeners === "function") {
+      page.removeAllListeners("framenavigated");
+    }
+  } catch {
+    return;
+  }
+  page.on("framenavigated", (frame) => {
+    void onOwnedFrameNavigated(activeClient, generation, frame);
+  });
+}
+
+async function onOwnedFrameNavigated(activeClient, generation, frame) {
+  if (tearingDown || !isLiveClient(activeClient, generation)) {
+    return;
+  }
+  let url = "";
+  try {
+    url = typeof frame?.url === "function" ? frame.url() : "";
+  } catch {
+    return;
+  }
+  if (typeof url === "string" && url.includes("post_logout=1")) {
+    await retireClientAfterWhatsAppLogout(
+      activeClient,
+      generation,
+      "post_logout=1",
+    );
+  }
+}
+
+async function retireClientAfterWhatsAppLogout(activeClient, generation, reason) {
+  if (tearingDown) {
+    return;
+  }
+  if (!isLiveClient(activeClient, generation)) {
+    return;
+  }
+
+  lockClientInject(activeClient);
+  stopPageKeepAlive();
+  holdNewClient = true;
+  connectionStatus = "QR_REQUIRED";
+  lastError = sanitizeError(reason || "LOGOUT");
+  logLifecycle("warn", "whatsapp-logout", {
+    reason: lastError,
+    localAuthPreserved: true,
+  });
+
+  try {
+    await lifecycleMutex.runExclusive(async () => {
+      if (generation !== clientGeneration && client !== activeClient && inFlightClient !== activeClient) {
+        return;
+      }
+      await stopCurrentClient({ clearSession: false });
+      holdNewClient = true;
+      connectionStatus = "QR_REQUIRED";
+      lastError = sanitizeError(reason || "LOGOUT");
+    });
+  } catch (error) {
+    logLifecycle("error", "logout-teardown-failed", {
+      error: sanitizeError(error instanceof Error ? error.message : String(error)),
+      localAuthPreserved: true,
+    });
+  }
 }
 
 async function stopCurrentClient({ clearSession = false } = {}) {
@@ -920,6 +1001,7 @@ async function startFreshClientUnlocked() {
         }
 
         await pruneExtraBrowserPages(activeClient);
+        disarmLibraryReinjection(activeClient, generation);
         client = activeClient;
         inFlightClient = null;
 

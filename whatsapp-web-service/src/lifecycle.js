@@ -8,6 +8,35 @@ function sanitizeError(message) {
     .slice(0, 500);
 }
 
+function isHarmlessPageLifecycleError(error) {
+  const message = sanitizeError(
+    error instanceof Error ? error.message : String(error || ""),
+  );
+  return (
+    /failed to add page binding/i.test(message) ||
+    /onqrchangedevent already exists/i.test(message) ||
+    /execution context was destroyed/i.test(message) ||
+    /context was destroyed/i.test(message) ||
+    /frame was detached/i.test(message) ||
+    /detached frame/i.test(message) ||
+    /target closed/i.test(message) ||
+    /cannot find context with specified id/i.test(message) ||
+    /session closed/i.test(message) ||
+    /protocol error \(runtime\.callfunctionon\)/i.test(message)
+  );
+}
+
+function isDuplicatePageBindingError(error) {
+  const message = sanitizeError(
+    error instanceof Error ? error.message : String(error || ""),
+  );
+  return (
+    /failed to add page binding/i.test(message) ||
+    /onqrchangedevent already exists/i.test(message) ||
+    /window\['onqrchangedevent'\] already exists/i.test(message)
+  );
+}
+
 function isRetryableInitError(error) {
   const message = sanitizeError(
     error instanceof Error ? error.message : String(error),
@@ -142,6 +171,8 @@ module.exports = {
   RECOVERY_WINDOW_MS,
   sanitizeError,
   isRetryableInitError,
+  isHarmlessPageLifecycleError,
+  isDuplicatePageBindingError,
   isGenuineWhatsAppLogout,
   isBrowserDisconnectReason,
   isCurrentClientEvent,
