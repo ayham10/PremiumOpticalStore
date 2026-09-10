@@ -431,13 +431,14 @@ async function destroyClientAndWait(activeClient) {
   return termination.terminated;
 }
 
-async function waitForFreshQr(timeoutMs, previousReceivedAt) {
+async function waitForReadyOrQrRequired(timeoutMs, previousReceivedAt) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     if (connectionStatus === "READY") {
       return true;
     }
     if (
+      connectionStatus === "QR_REQUIRED" &&
       latestQrDataUrl &&
       qrReceivedAt &&
       qrReceivedAt !== previousReceivedAt
@@ -1149,8 +1150,9 @@ async function startFreshClientUnlocked() {
 }
 
 /**
- * Restart the WhatsApp Web client to request a new pairing QR.
- * Does not delete LocalAuth/session files. Refuses when already READY.
+ * Non-destructive Admin reconnect: stop the current client, preserve
+ * LocalAuth, then start one new Client generation. Waits for READY
+ * (restored session) or QR_REQUIRED. Refuses when already READY.
  */
 async function reconnectWhatsAppClient() {
   if (connectionStatus === "READY") {
@@ -1174,7 +1176,7 @@ async function reconnectWhatsAppClient() {
       await stopCurrentClient({ clearSession: false });
       await startFreshClientUnlocked();
     });
-    const recovered = await waitForFreshQr(45000, previousReceivedAt);
+    const recovered = await waitForReadyOrQrRequired(45000, previousReceivedAt);
     return {
       ok: recovered,
       refused: false,
@@ -1225,7 +1227,7 @@ async function resetWhatsAppSession(options = {}) {
       await stopCurrentClient({ clearSession: true });
       await startFreshClientUnlocked();
     });
-    const recovered = await waitForFreshQr(45000, previousReceivedAt);
+    const recovered = await waitForReadyOrQrRequired(45000, previousReceivedAt);
     return {
       ok: recovered,
       refused: false,
