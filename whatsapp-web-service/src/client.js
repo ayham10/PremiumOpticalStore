@@ -1,10 +1,20 @@
 const fs = require("fs");
 const path = require("path");
 const qrcode = require("qrcode");
-const { Client, LocalAuth } = require("whatsapp-web.js");
+const { Client } = require("whatsapp-web.js");
 const config = require("./config");
 const { toWhatsAppChatId } = require("./phone");
 const { removeStaleChromiumProfileLocks } = require("./profileLocks");
+const { PreserveLocalAuth } = require("./localAuth");
+const {
+  sanitizeError,
+  isRetryableInitError,
+  isGenuineWhatsAppLogout,
+  isBrowserDisconnectReason,
+  isCurrentClientEvent,
+  createMutex,
+  createRecoveryBudget,
+} = require("./lifecycle");
 const {
   collectWhatsAppDiagnostics,
   collectBrowserSnapshot,
@@ -32,6 +42,11 @@ let clientGeneration = 0;
 let ownedBrowserPid = null;
 let staleChromiumLocksCleanedUp = false;
 let pageKeepAliveTimer = null;
+let tearingDown = false;
+let keepaliveFailures = 0;
+let recoveryPromise = null;
+const lifecycleMutex = createMutex();
+const recoveryBudget = createRecoveryBudget();
 
 const MAX_INIT_ATTEMPTS = 3;
 const INIT_RETRY_DELAY_MS = 4000;
@@ -40,27 +55,49 @@ const PRE_SEND_PING_RETRY_DELAY_MS = 2500;
 const RECOVERY_READY_TIMEOUT_MS = 120000;
 const PAGE_KEEPALIVE_INTERVAL_MS = 20000;
 const PAGE_KEEPALIVE_TIMEOUT_MS = 3000;
+const KEEPALIVE_FAILURES_BEFORE_RECOVERY = 3;
 const DESTROY_TIMEOUT_MS = 15000;
 const BROWSER_EXIT_WAIT_MS = 15000;
 const BROWSER_TERM_WAIT_MS = 5000;
+const BROWSER_KILL_WAIT_MS = 5000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isRetryableInitError(error) {
-  const message = sanitizeError(
-    error instanceof Error ? error.message : String(error),
-  );
+function currentClientRef() {
+  return {
+    generation: clientGeneration,
+    client,
+    inFlightClient,
+  };
+}
 
-  return (
-    /execution context was destroyed/i.test(message) ||
-    /context was destroyed/i.test(message) ||
-    /frame was detached/i.test(message) ||
-    /target closed/i.test(message) ||
-    /cannot find context with specified id/i.test(message) ||
-    /protocol error \(runtime\.callfunctionon\)/i.test(message)
+function isLiveClient(activeClient, generation) {
+  return isCurrentClientEvent(
+    { client: activeClient, generation },
+    currentClientRef(),
   );
+}
+
+function logLifecycle(level, event, extra = {}) {
+  const payload = {
+    event,
+    generation: clientGeneration,
+    chromiumPid: ownedBrowserPid,
+    localAuthPreserved: extra.localAuthPreserved !== false,
+    status: connectionStatus,
+    ...extra,
+  };
+  if (level === "error") {
+    console.error("[whatsapp-web]", payload);
+    return;
+  }
+  if (level === "warn") {
+    console.warn("[whatsapp-web]", payload);
+    return;
+  }
+  console.info("[whatsapp-web]", payload);
 }
 
 /** Railway essentials + conservative memory caps (no renderer-risky flags). */
@@ -100,13 +137,6 @@ function getQrPayload() {
     qrReceivedAt,
     generatedAt: qrReceivedAt,
   };
-}
-
-function sanitizeError(message) {
-  return String(message || "Unknown error")
-    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
-    .replace(/api[_-]?key[=:]\S+/gi, "api_key=[redacted]")
-    .slice(0, 500);
 }
 
 async function setQr(rawQr) {
@@ -185,6 +215,9 @@ async function logoutOwnedLocalAuth(activeClient) {
   if (!isOwnedLocalAuthSessionDir(strategy.userDataDir)) {
     return;
   }
+  if (typeof strategy.allowSessionDelete === "function") {
+    strategy.allowSessionDelete();
+  }
   try {
     await strategy.logout();
   } catch (error) {
@@ -256,16 +289,67 @@ async function waitForOwnedBrowserExit(pid, timeoutMs = BROWSER_EXIT_WAIT_MS) {
   return !isProcessAlive(pid);
 }
 
+function signalOwnedBrowser(pid, signal) {
+  if (!pid || pid === process.pid || !isProcessAlive(pid)) {
+    return false;
+  }
+  try {
+    process.kill(pid, signal);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function terminateOwnedBrowser(pid, { allowKill = true } = {}) {
+  if (!pid || pid === process.pid) {
+    return { pid: pid || null, terminated: true, signal: null };
+  }
+
+  let terminated = await waitForOwnedBrowserExit(pid, BROWSER_EXIT_WAIT_MS);
+  if (terminated) {
+    return { pid, terminated: true, signal: null };
+  }
+
+  logLifecycle("warn", "chromium-term", { pid, signal: "SIGTERM" });
+  signalOwnedBrowser(pid, "SIGTERM");
+  terminated = await waitForOwnedBrowserExit(pid, BROWSER_TERM_WAIT_MS);
+  if (terminated) {
+    return { pid, terminated: true, signal: "SIGTERM" };
+  }
+
+  if (allowKill) {
+    logLifecycle("warn", "chromium-kill", { pid, signal: "SIGKILL" });
+    signalOwnedBrowser(pid, "SIGKILL");
+    terminated = await waitForOwnedBrowserExit(pid, BROWSER_KILL_WAIT_MS);
+  }
+
+  return { pid, terminated, signal: allowKill ? "SIGKILL" : "SIGTERM" };
+}
+
 async function destroyClientAndWait(activeClient) {
   stopPageKeepAlive();
+  tearingDown = true;
   if (!activeClient) {
-    if (ownedBrowserPid) {
-      await waitForOwnedBrowserExit(ownedBrowserPid);
+    const leftover = ownedBrowserPid;
+    if (leftover) {
+      const result = await terminateOwnedBrowser(leftover);
+      logLifecycle(result.terminated ? "info" : "warn", "chromium-exit", {
+        pid: leftover,
+        terminated: result.terminated,
+        signal: result.signal,
+        localAuthPreserved: true,
+      });
     }
-    return;
+    tearingDown = false;
+    return !ownedBrowserPid || !isProcessAlive(ownedBrowserPid);
   }
 
   const pid = rememberOwnedBrowserPid(activeClient) || ownedBrowserPid;
+  logLifecycle("info", "client-destroy-start", {
+    pid,
+    localAuthPreserved: true,
+  });
 
   try {
     if (typeof activeClient.removeAllListeners === "function") {
@@ -273,6 +357,15 @@ async function destroyClientAndWait(activeClient) {
     }
   } catch {
     // Ignore listener cleanup failures.
+  }
+
+  try {
+    const page = activeClient.pupPage;
+    if (page && typeof page.removeAllListeners === "function") {
+      page.removeAllListeners("framenavigated");
+    }
+  } catch {
+    // Page may already be closed.
   }
 
   try {
@@ -298,18 +391,19 @@ async function destroyClientAndWait(activeClient) {
     });
   }
 
-  let exited = await waitForOwnedBrowserExit(pid, BROWSER_EXIT_WAIT_MS);
-  if (!exited && pid && isProcessAlive(pid)) {
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      // Process may have exited between the check and the signal.
-    }
-    exited = await waitForOwnedBrowserExit(pid, BROWSER_TERM_WAIT_MS);
-  }
-
-  if (!exited && pid && isProcessAlive(pid)) {
-    console.warn("[whatsapp-web] owned Chromium still running after destroy");
+  const termination = await terminateOwnedBrowser(pid);
+  if (!termination.terminated && pid && isProcessAlive(pid)) {
+    logLifecycle("error", "chromium-still-running", {
+      pid,
+      localAuthPreserved: true,
+    });
+  } else {
+    logLifecycle("info", "chromium-exit", {
+      pid,
+      terminated: termination.terminated,
+      signal: termination.signal,
+      localAuthPreserved: true,
+    });
   }
 
   if (inFlightClient === activeClient) {
@@ -318,6 +412,8 @@ async function destroyClientAndWait(activeClient) {
   if (client === activeClient) {
     client = null;
   }
+  tearingDown = false;
+  return termination.terminated;
 }
 
 async function waitForFreshQr(timeoutMs, previousReceivedAt) {
@@ -380,7 +476,7 @@ function buildPuppeteerConfig() {
 
 function buildWhatsAppClientOptions() {
   const options = {
-    authStrategy: new LocalAuth({
+    authStrategy: new PreserveLocalAuth({
       dataPath: path.resolve(config.authDataPath),
     }),
     puppeteer: buildPuppeteerConfig(),
@@ -405,11 +501,15 @@ function stopPageKeepAlive() {
   }
 }
 
-function startPageKeepAlive(activeClient) {
+function startPageKeepAlive(activeClient, generation) {
   stopPageKeepAlive();
+  keepaliveFailures = 0;
 
   pageKeepAliveTimer = setInterval(() => {
     void (async () => {
+      if (!isLiveClient(activeClient, generation)) {
+        return;
+      }
       if (
         connectionStatus !== "READY" ||
         !activeClient?.pupPage ||
@@ -417,16 +517,40 @@ function startPageKeepAlive(activeClient) {
       ) {
         return;
       }
+      if (lifecycleMutex.locked || recoveryPromise) {
+        return;
+      }
 
       const ping = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
-      if (!ping.responsive) {
-        const renderer = await collectRendererDiagnostics(activeClient);
-        logContainerResources(activeClient, "keepalive-failure");
-        console.warn("[whatsapp-web] page keepalive unresponsive", {
-          durationMs: ping.durationMs,
-          error: ping.error,
-          cacheMode: config.whatsappWebCacheMode,
-          renderer,
+      if (ping.responsive) {
+        keepaliveFailures = 0;
+        return;
+      }
+
+      keepaliveFailures += 1;
+      const renderer = await collectRendererDiagnostics(activeClient);
+      logContainerResources(activeClient, "keepalive-failure");
+      logLifecycle("warn", "keepalive-unresponsive", {
+        durationMs: ping.durationMs,
+        error: ping.error,
+        failures: keepaliveFailures,
+        cacheMode: config.whatsappWebCacheMode,
+        rendererBrowserConnected: renderer.browserConnected,
+        rendererProcessRunning: renderer.browserProcessRunning,
+      });
+
+      if (keepaliveFailures < KEEPALIVE_FAILURES_BEFORE_RECOVERY) {
+        return;
+      }
+
+      keepaliveFailures = 0;
+      try {
+        await performControlledRecovery("keepalive-unresponsive");
+      } catch (error) {
+        logLifecycle("error", "keepalive-recovery-failed", {
+          error: sanitizeError(
+            error instanceof Error ? error.message : String(error),
+          ),
         });
       }
     })();
@@ -529,34 +653,28 @@ function normalizeSendError(error) {
 
 function attachClientEvents(activeClient, generation) {
   activeClient.on("qr", async (qr) => {
-    if (
-      generation !== clientGeneration ||
-      (inFlightClient !== activeClient && client !== activeClient)
-    ) {
+    if (!isLiveClient(activeClient, generation)) {
       return;
     }
     rememberOwnedBrowserPid(activeClient);
     connectionStatus = "QR_REQUIRED";
     lastError = null;
     await setQr(qr);
-    console.info("[whatsapp-web] QR_RECEIVED");
+    logLifecycle("info", "QR_REQUIRED", { localAuthPreserved: true });
   });
 
   activeClient.on("authenticated", () => {
-    if (generation !== clientGeneration) {
+    if (!isLiveClient(activeClient, generation)) {
       return;
     }
     connectionStatus = "AUTHENTICATED";
     lastError = null;
     clearQr();
-    console.info("[whatsapp-web] AUTHENTICATED");
+    logLifecycle("info", "AUTHENTICATED", { localAuthPreserved: true });
   });
 
   activeClient.on("ready", async () => {
-    if (generation !== clientGeneration) {
-      return;
-    }
-    if (inFlightClient !== activeClient && client !== activeClient) {
+    if (!isLiveClient(activeClient, generation)) {
       return;
     }
     client = activeClient;
@@ -564,8 +682,9 @@ function attachClientEvents(activeClient, generation) {
     connectionStatus = "READY";
     lastError = null;
     clearQr();
-    console.info("[whatsapp-web] READY", {
+    logLifecycle("info", "READY", {
       cacheMode: config.whatsappWebCacheMode,
+      localAuthPreserved: true,
     });
     await pruneExtraBrowserPages(activeClient);
     await logBrowserSnapshot(activeClient, "ready");
@@ -574,6 +693,8 @@ function attachClientEvents(activeClient, generation) {
     const immediatePing = await fastPagePing(activeClient, PAGE_KEEPALIVE_TIMEOUT_MS);
     const rendererAtReady = await collectRendererDiagnostics(activeClient);
     console.info("[whatsapp-web] post-ready health", {
+      generation: clientGeneration,
+      chromiumPid: ownedBrowserPid,
       responsive: immediatePing.responsive,
       ping: immediatePing.ping,
       durationMs: immediatePing.durationMs,
@@ -585,29 +706,62 @@ function attachClientEvents(activeClient, generation) {
       ...collectProcessDiagnostics(activeClient),
     });
 
-    startPageKeepAlive(activeClient);
+    startPageKeepAlive(activeClient, generation);
   });
 
   activeClient.on("disconnected", (reason) => {
-    if (generation !== clientGeneration) {
+    if (tearingDown) {
+      logLifecycle("info", "disconnected-during-teardown", {
+        reason: sanitizeError(reason || "disconnected"),
+        localAuthPreserved: true,
+      });
+      return;
+    }
+    if (!isLiveClient(activeClient, generation)) {
       return;
     }
     stopPageKeepAlive();
+    const detail = sanitizeError(reason || "disconnected");
+    lastError = detail;
+
+    if (isGenuineWhatsAppLogout(reason)) {
+      connectionStatus = "QR_REQUIRED";
+      logLifecycle("warn", "whatsapp-logout", {
+        reason: detail,
+        localAuthPreserved: true,
+      });
+      return;
+    }
+
     connectionStatus = "DISCONNECTED";
-    lastError = sanitizeError(reason || "disconnected");
     clearQr();
-    console.warn("[whatsapp-web] DISCONNECTED", { reason: lastError });
+    logLifecycle("warn", "DISCONNECTED", {
+      reason: detail,
+      browserFailure: isBrowserDisconnectReason(reason),
+      localAuthPreserved: true,
+    });
+
+    if (isBrowserDisconnectReason(reason) && !holdNewClient && !adminMutationBusy) {
+      void performControlledRecovery(`disconnected:${detail}`).catch((error) => {
+        logLifecycle("error", "disconnect-recovery-failed", {
+          error: sanitizeError(
+            error instanceof Error ? error.message : String(error),
+          ),
+        });
+      });
+    }
   });
 
   activeClient.on("auth_failure", (message) => {
-    if (generation !== clientGeneration) {
+    if (!isLiveClient(activeClient, generation)) {
       return;
     }
     connectionStatus = "AUTH_FAILURE";
     lastError = sanitizeError(message || "auth_failure");
     clearQr();
-    console.error("[whatsapp-web] AUTH_FAILURE", {
+    logLifecycle("error", "AUTH_FAILURE", {
       error: lastError,
+      localAuthPreserved: true,
     });
   });
 }
@@ -620,7 +774,7 @@ async function stopCurrentClient({ clearSession = false } = {}) {
   connectionStatus = "INITIALIZING";
 
   const target = inFlightClient || client;
-  await destroyClientAndWait(target);
+  const browserGone = await destroyClientAndWait(target);
 
   if (startPromise) {
     try {
@@ -635,42 +789,68 @@ async function stopCurrentClient({ clearSession = false } = {}) {
   startPromise = null;
   ownedBrowserPid = isProcessAlive(ownedBrowserPid) ? ownedBrowserPid : null;
   if (ownedBrowserPid) {
-    await waitForOwnedBrowserExit(ownedBrowserPid);
+    const leftover = await terminateOwnedBrowser(ownedBrowserPid);
+    if (!leftover.terminated) {
+      const error = new Error(
+        "Owned Chromium did not exit; refusing to reuse LocalAuth userDataDir",
+      );
+      logLifecycle("error", "chromium-reuse-refused", {
+        pid: ownedBrowserPid,
+        localAuthPreserved: !clearSession,
+      });
+      throw error;
+    }
   }
 
   if (clearSession) {
     await logoutOwnedLocalAuth(target);
     await removeOwnedLocalAuthSession();
+    logLifecycle("info", "localauth-cleared", { localAuthPreserved: false });
+  } else {
+    logLifecycle("info", "localauth-preserved", { localAuthPreserved: true });
   }
 
-  staleChromiumLocksCleanedUp = false;
+  if (browserGone !== false) {
+    staleChromiumLocksCleanedUp = false;
+  }
 }
 
 async function initializeWhatsAppClient() {
   if (client) {
     return client;
   }
-  if (startPromise) {
-    return startPromise;
-  }
   if (holdNewClient) {
     return null;
   }
-  if (adminMutationBusy) {
-    while (adminMutationBusy && !client && !startPromise) {
-      await sleep(50);
-    }
+  if (startPromise) {
+    return startPromise;
+  }
+  return lifecycleMutex.runExclusive(async () => {
     if (client) {
       return client;
+    }
+    if (holdNewClient) {
+      return null;
     }
     if (startPromise) {
       return startPromise;
     }
-  }
-  return startFreshClient();
+    if (adminMutationBusy) {
+      while (adminMutationBusy && !client && !startPromise) {
+        await sleep(50);
+      }
+      if (client) {
+        return client;
+      }
+      if (startPromise) {
+        return startPromise;
+      }
+    }
+    return startFreshClientUnlocked();
+  });
 }
 
-async function startFreshClient() {
+async function startFreshClientUnlocked() {
   if (holdNewClient) {
     return null;
   }
@@ -683,6 +863,9 @@ async function startFreshClient() {
     if (inFlightClient || client) {
       throw new Error("Refusing to initialize while another WhatsApp client is active");
     }
+    if (ownedBrowserPid && isProcessAlive(ownedBrowserPid)) {
+      throw new Error("Refusing to initialize while owned Chromium is still running");
+    }
 
     connectionStatus = "INITIALIZING";
     lastError = null;
@@ -690,15 +873,13 @@ async function startFreshClient() {
     await cleanupStaleChromiumLocksOnce();
 
     const browserInfo = getResolvedBrowserInfo();
-    console.info("[whatsapp-web] launching browser", {
+    logLifecycle("info", "initialization-start", {
       source: browserInfo.source,
       headlessMode: config.puppeteerHeadlessMode,
-      cacheDir: process.env.PUPPETEER_CACHE_DIR || null,
       cacheMode: config.whatsappWebCacheMode,
       webVersion: config.whatsappWebCacheMode === "pinned"
         ? config.whatsappWebVersion
         : "live (web.whatsapp.com)",
-      webVersionCachePath: config.whatsappWebCachePath,
     });
 
     let lastInitError = null;
@@ -709,10 +890,9 @@ async function startFreshClient() {
       }
 
       connectionStatus = "INITIALIZING";
-      console.info("[whatsapp-web] initialization attempt", {
+      logLifecycle("info", "initialization-attempt", {
         attempt,
         maxAttempts: MAX_INIT_ATTEMPTS,
-        generation,
       });
 
       const activeClient = new Client(buildWhatsAppClientOptions());
@@ -743,12 +923,9 @@ async function startFreshClient() {
         client = activeClient;
         inFlightClient = null;
 
-        console.info("[whatsapp-web] initialization succeeded", {
+        logLifecycle("info", "initialization-succeeded", {
           attempt,
           cacheMode: config.whatsappWebCacheMode,
-          webVersion: config.whatsappWebCacheMode === "pinned"
-            ? config.whatsappWebVersion
-            : "live (web.whatsapp.com)",
         });
         return activeClient;
       } catch (error) {
@@ -756,9 +933,8 @@ async function startFreshClient() {
         const detail = sanitizeError(
           error instanceof Error ? error.message : String(error),
         );
-        console.error("[whatsapp-web] initialization failed", {
+        logLifecycle("error", "initialization-failed", {
           attempt,
-          generation,
           error: detail,
         });
 
@@ -766,6 +942,11 @@ async function startFreshClient() {
         if (inFlightClient === activeClient) {
           inFlightClient = null;
         }
+        if (ownedBrowserPid && isProcessAlive(ownedBrowserPid)) {
+          await terminateOwnedBrowser(ownedBrowserPid);
+        }
+        staleChromiumLocksCleanedUp = false;
+        await cleanupStaleChromiumLocksOnce();
 
         const shouldRetry =
           attempt < MAX_INIT_ATTEMPTS &&
@@ -775,7 +956,7 @@ async function startFreshClient() {
           break;
         }
 
-        console.warn("[whatsapp-web] retry scheduled", {
+        logLifecycle("warn", "initialization-retry", {
           attempt,
           nextAttempt: attempt + 1,
           delayMs: INIT_RETRY_DELAY_MS,
@@ -790,7 +971,7 @@ async function startFreshClient() {
       lastError = sanitizeError(
         lastInitError instanceof Error ? lastInitError.message : String(lastInitError),
       );
-      console.error("[whatsapp-web] initialization exhausted retries", {
+      logLifecycle("error", "initialization-exhausted", {
         attempts: MAX_INIT_ATTEMPTS,
         error: lastError,
       });
@@ -830,8 +1011,10 @@ async function reconnectWhatsAppClient() {
   holdNewClient = false;
   const previousReceivedAt = qrReceivedAt;
   try {
-    await stopCurrentClient({ clearSession: false });
-    void startFreshClient();
+    await lifecycleMutex.runExclusive(async () => {
+      await stopCurrentClient({ clearSession: false });
+      await startFreshClientUnlocked();
+    });
     const recovered = await waitForFreshQr(45000, previousReceivedAt);
     return {
       ok: recovered,
@@ -879,8 +1062,10 @@ async function resetWhatsAppSession(options = {}) {
   holdNewClient = false;
   const previousReceivedAt = qrReceivedAt;
   try {
-    await stopCurrentClient({ clearSession: true });
-    void startFreshClient();
+    await lifecycleMutex.runExclusive(async () => {
+      await stopCurrentClient({ clearSession: true });
+      await startFreshClientUnlocked();
+    });
     const recovered = await waitForFreshQr(45000, previousReceivedAt);
     return {
       ok: recovered,
@@ -946,7 +1131,9 @@ async function disconnectWhatsAppSession() {
   try {
     const active = client;
     await unlinkWhatsAppClient(active);
-    await stopCurrentClient({ clearSession: true });
+    await lifecycleMutex.runExclusive(async () => {
+      await stopCurrentClient({ clearSession: true });
+    });
     holdNewClient = true;
     connectionStatus = "DISCONNECTED";
     clearQr();
@@ -974,8 +1161,8 @@ async function disconnectWhatsAppSession() {
   }
 }
 
-async function waitForReady(activeClient, timeoutMs) {
-  if (connectionStatus === "READY") {
+async function waitForReady(activeClient, timeoutMs, generation) {
+  if (connectionStatus === "READY" && isLiveClient(activeClient, generation)) {
     return;
   }
 
@@ -990,16 +1177,51 @@ async function waitForReady(activeClient, timeoutMs) {
     }, timeoutMs);
 
     const onReady = () => {
+      if (!isLiveClient(activeClient, generation)) {
+        return;
+      }
       cleanup();
       resolve();
     };
 
+    const onTerminal = () => {
+      if (!isLiveClient(activeClient, generation)) {
+        return;
+      }
+      if (
+        connectionStatus === "QR_REQUIRED" ||
+        connectionStatus === "AUTH_FAILURE"
+      ) {
+        cleanup();
+        reject(
+          new Error(
+            `Recovery reached ${connectionStatus} instead of READY`,
+          ),
+        );
+      }
+    };
+
+    const poll = setInterval(() => {
+      if (generation !== clientGeneration) {
+        cleanup();
+        reject(new Error("Recovery aborted by a newer client generation"));
+        return;
+      }
+      if (connectionStatus === "READY" && isLiveClient(activeClient, generation)) {
+        cleanup();
+        resolve();
+        return;
+      }
+      onTerminal();
+    }, 250);
+
     const cleanup = () => {
       clearTimeout(timer);
+      clearInterval(poll);
       activeClient.removeListener("ready", onReady);
     };
 
-    if (connectionStatus === "READY") {
+    if (connectionStatus === "READY" && isLiveClient(activeClient, generation)) {
       cleanup();
       resolve();
       return;
@@ -1009,28 +1231,68 @@ async function waitForReady(activeClient, timeoutMs) {
   });
 }
 
-async function performControlledRecovery() {
+async function performControlledRecovery(reason = "unspecified") {
+  if (holdNewClient) {
+    const error = new Error("WhatsApp client is held after disconnect");
+    error.statusCode = 503;
+    throw error;
+  }
   if (adminMutationBusy) {
     const error = new Error("WhatsApp client lifecycle is busy");
     error.statusCode = 503;
     throw error;
   }
-
-  logContainerResources(client, "recovery-before");
-  console.warn("[whatsapp-web] recovery started");
-
-  await stopCurrentClient({ clearSession: false });
-  const recoveredClient = await startFreshClient();
-  if (!recoveredClient) {
-    const error = new Error("Controlled recovery failed to initialize client");
+  if (!recoveryBudget.canAttempt()) {
+    const error = new Error(
+      "WhatsApp recovery retry budget exhausted; admin reconnect required",
+    );
     error.statusCode = 503;
+    logLifecycle("error", "recovery-budget-exhausted", {
+      reason,
+      remaining: recoveryBudget.remaining(),
+    });
     throw error;
   }
+  if (recoveryPromise) {
+    return recoveryPromise;
+  }
 
-  await waitForReady(recoveredClient, RECOVERY_READY_TIMEOUT_MS);
-  console.info("[whatsapp-web] recovery READY");
+  recoveryPromise = lifecycleMutex.runExclusive(async () => {
+    const attempt = recoveryBudget.record();
+    logContainerResources(client, "recovery-before");
+    logLifecycle("warn", "recovery-started", {
+      reason,
+      attempt,
+      remainingAfter: recoveryBudget.remaining(),
+      localAuthPreserved: true,
+      clearSession: false,
+    });
 
-  return recoveredClient;
+    await stopCurrentClient({ clearSession: false });
+    const recoveredClient = await startFreshClientUnlocked();
+    if (!recoveredClient) {
+      const error = new Error("Controlled recovery failed to initialize client");
+      error.statusCode = 503;
+      throw error;
+    }
+
+    await waitForReady(
+      recoveredClient,
+      RECOVERY_READY_TIMEOUT_MS,
+      clientGeneration,
+    );
+    logLifecycle("info", "recovery-ready", {
+      reason,
+      attempt,
+      localAuthPreserved: true,
+    });
+
+    return recoveredClient;
+  }).finally(() => {
+    recoveryPromise = null;
+  });
+
+  return recoveryPromise;
 }
 
 async function ensurePageResponsiveForSend(activeClient, options = {}) {
@@ -1073,7 +1335,7 @@ async function ensurePageResponsiveForSend(activeClient, options = {}) {
     throw error;
   }
 
-  currentClient = await performControlledRecovery();
+  currentClient = await performControlledRecovery("pre-send-unresponsive");
   lastPing = await fastPagePing(currentClient);
 
   console.info("[whatsapp-web] page responsive check", {
