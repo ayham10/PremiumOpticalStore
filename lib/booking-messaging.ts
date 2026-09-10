@@ -13,9 +13,10 @@ import {
   jerusalemWallClockToUtc,
 } from "@/lib/eye-exam";
 import type { SmsResult } from "@/lib/sms/provider";
-import type { AppData, EyeExamAppointment } from "@/lib/types";
+import type { AppData, BookingMessagesSettings, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 import {
+  formatPhoneForWhatsAppWeb,
   isWhatsAppWebServiceConfigured,
   logWhatsAppBookingResult,
   sendBookingWhatsAppMessage,
@@ -188,6 +189,31 @@ async function logWhatsAppAttempt(
   }
 }
 
+export function ownerNotificationSkipReason(
+  bookingMessages: BookingMessagesSettings,
+  useWhatsAppWeb: boolean,
+):
+  | "disabled"
+  | "missing-owner-phone"
+  | "invalid-owner-phone"
+  | "missing-template"
+  | null {
+  if (!bookingMessages.ownerNotification.enabled) {
+    return "disabled";
+  }
+  const ownerWhatsApp = bookingMessages.ownerNotification.ownerWhatsApp.trim();
+  if (!ownerWhatsApp) {
+    return "missing-owner-phone";
+  }
+  if (!formatPhoneForWhatsAppWeb(ownerWhatsApp)) {
+    return "invalid-owner-phone";
+  }
+  if (!useWhatsAppWeb && !bookingMessages.ownerNotification.templateName.trim()) {
+    return "missing-template";
+  }
+  return null;
+}
+
 async function sendConfiguredTemplate(
   appointment: EyeExamAppointment,
   opts: {
@@ -328,47 +354,62 @@ export async function dispatchBookingMessages(
     const customerConfirmationVariables =
       buildCustomerConfirmationContentVariables(appointment);
     const useWhatsAppWeb = isWhatsAppWebServiceConfigured();
+    const immediateSends: Promise<void>[] = [];
 
     if (bookingMessages.customerConfirmation.enabled) {
-      await sendConfiguredTemplate(appointment, {
-        to: appointment.phone,
-        templateName:
-          bookingMessages.customerConfirmation.templateName.trim() ||
-          CUSTOMER_CONFIRMATION_TEMPLATE,
-        contentVariables: customerConfirmationVariables,
-        textMessage: applyBookingMessagePlaceholders(
-          bookingMessages.customerConfirmation.body ||
-            DEFAULT_CUSTOMER_CONFIRMATION_BODY,
-          placeholders,
-        ),
-        kind: "customer_confirmation",
-        smsType: "appointment_confirmation",
-      });
+      immediateSends.push(
+        sendConfiguredTemplate(appointment, {
+          to: appointment.phone,
+          templateName:
+            bookingMessages.customerConfirmation.templateName.trim() ||
+            CUSTOMER_CONFIRMATION_TEMPLATE,
+          contentVariables: customerConfirmationVariables,
+          textMessage: applyBookingMessagePlaceholders(
+            bookingMessages.customerConfirmation.body ||
+              DEFAULT_CUSTOMER_CONFIRMATION_BODY,
+            placeholders,
+          ),
+          kind: "customer_confirmation",
+          smsType: "appointment_confirmation",
+        }),
+      );
     }
 
     const ownerWhatsApp =
       bookingMessages.ownerNotification.ownerWhatsApp.trim();
     const ownerTemplate =
       bookingMessages.ownerNotification.templateName.trim();
-    if (
-      bookingMessages.ownerNotification.enabled &&
-      ownerWhatsApp &&
-      (useWhatsAppWeb || ownerTemplate)
-    ) {
-      await sendConfiguredTemplate(appointment, {
-        to: ownerWhatsApp,
-        templateName: ownerTemplate || "owner_notification",
-        contentVariables: ownerContentVariables,
-        textMessage: applyBookingMessagePlaceholders(
-          bookingMessages.ownerNotification.body ||
-            DEFAULT_OWNER_NOTIFICATION_BODY,
-          placeholders,
-        ),
-        kind: "owner_notification",
-        smsType: "custom",
-        note: "owner",
+    const ownerSkip = ownerNotificationSkipReason(
+      bookingMessages,
+      useWhatsAppWeb,
+    );
+    if (ownerSkip) {
+      console.info("[WhatsApp] owner notification skipped", {
+        appointmentId: appointment.id,
+        reason: ownerSkip,
+        hasOwnerPhone: Boolean(ownerWhatsApp),
+        hasTemplate: Boolean(ownerTemplate),
+        useWhatsAppWeb,
       });
+    } else {
+      immediateSends.push(
+        sendConfiguredTemplate(appointment, {
+          to: ownerWhatsApp,
+          templateName: ownerTemplate || "owner_notification",
+          contentVariables: ownerContentVariables,
+          textMessage: applyBookingMessagePlaceholders(
+            bookingMessages.ownerNotification.body ||
+              DEFAULT_OWNER_NOTIFICATION_BODY,
+            placeholders,
+          ),
+          kind: "owner_notification",
+          smsType: "custom",
+          note: "owner",
+        }),
+      );
     }
+
+    await Promise.all(immediateSends);
 
     if (bookingMessages.appointmentReminder.enabled) {
       const minutesBefore = reminderMinutesBefore(bookingMessages);

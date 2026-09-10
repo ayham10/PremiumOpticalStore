@@ -34,6 +34,7 @@ import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const LOCALES = new Set<Locale>(["en", "he", "ar"]);
 

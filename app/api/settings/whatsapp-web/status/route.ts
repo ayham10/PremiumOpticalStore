@@ -5,6 +5,8 @@ import { fetchOracleAdminStatus } from "@/lib/whatsapp/oracle-admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 export async function GET() {
   try {
@@ -18,10 +20,13 @@ export async function GET() {
         status: status.status,
         ready: status.ready,
         hasQr: status.hasQr,
+        lastError: status.lastError,
       },
       {
         status: 200,
-        headers: { "Cache-Control": "no-store" },
+        headers: {
+          "Cache-Control": "private, no-store, no-cache, must-revalidate",
+        },
       },
     );
   } catch (error) {

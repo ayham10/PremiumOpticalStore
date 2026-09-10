@@ -215,8 +215,19 @@ export default function BookingMessagesSettingsSection({
 
   useEffect(() => {
     void loadStatus();
+    startPolling(false);
     return () => stopPolling();
   }, [loadStatus, stopPolling]);
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void loadStatus();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadStatus]);
 
   async function testOracleConnection() {
     setTesting(true);
