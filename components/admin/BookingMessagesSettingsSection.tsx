@@ -24,6 +24,8 @@ type Props = {
   onChange: (next: BookingMessagesSettings) => void;
 };
 
+const REMINDER_MINUTE_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
+
 function ToggleRow({
   id,
   label,
@@ -667,28 +669,37 @@ export default function BookingMessagesSettingsSection({
         </header>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
-            <label className="admin-bm-field-label" htmlFor="bm-reminder-hours">
+            <label className="admin-bm-field-label" htmlFor="bm-reminder-minutes">
               <Clock className="admin-bm-gold-icon" size={14} strokeWidth={1.75} aria-hidden />
-              {t("admin.settings.bmHoursBefore")}
+              {t("admin.settings.bmReminderTime")}
             </label>
-            <input
-              id="bm-reminder-hours"
-              type="number"
-              min={1}
-              max={168}
-              className="input admin-bm-input admin-bm-input-narrow"
-              value={value.appointmentReminder.hoursBefore}
+            <select
+              id="bm-reminder-minutes"
+              className="select admin-bm-select"
+              value={
+                REMINDER_MINUTE_OPTIONS.includes(
+                  value.appointmentReminder.minutesBefore as (typeof REMINDER_MINUTE_OPTIONS)[number],
+                )
+                  ? value.appointmentReminder.minutesBefore
+                  : 60
+              }
               disabled={!value.appointmentReminder.enabled}
               onChange={(e) =>
                 onChange({
                   ...value,
                   appointmentReminder: {
                     ...value.appointmentReminder,
-                    hoursBefore: Math.max(1, Number(e.target.value) || 1),
+                    minutesBefore: Number(e.target.value) as (typeof REMINDER_MINUTE_OPTIONS)[number],
                   },
                 })
               }
-            />
+            >
+              {REMINDER_MINUTE_OPTIONS.map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {t(`admin.settings.bmReminderMin${minutes}`)}
+                </option>
+              ))}
+            </select>
           </div>
           <TemplateSelect
             id="bm-reminder-template"

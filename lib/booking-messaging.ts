@@ -139,7 +139,7 @@ function reminderAlreadySent(store: AppData, appointmentId: string): boolean {
 
 function computeReminderSendAt(
   appointment: EyeExamAppointment,
-  hoursBefore: number,
+  minutesBefore: number,
 ): Date | null {
   const appointmentStart = jerusalemWallClockToUtc(
     appointment.appointmentDate,
@@ -147,7 +147,16 @@ function computeReminderSendAt(
   );
   if (!appointmentStart) return null;
 
-  return new Date(appointmentStart.getTime() - hoursBefore * 60 * 60 * 1000);
+  return new Date(appointmentStart.getTime() - minutesBefore * 60 * 1000);
+}
+
+function reminderMinutesBefore(
+  bookingMessages: ReturnType<typeof mergeBookingMessages>,
+): number {
+  return Math.max(
+    15,
+    Math.min(120, bookingMessages.appointmentReminder.minutesBefore || 60),
+  );
 }
 
 async function logWhatsAppAttempt(
@@ -237,11 +246,8 @@ async function sendAppointmentReminder(
     return false;
   }
 
-  const hoursBefore = Math.max(
-    1,
-    Math.min(168, bookingMessages.appointmentReminder.hoursBefore || 24),
-  );
-  const sendAt = computeReminderSendAt(appointment, hoursBefore);
+  const minutesBefore = reminderMinutesBefore(bookingMessages);
+  const sendAt = computeReminderSendAt(appointment, minutesBefore);
   if (!sendAt) {
     console.error("[WhatsApp] reminder skipped — invalid appointment time", {
       appointmentId: appointment.id,
@@ -274,7 +280,7 @@ async function sendAppointmentReminder(
     kind: "appointment_reminder",
     smsType: "appointment_reminder",
     sendAt,
-    note: `${hoursBefore}h before`,
+    note: `${minutesBefore}m before`,
     logDeferredReminder: true,
   });
 
@@ -365,11 +371,8 @@ export async function dispatchBookingMessages(
     }
 
     if (bookingMessages.appointmentReminder.enabled) {
-      const hoursBefore = Math.max(
-        1,
-        Math.min(168, bookingMessages.appointmentReminder.hoursBefore || 24),
-      );
-      const sendAt = computeReminderSendAt(appointment, hoursBefore);
+      const minutesBefore = reminderMinutesBefore(bookingMessages);
+      const sendAt = computeReminderSendAt(appointment, minutesBefore);
 
       if (!sendAt) {
         console.error("[WhatsApp] reminder skipped — invalid appointment time", {

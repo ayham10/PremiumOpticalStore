@@ -360,7 +360,7 @@ export interface BookingMessagesSettings {
   };
   appointmentReminder: {
     enabled: boolean;
-    hoursBefore: number;
+    minutesBefore: number;
     templateName: string;
     body: string;
   };

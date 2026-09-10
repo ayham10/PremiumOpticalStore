@@ -61,11 +61,35 @@ export const DEFAULT_BOOKING_MESSAGES: BookingMessagesSettings = {
   },
   appointmentReminder: {
     enabled: false,
-    hoursBefore: 24,
+    minutesBefore: 60,
     templateName: "",
     body: DEFAULT_APPOINTMENT_REMINDER_BODY,
   },
 };
+
+type LegacyAppointmentReminder = Partial<
+  BookingMessagesSettings["appointmentReminder"]
+> & {
+  hoursBefore?: number;
+};
+
+function resolveMinutesBefore(raw?: LegacyAppointmentReminder | null): number {
+  if (
+    raw &&
+    typeof raw.minutesBefore === "number" &&
+    Number.isFinite(raw.minutesBefore)
+  ) {
+    return raw.minutesBefore;
+  }
+  if (
+    raw &&
+    typeof raw.hoursBefore === "number" &&
+    Number.isFinite(raw.hoursBefore)
+  ) {
+    return raw.hoursBefore * 60;
+  }
+  return DEFAULT_BOOKING_MESSAGES.appointmentReminder.minutesBefore;
+}
 
 function withDefaultBody(body: string | undefined, fallback: string): string {
   const trimmed = typeof body === "string" ? body.trim() : "";
@@ -86,9 +110,12 @@ export function mergeBookingMessages(
     ...DEFAULT_BOOKING_MESSAGES.ownerNotification,
     ...(partial?.ownerNotification || {}),
   };
+  const rawAppointmentReminder = (partial?.appointmentReminder ||
+    {}) as LegacyAppointmentReminder;
   const appointmentReminder = {
     ...DEFAULT_BOOKING_MESSAGES.appointmentReminder,
-    ...(partial?.appointmentReminder || {}),
+    ...rawAppointmentReminder,
+    minutesBefore: resolveMinutesBefore(rawAppointmentReminder),
   };
 
   return {
@@ -110,7 +137,9 @@ export function mergeBookingMessages(
       ),
     },
     appointmentReminder: {
-      ...appointmentReminder,
+      enabled: appointmentReminder.enabled,
+      minutesBefore: appointmentReminder.minutesBefore,
+      templateName: appointmentReminder.templateName,
       body: withDefaultBody(
         appointmentReminder.body,
         DEFAULT_APPOINTMENT_REMINDER_BODY,
