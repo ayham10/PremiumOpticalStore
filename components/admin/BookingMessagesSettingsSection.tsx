@@ -26,6 +26,18 @@ type Props = {
 
 const REMINDER_MINUTE_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
 
+function reminderSelectValue(minutesBefore: number): number {
+  if (
+    (REMINDER_MINUTE_OPTIONS as readonly number[]).includes(minutesBefore)
+  ) {
+    return minutesBefore;
+  }
+  const clamped = Math.max(15, Math.min(120, minutesBefore || 60));
+  return REMINDER_MINUTE_OPTIONS.reduce((best, option) =>
+    Math.abs(option - clamped) < Math.abs(best - clamped) ? option : best,
+  );
+}
+
 function ToggleRow({
   id,
   label,
@@ -676,13 +688,7 @@ export default function BookingMessagesSettingsSection({
             <select
               id="bm-reminder-minutes"
               className="select admin-bm-select"
-              value={
-                REMINDER_MINUTE_OPTIONS.includes(
-                  value.appointmentReminder.minutesBefore as (typeof REMINDER_MINUTE_OPTIONS)[number],
-                )
-                  ? value.appointmentReminder.minutesBefore
-                  : 60
-              }
+              value={reminderSelectValue(value.appointmentReminder.minutesBefore)}
               disabled={!value.appointmentReminder.enabled}
               onChange={(e) =>
                 onChange({
