@@ -44,9 +44,9 @@ function parseTwilioError(raw: string): string {
 }
 
 /**
- * Existing Twilio Content-template send (same Messages.json + ContentSid
- * path used before the Meta/Oracle booking migration). Not wired into
- * live booking/owner/reminder dispatch.
+ * Twilio Content-template send (Messages.json + ContentSid).
+ * Used for live customer booking confirmation. Owner/reminder stay
+ * on Oracle/Meta via sendBookingWhatsAppMessage.
  */
 export async function sendTwilioWhatsAppTemplate(message: {
   to: string;

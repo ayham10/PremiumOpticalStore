@@ -2,7 +2,6 @@ import { pushSmsLog } from "@/lib/api/helpers";
 import {
   applyBookingMessagePlaceholders,
   DEFAULT_APPOINTMENT_REMINDER_BODY,
-  DEFAULT_CUSTOMER_CONFIRMATION_BODY,
   DEFAULT_OWNER_NOTIFICATION_BODY,
   mergeBookingMessages,
 } from "@/lib/booking-messages";
@@ -15,6 +14,10 @@ import {
 import type { SmsResult } from "@/lib/sms/provider";
 import type { AppData, BookingMessagesSettings, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
+import {
+  sendTwilioWhatsAppTemplate,
+  type TwilioWhatsAppSendResult,
+} from "@/lib/twilio/whatsapp";
 import {
   formatPhoneForWhatsAppWeb,
   isWhatsAppWebServiceConfigured,
@@ -112,7 +115,9 @@ function bookingPlaceholderValues(
   };
 }
 
-function toSmsResult(result: WhatsAppSendResult): SmsResult {
+function toSmsResult(
+  result: WhatsAppSendResult | TwilioWhatsAppSendResult,
+): SmsResult {
   return {
     ok: result.ok,
     provider: result.provider,
@@ -166,7 +171,7 @@ async function logWhatsAppAttempt(
     to: string;
     type: "appointment_confirmation" | "appointment_reminder" | "custom";
     templateName: string;
-    result: WhatsAppSendResult;
+    result: WhatsAppSendResult | TwilioWhatsAppSendResult;
     note?: string;
   },
 ): Promise<void> {
@@ -212,6 +217,45 @@ export function ownerNotificationSkipReason(
     return "missing-template";
   }
   return null;
+}
+
+async function sendCustomerConfirmationViaTwilio(
+  appointment: EyeExamAppointment,
+  opts: {
+    templateName: string;
+    contentVariables: Record<string, string>;
+  },
+): Promise<void> {
+  const result = await sendTwilioWhatsAppTemplate({
+    to: appointment.phone,
+    templateName: opts.templateName,
+    contentVariables: opts.contentVariables,
+  });
+
+  if (result.ok) {
+    console.info("[WhatsApp] customer confirmation sent", {
+      appointmentId: appointment.id,
+      provider: "twilio",
+      template: result.templateName,
+      messageId: result.externalId,
+      status: result.status,
+    });
+  } else {
+    console.error("[WhatsApp] customer confirmation failed", {
+      appointmentId: appointment.id,
+      provider: "twilio",
+      template: result.templateName,
+      status: result.status,
+      error: result.error || "Twilio confirmation send failed",
+    });
+  }
+
+  await logWhatsAppAttempt(appointment, {
+    to: appointment.phone,
+    type: "appointment_confirmation",
+    templateName: opts.templateName,
+    result,
+  });
 }
 
 async function sendConfiguredTemplate(
@@ -315,7 +359,9 @@ async function sendAppointmentReminder(
 
 /**
  * Dispatch WhatsApp messages after a booking is saved.
- * Uses Oracle WhatsApp Web when configured, otherwise Meta templates.
+ * Customer confirmation uses Twilio ContentSid templates.
+ * Owner notification and reminders still use Oracle WhatsApp Web
+ * when configured, otherwise Meta templates.
  * Never throws — messaging failures must not affect the booking.
  */
 export async function dispatchBookingMessages(
@@ -358,19 +404,11 @@ export async function dispatchBookingMessages(
 
     if (bookingMessages.customerConfirmation.enabled) {
       immediateSends.push(
-        sendConfiguredTemplate(appointment, {
-          to: appointment.phone,
+        sendCustomerConfirmationViaTwilio(appointment, {
           templateName:
             bookingMessages.customerConfirmation.templateName.trim() ||
             CUSTOMER_CONFIRMATION_TEMPLATE,
           contentVariables: customerConfirmationVariables,
-          textMessage: applyBookingMessagePlaceholders(
-            bookingMessages.customerConfirmation.body ||
-              DEFAULT_CUSTOMER_CONFIRMATION_BODY,
-            placeholders,
-          ),
-          kind: "customer_confirmation",
-          smsType: "appointment_confirmation",
         }),
       );
     }
