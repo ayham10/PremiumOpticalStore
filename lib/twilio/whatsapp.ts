@@ -45,8 +45,8 @@ function parseTwilioError(raw: string): string {
 
 /**
  * Twilio Content-template send (Messages.json + ContentSid).
- * Used for live customer booking confirmation. Owner/reminder stay
- * on Oracle/Meta via sendBookingWhatsAppMessage.
+ * Used for live customer confirmation, owner notification, and reminders.
+ * Oracle WhatsApp Web / Meta sendBookingWhatsAppMessage remains available.
  */
 export async function sendTwilioWhatsAppTemplate(message: {
   to: string;

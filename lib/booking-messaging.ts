@@ -15,6 +15,10 @@ import type { SmsResult } from "@/lib/sms/provider";
 import type { AppData, BookingMessagesSettings, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 import {
+  getTwilioContentSidMap,
+  resolveTwilioContentSid,
+} from "@/lib/twilio/content-sids";
+import {
   sendTwilioWhatsAppTemplate,
   type TwilioWhatsAppSendResult,
 } from "@/lib/twilio/whatsapp";
@@ -28,8 +32,34 @@ import {
 
 const CUSTOMER_CONFIRMATION_TEMPLATE =
   "oyon_booking_confirmation_hx716fcfd9ac41ae0e332e569b9b4fbc39";
+const OWNER_NOTIFICATION_TEMPLATE = "owner_notification";
+const APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder";
 
 const REMINDER_GRACE_MS = 30 * 60 * 1000;
+
+function firstMappedTwilioTemplate(...needles: string[]): string | null {
+  const lowerNeedles = needles.map((needle) => needle.toLowerCase());
+  for (const name of getTwilioContentSidMap().keys()) {
+    const lower = name.toLowerCase();
+    if (lowerNeedles.every((needle) => lower.includes(needle))) {
+      return name;
+    }
+  }
+  return null;
+}
+
+/** Prefer a name that already has a ContentSid mapping (avoids short Admin aliases). */
+function resolveMappedTwilioTemplateName(
+  storedName: string,
+  needles: string[],
+  fallback: string,
+): string {
+  const requested = storedName.trim();
+  if (requested && resolveTwilioContentSid(requested)) {
+    return requested;
+  }
+  return firstMappedTwilioTemplate(...needles) || fallback;
+}
 
 function buildCustomerConfirmationContentVariables(
   appointment: EyeExamAppointment,
@@ -139,7 +169,7 @@ function reminderAlreadySent(store: AppData, appointmentId: string): boolean {
     (log) =>
       log.appointmentId === appointmentId &&
       log.type === "appointment_reminder" &&
-      log.status === "sent",
+      (log.status === "sent" || log.status === "queued"),
   );
 }
 
@@ -213,10 +243,60 @@ export function ownerNotificationSkipReason(
   if (!formatPhoneForWhatsAppWeb(ownerWhatsApp)) {
     return "invalid-owner-phone";
   }
-  if (!useWhatsAppWeb && !bookingMessages.ownerNotification.templateName.trim()) {
+  void useWhatsAppWeb;
+  const ownerTemplate = resolveMappedTwilioTemplateName(
+    bookingMessages.ownerNotification.templateName,
+    ["owner"],
+    OWNER_NOTIFICATION_TEMPLATE,
+  );
+  if (!resolveTwilioContentSid(ownerTemplate)) {
     return "missing-template";
   }
   return null;
+}
+
+async function sendViaTwilio(
+  appointment: EyeExamAppointment,
+  opts: {
+    to: string;
+    templateName: string;
+    contentVariables: Record<string, string>;
+    kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
+    smsType: "appointment_confirmation" | "appointment_reminder" | "custom";
+    note?: string;
+  },
+): Promise<void> {
+  const result = await sendTwilioWhatsAppTemplate({
+    to: opts.to,
+    templateName: opts.templateName,
+    contentVariables: opts.contentVariables,
+  });
+
+  if (result.ok) {
+    console.info(`[WhatsApp] ${opts.kind} sent`, {
+      appointmentId: appointment.id,
+      provider: "twilio",
+      template: result.templateName,
+      messageId: result.externalId,
+      status: result.status,
+    });
+  } else {
+    console.error(`[WhatsApp] ${opts.kind} failed`, {
+      appointmentId: appointment.id,
+      provider: "twilio",
+      template: result.templateName,
+      status: result.status,
+      error: result.error || "Twilio send failed",
+    });
+  }
+
+  await logWhatsAppAttempt(appointment, {
+    to: opts.to,
+    type: opts.smsType,
+    templateName: opts.templateName,
+    result,
+    note: opts.note,
+  });
 }
 
 async function sendCustomerConfirmationViaTwilio(
@@ -226,35 +306,12 @@ async function sendCustomerConfirmationViaTwilio(
     contentVariables: Record<string, string>;
   },
 ): Promise<void> {
-  const result = await sendTwilioWhatsAppTemplate({
+  await sendViaTwilio(appointment, {
     to: appointment.phone,
     templateName: opts.templateName,
     contentVariables: opts.contentVariables,
-  });
-
-  if (result.ok) {
-    console.info("[WhatsApp] customer confirmation sent", {
-      appointmentId: appointment.id,
-      provider: "twilio",
-      template: result.templateName,
-      messageId: result.externalId,
-      status: result.status,
-    });
-  } else {
-    console.error("[WhatsApp] customer confirmation failed", {
-      appointmentId: appointment.id,
-      provider: "twilio",
-      template: result.templateName,
-      status: result.status,
-      error: result.error || "Twilio confirmation send failed",
-    });
-  }
-
-  await logWhatsAppAttempt(appointment, {
-    to: appointment.phone,
-    type: "appointment_confirmation",
-    templateName: opts.templateName,
-    result,
+    kind: "customer_confirmation",
+    smsType: "appointment_confirmation",
   });
 }
 
@@ -304,15 +361,12 @@ async function sendAppointmentReminder(
   store: AppData,
   bookingMessages: ReturnType<typeof mergeBookingMessages>,
 ): Promise<boolean> {
-  const reminderBody =
-    bookingMessages.appointmentReminder.body.trim() ||
-    DEFAULT_APPOINTMENT_REMINDER_BODY;
-  const reminderTemplate = bookingMessages.appointmentReminder.templateName.trim();
-  const useWhatsAppWeb = isWhatsAppWebServiceConfigured();
-  if (
-    reminderAlreadySent(store, appointment.id) ||
-    (!useWhatsAppWeb && !reminderTemplate)
-  ) {
+  const reminderTemplate = resolveMappedTwilioTemplateName(
+    bookingMessages.appointmentReminder.templateName,
+    ["remind"],
+    APPOINTMENT_REMINDER_TEMPLATE,
+  );
+  if (reminderAlreadySent(store, appointment.id)) {
     return false;
   }
 
@@ -340,18 +394,14 @@ async function sendAppointmentReminder(
     store.bookingServices || [],
   );
   const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
-  const placeholders = bookingPlaceholderValues(appointment, serviceLabel);
 
-  await sendConfiguredTemplate(appointment, {
+  await sendViaTwilio(appointment, {
     to: appointment.phone,
-    templateName: reminderTemplate || "appointment_reminder",
+    templateName: reminderTemplate,
     contentVariables,
-    textMessage: applyBookingMessagePlaceholders(reminderBody, placeholders),
     kind: "appointment_reminder",
     smsType: "appointment_reminder",
-    sendAt,
     note: `${minutesBefore}m before`,
-    logDeferredReminder: true,
   });
 
   return true;
@@ -359,9 +409,9 @@ async function sendAppointmentReminder(
 
 /**
  * Dispatch WhatsApp messages after a booking is saved.
- * Customer confirmation uses Twilio ContentSid templates.
- * Owner notification and reminders still use Oracle WhatsApp Web
- * when configured, otherwise Meta templates.
+ * Customer confirmation, owner notification, and reminders use Twilio
+ * ContentSid templates. Oracle WhatsApp Web / Meta helpers remain in
+ * sendConfiguredTemplate for future reuse and are not deleted.
  * Never throws — messaging failures must not affect the booking.
  */
 export async function dispatchBookingMessages(
@@ -391,8 +441,6 @@ export async function dispatchBookingMessages(
       appointment,
       store.bookingServices || [],
     );
-    const placeholders = bookingPlaceholderValues(appointment, serviceLabel);
-    const contentVariables = buildBookingContentVariables(appointment, serviceLabel);
     const ownerContentVariables = buildOwnerNotificationContentVariables(
       appointment,
       serviceLabel,
@@ -413,8 +461,11 @@ export async function dispatchBookingMessages(
 
     const ownerWhatsApp =
       bookingMessages.ownerNotification.ownerWhatsApp.trim();
-    const ownerTemplate =
-      bookingMessages.ownerNotification.templateName.trim();
+    const ownerTemplate = resolveMappedTwilioTemplateName(
+      bookingMessages.ownerNotification.templateName,
+      ["owner"],
+      OWNER_NOTIFICATION_TEMPLATE,
+    );
     const ownerSkip = ownerNotificationSkipReason(
       bookingMessages,
       useWhatsAppWeb,
@@ -429,15 +480,10 @@ export async function dispatchBookingMessages(
       });
     } else {
       immediateSends.push(
-        sendConfiguredTemplate(appointment, {
+        sendViaTwilio(appointment, {
           to: ownerWhatsApp,
-          templateName: ownerTemplate || "owner_notification",
+          templateName: ownerTemplate,
           contentVariables: ownerContentVariables,
-          textMessage: applyBookingMessagePlaceholders(
-            bookingMessages.ownerNotification.body ||
-              DEFAULT_OWNER_NOTIFICATION_BODY,
-            placeholders,
-          ),
           kind: "owner_notification",
           smsType: "custom",
           note: "owner",
