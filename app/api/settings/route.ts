@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/helpers";
 import { mergeBranding } from "@/lib/branding";
 import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/booking-messages";
+import { getTwilioWhatsAppPublicStatus } from "@/lib/twilio/config";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
 import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
 import type { StoreSettings } from "@/lib/types";
@@ -60,6 +61,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         settings: data.settings,
         bookingWhatsAppTemplates: getApprovedWhatsAppTemplates(),
+        twilioWhatsApp: getTwilioWhatsAppPublicStatus(),
       });
     }
 

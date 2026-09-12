@@ -35,6 +35,21 @@ export function isTwilioWhatsAppConfigured(): boolean {
   return getTwilioConfig() !== null;
 }
 
+/** Safe Admin display: sender only, never SID/token/ContentSid. */
+export function getTwilioWhatsAppPublicStatus(): {
+  configured: boolean;
+  from: string | null;
+} {
+  const config = getTwilioConfig();
+  if (!config) {
+    return { configured: false, from: null };
+  }
+  return {
+    configured: true,
+    from: config.whatsappFrom.replace(/^whatsapp:/i, "") || null,
+  };
+}
+
 export function twilioBasicAuth(config: TwilioConfig): string {
   return Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64");
 }

@@ -1115,10 +1115,21 @@ const he: Dictionary = {
       bmProvider: "שירות וואטסאפ",
       bmProviderConsole: "מצב פיתוח (Console)",
       bmProviderName: "ספק",
+      bmProviderTwilio: "Twilio WhatsApp API",
       bmProviderOracle: "Oracle WhatsApp Web",
       bmProviderMeta: "META API",
       bmProviderHint:
         "פרטי Meta WhatsApp Cloud API מוגדרים בשרת בלבד — לא מוצגים כאן.",
+      bmTwilioActive: "פעיל / מוגדר",
+      bmTwilioInactive: "לא מוגדר בשרת",
+      bmTwilioSender: "מספר שולח",
+      bmTwilioHint:
+        "אישור ללקוח, התראה לבעלים ותזכורת תור נשלחים דרך Twilio WhatsApp API. פרטי הגישה נשארים בשרת.",
+      bmViaTwilio: "הודעות אוטומטיות נשלחות דרך Twilio WhatsApp API.",
+      bmOracleBackup: "ספק גיבוי / ישן",
+      bmOracleBackupHint:
+        "לא בשימוש כרגע להודעות אוטומטיות. אפשר להשאיר את השירות כבוי בלי לפגוע בוואטסאפ החי.",
+      bmOracleBackupIdle: "לא פעיל — לא בשימוש להודעות חיות",
       bmOracleHint:
         "פרטי Oracle WhatsApp Web נשארים בשרת. הפאנל לא מקבל את מפתח ה-API.",
       bmOracleReady: "מחובר — READY",
@@ -1170,7 +1181,9 @@ const he: Dictionary = {
       bmOwner: "התראה לבעלים",
       bmReminder: "תזכורת תור",
       bmEnabled: "פעיל",
-      bmTemplate: "תבנית מאושרת",
+      bmTemplate: "שם תבנית",
+      bmTemplateHint:
+        "מזהי Twilio Content SID מוגדרים בשרת ואינם נערכים כאן.",
       bmSelectTemplate: "בחר תבנית",
       bmMessageBody: "הודעת וואטסאפ",
       bmPlaceholders:

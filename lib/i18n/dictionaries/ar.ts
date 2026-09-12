@@ -1115,10 +1115,21 @@ const ar: Dictionary = {
       bmProvider: "خدمة واتساب",
       bmProviderConsole: "وضع التطوير (Console)",
       bmProviderName: "المزوّد",
+      bmProviderTwilio: "Twilio WhatsApp API",
       bmProviderOracle: "Oracle WhatsApp Web",
       bmProviderMeta: "META API",
       bmProviderHint:
         "بيانات Meta WhatsApp Cloud API تُضبط على الخادم فقط — لا تُعرض هنا.",
+      bmTwilioActive: "نشط / مُعدّ",
+      bmTwilioInactive: "غير مُعدّ على الخادم",
+      bmTwilioSender: "رقم الإرسال",
+      bmTwilioHint:
+        "تأكيد العميل وإشعار المالك وتذكير الموعد تُرسل عبر Twilio WhatsApp API. بيانات الدخول تبقى على الخادم.",
+      bmViaTwilio: "الرسائل التلقائية تُرسل عبر Twilio WhatsApp API.",
+      bmOracleBackup: "مزوّد احتياطي / سابق",
+      bmOracleBackupHint:
+        "غير مستخدم حالياً للرسائل التلقائية. يمكن إيقاف هذه الخدمة دون التأثير على واتساب الحي.",
+      bmOracleBackupIdle: "خامل — غير مستخدم للرسائل الحية",
       bmOracleHint:
         "بيانات Oracle WhatsApp Web تبقى على الخادم. هذه اللوحة لا تستلم مفتاح API.",
       bmOracleReady: "متصل — READY",
@@ -1170,7 +1181,9 @@ const ar: Dictionary = {
       bmOwner: "إشعار المالك",
       bmReminder: "تذكير الموعد",
       bmEnabled: "مفعّل",
-      bmTemplate: "القالب المعتمد",
+      bmTemplate: "اسم القالب",
+      bmTemplateHint:
+        "معرفات Twilio Content SID تُضبط على الخادم ولا تُعدَّل من هنا.",
       bmSelectTemplate: "اختر قالباً",
       bmMessageBody: "رسالة واتساب",
       bmPlaceholders:

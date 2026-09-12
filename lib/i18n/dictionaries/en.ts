@@ -1473,10 +1473,21 @@ const en: Dictionary = {
       bmProvider: "WhatsApp service",
       bmProviderConsole: "Console (dev)",
       bmProviderName: "Provider",
+      bmProviderTwilio: "Twilio WhatsApp API",
       bmProviderOracle: "Oracle WhatsApp Web",
       bmProviderMeta: "META API",
       bmProviderHint:
         "Meta WhatsApp Cloud API credentials are configured on the server only — never shown here.",
+      bmTwilioActive: "Active / Configured",
+      bmTwilioInactive: "Not configured on the server",
+      bmTwilioSender: "Sender number",
+      bmTwilioHint:
+        "Customer confirmation, owner notification, and appointment reminders are sent through Twilio WhatsApp API. Credentials stay on the server.",
+      bmViaTwilio: "Automated messages are sent through Twilio WhatsApp API.",
+      bmOracleBackup: "Backup / Legacy provider",
+      bmOracleBackupHint:
+        "Not currently used for automated messages. This service can stay stopped without affecting live WhatsApp.",
+      bmOracleBackupIdle: "Idle — not used for live messages",
       bmOracleHint:
         "Oracle WhatsApp Web credentials stay on the server. This panel never receives the API key.",
       bmOracleReady: "Connected — READY",
@@ -1528,7 +1539,9 @@ const en: Dictionary = {
       bmOwner: "Owner notification",
       bmReminder: "Appointment reminder",
       bmEnabled: "Enabled",
-      bmTemplate: "Approved template",
+      bmTemplate: "Template name",
+      bmTemplateHint:
+        "Twilio Content SIDs are configured on the server and are not edited here.",
       bmSelectTemplate: "Select template",
       bmMessageBody: "WhatsApp message",
       bmPlaceholders:

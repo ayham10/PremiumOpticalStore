@@ -14589,6 +14589,16 @@ select.admin-pe-input {
   color: rgba(212, 175, 106, 0.55);
 }
 
+.admin-bm-status-dot.is-idle {
+  background: #8a8476;
+  color: rgba(138, 132, 118, 0.45);
+}
+
+.admin-bm-card-backup {
+  opacity: 0.96;
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
 .admin-bm-status-label {
   color: #f0ebe3;
   font-size: 0.86rem;

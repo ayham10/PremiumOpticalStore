@@ -168,6 +168,10 @@ function AdminSettingsPageInner() {
   const [whatsappTemplates, setWhatsappTemplates] = useState<string[]>([
     "hello_world",
   ]);
+  const [twilioWhatsApp, setTwilioWhatsApp] = useState<{
+    configured: boolean;
+    from: string | null;
+  }>({ configured: false, from: null });
   const [tab, setTab] = useState<SettingsTab>(() => {
     const raw = searchParams.get("tab");
     const allowed = TABS.map((item) => item.id);
@@ -191,12 +195,25 @@ function AdminSettingsPageInner() {
     try {
       const data = await apiFetch<
         | StoreSettings
-        | { settings: StoreSettings; bookingWhatsAppTemplates?: string[] }
+        | {
+            settings: StoreSettings;
+            bookingWhatsAppTemplates?: string[];
+            twilioWhatsApp?: { configured?: boolean; from?: string | null };
+          }
       >("/api/settings?admin=1");
       if (data && typeof data === "object" && "settings" in data) {
         setForm(normalizeSettings(data.settings));
         if (Array.isArray(data.bookingWhatsAppTemplates)) {
           setWhatsappTemplates(data.bookingWhatsAppTemplates);
+        }
+        if (data.twilioWhatsApp) {
+          setTwilioWhatsApp({
+            configured: Boolean(data.twilioWhatsApp.configured),
+            from:
+              typeof data.twilioWhatsApp.from === "string"
+                ? data.twilioWhatsApp.from
+                : null,
+          });
         }
       } else {
         setForm(normalizeSettings(data));
@@ -698,6 +715,7 @@ function AdminSettingsPageInner() {
             <BookingMessagesSettingsSection
               value={form.bookingMessages}
               templates={whatsappTemplates}
+              twilioWhatsApp={twilioWhatsApp}
               onChange={(bookingMessages) =>
                 setForm((f) => ({ ...f, bookingMessages }))
               }

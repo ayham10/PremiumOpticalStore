@@ -21,6 +21,10 @@ import type { BookingMessagesSettings } from "@/lib/types";
 type Props = {
   value: BookingMessagesSettings;
   templates: string[];
+  twilioWhatsApp?: {
+    configured: boolean;
+    from: string | null;
+  };
   onChange: (next: BookingMessagesSettings) => void;
 };
 
@@ -102,6 +106,7 @@ function TemplateSelect({
           </option>
         ))}
       </select>
+      <p className="admin-bm-placeholders">{t("admin.settings.bmTemplateHint")}</p>
     </div>
   );
 }
@@ -144,6 +149,7 @@ function MessageBodyField({
 export default function BookingMessagesSettingsSection({
   value,
   templates,
+  twilioWhatsApp,
   onChange,
 }: Props) {
   const { t } = useLocale();
@@ -428,22 +434,12 @@ export default function BookingMessagesSettingsSection({
     }
   }
 
-  const statusTone = !serviceReachable
-    ? "unavailable"
-    : serviceReady
-      ? "ready"
-      : serviceStatus === "DISCONNECTED" || serviceStatus === "AUTH_FAILURE"
-        ? "down"
-        : "wait";
-
-  const statusLabel =
-    statusTone === "ready"
-      ? t("admin.settings.bmOracleReady")
-      : statusTone === "wait"
-        ? t("admin.settings.bmOracleWaiting")
-        : statusTone === "down"
-          ? t("admin.settings.bmOracleDisconnected")
-          : t("admin.settings.bmOracleUnavailable");
+  const twilioConfigured = Boolean(twilioWhatsApp?.configured);
+  const twilioFrom = twilioWhatsApp?.from?.trim() || "";
+  const oracleTone = serviceReady ? "ready" : "idle";
+  const oracleLabel = serviceReady
+    ? t("admin.settings.bmOracleReady")
+    : t("admin.settings.bmOracleBackupIdle");
 
   return (
     <div className="admin-bm">
@@ -457,13 +453,56 @@ export default function BookingMessagesSettingsSection({
         <div className="admin-bm-field">
           <span className="admin-bm-field-label">{t("admin.settings.bmProviderName")}</span>
           <p className="admin-bm-provider-name">
-            {t("admin.settings.bmProviderOracle")}
+            {t("admin.settings.bmProviderTwilio")}
           </p>
         </div>
         <div className="admin-bm-status-row" role="status">
-          <span className={`admin-bm-status-dot is-${statusTone}`} aria-hidden />
-          <span className="admin-bm-status-label">{statusLabel}</span>
+          <span
+            className={`admin-bm-status-dot is-${twilioConfigured ? "ready" : "unavailable"}`}
+            aria-hidden
+          />
+          <span className="admin-bm-status-label">
+            {twilioConfigured
+              ? t("admin.settings.bmTwilioActive")
+              : t("admin.settings.bmTwilioInactive")}
+          </span>
         </div>
+        {twilioFrom ? (
+          <div className="admin-bm-field">
+            <span className="admin-bm-field-label">{t("admin.settings.bmTwilioSender")}</span>
+            <p className="admin-bm-provider-name" dir="ltr">
+              {twilioFrom}
+            </p>
+          </div>
+        ) : null}
+        <p className="admin-bm-hint">{t("admin.settings.bmTwilioHint")}</p>
+      </section>
+
+      <section className="admin-bm-card admin-bm-card-backup">
+        <header className="admin-bm-card-head">
+          <span className="admin-bm-card-title">
+            <Plug className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
+            {t("admin.settings.bmOracleBackup")}
+          </span>
+        </header>
+        <div className="admin-bm-field">
+          <span className="admin-bm-field-label">{t("admin.settings.bmProviderName")}</span>
+          <p className="admin-bm-provider-name">
+            {t("admin.settings.bmProviderOracle")}
+          </p>
+        </div>
+        <p className="admin-bm-hint">{t("admin.settings.bmOracleBackupHint")}</p>
+        <div className="admin-bm-status-row" role="status">
+          <span className={`admin-bm-status-dot is-${oracleTone}`} aria-hidden />
+          <span className="admin-bm-status-label">{oracleLabel}</span>
+        </div>
+        {!serviceReady ? (
+          <p className="admin-bm-hint">
+            {serviceReachable
+              ? serviceStatus
+              : t("admin.settings.bmOracleUnavailable")}
+          </p>
+        ) : null}
         <div className="admin-bm-provider-row">
           <button
             type="button"
@@ -624,6 +663,7 @@ export default function BookingMessagesSettingsSection({
             }
           />
         </header>
+        <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <TemplateSelect
           id="bm-customer-template"
           label={t("admin.settings.bmTemplate")}
@@ -670,6 +710,7 @@ export default function BookingMessagesSettingsSection({
             }
           />
         </header>
+        <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
             <label className="admin-bm-field-label" htmlFor="bm-owner-phone">
@@ -742,6 +783,7 @@ export default function BookingMessagesSettingsSection({
             }
           />
         </header>
+        <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
             <label className="admin-bm-field-label" htmlFor="bm-reminder-minutes">
