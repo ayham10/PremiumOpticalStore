@@ -28,6 +28,46 @@ type Props = {
   onChange: (next: BookingMessagesSettings) => void;
 };
 
+/** Flip to true to restore Oracle/Meta backup controls in Admin. Logic stays in this file. */
+const SHOW_ORACLE_ADMIN_CONTROLS = false;
+/** Flip to true to restore editable template name + message body fields. */
+const SHOW_EDITABLE_TEMPLATE_CONTROLS = false;
+
+const DISPLAY_CUSTOMER_TEMPLATE = "oyon_booking_confirmation";
+const DISPLAY_OWNER_TEMPLATE = "owner_notification";
+const DISPLAY_REMINDER_TEMPLATE = "appointment_reminder";
+
+/**
+ * Visual-only Admin previews with example values.
+ * Never sent to Twilio and not used as ContentVariables.
+ */
+const TWILIO_CUSTOMER_CONFIRMATION_PREVIEW = `مرحباً محمد 👋
+
+تم تأكيد موعدك في OYON Optics | عيون أوبتيكا
+
+📅 التاريخ: 15/09/2026
+🕐 الساعة: 18:30
+
+نتطلع لرؤيتك 💜`;
+
+const TWILIO_OWNER_NOTIFICATION_PREVIEW = `🔔 حجز جديد — OYON Optics
+
+👤 العميل: محمد
+📅 التاريخ: 15/09/2026
+🕐 الساعة: 18:30
+📱 الهاتف: +972501234567
+👓 الخدمة: فحص نظر`;
+
+const TWILIO_APPOINTMENT_REMINDER_PREVIEW = `⏰ تذكير بموعدك في OYON Optics | عيون أوبتيكا
+
+مرحباً محمد 👋
+
+📅 التاريخ: 15/09/2026
+🕐 الساعة: 18:30
+👓 الخدمة: فحص نظر
+
+نتطلع لرؤيتك 💜`;
+
 const REMINDER_MINUTE_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
 
 function reminderSelectValue(minutesBefore: number): number {
@@ -107,6 +147,37 @@ function TemplateSelect({
         ))}
       </select>
       <p className="admin-bm-placeholders">{t("admin.settings.bmTemplateHint")}</p>
+    </div>
+  );
+}
+
+function WhatsAppMessagePreview({
+  templateName,
+  text,
+  disabled,
+}: {
+  templateName: string;
+  text: string;
+  disabled?: boolean;
+}) {
+  const { t } = useLocale();
+
+  return (
+    <div
+      className={`admin-bm-wa-preview${disabled ? " is-disabled" : ""}`}
+    >
+      <p className="admin-bm-used-template">
+        {t("admin.settings.bmUsedTemplate", { name: templateName })}
+      </p>
+      <div className="admin-bm-wa-stage">
+        <p className="admin-bm-wa-caption">{t("admin.settings.bmMessagePreview")}</p>
+        <div className="admin-bm-wa-thread" aria-readonly="true">
+          <div className="admin-bm-wa-bubble">
+            <p className="admin-bm-wa-text">{text}</p>
+          </div>
+        </div>
+      </div>
+      <p className="admin-bm-placeholders">{t("admin.settings.bmPreviewHint")}</p>
     </div>
   );
 }
@@ -223,12 +294,14 @@ export default function BookingMessagesSettingsSection({
   }, [applyStatus]);
 
   useEffect(() => {
+    if (!SHOW_ORACLE_ADMIN_CONTROLS) return;
     void loadStatus();
     startPolling(false);
     return () => stopPolling();
   }, [loadStatus, stopPolling]);
 
   useEffect(() => {
+    if (!SHOW_ORACLE_ADMIN_CONTROLS) return;
     function onVisible() {
       if (document.visibilityState === "visible") {
         void loadStatus();
@@ -478,6 +551,7 @@ export default function BookingMessagesSettingsSection({
         <p className="admin-bm-hint">{t("admin.settings.bmTwilioHint")}</p>
       </section>
 
+      {SHOW_ORACLE_ADMIN_CONTROLS ? (
       <section className="admin-bm-card admin-bm-card-backup">
         <header className="admin-bm-card-head">
           <span className="admin-bm-card-title">
@@ -595,7 +669,9 @@ export default function BookingMessagesSettingsSection({
         ) : null}
         <p className="admin-bm-hint">{t("admin.settings.bmOracleHint")}</p>
       </section>
+      ) : null}
 
+      {SHOW_ORACLE_ADMIN_CONTROLS ? (
       <AdminModal
         open={confirmAction !== null}
         title={
@@ -644,6 +720,7 @@ export default function BookingMessagesSettingsSection({
           </button>
         </div>
       </AdminModal>
+      ) : null}
 
       <section className="admin-bm-card">
         <header className="admin-bm-card-head">
@@ -664,32 +741,42 @@ export default function BookingMessagesSettingsSection({
           />
         </header>
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
-        <TemplateSelect
-          id="bm-customer-template"
-          label={t("admin.settings.bmTemplate")}
-          value={value.customerConfirmation.templateName}
-          templates={templates}
-          disabled={!value.customerConfirmation.enabled}
-          onChange={(templateName) =>
-            onChange({
-              ...value,
-              customerConfirmation: { ...value.customerConfirmation, templateName },
-            })
-          }
-        />
-        <MessageBodyField
-          id="bm-customer-body"
-          label={t("admin.settings.bmMessageBody")}
-          helper={t("admin.settings.bmPlaceholders")}
-          value={value.customerConfirmation.body}
-          disabled={!value.customerConfirmation.enabled}
-          onChange={(body) =>
-            onChange({
-              ...value,
-              customerConfirmation: { ...value.customerConfirmation, body },
-            })
-          }
-        />
+        {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
+          <>
+            <TemplateSelect
+              id="bm-customer-template"
+              label={t("admin.settings.bmTemplate")}
+              value={value.customerConfirmation.templateName}
+              templates={templates}
+              disabled={!value.customerConfirmation.enabled}
+              onChange={(templateName) =>
+                onChange({
+                  ...value,
+                  customerConfirmation: { ...value.customerConfirmation, templateName },
+                })
+              }
+            />
+            <MessageBodyField
+              id="bm-customer-body"
+              label={t("admin.settings.bmMessageBody")}
+              helper={t("admin.settings.bmPlaceholders")}
+              value={value.customerConfirmation.body}
+              disabled={!value.customerConfirmation.enabled}
+              onChange={(body) =>
+                onChange({
+                  ...value,
+                  customerConfirmation: { ...value.customerConfirmation, body },
+                })
+              }
+            />
+          </>
+        ) : (
+          <WhatsAppMessagePreview
+            templateName={DISPLAY_CUSTOMER_TEMPLATE}
+            text={TWILIO_CUSTOMER_CONFIRMATION_PREVIEW}
+            disabled={!value.customerConfirmation.enabled}
+          />
+        )}
       </section>
 
       <section className="admin-bm-card">
@@ -736,33 +823,43 @@ export default function BookingMessagesSettingsSection({
               }
             />
           </div>
-          <TemplateSelect
-            id="bm-owner-template"
-            label={t("admin.settings.bmTemplate")}
-            value={value.ownerNotification.templateName}
-            templates={templates}
+          {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
+            <TemplateSelect
+              id="bm-owner-template"
+              label={t("admin.settings.bmTemplate")}
+              value={value.ownerNotification.templateName}
+              templates={templates}
+              disabled={!value.ownerNotification.enabled}
+              onChange={(templateName) =>
+                onChange({
+                  ...value,
+                  ownerNotification: { ...value.ownerNotification, templateName },
+                })
+              }
+            />
+          ) : null}
+        </div>
+        {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
+          <MessageBodyField
+            id="bm-owner-body"
+            label={t("admin.settings.bmMessageBody")}
+            helper={t("admin.settings.bmPlaceholders")}
+            value={value.ownerNotification.body}
             disabled={!value.ownerNotification.enabled}
-            onChange={(templateName) =>
+            onChange={(body) =>
               onChange({
                 ...value,
-                ownerNotification: { ...value.ownerNotification, templateName },
+                ownerNotification: { ...value.ownerNotification, body },
               })
             }
           />
-        </div>
-        <MessageBodyField
-          id="bm-owner-body"
-          label={t("admin.settings.bmMessageBody")}
-          helper={t("admin.settings.bmPlaceholders")}
-          value={value.ownerNotification.body}
-          disabled={!value.ownerNotification.enabled}
-          onChange={(body) =>
-            onChange({
-              ...value,
-              ownerNotification: { ...value.ownerNotification, body },
-            })
-          }
-        />
+        ) : (
+          <WhatsAppMessagePreview
+            templateName={DISPLAY_OWNER_TEMPLATE}
+            text={TWILIO_OWNER_NOTIFICATION_PREVIEW}
+            disabled={!value.ownerNotification.enabled}
+          />
+        )}
       </section>
 
       <section className="admin-bm-card">
@@ -812,33 +909,43 @@ export default function BookingMessagesSettingsSection({
               ))}
             </select>
           </div>
-          <TemplateSelect
-            id="bm-reminder-template"
-            label={t("admin.settings.bmTemplate")}
-            value={value.appointmentReminder.templateName}
-            templates={templates}
+          {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
+            <TemplateSelect
+              id="bm-reminder-template"
+              label={t("admin.settings.bmTemplate")}
+              value={value.appointmentReminder.templateName}
+              templates={templates}
+              disabled={!value.appointmentReminder.enabled}
+              onChange={(templateName) =>
+                onChange({
+                  ...value,
+                  appointmentReminder: { ...value.appointmentReminder, templateName },
+                })
+              }
+            />
+          ) : null}
+        </div>
+        {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
+          <MessageBodyField
+            id="bm-reminder-body"
+            label={t("admin.settings.bmMessageBody")}
+            helper={t("admin.settings.bmPlaceholders")}
+            value={value.appointmentReminder.body}
             disabled={!value.appointmentReminder.enabled}
-            onChange={(templateName) =>
+            onChange={(body) =>
               onChange({
                 ...value,
-                appointmentReminder: { ...value.appointmentReminder, templateName },
+                appointmentReminder: { ...value.appointmentReminder, body },
               })
             }
           />
-        </div>
-        <MessageBodyField
-          id="bm-reminder-body"
-          label={t("admin.settings.bmMessageBody")}
-          helper={t("admin.settings.bmPlaceholders")}
-          value={value.appointmentReminder.body}
-          disabled={!value.appointmentReminder.enabled}
-          onChange={(body) =>
-            onChange({
-              ...value,
-              appointmentReminder: { ...value.appointmentReminder, body },
-            })
-          }
-        />
+        ) : (
+          <WhatsAppMessagePreview
+            templateName={DISPLAY_REMINDER_TEMPLATE}
+            text={TWILIO_APPOINTMENT_REMINDER_PREVIEW}
+            disabled={!value.appointmentReminder.enabled}
+          />
+        )}
       </section>
     </div>
   );

@@ -1544,6 +1544,10 @@ const en: Dictionary = {
         "Twilio Content SIDs are configured on the server and are not edited here.",
       bmSelectTemplate: "Select template",
       bmMessageBody: "WhatsApp message",
+      bmUsedTemplate: "Template in use: {name}",
+      bmMessagePreview: "Message preview",
+      bmPreviewHint:
+        "Display only — this preview is not sent and does not change the Twilio template.",
       bmPlaceholders:
         "{{name}}  {{service}}  {{date}}  {{time}}  {{phone}}",
       bmOwnerPhone: "Owner WhatsApp",

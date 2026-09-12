@@ -1186,6 +1186,10 @@ const ar: Dictionary = {
         "معرفات Twilio Content SID تُضبط على الخادم ولا تُعدَّل من هنا.",
       bmSelectTemplate: "اختر قالباً",
       bmMessageBody: "رسالة واتساب",
+      bmUsedTemplate: "القالب المستخدم: {name}",
+      bmMessagePreview: "معاينة الرسالة",
+      bmPreviewHint:
+        "عرض فقط — هذه المعاينة لا تُرسل ولا تغيّر قالب Twilio.",
       bmPlaceholders:
         "{{name}}  {{service}}  {{date}}  {{time}}  {{phone}}",
       bmOwnerPhone: "واتساب المالك",

@@ -1186,6 +1186,10 @@ const he: Dictionary = {
         "מזהי Twilio Content SID מוגדרים בשרת ואינם נערכים כאן.",
       bmSelectTemplate: "בחר תבנית",
       bmMessageBody: "הודעת וואטסאפ",
+      bmUsedTemplate: "התבנית בשימוש: {name}",
+      bmMessagePreview: "תצוגה מקדימה",
+      bmPreviewHint:
+        "תצוגה בלבד — התצוגה הזו לא נשלחת ואינה משנה את תבנית Twilio.",
       bmPlaceholders:
         "{{name}}  {{service}}  {{date}}  {{time}}  {{phone}}",
       bmOwnerPhone: "וואטסאפ בעלים",
