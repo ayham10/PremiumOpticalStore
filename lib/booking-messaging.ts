@@ -405,9 +405,7 @@ export async function dispatchBookingMessages(
     if (bookingMessages.customerConfirmation.enabled) {
       immediateSends.push(
         sendCustomerConfirmationViaTwilio(appointment, {
-          templateName:
-            bookingMessages.customerConfirmation.templateName.trim() ||
-            CUSTOMER_CONFIRMATION_TEMPLATE,
+          templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
           contentVariables: customerConfirmationVariables,
         }),
       );
