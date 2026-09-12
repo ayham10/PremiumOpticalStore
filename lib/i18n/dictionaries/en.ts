@@ -1480,6 +1480,12 @@ const en: Dictionary = {
         "Meta WhatsApp Cloud API credentials are configured on the server only — never shown here.",
       bmTwilioActive: "Active / Configured",
       bmTwilioInactive: "Not configured on the server",
+      bmTwilioConnected: "Connected",
+      bmTwilioConnectionIssue: "Connection issue",
+      bmTwilioNotConfigured: "Not configured",
+      bmTwilioChecking: "Checking",
+      bmTwilioRefresh: "Refresh status",
+      bmTwilioRefreshing: "Checking…",
       bmTwilioSender: "Sender number",
       bmTwilioHint:
         "Customer confirmation, owner notification, and appointment reminders are sent through Twilio WhatsApp API. Credentials stay on the server.",

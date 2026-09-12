@@ -1122,6 +1122,12 @@ const ar: Dictionary = {
         "بيانات Meta WhatsApp Cloud API تُضبط على الخادم فقط — لا تُعرض هنا.",
       bmTwilioActive: "نشط / مُعدّ",
       bmTwilioInactive: "غير مُعدّ على الخادم",
+      bmTwilioConnected: "متصل",
+      bmTwilioConnectionIssue: "مشكلة في الاتصال",
+      bmTwilioNotConfigured: "غير مُعدّ",
+      bmTwilioChecking: "جارٍ الفحص",
+      bmTwilioRefresh: "تحديث الحالة",
+      bmTwilioRefreshing: "جارٍ الفحص…",
       bmTwilioSender: "رقم الإرسال",
       bmTwilioHint:
         "تأكيد العميل وإشعار المالك وتذكير الموعد تُرسل عبر Twilio WhatsApp API. بيانات الدخول تبقى على الخادم.",

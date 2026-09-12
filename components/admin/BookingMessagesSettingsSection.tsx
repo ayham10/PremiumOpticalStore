@@ -165,15 +165,23 @@ function WhatsAppMessagePreview({
   return (
     <div
       className={`admin-bm-wa-preview${disabled ? " is-disabled" : ""}`}
+      dir="rtl"
     >
       <p className="admin-bm-used-template">
         {t("admin.settings.bmUsedTemplate", { name: templateName })}
       </p>
       <div className="admin-bm-wa-stage">
         <p className="admin-bm-wa-caption">{t("admin.settings.bmMessagePreview")}</p>
-        <div className="admin-bm-wa-thread" aria-readonly="true">
+        <div
+          className="admin-bm-wa-thread"
+          dir="rtl"
+          lang="ar"
+          aria-readonly="true"
+        >
           <div className="admin-bm-wa-bubble">
-            <p className="admin-bm-wa-text">{text}</p>
+            <p className="admin-bm-wa-text" dir="rtl" lang="ar">
+              {text}
+            </p>
           </div>
         </div>
       </div>
@@ -233,6 +241,9 @@ export default function BookingMessagesSettingsSection({
     "reconnect" | "reset" | "disconnect" | null
   >(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [twilioHealth, setTwilioHealth] = useState<
+    "checking" | "connected" | "issue" | "unconfigured"
+  >("checking");
   const [testResult, setTestResult] = useState<{
     ok: boolean;
     message: string;
@@ -507,8 +518,45 @@ export default function BookingMessagesSettingsSection({
     }
   }
 
-  const twilioConfigured = Boolean(twilioWhatsApp?.configured);
   const twilioFrom = twilioWhatsApp?.from?.trim() || "";
+  const checkTwilioHealth = useCallback(async () => {
+    setTwilioHealth("checking");
+    try {
+      const data = await apiFetch<{
+        configured?: boolean;
+        connected?: boolean;
+        from?: string | null;
+      }>("/api/settings/twilio/status");
+      if (!data.configured) {
+        setTwilioHealth("unconfigured");
+        return;
+      }
+      setTwilioHealth(data.connected ? "connected" : "issue");
+    } catch {
+      setTwilioHealth("issue");
+    }
+  }, []);
+
+  useEffect(() => {
+    void checkTwilioHealth();
+  }, [checkTwilioHealth]);
+
+  const twilioTone =
+    twilioHealth === "connected"
+      ? "ready"
+      : twilioHealth === "issue"
+        ? "down"
+        : twilioHealth === "checking"
+          ? "wait"
+          : "idle";
+  const twilioHealthLabel =
+    twilioHealth === "connected"
+      ? t("admin.settings.bmTwilioConnected")
+      : twilioHealth === "issue"
+        ? t("admin.settings.bmTwilioConnectionIssue")
+        : twilioHealth === "checking"
+          ? t("admin.settings.bmTwilioChecking")
+          : t("admin.settings.bmTwilioNotConfigured");
   const oracleTone = serviceReady ? "ready" : "idle";
   const oracleLabel = serviceReady
     ? t("admin.settings.bmOracleReady")
@@ -531,14 +579,23 @@ export default function BookingMessagesSettingsSection({
         </div>
         <div className="admin-bm-status-row" role="status">
           <span
-            className={`admin-bm-status-dot is-${twilioConfigured ? "ready" : "unavailable"}`}
+            className={`admin-bm-status-dot is-${twilioTone}`}
             aria-hidden
           />
-          <span className="admin-bm-status-label">
-            {twilioConfigured
-              ? t("admin.settings.bmTwilioActive")
-              : t("admin.settings.bmTwilioInactive")}
-          </span>
+          <span className="admin-bm-status-label">{twilioHealthLabel}</span>
+        </div>
+        <div className="admin-bm-provider-row">
+          <button
+            type="button"
+            className="btn btn-ghost admin-bm-test-btn"
+            onClick={() => void checkTwilioHealth()}
+            disabled={twilioHealth === "checking"}
+          >
+            <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
+            {twilioHealth === "checking"
+              ? t("admin.settings.bmTwilioRefreshing")
+              : t("admin.settings.bmTwilioRefresh")}
+          </button>
         </div>
         {twilioFrom ? (
           <div className="admin-bm-field">

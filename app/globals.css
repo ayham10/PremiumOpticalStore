@@ -14578,6 +14578,7 @@ select.admin-pe-input {
 .admin-bm-status-dot.is-wait {
   background: #e0c05a;
   color: rgba(224, 192, 90, 0.65);
+  animation: admin-bm-status-pulse 1.2s ease-in-out infinite;
 }
 
 .admin-bm-status-dot.is-down {
@@ -14593,6 +14594,16 @@ select.admin-pe-input {
 .admin-bm-status-dot.is-idle {
   background: #8a8476;
   color: rgba(138, 132, 118, 0.45);
+}
+
+@keyframes admin-bm-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .admin-bm-card-backup {
@@ -14802,7 +14813,10 @@ select.admin-pe-input {
 .admin-bm-wa-preview {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   min-width: 0;
+  direction: rtl;
+  text-align: right;
 }
 
 .admin-bm-wa-preview.is-disabled {
@@ -14813,7 +14827,10 @@ select.admin-pe-input {
 .admin-bm-wa-stage {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 0.45rem;
+  direction: rtl;
+  text-align: right;
 }
 
 .admin-bm-wa-caption {
@@ -14822,14 +14839,23 @@ select.admin-pe-input {
   font-size: 0.7rem;
   letter-spacing: 0.04em;
   text-transform: none;
+  direction: rtl;
+  text-align: right;
 }
 
 .admin-bm-wa-thread {
   position: relative;
-  max-width: 22.5rem;
-  padding: 0.85rem 0.8rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  margin-inline-start: auto;
+  padding: 0.75rem 0.7rem 0.8rem;
   border: 1px solid rgba(212, 175, 106, 0.16);
   border-radius: 16px;
+  direction: rtl;
+  text-align: right;
   background:
     linear-gradient(180deg, rgba(11, 18, 24, 0.55), rgba(8, 12, 16, 0.72)),
     #0d151b;
@@ -14851,19 +14877,21 @@ select.admin-pe-input {
 .admin-bm-wa-bubble {
   position: relative;
   z-index: 1;
-  margin-inline-start: auto;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  padding: 0.55rem 0.7rem 0.6rem;
-  border-radius: 12px 12px 4px 12px;
+  margin: 0;
+  padding: 0.55rem 0.75rem 0.6rem 0.7rem;
+  border-radius: 12px 12px 12px 4px;
   background: #1f2c34;
+  direction: rtl;
+  text-align: right;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
 }
 
 .admin-bm-wa-bubble::after {
   content: "";
   position: absolute;
-  inset-inline-end: -5px;
+  right: -5px;
   bottom: 0;
   width: 8px;
   height: 10px;
@@ -14873,12 +14901,14 @@ select.admin-pe-input {
 
 .admin-bm-wa-text {
   margin: 0;
+  width: 100%;
   color: #e9edef;
   font-size: 0.84rem;
   line-height: 1.65;
   white-space: pre-wrap;
   direction: rtl;
   text-align: right;
+  unicode-bidi: plaintext;
 }
 
 .admin-bm-placeholders {

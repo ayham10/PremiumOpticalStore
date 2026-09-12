@@ -1122,6 +1122,12 @@ const he: Dictionary = {
         "פרטי Meta WhatsApp Cloud API מוגדרים בשרת בלבד — לא מוצגים כאן.",
       bmTwilioActive: "פעיל / מוגדר",
       bmTwilioInactive: "לא מוגדר בשרת",
+      bmTwilioConnected: "מחובר",
+      bmTwilioConnectionIssue: "בעיית חיבור",
+      bmTwilioNotConfigured: "לא מוגדר",
+      bmTwilioChecking: "בודק",
+      bmTwilioRefresh: "רענון סטטוס",
+      bmTwilioRefreshing: "בודק…",
       bmTwilioSender: "מספר שולח",
       bmTwilioHint:
         "אישור ללקוח, התראה לבעלים ותזכורת תור נשלחים דרך Twilio WhatsApp API. פרטי הגישה נשארים בשרת.",
