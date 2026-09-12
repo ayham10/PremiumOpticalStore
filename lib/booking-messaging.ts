@@ -244,12 +244,7 @@ export function ownerNotificationSkipReason(
     return "invalid-owner-phone";
   }
   void useWhatsAppWeb;
-  const ownerTemplate = resolveMappedTwilioTemplateName(
-    bookingMessages.ownerNotification.templateName,
-    ["owner"],
-    OWNER_NOTIFICATION_TEMPLATE,
-  );
-  if (!resolveTwilioContentSid(ownerTemplate)) {
+  if (!resolveTwilioContentSid(OWNER_NOTIFICATION_TEMPLATE)) {
     return "missing-template";
   }
   return null;
@@ -461,11 +456,6 @@ export async function dispatchBookingMessages(
 
     const ownerWhatsApp =
       bookingMessages.ownerNotification.ownerWhatsApp.trim();
-    const ownerTemplate = resolveMappedTwilioTemplateName(
-      bookingMessages.ownerNotification.templateName,
-      ["owner"],
-      OWNER_NOTIFICATION_TEMPLATE,
-    );
     const ownerSkip = ownerNotificationSkipReason(
       bookingMessages,
       useWhatsAppWeb,
@@ -475,14 +465,15 @@ export async function dispatchBookingMessages(
         appointmentId: appointment.id,
         reason: ownerSkip,
         hasOwnerPhone: Boolean(ownerWhatsApp),
-        hasTemplate: Boolean(ownerTemplate),
+        hasTemplate: Boolean(OWNER_NOTIFICATION_TEMPLATE),
+        templateName: OWNER_NOTIFICATION_TEMPLATE,
         useWhatsAppWeb,
       });
     } else {
       immediateSends.push(
         sendViaTwilio(appointment, {
           to: ownerWhatsApp,
-          templateName: ownerTemplate,
+          templateName: OWNER_NOTIFICATION_TEMPLATE,
           contentVariables: ownerContentVariables,
           kind: "owner_notification",
           smsType: "custom",
