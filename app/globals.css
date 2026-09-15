@@ -6004,94 +6004,136 @@ html[dir="rtl"] .frames-product-name {
 }
 
 /* ========== Contact Lenses catalogue extras ========== */
-.cl-page .cl-content {
-  padding-bottom: 2.5rem;
+.cl-page {
+  --cl-bg: #0b0d10;
+  --cl-gold: #d4b483;
+  --cl-muted: #a7adb7;
+  background: var(--cl-bg);
+  padding-top: 0;
+  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
 }
 
-.cl-eyebrow {
-  margin: 0 0 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #d4b483;
-}
-
-.cl-head {
-  margin-bottom: 1.5rem;
-}
-
-.cl-info-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-@media (min-width: 768px) {
-  .cl-info-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-  }
-}
-
-.cl-info-card {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #15181d;
-  padding: 1rem 1.05rem;
-}
-
-.cl-info-icon {
-  color: #d4b483;
-  margin-bottom: 0.55rem;
-}
-
-.cl-info-card h2 {
-  margin: 0 0 0.35rem;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: #f5f5f5;
-}
-
-.cl-info-card p {
-  margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.45;
-  color: #a7adb7;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.cl-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: min(78svh, 640px);
   overflow: hidden;
 }
 
-.cl-safety {
+.cl-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.cl-hero-video,
+.cl-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cl-hero-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(11, 13, 16, 0.97) 0%,
+    rgba(11, 13, 16, 0.78) 26%,
+    rgba(11, 13, 16, 0.38) 56%,
+    rgba(8, 10, 12, 0.42) 100%
+  );
+}
+
+.cl-hero::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  z-index: 1;
+  height: 4.8rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(11, 13, 16, 0), var(--cl-bg) 90%);
+}
+
+.cl-hero-copy {
+  position: relative;
+  z-index: 2;
+  width: min(720px, calc(100% - 2rem));
+  margin-inline: auto;
+  padding: 6.4rem 0 1.4rem;
+  direction: inherit;
+  text-align: start;
+}
+
+.cl-inner {
+  position: relative;
+  z-index: 2;
+  width: min(720px, calc(100% - 2rem));
+  margin-inline: auto;
   display: flex;
-  gap: 0.7rem;
-  align-items: flex-start;
-  margin: 0 0 1.25rem;
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  border: 1px solid rgba(212, 180, 131, 0.22);
-  background: rgba(23, 26, 31, 0.9);
+  flex-direction: column;
+  gap: 1.45rem;
+  padding-top: 0.2rem;
+  padding-bottom: 2.5rem;
 }
 
-.cl-safety-icon {
-  flex-shrink: 0;
-  margin-top: 0.1rem;
-  color: #d4b483;
+@media (min-width: 768px) {
+  .cl-hero {
+    min-height: min(68vh, 620px);
+  }
+
+  .cl-hero-copy,
+  .cl-inner {
+    width: min(780px, calc(100% - 3rem));
+  }
+
+  .cl-hero-copy {
+    padding-top: 7rem;
+    padding-bottom: 1.8rem;
+  }
 }
 
-.cl-safety p {
+.cl-eyebrow {
   margin: 0;
   font-size: 0.82rem;
-  line-height: 1.45;
-  color: #a7adb7;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  color: var(--cl-gold);
+  text-align: start;
 }
 
-.cl-booking-row {
-  display: flex;
-  margin-bottom: 2rem;
+.cl-title {
+  margin: 0.4rem 0 0;
+  font-family: "Manrope", "Noto Sans Arabic", "Noto Sans Hebrew", sans-serif;
+  font-size: clamp(2.2rem, 9vw, 3.6rem);
+  font-weight: 750;
+  line-height: 1.12;
+  color: #fff;
+  text-align: start;
+}
+
+.cl-description {
+  margin: 0.8rem 0 0;
+  max-width: 34rem;
+  margin-inline-end: auto;
+  font-size: clamp(0.94rem, 2.8vw, 1.05rem);
+  line-height: 1.75;
+  color: rgba(245, 245, 245, 0.78);
+  text-align: start;
+}
+
+html[dir="ltr"] .cl-description {
+  margin-inline-end: 0;
+}
+
+.cl-hero-actions {
+  margin-top: 1.2rem;
 }
 
 .cl-book-btn {
@@ -6099,16 +6141,142 @@ html[dir="rtl"] .frames-product-name {
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  min-height: 48px;
+  min-height: 54px !important;
   width: 100%;
-  max-width: 360px;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #e4c48a 0%, #d4af6a 52%, #c49a4e 100%) !important;
+  color: #0b0d10 !important;
+  font-weight: 750;
+  font-size: 1.02rem;
+  box-shadow: 0 12px 28px rgba(212, 175, 106, 0.22);
+}
+
+.cl-features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cl-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.95rem 0.7rem;
+  text-align: start;
+}
+
+.cl-feature:nth-child(odd) {
+  border-inline-end: 1px solid rgba(198, 168, 118, 0.32);
+}
+
+.cl-feature:nth-child(-n + 2) {
+  border-bottom: 1px solid rgba(198, 168, 118, 0.32);
+}
+
+.cl-feature-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 180, 131, 0.38);
+  background: radial-gradient(circle at 35% 30%, rgba(212, 180, 131, 0.16), rgba(12, 14, 18, 0.92));
+  color: var(--cl-gold);
+  box-shadow: 0 0 12px rgba(212, 175, 106, 0.16);
+}
+
+.cl-feature-copy {
+  min-width: 0;
+}
+
+.cl-feature-title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(0.82rem, 2.8vw, 0.94rem);
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: start;
+}
+
+.cl-feature-text {
+  margin: 0.28rem 0 0;
+  color: rgba(167, 173, 183, 0.95);
+  font-size: clamp(0.7rem, 2.4vw, 0.78rem);
+  font-weight: 450;
+  line-height: 1.45;
+  text-align: start;
+}
+
+.cl-safety {
+  display: flex;
+  flex-direction: row;
+  gap: 0.7rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 1rem 1.05rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 180, 131, 0.34);
+  background: linear-gradient(180deg, rgba(18, 16, 14, 0.94), rgba(12, 14, 18, 0.96));
+  text-align: start;
+}
+
+.cl-safety-icon {
+  flex-shrink: 0;
+  margin-top: 0.12rem;
+  color: var(--cl-gold);
+}
+
+.cl-safety p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: rgba(232, 232, 232, 0.82);
+  text-align: start;
+}
+
+.cl-booking-row {
+  display: flex;
+  margin: 0;
+}
+
+.cl-catalogue-block {
+  margin-top: 0.35rem;
 }
 
 .cl-catalogue-title {
-  margin: 0 0 1rem;
-  font-family: "Fraunces", serif;
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
-  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.4rem 0 1.25rem;
+  text-align: center;
+}
+
+.cl-catalogue-label {
+  flex: 0 1 auto;
+  color: var(--cl-gold);
+  font-family: "Manrope", "Noto Sans Arabic", "Noto Sans Hebrew", sans-serif;
+  font-size: clamp(1.15rem, 3.4vw, 1.45rem);
+  font-weight: 750;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.cl-catalogue-rule {
+  flex: 1 1 2.2rem;
+  max-width: 4.2rem;
+  height: 1px;
+  background: rgba(212, 180, 131, 0.55);
+}
+
+.cl-page .frames-product-card {
+  border: 1px solid rgba(212, 180, 131, 0.28);
+  border-radius: 14px;
+  background: #101317;
+  overflow: hidden;
 }
 
 .cl-product-media {
@@ -6125,7 +6293,6 @@ html[dir="rtl"] .frames-product-name {
   color: #a7adb7;
 }
 
-/* Mobile default already 2-col via .frames-product-grid; keep alias for clarity */
 .contact-lens-grid {
   gap: 12px;
 }
@@ -6147,13 +6314,6 @@ html[dir="rtl"] .frames-product-name {
   font-weight: 400;
   color: #a7adb7;
   line-height: 1.4;
-}
-
-html[dir="rtl"] .cl-eyebrow,
-html[dir="rtl"] .cl-info-card,
-html[dir="rtl"] .cl-safety,
-html[dir="rtl"] .cl-catalogue-title {
-  text-align: start;
 }
 
 /* Dark footer when on frames page */
@@ -6649,7 +6809,9 @@ body:has(main.eye-exam-main) footer {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: min(92svh, 760px);
+  height: 400px;
+  min-height: 380px;
+  max-height: 420px;
   margin: 0;
   overflow: hidden;
 }
@@ -6665,7 +6827,7 @@ body:has(main.eye-exam-main) footer {
   z-index: 2;
   width: min(720px, calc(100% - 2rem));
   margin-inline: auto;
-  padding: 7.5rem 0 1.65rem;
+  padding: 4.6rem 0 0.95rem;
   direction: inherit;
   text-align: start;
 }
@@ -6694,7 +6856,9 @@ body:has(main.eye-exam-main) footer {
 
 @media (min-width: 768px) {
   .eye-exam-hero {
-    min-height: min(82vh, 780px);
+    height: min(52vh, 520px);
+    min-height: 420px;
+    max-height: 560px;
   }
 
   .eye-exam-hero-copy,
@@ -6704,8 +6868,8 @@ body:has(main.eye-exam-main) footer {
   }
 
   .eye-exam-hero-copy {
-    padding-top: 8rem;
-    padding-bottom: 2.1rem;
+    padding-top: 5.5rem;
+    padding-bottom: 1.35rem;
   }
 }
 
@@ -6782,9 +6946,9 @@ body:has(main.eye-exam-main) footer {
 }
 
 .eye-exam-title {
-  margin: 0.45rem 0 0;
+  margin: 0.35rem 0 0;
   font-family: "Manrope", "Noto Sans Arabic", "Noto Sans Hebrew", sans-serif;
-  font-size: clamp(2.55rem, 11vw, 4.15rem);
+  font-size: clamp(1.9rem, 8vw, 3.2rem);
   font-weight: 750;
   line-height: 1.12;
   color: #fff;
@@ -6809,7 +6973,7 @@ html[dir="ltr"] .eye-exam-description {
 .eye-exam-actions {
   display: grid;
   grid-template-columns: 1fr;
-  margin-top: 1.35rem;
+  margin-top: 0.95rem;
 }
 
 .eye-exam-btn {
@@ -6838,11 +7002,12 @@ html[dir="ltr"] .eye-exam-description {
 
 .eye-exam-feature {
   display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
   min-width: 0;
-  padding: 0.95rem 0.7rem;
-  text-align: start;
+  padding: 1.35rem 1.05rem 1.25rem;
+  text-align: center;
 }
 
 .eye-exam-feature:nth-child(odd) {
@@ -6857,17 +7022,19 @@ html[dir="ltr"] .eye-exam-description {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.85rem;
+  height: 2.85rem;
   flex-shrink: 0;
   border-radius: 999px;
-  border: 1px solid rgba(212, 180, 131, 0.34);
-  background: radial-gradient(circle at 35% 30%, rgba(212, 180, 131, 0.16), rgba(12, 14, 18, 0.92));
+  border: 1.5px solid rgba(232, 208, 154, 0.58);
+  background: radial-gradient(circle at 35% 30%, rgba(212, 180, 131, 0.22), rgba(12, 14, 18, 0.94));
   color: var(--ee-gold);
+  box-shadow: 0 0 18px rgba(212, 175, 106, 0.28);
 }
 
 .eye-exam-feature-copy {
   min-width: 0;
+  text-align: center;
 }
 
 .eye-exam-feature-title {
@@ -6876,6 +7043,7 @@ html[dir="ltr"] .eye-exam-description {
   font-size: clamp(0.82rem, 2.8vw, 0.95rem);
   font-weight: 700;
   line-height: 1.35;
+  text-align: center;
 }
 
 .eye-exam-feature-lead {
@@ -6884,6 +7052,7 @@ html[dir="ltr"] .eye-exam-description {
   font-size: clamp(0.7rem, 2.4vw, 0.78rem);
   font-weight: 450;
   line-height: 1.4;
+  text-align: center;
 }
 
 .eye-exam-benefits {
@@ -6957,14 +7126,17 @@ html[dir="ltr"] .eye-exam-benefits-rule {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.55rem;
-  padding: 1.35rem 1.1rem 1.4rem;
-  border-radius: 18px;
+  justify-content: center;
+  gap: 0.18rem;
+  min-height: 90px;
+  max-height: 110px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 14px;
   border: 1px solid rgba(212, 180, 131, 0.38);
   background:
     linear-gradient(180deg, rgba(28, 24, 18, 0.72) 0%, rgba(16, 18, 22, 0.94) 100%);
   box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.28),
+    0 10px 24px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 rgba(232, 208, 154, 0.08);
   text-align: center;
 }
@@ -6973,8 +7145,8 @@ html[dir="ltr"] .eye-exam-benefits-rule {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.1rem;
-  height: 3.1rem;
+  width: 1.65rem;
+  height: 1.65rem;
   border-radius: 999px;
   border: 1px solid rgba(212, 180, 131, 0.4);
   background: radial-gradient(circle at 35% 30%, rgba(212, 180, 131, 0.2), rgba(12, 14, 18, 0.95));
@@ -6982,19 +7154,19 @@ html[dir="ltr"] .eye-exam-benefits-rule {
 }
 
 .eye-exam-accuracy-title {
-  margin: 0.15rem 0 0;
+  margin: 0;
   color: #fff;
-  font-size: clamp(1.12rem, 3.4vw, 1.32rem);
+  font-size: 0.92rem;
   font-weight: 750;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .eye-exam-accuracy-text {
   margin: 0;
   max-width: 22rem;
   color: rgba(167, 173, 183, 0.95);
-  font-size: 0.88rem;
-  line-height: 1.55;
+  font-size: 0.72rem;
+  line-height: 1.3;
 }
 
 .eye-exam-privacy {

@@ -519,7 +519,7 @@ const ar: Dictionary = {
     },
   },
   contactLenses: {
-    eyebrow: "العناية بالعدسات",
+    eyebrow: "رعاية احترافية",
     title: "العدسات اللاصقة",
     description:
       "اختر عدسات لاصقة مريحة تناسب نظرك ونمط حياتك واستخدامك اليومي.",
@@ -535,6 +535,8 @@ const ar: Dictionary = {
       optionsText: "اختر مدة الاستخدام التي تناسب نمط حياتك.",
       supportTitle: "متابعة وإرشاد",
       supportText: "نصائح حول الراحة والعناية والاستخدام الآمن.",
+      safetyTitle: "سلامة عينيك أولاً",
+      safetyText: "ملاءمة مهنية واستخدام يومي حذر.",
     },
     booking: {
       formTitle: "احجز ملاءمة للعدسات اللاصقة",

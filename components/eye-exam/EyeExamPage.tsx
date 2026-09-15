@@ -54,7 +54,7 @@ export default function EyeExamPage() {
             {FEATURES.map(({ key, Icon }) => (
               <article key={key} className="eye-exam-feature">
                 <span className="eye-exam-feature-orb" aria-hidden>
-                  <Icon size={18} strokeWidth={1.7} />
+                  <Icon size={22} strokeWidth={1.85} />
                 </span>
                 <div className="eye-exam-feature-copy">
                   <p className="eye-exam-feature-title">
@@ -94,7 +94,7 @@ export default function EyeExamPage() {
           aria-labelledby="eye-exam-accuracy-title"
         >
           <span className="eye-exam-accuracy-orb" aria-hidden>
-            <Target size={26} strokeWidth={1.55} />
+            <Target size={16} strokeWidth={1.7} />
           </span>
           <h2 id="eye-exam-accuracy-title" className="eye-exam-accuracy-title">
             {t("eyeExam.values.precision")}

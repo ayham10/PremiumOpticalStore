@@ -9,6 +9,7 @@ import {
   Droplets,
   HeartHandshake,
   Ruler,
+  ShieldCheck,
 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
@@ -56,6 +57,33 @@ function ContactLensCard({ product }: { product: Product }) {
   );
 }
 
+const FEATURES = [
+  {
+    key: "fitting",
+    Icon: Ruler,
+    titleKey: "contactLenses.info.fittingTitle",
+    textKey: "contactLenses.info.fittingText",
+  },
+  {
+    key: "options",
+    Icon: Droplets,
+    titleKey: "contactLenses.info.optionsTitle",
+    textKey: "contactLenses.info.optionsText",
+  },
+  {
+    key: "support",
+    Icon: HeartHandshake,
+    titleKey: "contactLenses.info.supportTitle",
+    textKey: "contactLenses.info.supportText",
+  },
+  {
+    key: "safety",
+    Icon: ShieldCheck,
+    titleKey: "contactLenses.info.safetyTitle",
+    textKey: "contactLenses.info.safetyText",
+  },
+] as const;
+
 export default function ContactLensesPage() {
   const { t, rtl } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
@@ -96,71 +124,69 @@ export default function ContactLensesPage() {
     [products],
   );
 
-  const infoCards = [
-    {
-      icon: Ruler,
-      title: t("contactLenses.info.fittingTitle"),
-      text: t("contactLenses.info.fittingText"),
-    },
-    {
-      icon: Droplets,
-      title: t("contactLenses.info.optionsTitle"),
-      text: t("contactLenses.info.optionsText"),
-    },
-    {
-      icon: HeartHandshake,
-      title: t("contactLenses.info.supportTitle"),
-      text: t("contactLenses.info.supportText"),
-    },
-  ];
-
   return (
     <div className="frames-page cl-page" dir={rtl ? "rtl" : "ltr"}>
-      <section className="frames-hero" aria-label={t("contactLenses.title")}>
-        {reduceMotion ? (
-          <Image
-            src="/images/contact-lenses-hero-poster.jpg"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-        ) : (
-          <video
-            className="frames-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            poster="/images/contact-lenses-hero-poster.jpg"
-          >
-            <source src="/videos/contact-lenses-hero.mp4" type="video/mp4" />
-          </video>
-        )}
-        <span className="frames-hero-veil" aria-hidden />
+      <section className="cl-hero" aria-label={t("contactLenses.title")}>
+        <div className="cl-hero-media">
+          {reduceMotion ? (
+            <Image
+              src="/images/contact-lenses-hero-poster.jpg"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
+            />
+          ) : (
+            <video
+              className="cl-hero-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster="/images/contact-lenses-hero-poster.jpg"
+            >
+              <source src="/videos/contact-lenses-hero.mp4" type="video/mp4" />
+            </video>
+          )}
+        </div>
+        <span className="cl-hero-veil" aria-hidden />
+        <div className="cl-hero-copy">
+          <p className="cl-eyebrow">{t("contactLenses.eyebrow")}</p>
+          <h1 className="cl-title">{t("contactLenses.title")}</h1>
+          <p className="cl-description">{t("contactLenses.description")}</p>
+          <div className="cl-hero-actions">
+            <Link
+              href="/book?type=contact_lens_fitting"
+              className="btn btn-copper cl-book-btn"
+            >
+              <CalendarCheck2 size={18} strokeWidth={1.8} aria-hidden />
+              {t("contactLenses.bookCta")}
+            </Link>
+          </div>
+        </div>
       </section>
 
-      <section className="frames-catalogue wrap cl-content">
-        <header className="frames-catalogue-head cl-head">
-          <p className="cl-eyebrow">{t("contactLenses.eyebrow")}</p>
-          <h1 className="frames-catalogue-title">{t("contactLenses.title")}</h1>
-          <p className="frames-catalogue-lead">{t("contactLenses.description")}</p>
-        </header>
-
-        <div className="cl-info-grid" aria-label={t("contactLenses.info.aria")}>
-          {infoCards.map((card) => (
-            <article key={card.title} className="cl-info-card">
-              <card.icon className="cl-info-icon" size={20} aria-hidden />
-              <h2>{card.title}</h2>
-              <p>{card.text}</p>
-            </article>
-          ))}
-        </div>
+      <div className="cl-inner">
+        <section className="cl-features" aria-label={t("contactLenses.info.aria")}>
+          <div className="cl-features-grid">
+            {FEATURES.map(({ key, Icon, titleKey, textKey }) => (
+              <article key={key} className="cl-feature">
+                <span className="cl-feature-orb" aria-hidden>
+                  <Icon size={18} strokeWidth={1.7} />
+                </span>
+                <div className="cl-feature-copy">
+                  <h2 className="cl-feature-title">{t(titleKey)}</h2>
+                  <p className="cl-feature-text">{t(textKey)}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <aside className="cl-safety" role="note">
-          <AlertTriangle className="cl-safety-icon" size={18} aria-hidden />
+          <AlertTriangle className="cl-safety-icon" size={18} strokeWidth={1.7} aria-hidden />
           <p>{t("contactLenses.safety")}</p>
         </aside>
 
@@ -169,13 +195,17 @@ export default function ContactLensesPage() {
             href="/book?type=contact_lens_fitting"
             className="btn btn-copper cl-book-btn"
           >
-            <CalendarCheck2 size={18} aria-hidden />
+            <CalendarCheck2 size={18} strokeWidth={1.8} aria-hidden />
             {t("contactLenses.bookCta")}
           </Link>
         </div>
 
-        <div className="cl-catalogue-block">
-          <h2 className="cl-catalogue-title">{t("contactLenses.catalogueTitle")}</h2>
+        <section className="cl-catalogue-block" aria-labelledby="cl-catalogue-heading">
+          <h2 id="cl-catalogue-heading" className="cl-catalogue-title">
+            <span className="cl-catalogue-rule" aria-hidden />
+            <span className="cl-catalogue-label">{t("contactLenses.catalogueTitle")}</span>
+            <span className="cl-catalogue-rule" aria-hidden />
+          </h2>
           {loading ? (
             <div className="frames-product-grid" aria-hidden>
               {Array.from({ length: 4 }).map((_, i) => (
@@ -191,9 +221,8 @@ export default function ContactLensesPage() {
               ))}
             </div>
           )}
-        </div>
-      </section>
-
+        </section>
+      </div>
     </div>
   );
 }

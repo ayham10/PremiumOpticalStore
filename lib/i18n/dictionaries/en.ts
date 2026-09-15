@@ -245,6 +245,8 @@ export type Dictionary = {
       optionsText: string;
       supportTitle: string;
       supportText: string;
+      safetyTitle: string;
+      safetyText: string;
     };
     booking: {
       formTitle: string;
@@ -879,7 +881,7 @@ const en: Dictionary = {
     },
   },
   contactLenses: {
-    eyebrow: "Contact Lens Care",
+    eyebrow: "Professional Care",
     title: "Contact Lenses",
     description:
       "Find comfortable contact lenses suited to your vision, lifestyle and daily routine.",
@@ -895,6 +897,8 @@ const en: Dictionary = {
       optionsText: "Choose the replacement schedule that suits your lifestyle.",
       supportTitle: "Follow-up support",
       supportText: "Receive guidance on comfort, care and safe use.",
+      safetyTitle: "Your eye safety first",
+      safetyText: "Professional fitting and careful daily use.",
     },
     booking: {
       formTitle: "Book Contact Lens Fitting",

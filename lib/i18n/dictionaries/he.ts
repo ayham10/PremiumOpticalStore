@@ -519,7 +519,7 @@ const he: Dictionary = {
     },
   },
   contactLenses: {
-    eyebrow: "טיפול בעדשות מגע",
+    eyebrow: "טיפול מקצועי",
     title: "עדשות מגע",
     description:
       "מצאו עדשות מגע נוחות שמתאימות לראייה, לאורח החיים ולשגרה היומית שלכם.",
@@ -535,6 +535,8 @@ const he: Dictionary = {
       optionsText: "בחרו לוח החלפה שמתאים לאורח החיים.",
       supportTitle: "ליווי ומעקב",
       supportText: "הדרכה על נוחות, טיפול ושימוש בטוח.",
+      safetyTitle: "בטיחות העיניים קודם",
+      safetyText: "התאמה מקצועית ושימוש יומי זהיר.",
     },
     booking: {
       formTitle: "קביעת התאמת עדשות מגע",
