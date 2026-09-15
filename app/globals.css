@@ -9661,7 +9661,14 @@ a.store-filter-chip {
 }
 
 .promo-hero-image {
-  object-position: 24% center;
+  object-fit: cover;
+  object-position: 74% center;
+}
+
+@media (min-width: 768px) {
+  .promo-hero-image {
+    object-position: 58% center;
+  }
 }
 
 .promo-hero-veil {
@@ -9671,12 +9678,18 @@ a.store-filter-chip {
   pointer-events: none;
   background:
     linear-gradient(
-      100deg,
-      rgba(7, 10, 13, 0.78) 0%,
-      rgba(7, 10, 13, 0.42) 48%,
-      rgba(7, 10, 13, 0.22) 100%
+      to inline-end,
+      rgba(7, 10, 13, 0.88) 0%,
+      rgba(7, 10, 13, 0.58) 32%,
+      rgba(7, 10, 13, 0.22) 58%,
+      rgba(7, 10, 13, 0.08) 100%
     ),
-    linear-gradient(180deg, rgba(7, 10, 13, 0.35) 0%, rgba(7, 10, 13, 0.2) 45%, rgba(7, 10, 13, 0.82) 100%);
+    linear-gradient(
+      180deg,
+      rgba(7, 10, 13, 0.22) 0%,
+      rgba(7, 10, 13, 0.12) 42%,
+      rgba(7, 10, 13, 0.72) 100%
+    );
 }
 
 .promo-hero-copy {
