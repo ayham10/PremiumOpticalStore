@@ -10283,9 +10283,10 @@ button.promo-card {
     width: 50% !important;
     height: 100% !important;
     flex: 0 0 50%;
-    object-fit: contain !important;
-    object-position: center center;
-    background: #0b0f14;
+    align-self: stretch;
+    min-height: 100%;
+    object-fit: cover !important;
+    object-position: center 38%;
   }
 
   .promo-page .promo-slide-hero .promo-hero-veil {
