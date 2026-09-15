@@ -158,9 +158,13 @@ export type Dictionary = {
     features: {
       aria: string;
       specialists: string;
+      specialistsLead: string;
       duration: string;
+      durationLead: string;
       equipment: string;
+      equipmentLead: string;
       comprehensive: string;
+      comprehensiveLead: string;
     };
     benefits: {
       title: string;
@@ -788,9 +792,13 @@ const en: Dictionary = {
     features: {
       aria: "Exam highlights",
       specialists: "Certified specialists",
+      specialistsLead: "Trusted experience",
       duration: "Only 20–30 minutes",
+      durationLead: "Fast, easy booking",
       equipment: "Modern, precise devices",
+      equipmentLead: "Accurate results",
       comprehensive: "Full vision assessment",
+      comprehensiveLead: "Clarity and eye health",
     },
     benefits: {
       title: "What makes our eye exam different",

@@ -98,7 +98,7 @@ export default function EyeExamHeroVideo({ alt }: { alt: string }) {
           fill
           priority
           className="object-cover"
-          sizes="(max-width: 768px) 100vw, 960px"
+          sizes="100vw"
         />
         <div className="eye-exam-video-veil" aria-hidden />
       </div>

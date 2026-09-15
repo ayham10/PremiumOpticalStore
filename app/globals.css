@@ -6632,54 +6632,98 @@ body:has(main.eye-exam-main) footer {
 .eye-exam-page {
   --ee-bg: #0b0d10;
   --ee-surface: #15181d;
-  --ee-card: #171a1f;
+  --ee-card: #14181e;
   --ee-text: #f5f5f5;
   --ee-muted: #a7adb7;
-  --ee-line: rgba(255, 255, 255, 0.08);
+  --ee-line: rgba(212, 180, 131, 0.28);
   --ee-gold: #d4b483;
   min-height: 100svh;
   background: var(--ee-bg);
   color: var(--ee-text);
-  padding-top: calc(5.25rem + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  padding-top: 0;
+  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.eye-exam-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: min(92svh, 760px);
+  margin: 0;
+  overflow: hidden;
+}
+
+.eye-exam-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.eye-exam-hero-copy {
+  position: relative;
+  z-index: 2;
+  width: min(720px, calc(100% - 2rem));
+  margin-inline: auto;
+  padding: 7.5rem 0 1.65rem;
+  direction: inherit;
+  text-align: start;
+}
+
+.eye-exam-hero::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  z-index: 1;
+  height: 5.5rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(11, 13, 16, 0), var(--ee-bg) 88%);
 }
 
 .eye-exam-inner {
+  position: relative;
+  z-index: 2;
   width: min(720px, calc(100% - 2rem));
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.85rem;
+  padding-top: 0.35rem;
 }
 
 @media (min-width: 768px) {
+  .eye-exam-hero {
+    min-height: min(82vh, 780px);
+  }
+
+  .eye-exam-hero-copy,
   .eye-exam-inner {
-    width: min(760px, calc(100% - 2.5rem));
-    gap: 1.35rem;
+    width: min(760px, calc(100% - 3rem));
+    gap: 2.15rem;
+  }
+
+  .eye-exam-hero-copy {
+    padding-top: 8rem;
+    padding-bottom: 2.1rem;
   }
 }
 
-.eye-exam-hero {
-  margin: 0;
+@media (min-width: 1100px) {
+  .eye-exam-hero-copy,
+  .eye-exam-inner {
+    width: min(820px, calc(100% - 4rem));
+  }
 }
 
 .eye-exam-video-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  max-height: min(48vh, 420px);
+  height: 100%;
   overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid var(--ee-line);
+  border: 0;
+  border-radius: 0;
   background: #101317;
-}
-
-@media (max-width: 639px) {
-  .eye-exam-video-frame {
-    aspect-ratio: 4 / 3;
-    max-height: 340px;
-    border-radius: 20px;
-  }
 }
 
 .eye-exam-video,
@@ -6717,58 +6761,70 @@ body:has(main.eye-exam-main) footer {
   position: absolute;
   inset: 0;
   z-index: 3;
-  background: linear-gradient(
-    to top,
-    rgba(11, 13, 16, 0.5),
-    rgba(11, 13, 16, 0.1) 48%,
-    rgba(11, 13, 16, 0.22)
-  );
   pointer-events: none;
-}
-
-.eye-exam-content {
-  text-align: start;
+  background:
+    linear-gradient(
+      to top,
+      rgba(11, 13, 16, 0.96) 0%,
+      rgba(11, 13, 16, 0.72) 28%,
+      rgba(11, 13, 16, 0.38) 58%,
+      rgba(8, 10, 12, 0.5) 100%
+    );
 }
 
 .eye-exam-eyebrow {
-  font-size: 0.78rem;
+  margin: 0;
+  font-size: 0.82rem;
   font-weight: 650;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--ee-gold);
+  text-align: start;
 }
 
 .eye-exam-title {
-  margin-top: 0.35rem;
-  font-family: "Manrope", "Noto Sans Arabic", sans-serif;
-  font-size: clamp(1.85rem, 7vw, 2.6rem);
+  margin: 0.45rem 0 0;
+  font-family: "Manrope", "Noto Sans Arabic", "Noto Sans Hebrew", sans-serif;
+  font-size: clamp(2.55rem, 11vw, 4.15rem);
   font-weight: 750;
-  line-height: 1.15;
+  line-height: 1.12;
   color: #fff;
+  text-align: start;
 }
 
 .eye-exam-description {
-  margin-top: 0.7rem;
+  margin: 0.85rem 0 0;
   max-width: 34rem;
-  font-size: clamp(0.92rem, 2.8vw, 1.02rem);
-  line-height: 1.6;
-  color: rgba(245, 245, 245, 0.82);
+  margin-inline-end: auto;
+  font-size: clamp(0.95rem, 2.9vw, 1.08rem);
+  line-height: 1.75;
+  color: rgba(245, 245, 245, 0.78);
+  text-align: start;
+}
+
+html[dir="ltr"] .eye-exam-description {
+  margin-inline-end: 0;
+  margin-inline-start: 0;
 }
 
 .eye-exam-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.7rem;
-  margin-top: 1.25rem;
+  margin-top: 1.35rem;
 }
 
 .eye-exam-btn {
-  min-height: 52px !important;
+  min-height: 54px !important;
   width: 100%;
   justify-content: center;
   text-align: center;
+  border: 0 !important;
   border-radius: 14px !important;
-  font-weight: 700;
-  font-size: 1rem;
+  background: linear-gradient(180deg, #e4c48a 0%, #d4af6a 52%, #c49a4e 100%) !important;
+  color: #0b0d10 !important;
+  font-weight: 750;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+  box-shadow: 0 12px 28px rgba(212, 175, 106, 0.22);
 }
 
 .eye-exam-features {
@@ -6778,49 +6834,90 @@ body:has(main.eye-exam-main) footer {
 .eye-exam-features-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
 }
 
-@media (min-width: 640px) {
-  .eye-exam-features-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.eye-exam-feature-card {
+.eye-exam-feature {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: center;
-  min-height: 100%;
-  padding: 0.85rem 0.55rem;
-  border-radius: 14px;
-  border: 1px solid var(--ee-line);
-  background: var(--ee-card);
+  align-items: flex-start;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.95rem 0.7rem;
+  text-align: start;
 }
 
-.eye-exam-feature-icon {
+.eye-exam-feature:nth-child(odd) {
+  border-inline-end: 1px solid rgba(198, 168, 118, 0.32);
+}
+
+.eye-exam-feature:nth-child(-n + 2) {
+  border-bottom: 1px solid rgba(198, 168, 118, 0.32);
+}
+
+.eye-exam-feature-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 180, 131, 0.34);
+  background: radial-gradient(circle at 35% 30%, rgba(212, 180, 131, 0.16), rgba(12, 14, 18, 0.92));
   color: var(--ee-gold);
 }
 
-.eye-exam-feature-card p {
+.eye-exam-feature-copy {
+  min-width: 0;
+}
+
+.eye-exam-feature-title {
   margin: 0;
-  color: var(--ee-text);
-  font-size: clamp(0.72rem, 2.6vw, 0.82rem);
-  font-weight: 600;
+  color: #fff;
+  font-size: clamp(0.82rem, 2.8vw, 0.95rem);
+  font-weight: 700;
   line-height: 1.35;
 }
 
+.eye-exam-feature-lead {
+  margin: 0.22rem 0 0;
+  color: rgba(167, 173, 183, 0.92);
+  font-size: clamp(0.7rem, 2.4vw, 0.78rem);
+  font-weight: 450;
+  line-height: 1.4;
+}
+
 .eye-exam-benefits {
-  padding: 0.15rem 0.1rem;
+  padding: 0.1rem 0;
 }
 
 .eye-exam-benefits-title {
-  margin: 0 0 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0 0 1.05rem;
   color: var(--ee-gold);
-  font-size: clamp(1rem, 3vw, 1.15rem);
+  font-size: clamp(1.12rem, 3.4vw, 1.38rem);
   font-weight: 700;
+  text-align: start;
+}
+
+.eye-exam-benefits-rule {
+  flex: 1 1 auto;
+  height: 1px;
+  min-width: 2.5rem;
+  background: linear-gradient(
+    to left,
+    rgba(212, 180, 131, 0.72),
+    rgba(212, 180, 131, 0.02)
+  );
+}
+
+html[dir="ltr"] .eye-exam-benefits-rule {
+  background: linear-gradient(
+    to right,
+    rgba(212, 180, 131, 0.72),
+    rgba(212, 180, 131, 0.02)
+  );
 }
 
 .eye-exam-benefits-list {
@@ -6829,106 +6926,93 @@ body:has(main.eye-exam-main) footer {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.92rem;
 }
 
 .eye-exam-benefits-list li {
   display: flex;
   align-items: flex-start;
-  gap: 0.55rem;
-  color: var(--ee-text);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.eye-exam-benefits-check {
-  flex-shrink: 0;
-  margin-top: 0.15rem;
-  color: var(--ee-gold);
-}
-
-.eye-exam-values-grid {
-  display: grid;
-  grid-template-columns: 1fr;
   gap: 0.7rem;
+  color: #f3f3f3;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  text-align: start;
 }
 
-@media (min-width: 640px) {
-  .eye-exam-values-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.eye-exam-value-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.55rem;
-  text-align: center;
-  padding: 1.05rem 0.85rem;
-  border-radius: 14px;
-  border: 1px solid var(--ee-line);
-  background: var(--ee-card);
-}
-
-.eye-exam-value-icon {
-  color: var(--ee-gold);
-}
-
-.eye-exam-value-card p {
-  margin: 0;
-  color: var(--ee-text);
-  font-size: 0.88rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.eye-exam-badges {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  margin-top: 0.25rem;
-}
-
-@media (min-width: 640px) {
-  .eye-exam-badges {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .eye-exam-badge {
-    flex: 1 1 0;
-  }
-}
-
-.eye-exam-badge {
+.eye-exam-check-orb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  min-height: 2.45rem;
-  padding: 0.45rem 0.75rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex-shrink: 0;
+  margin-top: 0.08rem;
   border-radius: 999px;
-  border: 1px solid var(--ee-line);
-  background: var(--ee-card);
+  border: 1px solid rgba(212, 180, 131, 0.42);
+  background: rgba(212, 180, 131, 0.12);
   color: var(--ee-gold);
+}
+
+.eye-exam-accuracy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 1.35rem 1.1rem 1.4rem;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 180, 131, 0.38);
+  background:
+    linear-gradient(180deg, rgba(28, 24, 18, 0.72) 0%, rgba(16, 18, 22, 0.94) 100%);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(232, 208, 154, 0.08);
   text-align: center;
 }
 
-.eye-exam-badge span {
-  color: rgba(245, 245, 245, 0.88);
-  font-size: 0.72rem;
-  font-weight: 600;
+.eye-exam-accuracy-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 180, 131, 0.4);
+  background: radial-gradient(circle at 35% 30%, rgba(212, 180, 131, 0.2), rgba(12, 14, 18, 0.95));
+  color: var(--ee-gold);
+}
+
+.eye-exam-accuracy-title {
+  margin: 0.15rem 0 0;
+  color: #fff;
+  font-size: clamp(1.12rem, 3.4vw, 1.32rem);
+  font-weight: 750;
   line-height: 1.3;
 }
 
-.eye-exam-blurb {
-  margin: 0.15rem auto 0;
-  max-width: 34rem;
-  text-align: center;
-  font-size: clamp(0.92rem, 2.7vw, 1.02rem);
-  line-height: 1.65;
-  color: rgba(245, 245, 245, 0.88);
+.eye-exam-accuracy-text {
+  margin: 0;
+  max-width: 22rem;
+  color: rgba(167, 173, 183, 0.95);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.eye-exam-privacy {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ee-muted);
+  text-align: start;
+}
+
+.eye-exam-privacy svg {
+  color: var(--ee-gold);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 
 .eye-exam-next-card {

@@ -432,9 +432,13 @@ const he: Dictionary = {
     features: {
       aria: "נקודות הבדיקה",
       specialists: "מומחים מוסמכים",
+      specialistsLead: "ניסיון אמין",
       duration: "רק 20–30 דקות",
+      durationLead: "הזמנה מהירה וקלה",
       equipment: "מכשירים מודרניים ומדויקים",
+      equipmentLead: "תוצאות מדויקות",
       comprehensive: "בדיקה מקיפה לכל היבטי הראייה",
+      comprehensiveLead: "חדות ראייה ובריאות העין",
     },
     benefits: {
       title: "מה מייחד את בדיקת העיניים שלנו",

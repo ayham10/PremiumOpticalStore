@@ -432,9 +432,13 @@ const ar: Dictionary = {
     features: {
       aria: "مميزات الفحص",
       specialists: "أخصائيون معتمدون",
+      specialistsLead: "خبرة موثوقة",
       duration: "20 - 30 دقيقة فقط",
+      durationLead: "حجز سريع وسهل",
       equipment: "أجهزة حديثة ودقيقة",
+      equipmentLead: "نتائج دقيقة",
       comprehensive: "فحص شامل لجميع جوانب الرؤية",
+      comprehensiveLead: "حدة النظر وصحة العين",
     },
     benefits: {
       title: "ما يميز فحص النظر لدينا",
