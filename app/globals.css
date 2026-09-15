@@ -6243,7 +6243,7 @@ html[dir="ltr"] .cl-description {
 }
 
 .cl-catalogue-block {
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 
 .cl-catalogue-title {
@@ -10267,24 +10267,51 @@ button.promo-card {
 
   .promo-page .promo-slide-hero {
     border-radius: 0 0 14px 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    direction: ltr;
+  }
+
+  .promo-page .promo-slide-hero img.promo-hero-image {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 50% !important;
+    height: 100% !important;
+    flex: 0 0 50%;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .promo-page .promo-slide-hero .promo-hero-veil {
+    display: none;
   }
 
   .promo-page .promo-slide-hero .promo-hero-copy,
   .promo-page .promo-slide-hero .promo-hero-copy.wrap {
-    inset-inline-start: auto;
-    inset-inline-end: 0;
+    position: relative;
+    inset: auto;
     left: auto;
-    right: 0;
-    width: auto;
-    max-width: min(74%, 18rem);
-    margin-inline: 0;
-    margin-inline-start: auto;
-    padding: 0.72rem 1rem 0.82rem;
+    right: auto;
+    flex: 1 1 50%;
+    width: 50%;
+    max-width: none;
+    height: auto;
+    min-height: 100%;
+    margin: 0;
+    padding: 0.72rem 0.9rem 0.82rem;
+    background: #0b0f14;
     direction: rtl;
     text-align: right;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   .promo-page .promo-hero-eyebrow {

@@ -190,16 +190,6 @@ export default function ContactLensesPage() {
           <p>{t("contactLenses.safety")}</p>
         </aside>
 
-        <div className="cl-booking-row">
-          <Link
-            href="/book?type=contact_lens_fitting"
-            className="btn btn-copper cl-book-btn"
-          >
-            <CalendarCheck2 size={18} strokeWidth={1.8} aria-hidden />
-            {t("contactLenses.bookCta")}
-          </Link>
-        </div>
-
         <section className="cl-catalogue-block" aria-labelledby="cl-catalogue-heading">
           <h2 id="cl-catalogue-heading" className="cl-catalogue-title">
             <span className="cl-catalogue-rule" aria-hidden />
