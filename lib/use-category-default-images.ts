@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useBranding } from "@/components/branding/BrandingProvider";
-import { cachedJsonFetch, peekPublicCache } from "@/lib/public-data-cache";
+import { cachedJsonFetch, peekPublicCache, setPublicCache } from "@/lib/public-data-cache";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import type { CategoryDefaultImages } from "@/lib/types";
 
@@ -13,6 +13,28 @@ type PublicSettingsPayload = {
     categoryDefaultImages?: CategoryDefaultImages;
   };
 };
+
+export function rememberCategoryDefaultImages(
+  incoming?: CategoryDefaultImages | null,
+) {
+  const merged = mergeCategoryDefaultImages(incoming);
+  if (!Object.keys(merged).length) return;
+  const existing = peekPublicCache<PublicSettingsPayload>(
+    CATEGORY_DEFAULT_IMAGES_CACHE_KEY,
+    60_000,
+    { allowStale: true },
+  );
+  setPublicCache(CATEGORY_DEFAULT_IMAGES_CACHE_KEY, {
+    ...(existing || {}),
+    settings: {
+      ...(existing?.settings || {}),
+      categoryDefaultImages: mergeCategoryDefaultImages({
+        ...existing?.settings?.categoryDefaultImages,
+        ...merged,
+      }),
+    },
+  });
+}
 
 export function useCategoryDefaultImages(): CategoryDefaultImages {
   const { settings } = useBranding();
@@ -37,6 +59,7 @@ export function useCategoryDefaultImages(): CategoryDefaultImages {
         setFetched(
           mergeCategoryDefaultImages(data.settings?.categoryDefaultImages),
         );
+        rememberCategoryDefaultImages(data.settings?.categoryDefaultImages);
       })
       .catch(() => {
         /* keep placeholder / last known defaults */

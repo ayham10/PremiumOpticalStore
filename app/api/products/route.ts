@@ -7,12 +7,22 @@ import {
   jsonError,
   pushActivity,
 } from "@/lib/api/helpers";
-import type { Product, ProductCategory, ProductStatus } from "@/lib/types";
+import {
+  mergeCategoryDefaultImages,
+  storefrontProductImages,
+} from "@/lib/product-images";
+import type {
+  CategoryDefaultImages,
+  Product,
+  ProductCategory,
+  ProductStatus,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 /** Card/list DTO — omit gallery, costs, and inventory fields. */
-function toListProduct(p: Product) {
+function toListProduct(p: Product, defaults?: CategoryDefaultImages) {
+  const images = storefrontProductImages(p, defaults);
   return {
     id: p.id,
     slug: p.slug,
@@ -23,8 +33,15 @@ function toListProduct(p: Product) {
     category: p.category,
     createdAt: p.createdAt,
     featured: p.featured,
-    images: p.images?.[0] ? [p.images[0]] : [],
+    images: images[0] ? [images[0]] : [],
     ...(p.lensType ? { lensType: p.lensType } : {}),
+  };
+}
+
+function toPublicProduct(p: Product, defaults?: CategoryDefaultImages): Product {
+  return {
+    ...p,
+    images: storefrontProductImages(p, defaults),
   };
 }
 
@@ -101,6 +118,9 @@ export async function GET(request: Request) {
     );
 
     const { data } = await getStore();
+    const defaults = mergeCategoryDefaultImages(
+      data.settings?.categoryDefaultImages,
+    );
     let products = data.products;
     let fullRecords = all;
 
@@ -131,17 +151,19 @@ export async function GET(request: Request) {
                 (p.status === "active" || p.status === "out_of_stock"),
             )
             .slice(0, 8)
-            .map(toListProduct)
+            .map((p) => toListProduct(p, defaults))
         : [];
+      const publicProduct = product ? toPublicProduct(product, defaults) : null;
       return NextResponse.json(
         {
-          product,
+          product: publicProduct,
           related,
-          products: product ? [product] : [],
+          products: publicProduct ? [publicProduct] : [],
           settings: {
             whatsapp: data.settings.whatsapp,
             currencySymbol: data.settings.currencySymbol,
             currency: data.settings.currency,
+            categoryDefaultImages: defaults,
           },
         },
         {
@@ -165,10 +187,15 @@ export async function GET(request: Request) {
     }
 
     // Admin inventory (`all=1` + session) needs full product records; public lists get cards only.
-    const payload = fullRecords ? products : products.map(toListProduct);
+    const payload = fullRecords
+      ? products
+      : products.map((p) => toListProduct(p, defaults));
 
     return NextResponse.json(
-      { products: payload },
+      {
+        products: payload,
+        ...(fullRecords ? {} : { categoryDefaultImages: defaults }),
+      },
       {
         headers: {
           "Cache-Control": "public, max-age=30, stale-while-revalidate=60",

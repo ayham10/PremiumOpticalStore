@@ -12,9 +12,12 @@ import {
   peekPublicCache,
   productSlugCacheKey,
 } from "@/lib/public-data-cache";
-import type { Product } from "@/lib/types";
+import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { productDisplayGallery } from "@/lib/product-images";
-import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
+import {
+  rememberCategoryDefaultImages,
+  useCategoryDefaultImages,
+} from "@/lib/use-category-default-images";
 
 type ProductPayload = {
   product: Product | null;
@@ -23,6 +26,7 @@ type ProductPayload = {
     whatsapp?: string;
     currencySymbol?: string;
     currency?: string;
+    categoryDefaultImages?: CategoryDefaultImages;
   };
 };
 
@@ -87,6 +91,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           setPayload(null);
           return;
         }
+        rememberCategoryDefaultImages(data.settings?.categoryDefaultImages);
         setPayload(data);
         setMissing(false);
       })

@@ -14,9 +14,12 @@ import {
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
-import type { Product } from "@/lib/types";
+import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { productDisplayImage } from "@/lib/product-images";
-import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
+import {
+  rememberCategoryDefaultImages,
+  useCategoryDefaultImages,
+} from "@/lib/use-category-default-images";
 
 function ContactLensCard({ product }: { product: Product }) {
   const { t, dict } = useLocale();
@@ -105,11 +108,15 @@ export default function ContactLensesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await cachedJsonFetch<{ products: Product[] }>(
+        const data = await cachedJsonFetch<{
+          products: Product[];
+          categoryDefaultImages?: CategoryDefaultImages;
+        }>(
           productsCacheKey(["Contact Lenses"]),
           "/api/products?category=Contact%20Lenses",
           { ttlMs: 60_000 },
         );
+        rememberCategoryDefaultImages(data.categoryDefaultImages);
         if (!cancelled) setProducts(data.products || []);
       } catch {
         if (!cancelled) setProducts([]);

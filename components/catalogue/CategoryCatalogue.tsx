@@ -22,9 +22,12 @@ import {
   peekPublicCache,
   productsCacheKey,
 } from "@/lib/public-data-cache";
-import type { Product, ProductCategory } from "@/lib/types";
+import type { CategoryDefaultImages, Product, ProductCategory } from "@/lib/types";
 import { productDisplayImage } from "@/lib/product-images";
-import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
+import {
+  rememberCategoryDefaultImages,
+  useCategoryDefaultImages,
+} from "@/lib/use-category-default-images";
 
 export type CatalogueSort = "newest" | "price-asc" | "price-desc";
 
@@ -286,11 +289,15 @@ export default function CategoryCatalogue({
 
     (async () => {
       try {
-        const data = await cachedJsonFetch<{ products: Product[] }>(
+        const data = await cachedJsonFetch<{
+          products: Product[];
+          categoryDefaultImages?: CategoryDefaultImages;
+        }>(
           cacheKey,
           url,
           { ttlMs: 60_000 },
         );
+        rememberCategoryDefaultImages(data.categoryDefaultImages);
         if (!cancelled) setProducts(data.products || []);
       } catch {
         if (!cancelled) setProducts([]);

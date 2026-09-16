@@ -1,6 +1,7 @@
 import { isPromotionActive } from "@/lib/appointments";
+import { storefrontProductImages } from "@/lib/product-images";
 import { SEED_PROMOTION_IDS, SEED_PROMOTIONS } from "@/lib/seed";
-import type { Product, Promotion } from "@/lib/types";
+import type { CategoryDefaultImages, Product, Promotion } from "@/lib/types";
 
 export type PromoSlideData = {
   promotion: Promotion;
@@ -94,11 +95,16 @@ export function productsForPromotion(
 export function buildPromoSlides(
   promotions: Promotion[],
   products: Product[],
+  defaults?: CategoryDefaultImages | null,
 ): PromoSlideData[] {
   const activePromos = publicPromotions(promotions);
 
   const activeProducts = products
     .filter((p) => p.status === "active")
+    .map((p) => ({
+      ...p,
+      images: storefrontProductImages(p, defaults),
+    }))
     .sort((a, b) => {
       const af = a.featured ? 0 : 1;
       const bf = b.featured ? 0 : 1;

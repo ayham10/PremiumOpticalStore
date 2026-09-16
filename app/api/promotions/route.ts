@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, hasPermission, newId, requireSession } from "@/lib/auth";
 import { getStore, updateStore } from "@/lib/db/store";
+import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { publicPromotions } from "@/lib/promotions";
 import {
   handleRouteError,
@@ -103,7 +104,11 @@ export async function GET(request: Request) {
 
     if (wantSlides) {
       const { buildPromoSlides } = await import("@/lib/promotions");
-      const slides = buildPromoSlides(data.promotions, data.products);
+      const slides = buildPromoSlides(
+        data.promotions,
+        data.products,
+        mergeCategoryDefaultImages(data.settings?.categoryDefaultImages),
+      );
       return NextResponse.json(
         { slides },
         {

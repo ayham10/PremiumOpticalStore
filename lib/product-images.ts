@@ -11,14 +11,18 @@ export const CATEGORY_DEFAULT_IMAGE_KEYS = [
   "Contact Lenses",
 ] as const satisfies readonly CategoryDefaultImageKey[];
 
-const CONTACT_LENS_CATEGORY_ALIASES = new Set([
-  "contact lenses",
-  "contact lens",
-  "lenses",
-  "contacts",
-  "contact-lenses",
-  "contact_lenses",
-]);
+const CATEGORY_DEFAULT_ALIASES: Record<string, CategoryDefaultImageKey> = {
+  frames: "Frames",
+  "prescription glasses": "Frames",
+  "eyeglass frames": "Frames",
+  sunglasses: "Sunglasses",
+  "contact lenses": "Contact Lenses",
+  "contact lens": "Contact Lenses",
+  lenses: "Contact Lenses",
+  contacts: "Contact Lenses",
+  "contact-lenses": "Contact Lenses",
+  contact_lenses: "Contact Lenses",
+};
 
 export function isCategoryDefaultImageKey(
   value: string,
@@ -39,8 +43,7 @@ export function resolveCategoryDefaultKey(
   for (const key of CATEGORY_DEFAULT_IMAGE_KEYS) {
     if (key.toLowerCase() === lower) return key;
   }
-  if (CONTACT_LENS_CATEGORY_ALIASES.has(lower)) return "Contact Lenses";
-  return null;
+  return CATEGORY_DEFAULT_ALIASES[lower] || null;
 }
 
 function isUsableOwnImage(value: string): boolean {
@@ -61,6 +64,20 @@ function firstOwnImage(images: string[] | undefined): string {
   return "";
 }
 
+export function productOwnImage(images?: string[] | null): string {
+  return firstOwnImage(images || undefined);
+}
+
+export function categoryDefaultForProduct(
+  product: { category?: string },
+  defaults?: CategoryDefaultImages | null,
+): string {
+  const key = resolveCategoryDefaultKey(product.category);
+  if (!key) return "";
+  const fallback = defaults?.[key]?.trim();
+  return fallback || "";
+}
+
 export function mergeCategoryDefaultImages(
   incoming?: CategoryDefaultImages | null,
 ): CategoryDefaultImages {
@@ -71,17 +88,13 @@ export function mergeCategoryDefaultImages(
     const raw = record[key];
     if (typeof raw === "string" && raw.trim()) {
       next[key] = raw.trim();
-      continue;
     }
   }
-  // Recover Contact Lenses if the store saved it under a nearby alias.
-  if (!next["Contact Lenses"]) {
-    for (const [rawKey, rawValue] of Object.entries(record)) {
-      if (typeof rawValue !== "string" || !rawValue.trim()) continue;
-      if (resolveCategoryDefaultKey(rawKey) === "Contact Lenses") {
-        next["Contact Lenses"] = rawValue.trim();
-        break;
-      }
+  for (const [rawKey, rawValue] of Object.entries(record)) {
+    if (typeof rawValue !== "string" || !rawValue.trim()) continue;
+    const mapped = resolveCategoryDefaultKey(rawKey);
+    if (mapped && !next[mapped]) {
+      next[mapped] = rawValue.trim();
     }
   }
   return next;
@@ -94,11 +107,8 @@ export function productDisplayImage(
   const own = firstOwnImage(product.images);
   if (own) return own;
 
-  const key = resolveCategoryDefaultKey(product.category);
-  if (key) {
-    const fallback = defaults?.[key]?.trim();
-    if (fallback) return fallback;
-  }
+  const fallback = categoryDefaultForProduct(product, defaults);
+  if (fallback) return fallback;
 
   return PLACEHOLDER_PRODUCT_IMAGE;
 }
@@ -113,4 +123,20 @@ export function productDisplayGallery(
   );
   if (own.length) return own.map((value) => value.trim());
   return [productDisplayImage(product, defaults)];
+}
+
+/** Storefront-only image list. Does not change the stored product record. */
+export function storefrontProductImages(
+  product: { images?: string[]; category?: string },
+  defaults?: CategoryDefaultImages | null,
+): string[] {
+  const own = (Array.isArray(product.images) ? product.images : [])
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && isUsableOwnImage(value),
+    )
+    .map((value) => value.trim());
+  if (own.length) return own;
+  const fallback = categoryDefaultForProduct(product, defaults);
+  return fallback ? [fallback] : [];
 }
