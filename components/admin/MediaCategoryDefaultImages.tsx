@@ -34,12 +34,13 @@ export default function MediaCategoryDefaultImages({
                 {url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={url} alt={`${key} default`} />
-                ) : (
-                  <span>No default image</span>
-                )}
+                ) : null}
               </div>
               <div className="admin-media-default-meta">
                 <p className="admin-media-default-name">{key}</p>
+                {!url ? (
+                  <p className="admin-media-default-empty">No default image</p>
+                ) : null}
                 {canEdit ? (
                   <div className="admin-media-default-actions">
                     <button
@@ -53,7 +54,7 @@ export default function MediaCategoryDefaultImages({
                     {url ? (
                       <button
                         type="button"
-                        className="btn btn-ghost text-[var(--danger)]"
+                        className="btn btn-ghost admin-media-default-clear"
                         onClick={() => onClear(key)}
                       >
                         <Trash2 size={12} />

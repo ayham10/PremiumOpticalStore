@@ -300,7 +300,7 @@ export default function AdminMediaPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="admin-media-page">
       <AdminPageHeader
         icon={ImageIcon}
         kicker="Library"
@@ -341,9 +341,9 @@ export default function AdminMediaPage() {
         }}
       />
 
-      <div className="admin-card flex flex-wrap gap-3 p-4">
+      <div className="admin-card admin-media-folder-bar">
         <select
-          className="select max-w-[220px]"
+          className="select admin-media-folder-select"
           value={folder}
           onChange={(e) => setFolder(e.target.value)}
         >
