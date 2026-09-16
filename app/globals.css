@@ -10088,12 +10088,12 @@ html[dir="rtl"] .promo-product-name {
   width: min(40%, 22rem);
   max-width: min(40%, 22rem);
   margin: 0;
-  padding: 1rem 1.35rem 1.2rem;
+  padding: 1rem 0.35rem 1.2rem 1.35rem;
   direction: inherit;
-  text-align: start;
+  text-align: right;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-end;
   box-sizing: border-box;
 }
 
@@ -10317,13 +10317,13 @@ button.promo-card {
     height: auto;
     min-height: 0;
     margin: 0;
-    padding: 0.35rem 0.9rem 0.7rem;
+    padding: 0.35rem 0.28rem 0.7rem 0.9rem;
     background: transparent;
     direction: inherit;
-    text-align: start;
+    text-align: right;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-end;
     justify-content: flex-end;
     gap: 0.38rem;
     box-sizing: border-box;
@@ -10337,7 +10337,7 @@ button.promo-card {
     font-weight: 650;
     letter-spacing: 0.02em;
     line-height: 1.2;
-    text-align: start;
+    text-align: right;
   }
 
   .promo-page .promo-hero-title {
@@ -10348,7 +10348,7 @@ button.promo-card {
     font-weight: 800;
     line-height: 1.05;
     letter-spacing: -0.02em;
-    text-align: start;
+    text-align: right;
   }
 
   .promo-page .promo-hero-lead {
@@ -10359,7 +10359,7 @@ button.promo-card {
     font-size: 0.875rem;
     font-weight: 550;
     line-height: 1.35;
-    text-align: start;
+    text-align: right;
   }
 
   .promo-page .promo-slide-desc {
@@ -10369,14 +10369,14 @@ button.promo-card {
     color: rgba(255, 255, 255, 0.78);
     font-size: 0.84rem;
     line-height: 1.45;
-    text-align: start;
+    text-align: right;
     -webkit-line-clamp: 3;
   }
 
   .promo-page .promo-slide-code {
     margin: 0;
     width: 100%;
-    text-align: start;
+    text-align: right;
     font-size: 0;
     line-height: 0;
     color: transparent;
@@ -10401,8 +10401,8 @@ button.promo-card {
 
   .promo-page .promo-slide-until,
   .promo-page .promo-card-until.promo-slide-until {
-    align-self: stretch;
-    justify-content: flex-start;
+    align-self: flex-end;
+    justify-content: flex-end;
     width: 100%;
     margin: 0;
     gap: 0.3rem;
