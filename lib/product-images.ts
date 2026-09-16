@@ -44,14 +44,7 @@ export function resolveCategoryDefaultKey(
 }
 
 function isUsableOwnImage(value: string): boolean {
-  const url = value.trim();
-  if (!url) return false;
-  if (url === PLACEHOLDER_PRODUCT_IMAGE) return false;
-  if (/^(undefined|null|none|#)$/i.test(url)) return false;
-  // Seed/local contact-lens files are not in /public, so they render broken
-  // and must not block the Contact Lenses category default.
-  if (/^\/images\/contact-lenses\//i.test(url)) return false;
-  return true;
+  return Boolean(value.trim());
 }
 
 function firstOwnImage(images: string[] | undefined): string {
