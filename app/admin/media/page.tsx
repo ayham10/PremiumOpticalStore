@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageIcon, Plus, Trash2, Upload } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -74,7 +74,10 @@ export default function AdminMediaPage() {
   const [uploading, setUploading] = useState(false);
   const [defaults, setDefaults] = useState<CategoryDefaultImages>({});
   const [defaultFor, setDefaultFor] = useState<"" | CategoryDefaultImageKey>("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState("");
   const uploadInputEl = useRef<HTMLInputElement | null>(null);
+  const pendingPreviewRef = useRef("");
   const canAssignDefaults = hasPermission(role, "settings");
 
   const load = useCallback(async () => {
@@ -111,11 +114,30 @@ export default function AdminMediaPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    return () => {
+      if (pendingPreviewRef.current) {
+        URL.revokeObjectURL(pendingPreviewRef.current);
+      }
+    };
+  }, []);
+
+  function clearPendingFile() {
+    if (pendingPreviewRef.current) {
+      URL.revokeObjectURL(pendingPreviewRef.current);
+      pendingPreviewRef.current = "";
+    }
+    setPendingFile(null);
+    setPendingPreview("");
+    if (uploadInputEl.current) uploadInputEl.current.value = "";
+  }
+
   function resetAddForm() {
     setUrl("");
     setAlt("");
     setDefaultFor("");
     setType("image");
+    clearPendingFile();
   }
 
   async function saveCategoryDefault(
@@ -154,8 +176,11 @@ export default function AdminMediaPage() {
     return items.filter((m) => m.folder === folder);
   }, [items, folder]);
 
-  async function addByUrl(e: FormEvent) {
-    e.preventDefault();
+  async function addByUrl() {
+    if (!url.trim()) {
+      setMessage("Paste a Media URL, or choose a file and click Upload");
+      return;
+    }
     setSaving(true);
     setMessage("");
     try {
@@ -164,7 +189,7 @@ export default function AdminMediaPage() {
         {
           method: "POST",
           body: JSON.stringify({
-            url,
+            url: url.trim(),
             alt: alt || undefined,
             folder: newFolder,
             type,
@@ -191,7 +216,47 @@ export default function AdminMediaPage() {
     }
   }
 
-  async function onUpload(file: File) {
+  function onSelectFile(file: File) {
+    const allowed =
+      type === "video" ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
+    const mime = fileMime(file);
+    if (!allowed.has(mime)) {
+      setMessage(
+        type === "video"
+          ? "Use MP4 or WebM video only"
+          : "Use JPG, PNG, or WebP only",
+      );
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
+      return;
+    }
+    if (file.size <= 0) {
+      setMessage("File is empty");
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setMessage("File exceeds 12 MB limit");
+      if (uploadInputEl.current) uploadInputEl.current.value = "";
+      return;
+    }
+
+    setMessage("");
+    clearPendingFile();
+    setPendingFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    pendingPreviewRef.current = previewUrl;
+    setPendingPreview(previewUrl);
+    if (!alt.trim()) {
+      setAlt(file.name.replace(/\.[^.]+$/, ""));
+    }
+  }
+
+  async function onUpload() {
+    if (!pendingFile) {
+      setMessage("Choose a file first");
+      return;
+    }
+    const file = pendingFile;
     setUploading(true);
     setMessage("");
 
@@ -205,19 +270,16 @@ export default function AdminMediaPage() {
           : "Use JPG, PNG, or WebP only",
       );
       setUploading(false);
-      if (uploadInputEl.current) uploadInputEl.current.value = "";
       return;
     }
     if (file.size <= 0) {
       setMessage("File is empty");
       setUploading(false);
-      if (uploadInputEl.current) uploadInputEl.current.value = "";
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
       setMessage("File exceeds 12 MB limit");
       setUploading(false);
-      if (uploadInputEl.current) uploadInputEl.current.value = "";
       return;
     }
 
@@ -277,7 +339,6 @@ export default function AdminMediaPage() {
       setMessage(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (uploadInputEl.current) uploadInputEl.current.value = "";
     }
   }
 
@@ -312,6 +373,7 @@ export default function AdminMediaPage() {
             className="btn btn-accent"
             onClick={() => {
               resetAddForm();
+              setMessage("");
               setModalOpen(true);
             }}
           >
@@ -324,6 +386,8 @@ export default function AdminMediaPage() {
         defaults={defaults}
         canEdit={canAssignDefaults}
         onChange={(key) => {
+          resetAddForm();
+          setMessage("");
           setType("image");
           setDefaultFor(key);
           setModalOpen(true);
@@ -356,7 +420,7 @@ export default function AdminMediaPage() {
         </select>
       </div>
 
-      {message ? (
+      {!modalOpen && message ? (
         <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
           {message}
         </p>
@@ -428,19 +492,68 @@ export default function AdminMediaPage() {
           resetAddForm();
         }}
       >
-        <form onSubmit={addByUrl} className="space-y-4">
-          <div>
-            <label className="label" htmlFor="m-url">
-              Media URL
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (pendingFile) {
+              void onUpload();
+              return;
+            }
+            void addByUrl();
+          }}
+          className="space-y-4"
+        >
+          {message ? (
+            <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
+              {message}
+            </p>
+          ) : null}
+          <div className="rounded-xl border border-dashed border-[var(--line-strong)] p-4 text-center">
+            {pendingFile ? (
+              <div className="mb-3 space-y-3">
+                {type === "video" && pendingPreview ? (
+                  <video
+                    src={pendingPreview}
+                    className="mx-auto max-h-40 w-full rounded-lg object-contain"
+                    muted
+                    controls
+                  />
+                ) : pendingPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pendingPreview}
+                    alt={pendingFile.name}
+                    className="mx-auto max-h-40 rounded-lg object-contain"
+                  />
+                ) : null}
+                <p className="truncate text-sm font-medium text-[var(--ink)]">
+                  {pendingFile.name}
+                </p>
+              </div>
+            ) : null}
+            <label className="btn btn-ghost cursor-pointer">
+              <Upload size={16} />
+              {pendingFile ? "Change file" : "Upload file"}
+              <input
+                ref={uploadInputEl}
+                type="file"
+                accept={
+                  type === "video"
+                    ? "video/mp4,video/webm"
+                    : "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                }
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onSelectFile(file);
+                }}
+              />
             </label>
-            <input
-              id="m-url"
-              className="input"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://…"
-              required
-            />
+            <p className="mt-2 text-xs text-[var(--slate)]">
+              Selects a local file only. Set Folder, Alt text, and Default image
+              for below, then click Upload.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="m-alt">
@@ -485,6 +598,14 @@ export default function AdminMediaPage() {
                   const next = e.target.value as "image" | "video";
                   setType(next);
                   if (next === "video") setDefaultFor("");
+                  if (pendingFile) {
+                    const mime = fileMime(pendingFile);
+                    const allowed =
+                      next === "video"
+                        ? ALLOWED_VIDEO_TYPES
+                        : ALLOWED_IMAGE_TYPES;
+                    if (!allowed.has(mime)) clearPendingFile();
+                  }
                 }}
               >
                 <option value="image">Image</option>
@@ -520,30 +641,6 @@ export default function AdminMediaPage() {
               </p>
             </div>
           ) : null}
-          <div className="rounded-xl border border-dashed border-[var(--line-strong)] p-4 text-center">
-            <label className="btn btn-ghost cursor-pointer">
-              <Upload size={16} />
-              {uploading ? "Uploading…" : "Upload file"}
-              <input
-                ref={uploadInputEl}
-                type="file"
-                accept={
-                  type === "video"
-                    ? "video/mp4,video/webm"
-                    : "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                }
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void onUpload(file);
-                }}
-              />
-            </label>
-            <p className="mt-2 text-xs text-[var(--slate)]">
-              Uses /api/storage/upload when available; otherwise paste a URL.
-            </p>
-          </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -555,9 +652,38 @@ export default function AdminMediaPage() {
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-accent" disabled={saving}>
-              {saving ? "Saving…" : "Add by URL"}
+            <button
+              type="button"
+              className="btn btn-accent"
+              disabled={uploading || saving || !pendingFile}
+              onClick={() => void onUpload()}
+            >
+              {uploading ? "Uploading…" : "Upload"}
             </button>
+          </div>
+          <div className="space-y-3 border-t border-[var(--line)] pt-4">
+            <div>
+              <label className="label" htmlFor="m-url">
+                Media URL
+              </label>
+              <input
+                id="m-url"
+                className="input"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={saving || uploading || !url.trim()}
+                onClick={() => void addByUrl()}
+              >
+                {saving ? "Saving…" : "Add by URL"}
+              </button>
+            </div>
           </div>
         </form>
       </AdminModal>
