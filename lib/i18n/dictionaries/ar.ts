@@ -270,6 +270,10 @@ const ar: Dictionary = {
       Accessories: "إكسسوارات",
       "Cleaning Products": "منتجات تنظيف",
     },
+    pagination: "صفحات المنتجات",
+    pagePrev: "الصفحة السابقة",
+    pageNext: "الصفحة التالية",
+    page: "صفحة {page}",
   },
   offersPage: {
     title: "العروض",

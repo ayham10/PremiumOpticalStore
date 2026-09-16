@@ -9,6 +9,7 @@ import {
   sortProducts,
   type CatalogueSort,
 } from "@/components/catalogue/CategoryCatalogue";
+import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import {
   CatalogueFilterChips,
   type CatalogueFilterKey,
@@ -138,11 +139,11 @@ function ShopContent() {
         ) : filtered.length === 0 ? (
           <p className="frames-empty">{t("shop.empty")}</p>
         ) : (
-          <div className="frames-product-grid">
-            {filtered.map((product) => (
-              <CatalogueProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <CataloguePagedList
+            items={filtered}
+            resetKey={`${filter}:${sort}`}
+            renderItem={(product) => <CatalogueProductCard product={product} />}
+          />
         )}
       </section>
     </div>

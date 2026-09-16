@@ -6155,6 +6155,73 @@ html[dir="rtl"] .catalogue-sort-select {
   }
 }
 
+.catalogue-paged-list {
+  scroll-margin-top: calc(5.25rem + env(safe-area-inset-top, 0px));
+}
+
+.catalogue-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1.35rem;
+}
+
+.catalogue-pagination-pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  direction: ltr;
+}
+
+.catalogue-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.35rem;
+  height: 2.35rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: #f5f5f5;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.catalogue-pagination-btn:hover:not(:disabled) {
+  border-color: rgba(212, 175, 106, 0.45);
+}
+
+.catalogue-pagination-btn.is-active {
+  border-color: #d4af6a;
+  color: #d4af6a;
+}
+
+.catalogue-pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.catalogue-pagination-ellipsis {
+  min-width: 1.1rem;
+  color: rgba(212, 175, 106, 0.7);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+html[dir="rtl"] .catalogue-pagination-arrow svg {
+  transform: scaleX(-1);
+}
+
 /* Catalog product cards — premium metallic gold frame (all listings) */
 .frames-product-card,
 .product-related-card,

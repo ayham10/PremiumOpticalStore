@@ -15,6 +15,7 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
+import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import { productDisplayImage } from "@/lib/product-images";
 import {
   rememberCategoryDefaultImages,
@@ -215,11 +216,12 @@ export default function ContactLensesPage() {
           ) : items.length === 0 ? (
             <p className="frames-empty">{t("shop.empty")}</p>
           ) : (
-            <div className="frames-product-grid contact-lens-grid">
-              {items.map((product) => (
-                <ContactLensCard key={product.id} product={product} />
-              ))}
-            </div>
+            <CataloguePagedList
+              items={items}
+              resetKey="contact-lenses"
+              gridClassName="frames-product-grid contact-lens-grid"
+              renderItem={(product) => <ContactLensCard product={product} />}
+            />
           )}
         </section>
       </div>

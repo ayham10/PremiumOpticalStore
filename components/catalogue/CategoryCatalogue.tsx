@@ -13,6 +13,7 @@ import {
   CatalogueFilterNav,
   type CatalogueFilterKey,
 } from "@/components/catalogue/CatalogueFilters";
+import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -387,11 +388,11 @@ export default function CategoryCatalogue({
         ) : items.length === 0 ? (
           <p className="frames-empty">{t("shop.empty")}</p>
         ) : (
-          <div className="frames-product-grid">
-            {items.map((product) => (
-              <CatalogueProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <CataloguePagedList
+            items={items}
+            resetKey={sort}
+            renderItem={(product) => <CatalogueProductCard product={product} />}
+          />
         )}
       </section>
     </div>

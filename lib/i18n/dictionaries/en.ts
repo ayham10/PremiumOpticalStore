@@ -63,6 +63,10 @@ export type Dictionary = {
     sortPriceAsc: string;
     sortPriceDesc: string;
     categories: Record<string, string>;
+    pagination: string;
+    pagePrev: string;
+    pageNext: string;
+    page: string;
   };
   offersPage: {
     title: string;
@@ -631,6 +635,10 @@ const en: Dictionary = {
       Accessories: "Accessories",
       "Cleaning Products": "Cleaning Products",
     },
+    pagination: "Product pages",
+    pagePrev: "Previous page",
+    pageNext: "Next page",
+    page: "Page {page}",
   },
   offersPage: {
     title: "Promotions",

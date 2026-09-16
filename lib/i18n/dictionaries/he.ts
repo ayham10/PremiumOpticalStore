@@ -270,6 +270,10 @@ const he: Dictionary = {
       Accessories: "אביזרים",
       "Cleaning Products": "מוצרי ניקוי",
     },
+    pagination: "עמודי מוצרים",
+    pagePrev: "העמוד הקודם",
+    pageNext: "העמוד הבא",
+    page: "עמוד {page}",
   },
   offersPage: {
     title: "מבצעים",
