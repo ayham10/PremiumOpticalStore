@@ -4,9 +4,20 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { ImageIcon, Plus, Trash2, Upload } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import MediaCategoryDefaultImages from "@/components/admin/MediaCategoryDefaultImages";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
-import type { AdminSession, MediaItem } from "@/lib/types";
+import {
+  isCategoryDefaultImageKey,
+  mergeCategoryDefaultImages,
+} from "@/lib/product-images";
+import { invalidatePublicCache } from "@/lib/public-data-cache";
+import type {
+  AdminSession,
+  CategoryDefaultImageKey,
+  CategoryDefaultImages,
+  MediaItem,
+} from "@/lib/types";
 
 const FOLDERS: MediaItem["folder"][] = [
   "gallery",
@@ -61,19 +72,30 @@ export default function AdminMediaPage() {
   const [type, setType] = useState<"image" | "video">("image");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [defaults, setDefaults] = useState<CategoryDefaultImages>({});
+  const [defaultFor, setDefaultFor] = useState<"" | CategoryDefaultImageKey>("");
   const uploadInputEl = useRef<HTMLInputElement | null>(null);
+  const canAssignDefaults = hasPermission(role, "settings");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [data, me] = await Promise.all([
+      const [data, me, settingsPayload] = await Promise.all([
         apiFetch<unknown>("/api/media"),
         apiFetch<{ user: AdminSession } | AdminSession>("/api/auth/me").catch(
           () => null
         ),
+        apiFetch<{ settings?: { categoryDefaultImages?: CategoryDefaultImages } }>(
+          "/api/settings",
+        ).catch(() => null),
       ]);
       setItems(unwrapList<MediaItem>(data, ["media", "items", "data"]));
+      setDefaults(
+        mergeCategoryDefaultImages(
+          settingsPayload?.settings?.categoryDefaultImages,
+        ),
+      );
       if (me) {
         const user = "user" in me ? me.user : me;
         setRole(user.role);
@@ -88,6 +110,44 @@ export default function AdminMediaPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  function resetAddForm() {
+    setUrl("");
+    setAlt("");
+    setDefaultFor("");
+    setType("image");
+  }
+
+  async function saveCategoryDefault(
+    key: CategoryDefaultImageKey,
+    imageUrl: string,
+  ) {
+    await apiFetch("/api/settings", {
+      method: "PUT",
+      body: JSON.stringify({
+        settings: {
+          categoryDefaultImages: {
+            [key]: imageUrl,
+          },
+        },
+      }),
+    });
+    setDefaults((prev) =>
+      mergeCategoryDefaultImages({
+        ...prev,
+        [key]: imageUrl,
+      }),
+    );
+    invalidatePublicCache("settings:");
+  }
+
+  async function assignDefaultIfNeeded(imageUrl: string) {
+    if (!defaultFor || type === "video") return;
+    if (!canAssignDefaults) {
+      throw new Error("You do not have permission to set category default images");
+    }
+    await saveCategoryDefault(defaultFor, imageUrl);
+  }
 
   const filtered = useMemo(() => {
     if (folder === "all") return items;
@@ -116,10 +176,14 @@ export default function AdminMediaPage() {
           ? created.media
           : (created as MediaItem);
       setItems((prev) => [row, ...prev]);
+      await assignDefaultIfNeeded(row.url);
       setModalOpen(false);
-      setUrl("");
-      setAlt("");
-      setMessage("Media added");
+      resetAddForm();
+      setMessage(
+        defaultFor
+          ? `Media added and set as ${defaultFor} default`
+          : "Media added",
+      );
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Add failed");
     } finally {
@@ -175,8 +239,10 @@ export default function AdminMediaPage() {
       if (!res.ok) {
         throw new Error(data.error || "Upload failed");
       }
+      let addedUrl = "";
       if (data.media) {
         setItems((prev) => [data.media!, ...prev]);
+        addedUrl = data.media.url;
       } else if (data.url) {
         const created = await apiFetch<MediaItem | { media: MediaItem }>(
           "/api/media",
@@ -195,13 +261,18 @@ export default function AdminMediaPage() {
             ? created.media
             : (created as MediaItem);
         setItems((prev) => [row, ...prev]);
+        addedUrl = row.url;
       } else {
         throw new Error("Upload succeeded but no media record was returned");
       }
-      setMessage("Upload complete");
+      await assignDefaultIfNeeded(addedUrl);
+      setMessage(
+        defaultFor
+          ? `Upload complete and set as ${defaultFor} default`
+          : "Upload complete",
+      );
       setModalOpen(false);
-      setUrl("");
-      setAlt("");
+      resetAddForm();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -239,11 +310,35 @@ export default function AdminMediaPage() {
           <button
             type="button"
             className="btn btn-accent"
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              resetAddForm();
+              setModalOpen(true);
+            }}
           >
             <Plus size={16} /> Add media
           </button>
         }
+      />
+
+      <MediaCategoryDefaultImages
+        defaults={defaults}
+        canEdit={canAssignDefaults}
+        onChange={(key) => {
+          setType("image");
+          setDefaultFor(key);
+          setModalOpen(true);
+        }}
+        onClear={async (key) => {
+          setMessage("");
+          try {
+            await saveCategoryDefault(key, "");
+            setMessage(`${key} default cleared`);
+          } catch (err) {
+            setMessage(
+              err instanceof Error ? err.message : "Could not clear default",
+            );
+          }
+        }}
       />
 
       <div className="admin-card flex flex-wrap gap-3 p-4">
@@ -323,7 +418,10 @@ export default function AdminMediaPage() {
       <AdminModal
         open={modalOpen}
         title="Add media"
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          resetAddForm();
+        }}
       >
         <form onSubmit={addByUrl} className="space-y-4">
           <div>
@@ -378,13 +476,45 @@ export default function AdminMediaPage() {
                 id="m-type"
                 className="select"
                 value={type}
-                onChange={(e) => setType(e.target.value as "image" | "video")}
+                onChange={(e) => {
+                  const next = e.target.value as "image" | "video";
+                  setType(next);
+                  if (next === "video") setDefaultFor("");
+                }}
               >
                 <option value="image">Image</option>
                 <option value="video">Video</option>
               </select>
             </div>
           </div>
+          {type === "image" ? (
+            <div>
+              <label className="label" htmlFor="m-default-for">
+                Default image for
+              </label>
+              <select
+                id="m-default-for"
+                className="select"
+                value={defaultFor}
+                disabled={!canAssignDefaults}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDefaultFor(
+                    isCategoryDefaultImageKey(value) ? value : "",
+                  );
+                }}
+              >
+                <option value="">None</option>
+                <option value="Frames">Frames</option>
+                <option value="Sunglasses">Sunglasses</option>
+                <option value="Contact Lenses">Contact Lenses</option>
+              </select>
+              <p className="mt-1.5 text-xs text-[var(--slate)]">
+                Optional. Does not change Folder. Used only when a product in
+                that category has no image of its own.
+              </p>
+            </div>
+          ) : null}
           <div className="rounded-xl border border-dashed border-[var(--line-strong)] p-4 text-center">
             <label className="btn btn-ghost cursor-pointer">
               <Upload size={16} />
@@ -413,7 +543,10 @@ export default function AdminMediaPage() {
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false);
+                resetAddForm();
+              }}
             >
               Cancel
             </button>
