@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { cachedJsonFetch, peekPublicCache } from "@/lib/public-data-cache";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import type { CategoryDefaultImages } from "@/lib/types";
@@ -14,12 +15,13 @@ type PublicSettingsPayload = {
 };
 
 export function useCategoryDefaultImages(): CategoryDefaultImages {
+  const { settings } = useBranding();
   const cached = peekPublicCache<PublicSettingsPayload>(
     CATEGORY_DEFAULT_IMAGES_CACHE_KEY,
     60_000,
     { allowStale: true },
   );
-  const [defaults, setDefaults] = useState<CategoryDefaultImages>(() =>
+  const [fetched, setFetched] = useState<CategoryDefaultImages>(() =>
     mergeCategoryDefaultImages(cached?.settings?.categoryDefaultImages),
   );
 
@@ -32,7 +34,7 @@ export function useCategoryDefaultImages(): CategoryDefaultImages {
     )
       .then((data) => {
         if (cancelled) return;
-        setDefaults(
+        setFetched(
           mergeCategoryDefaultImages(data.settings?.categoryDefaultImages),
         );
       })
@@ -44,5 +46,13 @@ export function useCategoryDefaultImages(): CategoryDefaultImages {
     };
   }, []);
 
-  return defaults;
+  return useMemo(
+    () =>
+      mergeCategoryDefaultImages({
+        ...settings?.categoryDefaultImages,
+        ...cached?.settings?.categoryDefaultImages,
+        ...fetched,
+      }),
+    [settings?.categoryDefaultImages, cached, fetched],
+  );
 }

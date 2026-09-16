@@ -15,13 +15,20 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { Product } from "@/lib/types";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, PLACEHOLDER_PRODUCT_IMAGE } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 function ContactLensCard({ product }: { product: Product }) {
   const { t, dict } = useLocale();
   const defaults = useCategoryDefaultImages();
-  const image = productDisplayImage(product, defaults);
+  const resolved = productDisplayImage(product, defaults);
+  const [src, setSrc] = useState(resolved);
+
+  useEffect(() => {
+    setSrc(resolved);
+  }, [resolved]);
+
+  const image = src || resolved;
   const typeLabel = product.lensType
     ? dict.product.attrs[product.lensType] || product.lensType
     : null;
@@ -40,6 +47,14 @@ function ContactLensCard({ product }: { product: Product }) {
           sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
           className="object-contain"
           loading="lazy"
+          unoptimized={image.endsWith(".svg")}
+          onError={() => {
+            const fallback =
+              defaults["Contact Lenses"]?.trim() || PLACEHOLDER_PRODUCT_IMAGE;
+            setSrc((current) =>
+              current === fallback ? PLACEHOLDER_PRODUCT_IMAGE : fallback,
+            );
+          }}
         />
       </Link>
       <div className="frames-product-body">
