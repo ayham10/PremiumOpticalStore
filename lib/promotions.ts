@@ -1,5 +1,5 @@
 import { isPromotionActive } from "@/lib/appointments";
-import { SEED_PROMOTION_IDS } from "@/lib/seed";
+import { SEED_PROMOTION_IDS, SEED_PROMOTIONS } from "@/lib/seed";
 import type { Product, Promotion } from "@/lib/types";
 
 export type PromoSlideData = {
@@ -7,20 +7,61 @@ export type PromoSlideData = {
   products: Product[];
 };
 
-const SEED_IDS = new Set<string>(SEED_PROMOTION_IDS);
+const SEED_DEMO_IDS = new Set<string>(SEED_PROMOTION_IDS);
+const SEED_DEMO_COUPONS = new Set(
+  SEED_PROMOTIONS.map((p) => (p.couponCode || "").trim().toUpperCase()).filter(
+    Boolean,
+  ),
+);
+
+function norm(value: string | undefined): string {
+  return (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
 
 /**
- * Admin-managed promotions for the public site.
- * Seed demo offers are omitted once any real Admin promotion exists.
+ * First-run catalogue demos from lib/seed.ts. Match by id, coupon, or the
+ * original title/discount pair — persisted copies may not still use promo-1/2.
+ */
+export function isSeedDemoPromotion(promo: Promotion): boolean {
+  const id = (promo.id || "").trim();
+  if (SEED_DEMO_IDS.has(id)) return true;
+
+  const coupon = (promo.couponCode || "").trim().toUpperCase();
+  if (coupon && SEED_DEMO_COUPONS.has(coupon)) return true;
+
+  const title = norm(promo.title);
+  const discount = norm(promo.discount);
+  if (SEED_PROMOTIONS.some((seed) => {
+    const seedTitle = norm(seed.title);
+    const seedDiscount = norm(seed.discount);
+    return Boolean(seedTitle) && title === seedTitle && discount === seedDiscount;
+  })) {
+    return true;
+  }
+
+  if (
+    title.includes("complimentary lens upgrade") &&
+    (discount.includes("ar coating") || discount.includes("free ar"))
+  ) {
+    return true;
+  }
+  if (
+    title.includes("second pair") &&
+    (discount.includes("50%") || title.includes("half price"))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Public catalogue offers = Admin promotions that are active and in date.
+ * Built-in seed demos are never published.
  */
 export function publicPromotions(promotions: Promotion[]): Promotion[] {
   const list = Array.isArray(promotions) ? promotions : [];
-  const hasAdminPromo = list.some((p) => !SEED_IDS.has(p.id));
-  const source = hasAdminPromo
-    ? list.filter((p) => !SEED_IDS.has(p.id))
-    : list;
-
-  return source
+  return list
+    .filter((p) => !isSeedDemoPromotion(p))
     .filter((p) => isPromotionActive(p.startDate, p.endDate, p.active))
     .sort((a, b) => {
       if (a.priority !== b.priority) return a.priority - b.priority;

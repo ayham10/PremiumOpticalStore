@@ -622,7 +622,7 @@ export function createSeedData(): AppData {
         email: "lab@horizonlens.com",
       },
     ],
-    promotions: SEED_PROMOTIONS,
+    promotions: [],
     media: GALLERY_IMAGES.map((url, i) => ({
       id: `media-${i + 1}`,
       url,

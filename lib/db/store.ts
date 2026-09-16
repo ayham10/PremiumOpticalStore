@@ -203,6 +203,7 @@ async function readStoreUncached(): Promise<{
         return { data: normalizeData(remote), storage: "supabase" };
       }
       const seed = createSeedData();
+      seed.promotions = [];
       await writeSupabase(seed);
       return { data: seed, storage: "supabase" };
     } catch (error) {
