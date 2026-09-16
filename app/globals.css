@@ -10291,7 +10291,8 @@ button.promo-card {
     height: 100% !important;
     flex: none;
     object-fit: cover !important;
-    object-position: center center;
+    /* Prefer the upper still-life so the top of the photo is not cropped. */
+    object-position: center 18%;
   }
 
   .promo-page .promo-slide-hero .promo-hero-veil {
