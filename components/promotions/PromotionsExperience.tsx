@@ -295,7 +295,7 @@ export default function PromotionsExperience({
         </section>
       ) : null}
 
-      {slides.length > 1 ? (
+      {slides.length > 0 ? (
         <section className="promo-section wrap">
           <header className="promo-section-head">
             <span className="promo-section-rule" aria-hidden />

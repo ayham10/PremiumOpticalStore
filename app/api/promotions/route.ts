@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { isPromotionActive } from "@/lib/appointments";
 import { getSession, hasPermission, newId, requireSession } from "@/lib/auth";
 import { getStore, updateStore } from "@/lib/db/store";
+import { publicPromotions } from "@/lib/promotions";
 import {
   handleRouteError,
   jsonError,
@@ -121,13 +121,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ promotions });
     }
 
-    const promotions = data.promotions
-      .filter(
-        (p) =>
-          p.homepageVisible &&
-          isPromotionActive(p.startDate, p.endDate, p.active)
-      )
-      .sort((a, b) => a.priority - b.priority);
+    const promotions = publicPromotions(data.promotions);
 
     return NextResponse.json(
       { promotions },

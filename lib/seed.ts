@@ -496,6 +496,9 @@ export const SEED_PRODUCTS: Product[] = [
   },
 ];
 
+/** First-run demo offers. Public pages hide these once Admin has created real promotions. */
+export const SEED_PROMOTION_IDS = ["promo-1", "promo-2"] as const;
+
 export const SEED_PROMOTIONS: Promotion[] = [
   {
     id: "promo-1",

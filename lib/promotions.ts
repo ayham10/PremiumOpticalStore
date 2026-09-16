@@ -1,10 +1,32 @@
 import { isPromotionActive } from "@/lib/appointments";
+import { SEED_PROMOTION_IDS } from "@/lib/seed";
 import type { Product, Promotion } from "@/lib/types";
 
 export type PromoSlideData = {
   promotion: Promotion;
   products: Product[];
 };
+
+const SEED_IDS = new Set<string>(SEED_PROMOTION_IDS);
+
+/**
+ * Admin-managed promotions for the public site.
+ * Seed demo offers are omitted once any real Admin promotion exists.
+ */
+export function publicPromotions(promotions: Promotion[]): Promotion[] {
+  const list = Array.isArray(promotions) ? promotions : [];
+  const hasAdminPromo = list.some((p) => !SEED_IDS.has(p.id));
+  const source = hasAdminPromo
+    ? list.filter((p) => !SEED_IDS.has(p.id))
+    : list;
+
+  return source
+    .filter((p) => isPromotionActive(p.startDate, p.endDate, p.active))
+    .sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.startDate.localeCompare(b.startDate);
+    });
+}
 
 /** Filter catalogue products for a promotion's scope. */
 export function productsForPromotion(
@@ -32,12 +54,7 @@ export function buildPromoSlides(
   promotions: Promotion[],
   products: Product[],
 ): PromoSlideData[] {
-  const activePromos = promotions
-    .filter((p) => isPromotionActive(p.startDate, p.endDate, p.active))
-    .sort((a, b) => {
-      if (a.priority !== b.priority) return a.priority - b.priority;
-      return a.startDate.localeCompare(b.startDate);
-    });
+  const activePromos = publicPromotions(promotions);
 
   const activeProducts = products
     .filter((p) => p.status === "active")
