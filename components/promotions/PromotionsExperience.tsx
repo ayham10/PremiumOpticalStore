@@ -25,6 +25,7 @@ import { formatPrice } from "@/lib/format";
 import type { Product, Promotion } from "@/lib/types";
 
 const FALLBACK_HERO = "/images/store-hero.jpg";
+const PROMO_HERO = "/images/promotions-hero.png";
 const AUTO_MS = 3500;
 
 export type PromoSlide = {
@@ -205,7 +206,7 @@ export default function PromotionsExperience({
             >
               <div className="promo-slide-hero">
                 <Image
-                  src={slide.promotion.image || FALLBACK_HERO}
+                  src={PROMO_HERO}
                   alt=""
                   fill
                   priority={slide.promotion.id === promo.id}

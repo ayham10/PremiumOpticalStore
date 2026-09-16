@@ -9662,12 +9662,13 @@ a.store-filter-chip {
 
 .promo-hero-image {
   object-fit: cover;
-  object-position: 74% center;
+  /* Keep product + % on the left and dark negative space on the right. */
+  object-position: center center;
 }
 
 @media (min-width: 768px) {
   .promo-hero-image {
-    object-position: 58% center;
+    object-position: center center;
   }
 }
 
@@ -9676,20 +9677,13 @@ a.store-filter-chip {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background:
-    linear-gradient(
-      to inline-end,
-      rgba(7, 10, 13, 0.88) 0%,
-      rgba(7, 10, 13, 0.58) 32%,
-      rgba(7, 10, 13, 0.22) 58%,
-      rgba(7, 10, 13, 0.08) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(7, 10, 13, 0.22) 0%,
-      rgba(7, 10, 13, 0.12) 42%,
-      rgba(7, 10, 13, 0.72) 100%
-    );
+  background: linear-gradient(
+    to left,
+    rgba(7, 10, 13, 0.42) 0%,
+    rgba(7, 10, 13, 0.22) 22%,
+    rgba(7, 10, 13, 0.06) 42%,
+    transparent 62%
+  );
 }
 
 .promo-hero-copy {
@@ -10084,6 +10078,25 @@ html[dir="rtl"] .promo-product-name {
   border-radius: 0 0 16px 16px;
 }
 
+.promo-page .promo-slide-hero .promo-hero-copy,
+.promo-page .promo-slide-hero .promo-hero-copy.wrap {
+  position: absolute;
+  inset: auto 0 0 auto;
+  left: auto;
+  right: 0;
+  z-index: 2;
+  width: min(40%, 22rem);
+  max-width: min(40%, 22rem);
+  margin: 0;
+  padding: 1rem 1.35rem 1.2rem;
+  direction: rtl;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  box-sizing: border-box;
+}
+
 @media (min-width: 768px) {
   .promo-slide-hero {
     aspect-ratio: 21 / 9;
@@ -10267,46 +10280,44 @@ button.promo-card {
 
   .promo-page .promo-slide-hero {
     border-radius: 0 0 14px 14px;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
+    display: block;
     direction: ltr;
   }
 
   .promo-page .promo-slide-hero img.promo-hero-image {
-    position: relative !important;
-    inset: auto !important;
-    top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: auto !important;
-    width: 50% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
     height: 100% !important;
-    flex: 0 0 50%;
-    align-self: stretch;
-    min-height: 100%;
+    flex: none;
     object-fit: cover !important;
-    object-position: center 38%;
+    object-position: center center;
   }
 
   .promo-page .promo-slide-hero .promo-hero-veil {
-    display: none;
+    display: block;
+    background: linear-gradient(
+      to left,
+      rgba(7, 10, 13, 0.48) 0%,
+      rgba(7, 10, 13, 0.22) 26%,
+      rgba(7, 10, 13, 0.05) 46%,
+      transparent 64%
+    );
   }
 
   .promo-page .promo-slide-hero .promo-hero-copy,
   .promo-page .promo-slide-hero .promo-hero-copy.wrap {
-    position: relative;
-    inset: auto;
+    position: absolute;
+    inset: auto 0 0 auto;
     left: auto;
-    right: auto;
-    flex: 1 1 50%;
-    width: 50%;
-    max-width: none;
+    right: 0;
+    width: min(44%, 16.5rem);
+    max-width: min(44%, 16.5rem);
     height: auto;
-    min-height: 100%;
+    min-height: 0;
     margin: 0;
     padding: 0.72rem 0.9rem 0.82rem;
-    background: #0b0f14;
+    background: transparent;
     direction: rtl;
     text-align: right;
     display: flex;
