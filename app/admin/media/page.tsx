@@ -370,40 +370,45 @@ export default function AdminMediaPage() {
       {loading ? (
         <p className="text-[var(--slate)]">Loading media…</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="admin-media-library-grid">
           {filtered.map((m) => (
-            <article key={m.id} className="admin-card overflow-hidden">
+            <article key={m.id} className="admin-card admin-media-library-card">
               <button
                 type="button"
-                className="block w-full aspect-[4/3] bg-[var(--mist)]"
+                className="admin-media-library-thumb"
                 onClick={() => setPreview(m)}
               >
                 {m.type === "video" ? (
-                  <video src={m.url} className="h-full w-full object-cover" muted />
+                  <video src={m.url} muted />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.url}
-                    alt={m.alt || "Media"}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={m.url} alt={m.alt || "Media"} />
                 )}
               </button>
-              <div className="flex items-start justify-between gap-2 p-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--ink)]">
+              <div className="admin-media-library-meta">
+                <div className="admin-media-library-copy">
+                  <p className="admin-media-library-title">
                     {m.alt || m.url}
                   </p>
-                  <p className="text-xs text-[var(--slate)]">{m.folder}</p>
+                  <p className="admin-media-library-sub">
+                    {m.folder}
+                    {m.createdAt
+                      ? ` · ${new Date(m.createdAt).toLocaleDateString(undefined, {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}`
+                      : ""}
+                  </p>
                 </div>
                 {hasPermission(role, "delete") ? (
                   <button
                     type="button"
-                    className="text-[var(--danger)]"
+                    className="admin-media-library-delete"
                     onClick={() => void onDelete(m)}
                     aria-label="Delete"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={13} />
                   </button>
                 ) : null}
               </div>

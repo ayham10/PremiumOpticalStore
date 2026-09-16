@@ -18,54 +18,45 @@ export default function MediaCategoryDefaultImages({
   onClear,
 }: Props) {
   return (
-    <section className="admin-card space-y-4 p-5">
+    <section className="admin-card admin-media-defaults">
       <div>
         <h2 className="admin-section-title">Default Product Images</h2>
-        <p className="mt-1 text-sm text-[var(--slate)]">
+        <p className="admin-media-defaults-hint">
           Used only when a product in that category has no photo of its own.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="admin-media-defaults-grid">
         {CATEGORY_DEFAULT_IMAGE_KEYS.map((key) => {
           const url = defaults[key] || "";
           return (
-            <article
-              key={key}
-              className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--admin-elevated)]"
-            >
-              <div className="relative aspect-[4/3] bg-[var(--mist)]">
+            <article key={key} className="admin-media-default-card">
+              <div className="admin-media-default-preview">
                 {url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={url}
-                    alt={`${key} default`}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={url} alt={`${key} default`} />
                 ) : (
-                  <div className="grid h-full place-items-center px-3 text-center text-xs text-[var(--slate)]">
-                    No default image
-                  </div>
+                  <span>No default image</span>
                 )}
               </div>
-              <div className="space-y-2 p-3">
-                <p className="text-sm font-semibold text-[var(--ink)]">{key}</p>
+              <div className="admin-media-default-meta">
+                <p className="admin-media-default-name">{key}</p>
                 {canEdit ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="admin-media-default-actions">
                     <button
                       type="button"
-                      className="btn btn-ghost !min-h-9 !px-3 !text-xs"
+                      className="btn btn-ghost"
                       onClick={() => onChange(key)}
                     >
-                      <ImagePlus size={14} />
+                      <ImagePlus size={12} />
                       Change
                     </button>
                     {url ? (
                       <button
                         type="button"
-                        className="btn btn-ghost !min-h-9 !px-3 !text-xs text-[var(--danger)]"
+                        className="btn btn-ghost text-[var(--danger)]"
                         onClick={() => onClear(key)}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                         Clear
                       </button>
                     ) : null}
