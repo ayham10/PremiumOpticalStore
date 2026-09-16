@@ -11,6 +11,12 @@ export const CATEGORY_DEFAULT_IMAGE_KEYS = [
   "Contact Lenses",
 ] as const satisfies readonly CategoryDefaultImageKey[];
 
+export function isCategoryDefaultImageKey(
+  value: string,
+): value is CategoryDefaultImageKey {
+  return (CATEGORY_DEFAULT_IMAGE_KEYS as readonly string[]).includes(value);
+}
+
 function firstOwnImage(images: string[] | undefined): string {
   if (!Array.isArray(images)) return "";
   for (const value of images) {
