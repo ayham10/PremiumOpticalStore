@@ -508,9 +508,9 @@ export default function AdminMediaPage() {
               {message}
             </p>
           ) : null}
-          <div className="rounded-xl border border-dashed border-[var(--line-strong)] p-4 text-center">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[var(--line-strong)] p-4 text-center">
             {pendingFile ? (
-              <div className="mb-3 space-y-3">
+              <div className="flex w-full flex-col items-center gap-2">
                 {type === "video" && pendingPreview ? (
                   <video
                     src={pendingPreview}
@@ -523,10 +523,10 @@ export default function AdminMediaPage() {
                   <img
                     src={pendingPreview}
                     alt={pendingFile.name}
-                    className="mx-auto max-h-40 rounded-lg object-contain"
+                    className="block max-h-40 max-w-full rounded-lg object-contain"
                   />
                 ) : null}
-                <p className="truncate text-sm font-medium text-[var(--ink)]">
+                <p className="w-full truncate text-sm font-medium text-[var(--ink)]">
                   {pendingFile.name}
                 </p>
               </div>
@@ -543,16 +543,15 @@ export default function AdminMediaPage() {
                     : "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                 }
                 className="hidden"
-                disabled={uploading}
+                disabled={uploading || saving}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) onSelectFile(file);
                 }}
               />
             </label>
-            <p className="mt-2 text-xs text-[var(--slate)]">
-              Selects a local file only. Set Folder, Alt text, and Default image
-              for below, then click Upload.
+            <p className="w-full text-xs text-[var(--slate)]">
+              Selects a local file only. Nothing uploads until you click Upload.
             </p>
           </div>
           <div>
@@ -654,7 +653,7 @@ export default function AdminMediaPage() {
             </button>
             <button
               type="button"
-              className="btn btn-accent"
+              className="btn btn-accent disabled:cursor-not-allowed disabled:opacity-50"
               disabled={uploading || saving || !pendingFile}
               onClick={() => void onUpload()}
             >
