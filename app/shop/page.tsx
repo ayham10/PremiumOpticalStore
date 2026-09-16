@@ -108,7 +108,7 @@ function ShopContent() {
       <ScrollRestore />
       <section className="frames-hero store-hero" aria-label={t("shop.title")}>
         <Image
-          src="/images/store-hero.jpg"
+          src="/images/store-catalog-hero.jpg"
           alt=""
           fill
           priority

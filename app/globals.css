@@ -9625,8 +9625,14 @@ html[dir="rtl"] .clinic-book-title {
   }
 }
 
-.store-hero-image {
-  object-position: 72% center;
+.store-hero img {
+  object-position: 12% 52%;
+}
+
+@media (min-width: 768px) {
+  .store-hero img {
+    object-position: left 50%;
+  }
 }
 
 .store-hero-veil {
