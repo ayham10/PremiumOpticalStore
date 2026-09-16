@@ -15,10 +15,13 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { Product } from "@/lib/types";
+import { productDisplayImage } from "@/lib/product-images";
+import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 function ContactLensCard({ product }: { product: Product }) {
   const { t, dict } = useLocale();
-  const image = product.images[0] || "/images/placeholder-frame.svg";
+  const defaults = useCategoryDefaultImages();
+  const image = productDisplayImage(product, defaults);
   const typeLabel = product.lensType
     ? dict.product.attrs[product.lensType] || product.lensType
     : null;

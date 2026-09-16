@@ -23,6 +23,8 @@ import {
   productsCacheKey,
 } from "@/lib/public-data-cache";
 import type { Product, ProductCategory } from "@/lib/types";
+import { productDisplayImage } from "@/lib/product-images";
+import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 export type CatalogueSort = "newest" | "price-asc" | "price-desc";
 
@@ -40,7 +42,8 @@ export function sortProducts(items: Product[], sort: CatalogueSort): Product[] {
 
 export function CatalogueProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
-  const image = product.images[0] || "/images/placeholder-frame.svg";
+  const defaults = useCategoryDefaultImages();
+  const image = productDisplayImage(product, defaults);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {

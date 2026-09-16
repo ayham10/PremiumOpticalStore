@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { mergeBranding } from "@/lib/branding";
 import { mergeBookingMessages } from "@/lib/booking-messages";
+import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
 import { createSeedData } from "@/lib/seed";
 import type { AppData } from "@/lib/types";
@@ -152,6 +153,9 @@ function normalizeData(data: AppData): AppData {
       ...(data.settings || {}),
       branding: mergeBranding(data.settings?.branding),
       bookingMessages: mergeBookingMessages(data.settings?.bookingMessages),
+      categoryDefaultImages: mergeCategoryDefaultImages(
+        data.settings?.categoryDefaultImages,
+      ),
     },
     version: data.version || 1,
     updatedAt: data.updatedAt || new Date().toISOString(),

@@ -7,6 +7,7 @@ import {
   pushActivity,
 } from "@/lib/api/helpers";
 import { mergeBranding } from "@/lib/branding";
+import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/booking-messages";
 import { getTwilioWhatsAppPublicStatus } from "@/lib/twilio/config";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
@@ -47,6 +48,9 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
     bookingLeadDays: settings.bookingLeadDays,
     currency: settings.currency,
     currencySymbol: settings.currencySymbol,
+    categoryDefaultImages: mergeCategoryDefaultImages(
+      settings.categoryDefaultImages,
+    ),
   };
 }
 
@@ -142,6 +146,10 @@ export async function PUT(request: Request) {
             ...(patch.content?.brandSuffix || {}),
           },
         },
+        categoryDefaultImages: mergeCategoryDefaultImages({
+          ...store.settings.categoryDefaultImages,
+          ...patch.categoryDefaultImages,
+        }),
         branding: mergeBranding({
           ...store.settings.branding,
           ...(patch.branding || {}),

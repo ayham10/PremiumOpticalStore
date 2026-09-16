@@ -15,6 +15,13 @@ export type ProductCategory =
   | "Accessories"
   | "Cleaning Products";
 
+/** Categories that can have an Admin-configured default/fallback image. */
+export type CategoryDefaultImageKey = "Frames" | "Sunglasses" | "Contact Lenses";
+
+export type CategoryDefaultImages = Partial<
+  Record<CategoryDefaultImageKey, string>
+>;
+
 export type ProductStatus = "active" | "draft" | "archived" | "out_of_stock";
 
 export type ServiceType =
@@ -415,6 +422,8 @@ export interface StoreSettings {
   currencySymbol: string;
   /** Optional per-admin display name overrides (account settings) */
   adminDisplayNames?: Record<string, string>;
+  /** Fallback product photos by category when a product has no images of its own. */
+  categoryDefaultImages?: CategoryDefaultImages;
 }
 
 export interface AdminSession {

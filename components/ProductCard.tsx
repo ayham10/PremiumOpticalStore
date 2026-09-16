@@ -5,10 +5,13 @@ import Image from "next/image";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { productDisplayImage } from "@/lib/product-images";
+import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { t, dict } = useLocale();
-  const image = product.images[0] || "/images/placeholder-frame.svg";
+  const defaults = useCategoryDefaultImages();
+  const image = productDisplayImage(product, defaults);
   const categoryLabel =
     dict.shop.categories[product.category as keyof typeof dict.shop.categories] ||
     product.category;

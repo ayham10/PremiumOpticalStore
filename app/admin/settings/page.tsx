@@ -35,11 +35,14 @@ import {
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import BookingMessagesSettingsSection from "@/components/admin/BookingMessagesSettingsSection";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
+import CategoryDefaultImagesSection from "@/components/admin/CategoryDefaultImagesSection";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { minutesToTime, parseTimeToMinutes } from "@/lib/appointments";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
 import { mergeBookingMessages } from "@/lib/booking-messages";
+import { mergeCategoryDefaultImages } from "@/lib/product-images";
+import { invalidatePublicCache } from "@/lib/public-data-cache";
 import type { DayHoursPeriod, StoreSettings, WorkingHours } from "@/lib/types";
 import {
   getDayPeriods,
@@ -150,6 +153,9 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
         : EMPTY_SETTINGS.openingHours,
     ),
     bookingMessages: mergeBookingMessages(settings.bookingMessages),
+    categoryDefaultImages: mergeCategoryDefaultImages(
+      settings.categoryDefaultImages,
+    ),
   };
 }
 
@@ -342,6 +348,7 @@ function AdminSettingsPageInner() {
       );
       const next = normalizeSettings(saved);
       setForm(next);
+      invalidatePublicCache("settings:");
       setMessage(t("admin.settings.saved"));
       window.dispatchEvent(new Event("oyon:branding-saved"));
       window.dispatchEvent(new Event("oyon:availability-saved"));
@@ -421,6 +428,8 @@ function AdminSettingsPageInner() {
             <div id="branding">
               <BrandingSettingsSection value={form} onChange={setForm} />
             </div>
+
+            <CategoryDefaultImagesSection value={form} onChange={setForm} />
 
             <section className="admin-card space-y-4 p-5">
               <h2 className="admin-section-title admin-set-title">

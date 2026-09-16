@@ -23,6 +23,8 @@ import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product, Promotion } from "@/lib/types";
+import { productDisplayImage } from "@/lib/product-images";
+import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 const FALLBACK_HERO = "/images/store-hero.jpg";
 const PROMO_HERO = "/images/promotions-hero.png";
@@ -372,7 +374,8 @@ function PromoProductCard({
   promo: Promotion;
 }) {
   const { t } = useLocale();
-  const image = product.images[0] || "/images/placeholder-frame.svg";
+  const defaults = useCategoryDefaultImages();
+  const image = productDisplayImage(product, defaults);
   const original = product.sellingPrice;
   const discounted = computeDiscountedPrice(original, promo);
   const hasDiscount = discounted < original - 0.001;

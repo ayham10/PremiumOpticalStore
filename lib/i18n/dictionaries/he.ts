@@ -1087,6 +1087,9 @@ const he: Dictionary = {
       textColor: "טקסט",
       backgroundColor: "רקע",
       storeInfo: "פרטי החנות",
+      defaultProductImages: "תמונות ברירת מחדל למוצרים",
+      defaultProductImagesHint:
+        "מוצגות באתר כאשר למוצר בקטגוריה אין תמונה משלו. תמונת המוצר עצמו תמיד גוברת.",
       phone: "טלפון",
       whatsapp: "וואטסאפ",
       email: "אימייל",

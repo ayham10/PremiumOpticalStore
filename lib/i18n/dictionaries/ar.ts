@@ -1087,6 +1087,9 @@ const ar: Dictionary = {
       textColor: "لون النص",
       backgroundColor: "الخلفية",
       storeInfo: "معلومات المتجر",
+      defaultProductImages: "صور المنتجات الافتراضية",
+      defaultProductImagesHint:
+        "تظهر في الموقع عندما لا يملك المنتج في هذا التصنيف صورة خاصة. صورة المنتج نفسه لها الأولوية دائماً.",
       phone: "الهاتف",
       whatsapp: "واتساب",
       email: "البريد الإلكتروني",

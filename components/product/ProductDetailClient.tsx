@@ -13,6 +13,8 @@ import {
   productSlugCacheKey,
 } from "@/lib/public-data-cache";
 import type { Product } from "@/lib/types";
+import { productDisplayGallery } from "@/lib/product-images";
+import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 type ProductPayload = {
   product: Product | null;
@@ -52,6 +54,7 @@ function ProductSkeleton() {
 
 export default function ProductDetailClient({ slug }: { slug: string }) {
   const { t, dict } = useLocale();
+  const defaults = useCategoryDefaultImages();
   const cacheKey = productSlugCacheKey(slug);
   const cached = peekPublicCache<ProductPayload>(cacheKey);
   const [payload, setPayload] = useState<ProductPayload | null>(cached);
@@ -127,10 +130,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     `Hello Oyon, I'm interested in ${product.name} (${product.sku}).`,
   )}`;
 
-  const images =
-    product.images.length > 0
-      ? product.images
-      : ["/images/placeholder-frame.svg"];
+  const images = productDisplayGallery(product, defaults);
 
   const availabilityLabel =
     product.status === "out_of_stock"

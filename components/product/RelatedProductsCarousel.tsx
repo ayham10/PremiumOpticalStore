@@ -7,6 +7,8 @@ import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
+import { productDisplayImage } from "@/lib/product-images";
+import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 type RelatedItem = Pick<
   Product,
@@ -23,6 +25,7 @@ export default function RelatedProductsCarousel({
   relatedTitle?: string;
 }) {
   const { t, dict, rtl } = useLocale();
+  const defaults = useCategoryDefaultImages();
   const trackRef = useRef<HTMLDivElement>(null);
   const heading =
     relatedTitle ||
@@ -100,7 +103,7 @@ export default function RelatedProductsCarousel({
         aria-label={heading}
       >
         {products.map((product) => {
-          const image = product.images[0] || "/images/placeholder-frame.svg";
+          const image = productDisplayImage(product, defaults);
           const categoryLabel =
             dict.shop.categories[
               product.category as keyof typeof dict.shop.categories

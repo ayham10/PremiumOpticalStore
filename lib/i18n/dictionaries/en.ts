@@ -1451,6 +1451,9 @@ const en: Dictionary = {
       textColor: "Text",
       backgroundColor: "Background",
       storeInfo: "Store information",
+      defaultProductImages: "Default Product Images",
+      defaultProductImagesHint:
+        "Shown on the website when a product in that category has no photo of its own. A product’s own image always wins.",
       phone: "Phone",
       whatsapp: "WhatsApp",
       email: "Email",
