@@ -6165,6 +6165,7 @@ html[dir="rtl"] .catalogue-sort-select {
   justify-content: center;
   gap: 0.4rem;
   margin-top: 1.35rem;
+  direction: ltr;
 }
 
 .catalogue-pagination-pages {
@@ -6216,10 +6217,6 @@ html[dir="rtl"] .catalogue-sort-select {
   font-size: 0.95rem;
   letter-spacing: 0.08em;
   text-align: center;
-}
-
-html[dir="rtl"] .catalogue-pagination-arrow svg {
-  transform: scaleX(-1);
 }
 
 /* Catalog product cards — premium metallic gold frame (all listings) */
