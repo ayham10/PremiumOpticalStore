@@ -10095,6 +10095,7 @@ html[dir="rtl"] .promo-product-name {
   flex-direction: column;
   align-items: flex-end;
   box-sizing: border-box;
+  transform: translateX(-14px);
 }
 
 @media (min-width: 768px) {
