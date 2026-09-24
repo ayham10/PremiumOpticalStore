@@ -130,7 +130,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const product = payload.product;
   const related = payload.related || [];
   const settings = payload.settings;
-  const whatsapp = settings?.whatsapp || "9725550180";
+  const whatsapp = (settings?.whatsapp || "").replace(/\D/g, "");
   const waHref = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
     `Hello Oyon, I'm interested in ${product.name} (${product.sku}).`,
   )}`;

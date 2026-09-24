@@ -349,6 +349,7 @@ function AdminSettingsPageInner() {
       const next = normalizeSettings(saved);
       setForm(next);
       invalidatePublicCache("settings:");
+      invalidatePublicCache("product:");
       setMessage(t("admin.settings.saved"));
       window.dispatchEvent(new Event("oyon:branding-saved"));
       window.dispatchEvent(new Event("oyon:availability-saved"));
