@@ -14,6 +14,7 @@ import {
 } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { productDisplayGallery } from "@/lib/product-images";
+import { storeWhatsAppHref } from "@/lib/store-whatsapp";
 import {
   rememberCategoryDefaultImages,
   useCategoryDefaultImages,
@@ -29,19 +30,6 @@ type ProductPayload = {
     categoryDefaultImages?: CategoryDefaultImages;
   };
 };
-
-/** International digits for wa.me / api.whatsapp.com (no +, spaces, or leading 0). */
-function storeWhatsAppDigits(raw?: string): string {
-  let digits = (raw || "").replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (digits.startsWith("0")) digits = `972${digits.slice(1)}`;
-  return digits;
-}
-
-function storeWhatsAppHref(rawPhone: string | undefined, text: string): string {
-  const phone = storeWhatsAppDigits(rawPhone);
-  return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
-}
 
 function ProductSkeleton() {
   return (

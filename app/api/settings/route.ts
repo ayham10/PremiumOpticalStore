@@ -32,7 +32,8 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
     city: settings.city,
     phone: settings.phone,
     email: settings.email,
-    whatsapp: settings.whatsapp,
+    whatsapp: mergeBookingMessages(settings.bookingMessages).ownerNotification
+      .ownerWhatsApp,
     googleMapsEmbedUrl: settings.googleMapsEmbedUrl,
     googleMapsLink: settings.googleMapsLink,
     openingHours: settings.openingHours,

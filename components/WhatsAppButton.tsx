@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { whatsappDialDigits } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
+import { storeWhatsAppDigits, storeWhatsAppHref } from "@/lib/store-whatsapp";
 
 const WHATSAPP_MESSAGES: Record<Locale, string> = {
   en: "Hello Oyon, I would like assistance with an eye exam / glasses.",
@@ -16,13 +16,11 @@ export default function WhatsAppButton() {
   const { locale, t } = useLocale();
   const { settings } = useBranding();
   const message = WHATSAPP_MESSAGES[locale] || WHATSAPP_MESSAGES.en;
-  const phone =
-    whatsappDialDigits(settings?.whatsapp) ||
-    whatsappDialDigits(settings?.phone);
+  const phone = storeWhatsAppDigits(settings?.whatsapp);
 
   if (!phone) return null;
 
-  const href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  const href = storeWhatsAppHref(settings?.whatsapp, message);
 
   return (
     <Link
