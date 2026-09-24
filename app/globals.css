@@ -15831,9 +15831,23 @@ select.admin-pe-input {
   color: #e07a7a;
 }
 
+.admin-stock-table-wrap {
+  display: none;
+}
+
 .admin-stock-mobile {
   display: grid;
   gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .admin-stock-table-wrap {
+    display: block;
+  }
+
+  .admin-stock-mobile {
+    display: none;
+  }
 }
 
 .admin-stock-mobile-card {

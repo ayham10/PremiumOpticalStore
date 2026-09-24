@@ -446,7 +446,7 @@ export default function AdminStockPage() {
         })}
       </p>
 
-      <div className="admin-card admin-stock-table-wrap hidden overflow-hidden md:block">
+      <div className="admin-card admin-stock-table-wrap overflow-hidden">
         <div className="md:overflow-x-auto">
           <table className="table">
             <thead>
@@ -564,7 +564,7 @@ export default function AdminStockPage() {
         </div>
       </div>
 
-      <div className="admin-stock-mobile md:hidden">
+      <div className="admin-stock-mobile">
         {loading ? (
           <p className="admin-muted">{t("admin.stock.loading")}</p>
         ) : rows.length === 0 ? (
