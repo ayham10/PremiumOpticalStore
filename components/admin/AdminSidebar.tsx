@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ClipboardList,
   Package,
+  Warehouse,
   Tag,
   ImageIcon,
   Settings,
@@ -78,6 +79,12 @@ const NAV: Array<{
     labelKey: "admin.sidebar.products",
     permission: "inventory",
     icon: Package,
+  },
+  {
+    href: "/admin/stock",
+    labelKey: "admin.sidebar.stock",
+    permission: "inventory",
+    icon: Warehouse,
   },
   {
     href: "/admin/media",
