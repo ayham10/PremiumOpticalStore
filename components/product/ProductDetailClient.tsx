@@ -30,6 +30,19 @@ type ProductPayload = {
   };
 };
 
+/** International digits for wa.me / api.whatsapp.com (no +, spaces, or leading 0). */
+function storeWhatsAppDigits(raw?: string): string {
+  let digits = (raw || "").replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0")) digits = `972${digits.slice(1)}`;
+  return digits;
+}
+
+function storeWhatsAppHref(rawPhone: string | undefined, text: string): string {
+  const phone = storeWhatsAppDigits(rawPhone);
+  return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
+}
+
 function ProductSkeleton() {
   return (
     <div className="product-page" aria-busy="true">
@@ -130,10 +143,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const product = payload.product;
   const related = payload.related || [];
   const settings = payload.settings;
-  const whatsapp = (settings?.whatsapp || "").replace(/\D/g, "");
-  const waHref = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-    `Hello Oyon, I'm interested in ${product.name} (${product.sku}).`,
-  )}`;
+  const inquiry = `Hello Oyon, I'm interested in ${product.name} (${product.sku}).`;
+  const waHref = storeWhatsAppHref(settings?.whatsapp, inquiry);
 
   const images = productDisplayGallery(product, defaults);
 

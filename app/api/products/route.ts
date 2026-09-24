@@ -7,7 +7,6 @@ import {
   jsonError,
   pushActivity,
 } from "@/lib/api/helpers";
-import { mergeBookingMessages } from "@/lib/booking-messages";
 import {
   mergeCategoryDefaultImages,
   storefrontProductImages,
@@ -161,8 +160,7 @@ export async function GET(request: Request) {
           related,
           products: publicProduct ? [publicProduct] : [],
           settings: {
-            whatsapp: mergeBookingMessages(data.settings.bookingMessages)
-              .ownerNotification.ownerWhatsApp,
+            whatsapp: data.settings.whatsapp || data.settings.phone,
             currencySymbol: data.settings.currencySymbol,
             currency: data.settings.currency,
             categoryDefaultImages: defaults,
