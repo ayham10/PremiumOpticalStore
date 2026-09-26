@@ -1812,6 +1812,7 @@ const en: Dictionary = {
       restoreError: "Could not restore the data.",
       restorePreviewError: "Could not prepare the restore preview.",
       restoreForbidden: "You do not have permission to restore data.",
+      restoreProductionOnly: "Live restore is available only in the production environment",
       comingSoon: "Coming soon",
     },
     common: {

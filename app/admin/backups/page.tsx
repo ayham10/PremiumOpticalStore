@@ -38,6 +38,7 @@ import type {
   RestoreExecuteClientResult,
   RestorePreviewResult,
 } from "@/lib/restore-status";
+import { isLiveRestoreUiAllowed } from "@/lib/restore-status";
 
 const HISTORY_PREVIEW = 5;
 
@@ -193,8 +194,10 @@ export default function AdminBackupsPage() {
     }
   }, [previewing, selectedBackupId, selectedCategories, t]);
 
+  const liveRestoreAllowed = isLiveRestoreUiAllowed();
+
   const runRestore = useCallback(async () => {
-    if (!preview || restoring) return;
+    if (!preview || restoring || !liveRestoreAllowed) return;
     setRestoring(true);
     setRestoreError("");
     try {
@@ -217,7 +220,12 @@ export default function AdminBackupsPage() {
       });
       await load({ silent: true });
     } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
+      if (
+        err instanceof ApiError &&
+        err.message === t("admin.backups.restoreProductionOnly")
+      ) {
+        setRestoreError(t("admin.backups.restoreProductionOnly"));
+      } else if (err instanceof ApiError && err.status === 403) {
         setRestoreError(t("admin.backups.restoreForbidden"));
       } else {
         setRestoreError(
@@ -227,7 +235,7 @@ export default function AdminBackupsPage() {
     } finally {
       setRestoring(false);
     }
-  }, [load, notifySaved, preview, restoring, t]);
+  }, [liveRestoreAllowed, load, notifySaved, preview, restoring, t]);
 
   const lastSuccessful = lastSuccessfulOf(data);
   const status = data?.status ?? "none";
@@ -514,6 +522,11 @@ export default function AdminBackupsPage() {
               ? t("admin.backups.restorePreviewing")
               : t("admin.backups.restorePreview")}
           </button>
+          {!liveRestoreAllowed ? (
+            <p className="admin-backups-restore-prod-only" role="status">
+              {t("admin.backups.restoreProductionOnly")}
+            </p>
+          ) : null}
         </section>
 
         <section className="admin-backups-card admin-backups-auto">
@@ -560,6 +573,7 @@ export default function AdminBackupsPage() {
           preview={preview}
           confirmOpen={confirmOpen}
           restoring={restoring}
+          executeAllowed={liveRestoreAllowed}
           t={t}
           onClose={() => {
             if (restoring) return;
@@ -689,6 +703,7 @@ function RestoreDialog({
   preview,
   confirmOpen,
   restoring,
+  executeAllowed,
   t,
   onClose,
   onAskConfirm,
@@ -697,6 +712,7 @@ function RestoreDialog({
   preview: RestorePreviewResult;
   confirmOpen: boolean;
   restoring: boolean;
+  executeAllowed: boolean;
   t: (key: string) => string;
   onClose: () => void;
   onAskConfirm: () => void;
@@ -760,16 +776,22 @@ function RestoreDialog({
             {t("admin.backups.restoreCancel")}
           </button>
           {confirmOpen ? (
-            <button
-              type="button"
-              className="admin-restore-confirm"
-              disabled={restoring}
-              onClick={onConfirm}
-            >
-              {restoring
-                ? t("admin.backups.restoreRunning")
-                : t("admin.backups.restoreConfirm")}
-            </button>
+            executeAllowed ? (
+              <button
+                type="button"
+                className="admin-restore-confirm"
+                disabled={restoring}
+                onClick={onConfirm}
+              >
+                {restoring
+                  ? t("admin.backups.restoreRunning")
+                  : t("admin.backups.restoreConfirm")}
+              </button>
+            ) : (
+              <p className="admin-restore-prod-only" role="status">
+                {t("admin.backups.restoreProductionOnly")}
+              </p>
+            )
           ) : (
             <button
               type="button"

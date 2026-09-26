@@ -42,7 +42,16 @@ export type RestoreDependencies = {
   readLive: typeof readLiveStoreRow;
   createPreRestore: typeof createPreRestoreSnapshot;
   writeLive: (data: AppData) => Promise<void>;
+  /** Test override. Runtime uses `process.env.VERCEL_ENV`. */
+  vercelEnv?: string;
 };
+
+/** Live execute is allowed only on Vercel Production. Preview/dev stay read-only. */
+export function isLiveRestoreAllowed(
+  env: string | undefined = process.env.VERCEL_ENV,
+): boolean {
+  return env === "production";
+}
 
 const defaultDeps: RestoreDependencies = {
   loadSnapshot: loadRestorableSnapshot,
@@ -106,6 +115,11 @@ export async function executeRestore(
   confirm: unknown,
   deps: RestoreDependencies = defaultDeps,
 ): Promise<RestoreExecuteResult> {
+  const vercelEnv =
+    deps.vercelEnv !== undefined ? deps.vercelEnv : process.env.VERCEL_ENV;
+  if (!isLiveRestoreAllowed(vercelEnv)) {
+    throw new Error("RESTORE_PRODUCTION_ONLY");
+  }
   if (confirm !== true) {
     throw new Error("RESTORE_CONFIRM_REQUIRED");
   }

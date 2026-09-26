@@ -1439,6 +1439,7 @@ const he: Dictionary = {
       restoreError: "לא ניתן לשחזר את הנתונים.",
       restorePreviewError: "לא ניתן להכין תצוגה מקדימה.",
       restoreForbidden: "אין הרשאה לשחזר נתונים.",
+      restoreProductionOnly: "שחזור בפועל זמין רק בסביבת הייצור",
       comingSoon: "בקרוב",
     },
     common: {

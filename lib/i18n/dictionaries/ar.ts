@@ -1440,6 +1440,7 @@ const ar: Dictionary = {
       restoreError: "تعذر استعادة البيانات.",
       restorePreviewError: "تعذر تجهيز معاينة الاستعادة.",
       restoreForbidden: "لا تملك صلاحية استعادة البيانات.",
+      restoreProductionOnly: "الاستعادة الفعلية متاحة فقط في بيئة الإنتاج",
       comingSoon: "قريباً",
     },
     common: {

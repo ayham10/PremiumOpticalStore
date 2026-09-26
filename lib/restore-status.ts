@@ -2,6 +2,11 @@ import type { RestoreCategory } from "@/lib/restore-apply";
 
 export type { RestoreCategory };
 
+/** Client-safe: Vercel inlines NEXT_PUBLIC_VERCEL_ENV at build time. */
+export function isLiveRestoreUiAllowed(): boolean {
+  return process.env.NEXT_PUBLIC_VERCEL_ENV === "production";
+}
+
 export type RestorePreviewSection = {
   category: RestoreCategory;
   liveCount: number;

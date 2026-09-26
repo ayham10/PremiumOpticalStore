@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/helpers";
-import { executeRestore } from "@/lib/restore";
+import { executeRestore, isLiveRestoreAllowed } from "@/lib/restore";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,6 +21,13 @@ export async function POST(request: Request) {
     return handleRouteError(error);
   }
 
+  if (!isLiveRestoreAllowed()) {
+    return NextResponse.json(
+      { error: "الاستعادة الفعلية متاحة فقط في بيئة الإنتاج" },
+      { status: 403, headers: PRIVATE_HEADERS },
+    );
+  }
+
   try {
     const body = (await request.json()) as {
       backupId?: unknown;
@@ -35,6 +42,12 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: 200, headers: PRIVATE_HEADERS });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
+    if (message === "RESTORE_PRODUCTION_ONLY") {
+      return NextResponse.json(
+        { error: "الاستعادة الفعلية متاحة فقط في بيئة الإنتاج" },
+        { status: 403, headers: PRIVATE_HEADERS },
+      );
+    }
     if (message === "RESTORE_CONFIRM_REQUIRED") {
       return NextResponse.json(
         { error: "يجب تأكيد الاستعادة أولاً." },

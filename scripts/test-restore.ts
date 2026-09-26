@@ -8,6 +8,7 @@ import {
 } from "../lib/restore-apply";
 import {
   executeRestore,
+  isLiveRestoreAllowed,
   previewRestore,
   resetRestoreInFlightForTests,
 } from "../lib/restore";
@@ -184,6 +185,7 @@ assert.equal(restoreCategoryCount(backup, "promotions"), 2);
 async function run() {
 resetRestoreInFlightForTests();
 let wrote = 0;
+let preRestore = 0;
 const snapshot = {
   purpose: "manual" as const,
   createdAt: "2026-09-26T19:00:10.289Z",
@@ -196,20 +198,96 @@ const goodDeps = {
     updatedAt: live.updatedAt,
     payloadBytes: 1,
   }),
-  createPreRestore: async () => ({ ok: true, complete: true }) as never,
+  createPreRestore: async () => {
+    preRestore += 1;
+    return { ok: true, complete: true } as never;
+  },
   writeLive: async () => {
     wrote += 1;
   },
+  vercelEnv: "production",
 };
+
+assert.equal(isLiveRestoreAllowed("production"), true);
+assert.equal(isLiveRestoreAllowed("preview"), false);
+assert.equal(isLiveRestoreAllowed("development"), false);
+assert.equal(isLiveRestoreAllowed(undefined), false);
 
 const preview = await previewRestore(
   "manual:2026-09-26T19:00:10.289Z",
   ["bookings"],
-  goodDeps,
+  { ...goodDeps, vercelEnv: "preview" },
 );
 assert.equal(preview.sections[0].liveCount, 2);
 assert.equal(preview.sections[0].backupCount, 1);
 assert.equal(wrote, 0);
+assert.equal(preRestore, 0);
+
+const previewInDev = await previewRestore(
+  "manual:2026-09-26T19:00:10.289Z",
+  ["products"],
+  { ...goodDeps, vercelEnv: "development" },
+);
+assert.equal(previewInDev.categories[0], "products");
+assert.equal(wrote, 0);
+assert.equal(preRestore, 0);
+
+await assert.rejects(
+  () =>
+    executeRestore("manual:2026-09-26T19:00:10.289Z", ["bookings"], true, {
+      ...goodDeps,
+      vercelEnv: "preview",
+    }),
+  /RESTORE_PRODUCTION_ONLY/,
+);
+assert.equal(wrote, 0);
+assert.equal(preRestore, 0);
+
+await assert.rejects(
+  () =>
+    executeRestore("manual:2026-09-26T19:00:10.289Z", ["bookings"], true, {
+      ...goodDeps,
+      vercelEnv: "development",
+    }),
+  /RESTORE_PRODUCTION_ONLY/,
+);
+assert.equal(wrote, 0);
+assert.equal(preRestore, 0);
+
+const previousVercelEnv = process.env.VERCEL_ENV;
+delete process.env.VERCEL_ENV;
+try {
+  const { vercelEnv: _ignored, ...processEnvDeps } = goodDeps;
+  await assert.rejects(
+    () =>
+      executeRestore(
+        "manual:2026-09-26T19:00:10.289Z",
+        ["bookings"],
+        true,
+        processEnvDeps,
+      ),
+    /RESTORE_PRODUCTION_ONLY/,
+  );
+  process.env.VERCEL_ENV = "preview";
+  await assert.rejects(
+    () =>
+      executeRestore(
+        "manual:2026-09-26T19:00:10.289Z",
+        ["bookings"],
+        true,
+        processEnvDeps,
+      ),
+    /RESTORE_PRODUCTION_ONLY/,
+  );
+} finally {
+  if (previousVercelEnv === undefined) {
+    delete process.env.VERCEL_ENV;
+  } else {
+    process.env.VERCEL_ENV = previousVercelEnv;
+  }
+}
+assert.equal(wrote, 0);
+assert.equal(preRestore, 0);
 
 await assert.rejects(
   () =>
@@ -222,6 +300,7 @@ await assert.rejects(
   /RESTORE_CONFIRM_REQUIRED/,
 );
 assert.equal(wrote, 0);
+assert.equal(preRestore, 0);
 
 await assert.rejects(
   () =>
@@ -259,9 +338,20 @@ const ok = await executeRestore(
 );
 assert.equal(ok.ok, true);
 assert.equal(wrote, 1);
+assert.equal(preRestore, 1);
 
 console.log(
-  JSON.stringify({ isolated: "pass", wrote, previewWrites: 0 }, null, 2),
+  JSON.stringify(
+    {
+      isolated: "pass",
+      wrote,
+      preRestore,
+      previewWrites: 0,
+      productionOnly: true,
+    },
+    null,
+    2,
+  ),
 );
 }
 
