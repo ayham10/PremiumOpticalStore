@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -62,15 +61,12 @@ function AdminSuccessNoticeDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const continueRef = useRef<HTMLButtonElement>(null);
-
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    continueRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
@@ -95,7 +91,6 @@ function AdminSuccessNoticeDialog({
         </span>
         <h2 id="admin-save-notice-title">{ADMIN_SAVE_SUCCESS_MESSAGE}</h2>
         <button
-          ref={continueRef}
           type="button"
           className="admin-save-notice-btn"
           onClick={onClose}

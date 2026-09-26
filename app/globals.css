@@ -16176,6 +16176,8 @@ select.admin-pe-input {
   display: grid;
   place-items: center;
   padding: 1.15rem;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: rgba(11, 14, 20, 0.78);
 }
 
