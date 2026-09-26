@@ -16748,49 +16748,56 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 }
 
 .admin-backups-page {
-  max-width: var(--admin-content-max, 1200px);
+  --bk-card: #10151c;
+  --bk-border: rgba(212, 175, 106, 0.22);
+  --bk-muted: #8b929c;
+  --bk-text: #f4f6f8;
+  --bk-gold: #d4af6a;
+  --bk-success: #3dbe8a;
+  max-width: 1080px;
   display: grid;
-  gap: 1rem;
+  gap: 16px;
 }
 
-.admin-backups-page .admin-page-header {
-  margin-bottom: 0;
+html.admin-dark .admin-backups-page .admin-backups-card,
+.admin-shell .admin-backups-page .admin-backups-card,
+.admin-backups-card {
+  background: var(--bk-card) !important;
+  border: 1px solid var(--bk-border) !important;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: var(--bk-text);
+  padding: 18px 20px;
 }
 
-.admin-backups-page .admin-page-title-icon {
-  width: 22px;
-  height: 22px;
+.admin-backups-head {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
 }
 
-.admin-backups-page .admin-page-title {
+.admin-backups-head-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--bk-gold);
+}
+
+.admin-backups-head-title h1 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
-  font-weight: 700;
+  font-size: clamp(1.35rem, 2.2vw, 1.62rem);
+  font-weight: 750;
   letter-spacing: -0.03em;
 }
 
-.admin-backups-page .admin-page-desc {
-  margin-top: 0.3rem;
-  max-width: 34rem;
-  color: #8d949d;
+.admin-backups-head p {
+  margin: 0;
+  color: var(--bk-muted);
   font-size: 0.84rem;
   line-height: 1.45;
-}
-
-.admin-backups-page .admin-card {
-  padding: 1rem 1.15rem;
-  border-radius: 18px;
-  border-color: rgba(212, 175, 106, 0.22);
-  box-shadow: none;
-  background: rgba(12, 16, 22, 0.84);
-}
-
-.admin-backups-kicker {
-  margin: 0;
-  color: #8d949d;
-  font-size: 0.72rem;
-  font-weight: 700;
 }
 
 .admin-backups-error {
@@ -16809,143 +16816,169 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
   align-items: center;
 }
 
-.admin-backups-status-row {
+.admin-backups-status-label {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  margin: 0.45rem 0 0;
-}
-
-.admin-backups-status-row h2 {
-  margin: 0;
-  font-size: 1.12rem;
+  gap: 0.45rem;
+  color: #d7dde4;
+  font-size: 0.8rem;
   font-weight: 700;
-  line-height: 1.3;
 }
 
-.admin-backups-status.is-healthy .admin-backups-status-row {
-  color: #5ec49a;
+.admin-backups-status.is-healthy .admin-backups-status-label {
+  color: var(--bk-success);
 }
 
-.admin-backups-status.is-warning {
-  border-color: rgba(230, 197, 138, 0.48);
-  background: rgba(230, 197, 138, 0.06);
-}
-
-.admin-backups-status.is-warning .admin-backups-status-row {
+.admin-backups-status.is-warning .admin-backups-status-label,
+.admin-backups-status.is-warning h2 {
   color: #e6c58a;
 }
 
-.admin-backups-status.is-failed,
-.admin-backups-status.is-none {
-  border-color: rgba(224, 122, 122, 0.48);
-  background: rgba(224, 122, 122, 0.07);
-}
-
-.admin-backups-status.is-failed .admin-backups-status-row,
-.admin-backups-status.is-none .admin-backups-status-row {
+.admin-backups-status.is-failed .admin-backups-status-label,
+.admin-backups-status.is-failed h2,
+.admin-backups-status.is-none .admin-backups-status-label,
+.admin-backups-status.is-none h2 {
   color: #e07a7a;
 }
 
-.admin-backups-last {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.55rem;
-  margin: 0.55rem 0 0;
-  color: #8d949d;
-  font-size: 0.8rem;
+.admin-backups-status-main h2 {
+  margin: 0.45rem 0 0;
+  color: var(--bk-success);
+  font-size: 1.18rem;
+  font-weight: 750;
+  line-height: 1.35;
 }
 
-.admin-backups-last strong {
-  color: #f5f5f5;
+.admin-backups-status.is-healthy h2 {
+  color: var(--bk-success);
+}
+
+.admin-backups-last-label {
+  margin: 0.7rem 0 0;
+  color: var(--bk-muted);
+  font-size: 0.78rem;
+}
+
+.admin-backups-last-value {
+  margin: 0.2rem 0 0;
+  color: var(--bk-text);
+  font-size: 0.92rem;
   font-weight: 700;
 }
 
-.admin-backups-status-action {
-  min-width: 0;
+.admin-backups-status-divider {
+  display: none;
+  width: 1px;
+  align-self: stretch;
+  background: rgba(212, 175, 106, 0.16);
 }
 
 .admin-backups-now {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
+  gap: 0.5rem;
   width: 100%;
-  min-height: 46px;
-  padding: 0.7rem 1rem;
+  min-height: 48px;
+  padding: 0.8rem 1.15rem;
   border: 0;
   border-radius: 14px;
-  background: #d4af6a;
-  color: #14181e;
+  background: #e6c56a;
+  color: #16120a;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 800;
   cursor: not-allowed;
-  opacity: 0.72;
-}
-
-.admin-backups-now em {
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
-  background: rgba(20, 24, 30, 0.16);
-  font-size: 0.7rem;
-  font-style: normal;
-  font-weight: 800;
 }
 
 .admin-backups-status-action p {
-  margin: 0.45rem 0 0;
-  color: #8d949d;
+  margin: 0.7rem 0 0;
+  color: var(--bk-muted);
   font-size: 0.78rem;
-  line-height: 1.4;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .admin-backups-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 16px;
 }
 
 .admin-backups-metric {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 118px;
 }
 
-.admin-backups-metric-icon {
+.admin-backups-metric-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.admin-backups-metric-top p {
+  margin: 0;
+  color: var(--bk-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-backups-metric-top span {
   display: grid;
   place-items: center;
-  width: 1.85rem;
-  height: 1.85rem;
-  margin-bottom: 0.55rem;
-  border-radius: 0.65rem;
-  background: rgba(212, 175, 106, 0.12);
-  color: #d4af6a;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.7rem;
+  background: rgba(212, 175, 106, 0.1);
+  color: var(--bk-gold);
+  flex-shrink: 0;
 }
 
 .admin-backups-metric-value {
-  margin: 0.28rem 0 0;
+  margin: 0.55rem 0 0;
   color: #ffffff;
-  font-size: 1.45rem;
+  font-size: 1.55rem;
   font-weight: 750;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .admin-backups-metric-note {
-  margin: 0.28rem 0 0;
-  color: #8d949d;
+  margin: 0.35rem 0 0;
+  color: var(--bk-muted);
   font-size: 0.72rem;
   font-weight: 600;
 }
 
-.admin-backups-history h2,
-.admin-backups-restore h2,
-.admin-backups-auto h2 {
-  margin: 0 0 0.7rem;
+.admin-backups-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-backups-section-head > div {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--bk-gold);
+}
+
+.admin-backups-section-head h2 {
+  margin: 0;
   color: #ffffff;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.98rem;
+  font-weight: 750;
+}
+
+.admin-backups-lead {
+  margin: 0 0 0.9rem;
+  color: var(--bk-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .admin-backups-history-desktop {
@@ -16954,28 +16987,32 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 
 .admin-backups-history table {
   width: 100%;
-  min-width: 36rem;
+  min-width: 34rem;
   border-collapse: collapse;
 }
 
 .admin-backups-history th,
 .admin-backups-history td {
-  padding: 0.55rem 0.4rem;
+  padding: 0.7rem 0.35rem;
   border: 0;
-  border-bottom: 1px solid rgba(42, 47, 54, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   text-align: start;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
 }
 
 .admin-backups-history th {
-  color: #8d949d;
+  color: var(--bk-muted);
   font-size: 0.72rem;
   font-weight: 700;
 }
 
 .admin-backups-history td {
-  color: #f2f4f6;
+  color: var(--bk-text);
   font-weight: 600;
+}
+
+.admin-backups-history tr.is-current td {
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .admin-backups-history tr:last-child td {
@@ -16985,13 +17022,13 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 .admin-backups-row-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 750;
 }
 
 .admin-backups-row-status.is-success {
-  color: #5ec49a;
+  color: var(--bk-success);
 }
 
 .admin-backups-row-status.is-warning {
@@ -17009,40 +17046,45 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 
 .admin-backups-empty {
   margin: 0;
-  color: #8d949d;
+  color: var(--bk-muted);
   font-size: 0.84rem;
 }
 
 .admin-backups-more {
-  margin-top: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
   padding: 0;
   border: 0;
   background: none;
-  color: #d4af6a;
+  color: var(--bk-gold);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
 }
 
-.admin-backups-bottom {
-  display: grid;
-  gap: 0.9rem;
+.admin-backups-more.is-static {
+  cursor: default;
+  opacity: 0.7;
 }
 
-.admin-backups-restore p,
-.admin-backups-auto p {
-  margin: 0 0 0.75rem;
-  color: #8d949d;
-  font-size: 0.8rem;
-  line-height: 1.45;
+.admin-backups-bottom {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-backups-restore,
+.admin-backups-auto {
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-backups-restore ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin: 0 0 0.85rem;
+  gap: 0.55rem;
+  margin: 0 0 0.9rem;
   padding: 0;
   list-style: none;
 }
@@ -17050,20 +17092,22 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 .admin-backups-restore li {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  min-height: 2.35rem;
-  padding: 0.4rem 0.55rem;
+  min-height: 40px;
+  padding: 0.45rem 0.5rem;
   border: 1px solid rgba(212, 175, 106, 0.16);
   border-radius: 12px;
-  background: rgba(8, 12, 17, 0.35);
+  background: #0c1117;
   color: #e8eaed;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
+  text-align: center;
 }
 
 .admin-backups-restore li svg {
   flex-shrink: 0;
-  color: #d4af6a;
+  color: var(--bk-gold);
 }
 
 .admin-backups-soon {
@@ -17072,60 +17116,89 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
   justify-content: center;
   gap: 0.4rem;
   width: 100%;
-  min-height: 44px;
-  border: 1px solid rgba(212, 175, 106, 0.22);
+  min-height: 42px;
+  margin-top: auto;
+  border: 1px solid rgba(212, 175, 106, 0.16);
   border-radius: 12px;
-  background: rgba(8, 12, 17, 0.4);
+  background: #0c1117;
   color: #c8cdd4;
   font: inherit;
-  font-size: 0.88rem;
-  font-weight: 800;
+  font-size: 0.86rem;
+  font-weight: 750;
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
 .admin-backups-auto dl {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-  margin: 0 0 0.7rem;
+  gap: 0.5rem;
+  margin: 0 0 0.9rem;
+}
+
+.admin-backups-auto dl > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.28rem;
+}
+
+.admin-backups-auto dl svg,
+.admin-backups-auto dl i {
+  color: var(--bk-gold);
+}
+
+.admin-backups-auto dl i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--bk-success);
 }
 
 .admin-backups-auto dt {
-  margin: 0.2rem 0 0;
-  color: #8d949d;
-  font-size: 0.72rem;
+  margin: 0;
+  color: var(--bk-muted);
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
 .admin-backups-auto dd {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
   margin: 0;
   color: #ffffff;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 800;
 }
 
-.admin-backups-auto dd i {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: #5ec49a;
+.admin-backups-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: auto 0 0;
+  padding-top: 0.15rem;
+  color: var(--bk-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 
-.admin-backups-auto p {
-  margin: 0;
+.admin-backups-info-bar svg {
+  flex-shrink: 0;
+  color: var(--bk-gold);
 }
 
 @media (min-width: 768px) {
   .admin-backups-status {
-    grid-template-columns: minmax(0, 1.25fr) minmax(14rem, 0.75fr);
+    grid-template-columns: minmax(0, 1fr) 1px minmax(16rem, 0.92fr);
+    gap: 1.35rem;
+  }
+
+  .admin-backups-status-divider {
+    display: block;
   }
 
   .admin-backups-bottom {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
   }
 
   .admin-backups-restore ul {
@@ -17152,7 +17225,7 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 
   .admin-backups-history-item {
     padding-bottom: 0.55rem;
-    border-bottom: 1px solid rgba(42, 47, 54, 0.88);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .admin-backups-history-item:last-child {
@@ -17177,7 +17250,7 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
     flex-wrap: wrap;
     gap: 0.55rem 0.85rem;
     margin: 0.3rem 0 0;
-    color: #8d949d;
+    color: var(--bk-muted);
     font-size: 0.75rem;
   }
 
@@ -17189,4 +17262,9 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
   .admin-backups-soon {
     min-height: 48px;
   }
+
+  .admin-backups-status-action p {
+    text-align: start;
+  }
 }
+

@@ -3,21 +3,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Blend,
   CalendarDays,
-  CheckCircle2,
+  ChevronLeft,
+  CircleCheck,
   CircleX,
+  Clock3,
+  Database,
   DatabaseBackup,
-  ImageIcon,
+  Image as ImageIcon,
+  Info,
   Lock,
   Package,
   Settings,
+  ShieldCheck,
   Tag,
-  Timer,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch, ApiError } from "@/lib/admin-api";
 import {
@@ -39,14 +41,14 @@ const RESTORE_ITEMS: Array<{
 }> = [
   { key: "appointments", icon: CalendarDays },
   { key: "products", icon: Package },
-  { key: "lenses", icon: Blend },
+  { key: "lenses", icon: Database },
   { key: "settings", icon: Settings },
   { key: "promotions", icon: Tag },
   { key: "customers", icon: Users },
 ];
 
 function statusIcon(status: BackupHealthStatus | BackupRowStatus) {
-  if (status === "healthy" || status === "success") return CheckCircle2;
+  if (status === "healthy" || status === "success") return CircleCheck;
   if (status === "warning") return AlertTriangle;
   return CircleX;
 }
@@ -97,8 +99,8 @@ export default function AdminBackupsPage() {
   const visibleHistory = showAllHistory
     ? history
     : history.slice(0, HISTORY_PREVIEW);
-
-  const mediaCount = data?.media.protectedCount ?? lastSuccessful?.mediaObjectCount ?? null;
+  const mediaCount =
+    data?.media.protectedCount ?? lastSuccessful?.mediaObjectCount ?? null;
 
   const metrics = useMemo(
     () => [
@@ -106,7 +108,7 @@ export default function AdminBackupsPage() {
         key: "appointments",
         label: t("admin.backups.sectionAppointments"),
         value: countLabel(lastSuccessful?.appointments),
-        note: null,
+        note: null as string | null,
         icon: CalendarDays,
       },
       {
@@ -132,8 +134,8 @@ export default function AdminBackupsPage() {
         value: t("admin.backups.retentionDays", {
           days: data?.retentionDays ?? 30,
         }),
-        note: null,
-        icon: Timer,
+        note: t("admin.backups.retentionNote"),
+        icon: Clock3,
       },
     ],
     [data?.retentionDays, lastSuccessful, mediaCount, t],
@@ -141,38 +143,37 @@ export default function AdminBackupsPage() {
 
   return (
     <div className="admin-backups-page">
-      <AdminPageHeader
-        icon={DatabaseBackup}
-        title={t("admin.backups.title")}
-        description={t("admin.backups.description")}
-      />
+      <header className="admin-backups-head">
+        <div className="admin-backups-head-title">
+          <DatabaseBackup size={22} strokeWidth={1.6} aria-hidden />
+          <h1>{t("admin.backups.title")}</h1>
+        </div>
+        <p>{t("admin.backups.description")}</p>
+      </header>
 
-      {error ? (
-        <p className="admin-backups-error">{error}</p>
-      ) : null}
+      {error ? <p className="admin-backups-error">{error}</p> : null}
 
-      <section className={`admin-card admin-backups-status is-${status}`}>
+      <section className={`admin-backups-card admin-backups-status is-${status}`}>
         <div className="admin-backups-status-main">
-          <p className="admin-backups-kicker">{t("admin.backups.statusTitle")}</p>
-          <div className="admin-backups-status-row">
-            <StatusIcon size={36} strokeWidth={1.8} aria-hidden />
-            <h2>{t(`admin.backups.status_${status}`)}</h2>
+          <div className="admin-backups-status-label">
+            <StatusIcon size={22} strokeWidth={2} aria-hidden />
+            <span>{t("admin.backups.statusTitle")}</span>
           </div>
-          <p className="admin-backups-last">
-            <span>{t("admin.backups.lastSuccess")}</span>
-            <strong>
-              {loading && !data
-                ? "—"
-                : lastSuccessful
-                  ? formatBackupDateTime(lastSuccessful.createdAt)
-                  : t("admin.backups.noneYet")}
-            </strong>
+          <h2>{t(`admin.backups.status_${status}`)}</h2>
+          <p className="admin-backups-last-label">{t("admin.backups.lastSuccess")}</p>
+          <p className="admin-backups-last-value">
+            {loading && !data
+              ? "—"
+              : lastSuccessful
+                ? formatBackupDateTime(lastSuccessful.createdAt)
+                : t("admin.backups.noneYet")}
           </p>
         </div>
+        <div className="admin-backups-status-divider" aria-hidden />
         <div className="admin-backups-status-action">
           <button type="button" className="admin-backups-now" disabled>
+            <Database size={16} strokeWidth={1.8} aria-hidden />
             <span>{t("admin.backups.createNow")}</span>
-            <em>{t("admin.backups.comingSoon")}</em>
           </button>
           <p>{t("admin.backups.createNowHint")}</p>
         </div>
@@ -182,11 +183,13 @@ export default function AdminBackupsPage() {
         {metrics.map((card) => {
           const Icon = card.icon;
           return (
-            <article key={card.key} className="admin-card admin-backups-metric">
-              <span className="admin-backups-metric-icon" aria-hidden>
-                <Icon size={16} strokeWidth={1.7} />
-              </span>
-              <p className="admin-backups-kicker">{card.label}</p>
+            <article key={card.key} className="admin-backups-card admin-backups-metric">
+              <div className="admin-backups-metric-top">
+                <p>{card.label}</p>
+                <span aria-hidden>
+                  <Icon size={16} strokeWidth={1.7} />
+                </span>
+              </div>
               <p className="admin-backups-metric-value">
                 {loading && !data ? "—" : card.value}
               </p>
@@ -198,8 +201,30 @@ export default function AdminBackupsPage() {
         })}
       </div>
 
-      <section className="admin-card admin-backups-history">
-        <h2>{t("admin.backups.historyTitle")}</h2>
+      <section className="admin-backups-card admin-backups-history">
+        <div className="admin-backups-section-head">
+          <div>
+            <DatabaseBackup size={16} strokeWidth={1.7} aria-hidden />
+            <h2>{t("admin.backups.historyTitle")}</h2>
+          </div>
+          {history.length > HISTORY_PREVIEW ? (
+            <button
+              type="button"
+              className="admin-backups-more"
+              onClick={() => setShowAllHistory((open) => !open)}
+            >
+              {showAllHistory
+                ? t("admin.backups.showLess")
+                : t("admin.backups.showAll")}
+              <ChevronLeft size={14} strokeWidth={2} aria-hidden />
+            </button>
+          ) : (
+            <span className="admin-backups-more is-static">
+              {t("admin.backups.showAll")}
+              <ChevronLeft size={14} strokeWidth={2} aria-hidden />
+            </span>
+          )}
+        </div>
         <div className="admin-backups-history-desktop">
           <table>
             <thead>
@@ -222,8 +247,13 @@ export default function AdminBackupsPage() {
                   <td colSpan={6}>{t("admin.backups.historyEmpty")}</td>
                 </tr>
               ) : (
-                visibleHistory.map((row) => (
-                  <HistoryRow key={`${row.date}-${row.createdAt}`} row={row} t={t} />
+                visibleHistory.map((row, index) => (
+                  <HistoryRow
+                    key={`${row.date}-${row.createdAt}`}
+                    row={row}
+                    t={t}
+                    current={index === 0}
+                  />
                 ))
               )}
             </tbody>
@@ -244,23 +274,17 @@ export default function AdminBackupsPage() {
             ))
           )}
         </div>
-        {history.length > HISTORY_PREVIEW ? (
-          <button
-            type="button"
-            className="admin-backups-more"
-            onClick={() => setShowAllHistory((open) => !open)}
-          >
-            {showAllHistory
-              ? t("admin.backups.showLess")
-              : t("admin.backups.showAll")}
-          </button>
-        ) : null}
       </section>
 
       <div className="admin-backups-bottom">
-        <section className="admin-card admin-backups-restore">
-          <h2>{t("admin.backups.restoreTitle")}</h2>
-          <p>{t("admin.backups.restoreLead")}</p>
+        <section className="admin-backups-card admin-backups-restore">
+          <div className="admin-backups-section-head">
+            <div>
+              <ShieldCheck size={16} strokeWidth={1.7} aria-hidden />
+              <h2>{t("admin.backups.restoreTitle")}</h2>
+            </div>
+          </div>
+          <p className="admin-backups-lead">{t("admin.backups.restoreLead")}</p>
           <ul>
             {RESTORE_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -273,31 +297,38 @@ export default function AdminBackupsPage() {
             })}
           </ul>
           <button type="button" className="admin-backups-soon" disabled>
-            <Lock size={14} strokeWidth={1.8} aria-hidden />
+            <Lock size={13} strokeWidth={1.8} aria-hidden />
             {t("admin.backups.comingSoon")}
           </button>
         </section>
 
-        <section className="admin-card admin-backups-auto">
-          <h2>{t("admin.backups.autoTitle")}</h2>
+        <section className="admin-backups-card admin-backups-auto">
+          <div className="admin-backups-section-head">
+            <div>
+              <Settings size={16} strokeWidth={1.7} aria-hidden />
+              <h2>{t("admin.backups.autoTitle")}</h2>
+            </div>
+          </div>
+          <p className="admin-backups-lead">{t("admin.backups.autoLead")}</p>
           <dl>
             <div>
-              <dd>
-                <i />
-                {t("admin.backups.automaticOn")}
-              </dd>
-              <dt>{t("admin.backups.statusTitleShort")}</dt>
+              <Clock3 size={16} strokeWidth={1.7} aria-hidden />
+              <dd>00:00 UTC</dd>
+              <dt>{t("admin.backups.autoTime")}</dt>
             </div>
             <div>
+              <CalendarDays size={16} strokeWidth={1.7} aria-hidden />
               <dd>{t("admin.backups.autoDaily")}</dd>
               <dt>{t("admin.backups.autoSchedule")}</dt>
             </div>
             <div>
-              <dd>00:00 UTC</dd>
-              <dt>{t("admin.backups.autoTime")}</dt>
+              <i />
+              <dd>{t("admin.backups.automaticOn")}</dd>
+              <dt>{t("admin.backups.statusTitleShort")}</dt>
             </div>
           </dl>
-          <p>
+          <p className="admin-backups-info-bar">
+            <Info size={13} strokeWidth={1.8} aria-hidden />
             {t("admin.backups.autoLocalNote", {
               time: data?.automatic.localTime || "03:00",
             })}
@@ -324,7 +355,7 @@ function RowStatus({
         : t("admin.backups.rowFailed");
   return (
     <span className={`admin-backups-row-status is-${status}`}>
-      <Icon size={13} strokeWidth={1.9} aria-hidden />
+      <Icon size={15} strokeWidth={2} aria-hidden />
       {label}
     </span>
   );
@@ -333,12 +364,14 @@ function RowStatus({
 function HistoryRow({
   row,
   t,
+  current,
 }: {
   row: BackupHistoryItem;
   t: (key: string) => string;
+  current?: boolean;
 }) {
   return (
-    <tr>
+    <tr className={current ? "is-current" : undefined}>
       <td>{formatBackupDate(row.date)}</td>
       <td>{formatBackupTime(row.createdAt)}</td>
       <td>{formatBackupBytes(row.sizeBytes)}</td>
