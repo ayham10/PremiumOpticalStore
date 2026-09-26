@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -20,6 +20,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch, ApiError } from "@/lib/admin-api";
 import {
@@ -31,6 +32,7 @@ import {
   type BackupHistoryItem,
   type BackupRowStatus,
   type BackupStatusSummary,
+  type ManualBackupClientResult,
 } from "@/lib/backup-status";
 
 const HISTORY_PREVIEW = 5;
@@ -63,34 +65,80 @@ function lastSuccessfulOf(data: BackupStatusSummary | null): BackupHistoryItem |
 
 export default function AdminBackupsPage() {
   const { t } = useLocale();
+  const { notifySaved } = useAdminSuccessNotice();
   const [data, setData] = useState<BackupStatusSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const summary = await apiFetch<BackupStatusSummary>("/api/admin/backups");
       setData(summary);
+      if (!opts?.silent) setError("");
     } catch (err) {
-      setData(null);
-      if (err instanceof ApiError && err.status === 403) {
-        setError(t("admin.backups.forbidden"));
-      } else {
-        setError(
-          err instanceof Error ? err.message : t("admin.backups.loadError"),
-        );
+      if (!opts?.silent) {
+        setData(null);
+        if (err instanceof ApiError && err.status === 403) {
+          setError(t("admin.backups.forbidden"));
+        } else {
+          setError(
+            err instanceof Error ? err.message : t("admin.backups.loadError"),
+          );
+        }
       }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const createManualBackup = useCallback(async () => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setCreating(true);
+    setActionError("");
+    try {
+      const result = await apiFetch<ManualBackupClientResult>(
+        "/api/admin/backups",
+        { method: "POST" },
+      );
+      if (!result.complete) {
+        setActionError(t("admin.backups.createIncomplete"));
+        return;
+      }
+      notifySaved({
+        title: t("admin.backups.createSuccess"),
+        detail: formatBackupDateTime(result.createdAt),
+      });
+      await load({ silent: true });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setActionError(t("admin.backups.createInProgress"));
+      } else if (err instanceof ApiError && err.status === 429) {
+        setActionError(t("admin.backups.createTooSoon"));
+      } else if (err instanceof ApiError && err.status === 403) {
+        setActionError(t("admin.backups.createForbidden"));
+      } else if (err instanceof ApiError && err.status === 503) {
+        setActionError(t("admin.backups.createIncomplete"));
+      } else {
+        setActionError(t("admin.backups.createError"));
+      }
+    } finally {
+      creatingRef.current = false;
+      setCreating(false);
+    }
+  }, [load, notifySaved, t]);
 
   const lastSuccessful = lastSuccessfulOf(data);
   const status = data?.status ?? "none";
@@ -171,11 +219,26 @@ export default function AdminBackupsPage() {
         </div>
         <div className="admin-backups-status-divider" aria-hidden />
         <div className="admin-backups-status-action">
-          <button type="button" className="admin-backups-now" disabled>
+          <button
+            type="button"
+            className="admin-backups-now"
+            disabled={creating}
+            onClick={() => void createManualBackup()}
+          >
             <Database size={16} strokeWidth={1.8} aria-hidden />
-            <span>{t("admin.backups.createNow")}</span>
+            <span>
+              {creating
+                ? t("admin.backups.creatingNow")
+                : t("admin.backups.createNow")}
+            </span>
           </button>
-          <p>{t("admin.backups.createNowHint")}</p>
+          {actionError ? (
+            <p className="admin-backups-action-error" role="alert">
+              {actionError}
+            </p>
+          ) : (
+            <p>{t("admin.backups.createNowHint")}</p>
+          )}
         </div>
       </section>
 
@@ -249,7 +312,7 @@ export default function AdminBackupsPage() {
               ) : (
                 visibleHistory.map((row, index) => (
                   <HistoryRow
-                    key={`${row.date}-${row.createdAt}`}
+                    key={`${row.kind}-${row.date}-${row.createdAt}`}
                     row={row}
                     t={t}
                     current={index === 0}
@@ -267,7 +330,7 @@ export default function AdminBackupsPage() {
           ) : (
             visibleHistory.map((row) => (
               <HistoryMobileRow
-                key={`${row.date}-${row.createdAt}`}
+                key={`${row.kind}-${row.date}-${row.createdAt}`}
                 row={row}
                 t={t}
               />
@@ -339,6 +402,22 @@ export default function AdminBackupsPage() {
   );
 }
 
+function KindBadge({
+  kind,
+  t,
+}: {
+  kind: BackupHistoryItem["kind"];
+  t: (key: string) => string;
+}) {
+  return (
+    <span className={`admin-backups-kind is-${kind}`}>
+      {kind === "manual"
+        ? t("admin.backups.kindManual")
+        : t("admin.backups.kindDaily")}
+    </span>
+  );
+}
+
 function RowStatus({
   status,
   t,
@@ -372,7 +451,12 @@ function HistoryRow({
 }) {
   return (
     <tr className={current ? "is-current" : undefined}>
-      <td>{formatBackupDate(row.date)}</td>
+      <td>
+        <span className="admin-backups-date-cell">
+          {formatBackupDate(row.date)}
+          <KindBadge kind={row.kind} t={t} />
+        </span>
+      </td>
       <td>{formatBackupTime(row.createdAt)}</td>
       <td>{formatBackupBytes(row.sizeBytes)}</td>
       <td>{countLabel(row.appointments)}</td>
@@ -395,7 +479,8 @@ function HistoryMobileRow({
     <article className="admin-backups-history-item">
       <div>
         <strong>
-          {formatBackupDate(row.date)} • {formatBackupTime(row.createdAt)}
+          {formatBackupDate(row.date)} • {formatBackupTime(row.createdAt)}{" "}
+          <KindBadge kind={row.kind} t={t} />
         </strong>
         <RowStatus status={row.status} t={t} />
       </div>

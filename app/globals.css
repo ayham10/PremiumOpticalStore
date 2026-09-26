@@ -16236,6 +16236,17 @@ body > .admin-save-notice,
   line-height: 1.45;
 }
 
+.admin-save-notice-card h2:has(+ .admin-save-notice-detail) {
+  margin-bottom: 0.35rem;
+}
+
+.admin-save-notice-detail {
+  margin: 0 0 1rem;
+  color: rgba(245, 245, 245, 0.72);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 .admin-save-notice-btn {
   display: inline-flex;
   align-items: center;
@@ -16889,7 +16900,16 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   font: inherit;
   font-size: 0.95rem;
   font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-backups-now:disabled {
   cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.admin-backups-action-error {
+  color: #e07a7a !important;
 }
 
 .admin-backups-status-action p {
@@ -17010,6 +17030,37 @@ html.admin-dark .admin-backups-page .admin-backups-card,
 .admin-backups-history td {
   color: var(--bk-text);
   font-weight: 600;
+}
+
+.admin-backups-date-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.admin-backups-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.admin-backups-kind.is-daily {
+  color: #d4c08a;
+  background: rgba(212, 175, 106, 0.1);
+  border: 1px solid rgba(212, 175, 106, 0.28);
+}
+
+.admin-backups-kind.is-manual {
+  color: #e6c56a;
+  background: rgba(230, 197, 106, 0.14);
+  border: 1px solid rgba(201, 157, 61, 0.45);
 }
 
 .admin-backups-history tr.is-current td {

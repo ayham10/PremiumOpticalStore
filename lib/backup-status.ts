@@ -8,8 +8,10 @@
  */
 export type BackupHealthStatus = "healthy" | "warning" | "failed" | "none";
 export type BackupRowStatus = "success" | "warning" | "failed";
+export type BackupHistoryKind = "daily" | "manual";
 
 export type BackupHistoryItem = {
+  kind: BackupHistoryKind;
   date: string;
   createdAt: string;
   sizeBytes: number;
@@ -21,6 +23,23 @@ export type BackupHistoryItem = {
   settingsIncluded: boolean;
   mediaObjectCount: number | null;
   status: BackupRowStatus;
+};
+
+/** Client-safe POST /api/admin/backups result. No paths, URLs, or secrets. */
+export type ManualBackupClientResult = {
+  ok: boolean;
+  complete: boolean;
+  timedOut: boolean;
+  remainingMedia: number;
+  purpose: "manual";
+  createdAt: string;
+  media: {
+    copied: number;
+    alreadyPresent: number;
+    skippedUnchanged: number;
+    failed: number;
+    liveObjectCount: number;
+  };
 };
 
 export type BackupStatusSummary = {

@@ -2,6 +2,7 @@ import {
   type BackupHealthStatus,
   type BackupHistoryItem,
   type BackupStatusSummary,
+  type ManualBackupClientResult,
 } from "@/lib/backup-status";
 import { supabaseConfig } from "@/lib/db/store";
 import {
@@ -38,7 +39,7 @@ export const RESTORABLE_SECTIONS = [
 ] as const;
 
 export type RestorableSection = (typeof RESTORABLE_SECTIONS)[number];
-export type BackupPurpose = "daily" | "pre-restore";
+export type BackupPurpose = "daily" | "manual" | "pre-restore";
 
 export type SectionSummary = {
   type: "array" | "object";
@@ -116,11 +117,14 @@ type MediaIndex = {
 const STORE_TABLE = process.env.SUPABASE_STORE_TABLE || "lumina_store";
 const STORE_ID = process.env.SUPABASE_STORE_ID || "default";
 const DAILY_PREFIX = "store/daily/";
+const MANUAL_PREFIX = "store/manual/";
 const PRE_RESTORE_PREFIX = "store/pre-restore/";
 const MEDIA_OBJECT_PREFIX = "media/objects/";
 const MEDIA_INDEX_PATH = "media/index.json";
 /** Stop starting new copies before Vercel kills the function (maxDuration 60s). */
 const BACKUP_TIME_BUDGET_MS = 45_000;
+/** Same-instance guard so a double-click cannot start two manuals. */
+let manualBackupInFlight = false;
 
 function requireConfig() {
   const config = supabaseServerConfig() ?? supabaseConfig();
@@ -161,6 +165,23 @@ function jerusalemDate(now = new Date()): string {
 
 function isoStamp(now = new Date()): string {
   return now.toISOString().replace(/[:.]/g, "-");
+}
+
+/** Collision-safe wall-clock stamp: YYYY-MM-DDTHH-mm-ss (Asia/Jerusalem). */
+function jerusalemDateTimeStamp(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    (parts.find((part) => part.type === type)?.value ?? "00").padStart(2, "0");
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}-${get("minute")}-${get("second")}`;
 }
 
 function summarizeSections(data: AppData): Record<RestorableSection, SectionSummary> {
@@ -372,9 +393,11 @@ async function uploadObject(
   path: string,
   body: Uint8Array | string,
   contentType: string,
+  options?: { upsert?: boolean },
 ) {
   const config = requireConfig();
   const payload = typeof body === "string" ? Buffer.from(body) : Buffer.from(body);
+  const upsert = options?.upsert !== false;
   const response = await fetch(
     `${config.url}/storage/v1/object/${bucket}/${path}`,
     {
@@ -382,7 +405,7 @@ async function uploadObject(
       headers: {
         ...storageHeaders(config, {
           "Content-Type": contentType,
-          "x-upsert": "true",
+          "x-upsert": upsert ? "true" : "false",
         }),
       },
       body: payload,
@@ -594,6 +617,65 @@ function dailySnapshotDate(path: string): string | null {
   return match?.[1] ?? null;
 }
 
+function manualSnapshotDate(path: string): string | null {
+  const name = path.slice(MANUAL_PREFIX.length);
+  const match = name.match(
+    /^(\d{4}-\d{2}-\d{2})T\d{2}-\d{2}-\d{2}(?:-\d+)?\.json$/,
+  );
+  return match?.[1] ?? null;
+}
+
+async function allocateManualSnapshotPath(): Promise<string> {
+  const stamp = jerusalemDateTimeStamp();
+  const existing = await listPrefix(
+    BACKUP_BUCKET,
+    MANUAL_PREFIX.replace(/\/$/, ""),
+  );
+  const taken = new Set(existing.map((object) => object.path));
+  const preferred = `${MANUAL_PREFIX}${stamp}.json`;
+  if (!taken.has(preferred)) return preferred;
+  let n = 1;
+  let path = `${MANUAL_PREFIX}${stamp}-${n}.json`;
+  while (taken.has(path)) {
+    n += 1;
+    path = `${MANUAL_PREFIX}${stamp}-${n}.json`;
+  }
+  return path;
+}
+
+async function uploadUniqueManualSnapshot(
+  initialPath: string,
+  json: string,
+): Promise<string> {
+  const stampMatch = initialPath
+    .slice(MANUAL_PREFIX.length)
+    .match(/^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})/);
+  const stamp = stampMatch?.[1] ?? jerusalemDateTimeStamp();
+  const taken = new Set<string>();
+  let path = initialPath;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    try {
+      await uploadObject(BACKUP_BUCKET, path, json, "application/json", {
+        upsert: false,
+      });
+      return path;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!/409|already exists|Duplicate|resource already/i.test(message)) {
+        throw error;
+      }
+      taken.add(path);
+      let n = 1;
+      path = `${MANUAL_PREFIX}${stamp}-${n}.json`;
+      while (taken.has(path)) {
+        n += 1;
+        path = `${MANUAL_PREFIX}${stamp}-${n}.json`;
+      }
+    }
+  }
+  throw new Error("Could not allocate a unique manual snapshot name");
+}
+
 function shiftIsoDate(isoDate: string, days: number): string {
   const [year, month, day] = isoDate.split("-").map(Number);
   const next = new Date(Date.UTC(year, month - 1, day));
@@ -617,10 +699,16 @@ async function pruneDailySnapshots(keepDays: number): Promise<string[]> {
 
 async function pruneUnreferencedMedia(index: MediaIndex): Promise<number> {
   const daily = await listPrefix(BACKUP_BUCKET, DAILY_PREFIX.replace(/\/$/, ""));
+  const manuals = await listPrefix(
+    BACKUP_BUCKET,
+    MANUAL_PREFIX.replace(/\/$/, ""),
+  );
   const pre = await listPrefix(BACKUP_BUCKET, PRE_RESTORE_PREFIX.replace(/\/$/, ""));
   const keep = new Set<string>();
 
-  for (const snapshot of [...daily, ...pre]) {
+  // Manual snapshots are never deleted. Keep their media so daily GC cannot
+  // orphan files that only a manual restore point still references.
+  for (const snapshot of [...daily, ...manuals, ...pre]) {
     try {
       const { bytes } = await downloadObject(BACKUP_BUCKET, snapshot.path);
       const parsed = JSON.parse(
@@ -669,23 +757,31 @@ async function writeSnapshot(
   const media = await copyMediaIncrementally(liveMedia, deadlineMs);
 
   const snapshot = buildSnapshot(purpose, live, liveMedia);
-  const intendedPath =
-    purpose === "pre-restore"
-      ? `${PRE_RESTORE_PREFIX}${isoStamp()}.json`
-      : `${DAILY_PREFIX}${jerusalemDate()}.json`;
 
   let snapshotPath: string | null = null;
   let prunedDailySnapshots: string[] = [];
   let prunedMediaObjects = 0;
 
   if (media.complete) {
-    await uploadObject(
-      BACKUP_BUCKET,
-      intendedPath,
-      JSON.stringify(snapshot),
-      "application/json",
-    );
-    snapshotPath = intendedPath;
+    if (purpose === "manual") {
+      const intendedPath = await allocateManualSnapshotPath();
+      snapshotPath = await uploadUniqueManualSnapshot(
+        intendedPath,
+        JSON.stringify(snapshot),
+      );
+    } else {
+      const intendedPath =
+        purpose === "pre-restore"
+          ? `${PRE_RESTORE_PREFIX}${isoStamp()}.json`
+          : `${DAILY_PREFIX}${jerusalemDate()}.json`;
+      await uploadObject(
+        BACKUP_BUCKET,
+        intendedPath,
+        JSON.stringify(snapshot),
+        "application/json",
+      );
+      snapshotPath = intendedPath;
+    }
     if (pruneDaily) {
       prunedDailySnapshots = await pruneDailySnapshots(BACKUP_RETENTION_DAYS);
       prunedMediaObjects = await pruneUnreferencedMedia(media.index);
@@ -734,11 +830,49 @@ export async function runDailyBackup(): Promise<BackupRunResult> {
 }
 
 /**
+ * Admin-triggered restore point. Same complete AppData + incremental media
+ * as a daily run, written to `store/manual/YYYY-MM-DDTHH-mm-ss.json`.
+ * Never prunes daily or manual snapshots.
+ */
+export async function runManualBackup(): Promise<BackupRunResult> {
+  if (manualBackupInFlight) {
+    throw new Error("MANUAL_BACKUP_IN_PROGRESS");
+  }
+  manualBackupInFlight = true;
+  try {
+    return await writeSnapshot("manual", false);
+  } finally {
+    manualBackupInFlight = false;
+  }
+}
+
+/**
  * Future restore MUST call this first. Writes the current production
  * AppData into `store/pre-restore/` without changing live data.
  */
 export async function createPreRestoreSnapshot(): Promise<BackupRunResult> {
   return writeSnapshot("pre-restore", false);
+}
+
+/** Strip paths, table names, prune lists, and size internals before browser JSON. */
+export function toManualBackupClientResult(
+  result: BackupRunResult,
+): ManualBackupClientResult {
+  return {
+    ok: result.ok,
+    complete: result.complete,
+    timedOut: result.timedOut,
+    remainingMedia: result.remainingMedia,
+    purpose: "manual",
+    createdAt: result.createdAt,
+    media: {
+      copied: result.media.copied,
+      alreadyPresent: result.media.alreadyPresent,
+      skippedUnchanged: result.media.skippedUnchanged,
+      failed: result.media.failed,
+      liveObjectCount: result.media.liveObjectCount,
+    },
+  };
 }
 
 function sectionCount(
@@ -751,14 +885,14 @@ function sectionCount(
     : null;
 }
 
-function isCompletedDailySnapshot(
+function isListedSnapshot(
   value: unknown,
 ): value is OyonStoreSnapshot {
   if (!value || typeof value !== "object") return false;
   const snapshot = value as Partial<OyonStoreSnapshot>;
   return (
     snapshot.kind === "oyon-store-snapshot" &&
-    snapshot.purpose === "daily" &&
+    (snapshot.purpose === "daily" || snapshot.purpose === "manual") &&
     Boolean(snapshot.createdAt) &&
     Boolean(snapshot.sections) &&
     typeof snapshot.sections === "object"
@@ -771,6 +905,7 @@ function toHistoryItem(
   snapshot: OyonStoreSnapshot,
 ): BackupHistoryItem {
   return {
+    kind: snapshot.purpose === "manual" ? "manual" : "daily",
     date,
     createdAt: snapshot.createdAt,
     sizeBytes,
@@ -834,27 +969,33 @@ async function readMediaStatusSafe(): Promise<BackupStatusSummary["media"]> {
 }
 
 /**
- * Read-only Admin summary. Lists retained daily snapshots and returns
- * counts/metadata only — never appData, paths, signed URLs, or credentials.
+ * Read-only Admin summary. Lists retained daily + manual snapshots and
+ * returns counts/metadata only — never appData, paths, signed URLs, or credentials.
  */
 export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
-  const objects = await listPrefix(BACKUP_BUCKET, DAILY_PREFIX.replace(/\/$/, ""));
-  const daily = objects
-    .map((object) => {
+  const [dailyObjects, manualObjects] = await Promise.all([
+    listPrefix(BACKUP_BUCKET, DAILY_PREFIX.replace(/\/$/, "")),
+    listPrefix(BACKUP_BUCKET, MANUAL_PREFIX.replace(/\/$/, "")),
+  ]);
+  const listed = [
+    ...dailyObjects.map((object) => {
       const date = dailySnapshotDate(object.path);
       return date ? { object, date } : null;
-    })
-    .filter((item): item is { object: StorageObject; date: string } => item != null)
-    .sort((a, b) => b.date.localeCompare(a.date));
+    }),
+    ...manualObjects.map((object) => {
+      const date = manualSnapshotDate(object.path);
+      return date ? { object, date } : null;
+    }),
+  ].filter((item): item is { object: StorageObject; date: string } => item != null);
 
   const history: BackupHistoryItem[] = [];
-  for (const item of daily) {
+  for (const item of listed) {
     try {
       const { bytes } = await downloadObject(BACKUP_BUCKET, item.object.path);
       const parsed = JSON.parse(
         Buffer.from(bytes).toString("utf8"),
       ) as unknown;
-      if (!isCompletedDailySnapshot(parsed)) continue;
+      if (!isListedSnapshot(parsed)) continue;
       history.push(
         toHistoryItem(
           item.date,
@@ -867,18 +1008,25 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
     }
   }
 
-  const latest = history[0] ?? null;
+  history.sort((a, b) => {
+    const byCreated = b.createdAt.localeCompare(a.createdAt);
+    if (byCreated !== 0) return byCreated;
+    return b.date.localeCompare(a.date);
+  });
+
+  const latestDaily = history.find((item) => item.kind === "daily") ?? null;
+  const lastSuccessful = history[0] ?? null;
   const today = jerusalemDate();
   const yesterday = shiftIsoDate(today, -1);
-  const status: BackupHealthStatus = !latest
+  const status: BackupHealthStatus = !latestDaily
     ? "none"
-    : latest.date >= yesterday
+    : latestDaily.date >= yesterday
       ? "healthy"
       : "warning";
 
   const media = await readMediaStatusSafe();
-  if (media.protectedCount == null && latest?.mediaObjectCount != null) {
-    media.protectedCount = latest.mediaObjectCount;
+  if (media.protectedCount == null && lastSuccessful?.mediaObjectCount != null) {
+    media.protectedCount = lastSuccessful.mediaObjectCount;
   }
 
   return {
@@ -891,8 +1039,8 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
       localTimeZone: "Asia/Jerusalem",
       localTime: utcMidnightLocalTime("Asia/Jerusalem"),
     },
-    latest,
-    lastSuccessful: latest,
+    latest: latestDaily,
+    lastSuccessful,
     history,
     media,
   };

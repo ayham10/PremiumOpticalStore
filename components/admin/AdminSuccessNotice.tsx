@@ -15,8 +15,13 @@ import { Check } from "lucide-react";
 export const ADMIN_SAVE_SUCCESS_MESSAGE = "تم حفظ التغييرات بنجاح";
 export const ADMIN_SAVE_CONTINUE_LABEL = "متابعة";
 
+export type AdminSuccessNoticeOptions = {
+  title?: string;
+  detail?: string;
+};
+
 type AdminSuccessNoticeContextValue = {
-  notifySaved: () => void;
+  notifySaved: (options?: AdminSuccessNoticeOptions) => void;
 };
 
 const AdminSuccessNoticeContext =
@@ -36,12 +41,16 @@ export function AdminSuccessNoticeProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(ADMIN_SAVE_SUCCESS_MESSAGE);
+  const [detail, setDetail] = useState<string | null>(null);
 
   const hide = useCallback(() => {
     setOpen(false);
   }, []);
 
-  const notifySaved = useCallback(() => {
+  const notifySaved = useCallback((options?: AdminSuccessNoticeOptions) => {
+    setTitle(options?.title?.trim() || ADMIN_SAVE_SUCCESS_MESSAGE);
+    setDetail(options?.detail?.trim() || null);
     setOpen(true);
   }, []);
 
@@ -50,16 +59,25 @@ export function AdminSuccessNoticeProvider({
   return (
     <AdminSuccessNoticeContext.Provider value={value}>
       {children}
-      <AdminSuccessNoticeDialog open={open} onClose={hide} />
+      <AdminSuccessNoticeDialog
+        open={open}
+        title={title}
+        detail={detail}
+        onClose={hide}
+      />
     </AdminSuccessNoticeContext.Provider>
   );
 }
 
 function AdminSuccessNoticeDialog({
   open,
+  title,
+  detail,
   onClose,
 }: {
   open: boolean;
+  title: string;
+  detail: string | null;
   onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -104,7 +122,8 @@ function AdminSuccessNoticeDialog({
         <span className="admin-save-notice-check" aria-hidden>
           <Check size={22} strokeWidth={2.4} />
         </span>
-        <h2 id="admin-save-notice-title">{ADMIN_SAVE_SUCCESS_MESSAGE}</h2>
+        <h2 id="admin-save-notice-title">{title}</h2>
+        {detail ? <p className="admin-save-notice-detail">{detail}</p> : null}
         <button
           type="button"
           className="admin-save-notice-btn"
