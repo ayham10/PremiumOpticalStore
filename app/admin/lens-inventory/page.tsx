@@ -178,20 +178,22 @@ export default function AdminLensInventoryPage() {
         <p className="admin-muted">{t("admin.lensInventory.loading")}</p>
       ) : (
         <>
-          <LensMatrix
-            title={t("admin.lensInventory.minusTitle")}
-            type="minus"
-            sphs={LENS_MINUS_SPH}
-            items={items}
-            onEdit={openCell}
-          />
-          <LensMatrix
-            title={t("admin.lensInventory.plusTitle")}
-            type="plus"
-            sphs={LENS_PLUS_SPH}
-            items={items}
-            onEdit={openCell}
-          />
+          <div className="admin-lens-matrices">
+            <LensMatrix
+              title={t("admin.lensInventory.minusTitle")}
+              type="minus"
+              sphs={LENS_MINUS_SPH}
+              items={items}
+              onEdit={openCell}
+            />
+            <LensMatrix
+              title={t("admin.lensInventory.plusTitle")}
+              type="plus"
+              sphs={LENS_PLUS_SPH}
+              items={items}
+              onEdit={openCell}
+            />
+          </div>
 
           <section className="admin-card admin-lens-legend" aria-label={t("admin.lensInventory.legendTitle")}>
             <h2>{t("admin.lensInventory.legendTitle")}</h2>
@@ -381,7 +383,7 @@ function LensMatrix({
         <table className="admin-lens-matrix">
           <thead>
             <tr>
-              <th>SPH</th>
+              <th>SPH \ CYL</th>
               {LENS_CYL.map((cyl) => (
                 <th key={cyl}>{cyl}</th>
               ))}
