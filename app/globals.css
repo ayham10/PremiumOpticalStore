@@ -15886,6 +15886,27 @@ select.admin-pe-input {
   display: none;
 }
 
+.admin-stock-table-wrap .table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.admin-stock-table-wrap .table th:nth-child(1),
+.admin-stock-table-wrap .table td:nth-child(1) {
+  width: 4.5rem;
+}
+
+.admin-stock-table-wrap .table th:nth-child(2),
+.admin-stock-table-wrap .table td:nth-child(2) {
+  min-width: 12rem;
+}
+
+.admin-stock-table-wrap .table th:last-child,
+.admin-stock-table-wrap .table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .admin-stock-mobile {
   display: grid;
   gap: 0.75rem;
@@ -16169,13 +16190,15 @@ select.admin-pe-input {
   box-shadow: 0 0 12px rgba(212, 175, 106, 0.14);
 }
 
+html.admin-dark body > .admin-save-notice,
+body > .admin-save-notice,
 .admin-save-notice {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
   padding: 1.15rem;
   overflow: hidden;
   overscroll-behavior: none;

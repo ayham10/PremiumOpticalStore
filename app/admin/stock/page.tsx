@@ -464,7 +464,6 @@ export default function AdminStockPage() {
                     <ArrowUpDown size={13} />
                   </button>
                 </th>
-                <th>{t("admin.stock.colSku")}</th>
                 <th>{t("admin.stock.colCategory")}</th>
                 <th>
                   <button
@@ -503,13 +502,13 @@ export default function AdminStockPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-[var(--slate)]">
+                  <td colSpan={8} className="text-[var(--slate)]">
                     {t("admin.stock.loading")}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-[var(--slate)]">
+                  <td colSpan={8} className="text-[var(--slate)]">
                     {t("admin.stock.empty")}
                   </td>
                 </tr>
@@ -533,7 +532,6 @@ export default function AdminStockPage() {
                       <td>
                         <div className="admin-cell-primary">{product.name}</div>
                       </td>
-                      <td className="admin-muted">{product.sku || "—"}</td>
                       <td>{categoryLabel(product.category)}</td>
                       <td>{formatPrice(product.sellingPrice)}</td>
                       <td className="admin-stock-qty">
@@ -593,9 +591,7 @@ export default function AdminStockPage() {
                       {statusLabel(level)}
                     </span>
                   </div>
-                  <p>
-                    {product.sku || "—"} · {categoryLabel(product.category)}
-                  </p>
+                  <p>{categoryLabel(product.category)}</p>
                   <p>
                     {formatPrice(product.sellingPrice)} ·{" "}
                     {t("admin.stock.colStock")}:{" "}

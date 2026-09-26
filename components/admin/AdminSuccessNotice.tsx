@@ -85,6 +85,14 @@ function AdminSuccessNoticeDialog({
       role="presentation"
       dir="rtl"
       onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 99999,
+      }}
     >
       <div
         className="admin-save-notice-card"
