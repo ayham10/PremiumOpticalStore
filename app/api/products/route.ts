@@ -81,8 +81,13 @@ function sanitizeProductInput(
   const minimumStock = Number(input.minimumStock ?? existing?.minimumStock ?? 0);
   const status = (input.status ?? existing?.status ?? "active") as ProductStatus;
 
+  const slug =
+    slugify(input.slug || existing?.slug || name) ||
+    existing?.slug ||
+    `product-${Date.now().toString(36)}`;
+
   return {
-    slug: slugify(input.slug || existing?.slug || name),
+    slug,
     name,
     category,
     brand,
