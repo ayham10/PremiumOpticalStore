@@ -233,6 +233,27 @@ export function invalidateStoreCache() {
   memoryStore = null;
 }
 
+/**
+ * Restore-only write. Replaces the live payload as-is.
+ * Does not seed-merge, normalize, or touch lumina-media.
+ */
+export async function replaceStorePayload(data: AppData): Promise<void> {
+  if (!data || typeof data !== "object" || !Array.isArray(data.products)) {
+    throw new Error("Invalid store payload");
+  }
+  const next: AppData = {
+    ...data,
+    updatedAt: new Date().toISOString(),
+  };
+  const config = supabaseConfig();
+  if (!config) {
+    throw new Error("Supabase is not configured; restore aborted");
+  }
+  await writeSupabase(next);
+  await writeFilesystem(next).catch(() => undefined);
+  memoryStore = { at: Date.now(), data: next, storage: "supabase" };
+}
+
 export async function saveStore(data: AppData): Promise<{ storage: StorageMode }> {
   const next: AppData = {
     ...normalizeData(data),

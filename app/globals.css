@@ -17172,6 +17172,173 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   color: var(--bk-gold);
 }
 
+.admin-backups-restore-pick {
+  margin: 0 0 0.7rem;
+  color: var(--bk-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.admin-backups-restore li button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 40px;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid rgba(201, 157, 61, 0.45);
+  border-radius: 12px;
+  background: #0d1a25;
+  color: #e8eaed;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-backups-restore li button.is-active {
+  color: #e6c56a;
+  border-color: rgba(201, 157, 61, 0.85);
+  background: #0d1a25;
+  box-shadow: inset 0 0 0 1px rgba(201, 157, 61, 0.35);
+}
+
+.admin-backups-restore-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: auto;
+  border: 0;
+  border-radius: 12px;
+  background: #e6c56a;
+  color: #16120a;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-backups-restore-go:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.admin-backups-history tr {
+  cursor: pointer;
+}
+
+.admin-backups-history tr.is-selected td,
+.admin-backups-history-item.is-selected {
+  background: #0d1a25;
+  box-shadow: inset 0 0 0 1px rgba(201, 157, 61, 0.45);
+}
+
+html.admin-dark body > .admin-restore-overlay,
+body > .admin-restore-overlay,
+.admin-restore-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99998 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1.15rem;
+  background: rgba(11, 14, 20, 0.78);
+}
+
+.admin-restore-card {
+  width: min(100%, 28rem);
+  padding: 1.25rem 1.15rem 1.1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(201, 157, 61, 0.45);
+  background: #07111a;
+  color: #f4f6f8;
+}
+
+.admin-restore-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+
+.admin-restore-meta {
+  margin: 0 0 0.85rem;
+  color: #8b929c;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.admin-restore-sections {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-restore-sections li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(201, 157, 61, 0.45);
+  border-radius: 12px;
+  background: #0d1a25;
+  font-size: 0.78rem;
+}
+
+.admin-restore-sections strong {
+  font-size: 0.82rem;
+}
+
+.admin-restore-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  color: #e6c58a;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.admin-restore-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.admin-restore-cancel,
+.admin-restore-next,
+.admin-restore-confirm {
+  min-height: 42px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-restore-cancel {
+  border: 1px solid rgba(201, 157, 61, 0.45);
+  background: #0d1a25;
+  color: #e8eaed;
+}
+
+.admin-restore-next,
+.admin-restore-confirm {
+  border: 0;
+  background: #e6c56a;
+  color: #16120a;
+}
+
+.admin-restore-cancel:disabled,
+.admin-restore-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .admin-backups-soon {
   display: flex;
   align-items: center;
