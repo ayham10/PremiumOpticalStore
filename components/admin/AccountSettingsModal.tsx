@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import AdminModal from "@/components/admin/AdminModal";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 
@@ -23,6 +24,7 @@ type AccountUser = {
 };
 
 export default function AccountSettingsModal({ open, onClose }: Props) {
+  const { notifySaved } = useAdminSuccessNotice();
   const { t } = useLocale();
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,7 @@ export default function AccountSettingsModal({ open, onClose }: Props) {
         body: JSON.stringify({ name: name.trim() }),
       });
       setSuccess(data.message || t("admin.account.saved"));
+      notifySaved();
       window.dispatchEvent(
         new CustomEvent("oyon:account-updated", { detail: data.user })
       );

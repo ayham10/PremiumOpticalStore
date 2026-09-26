@@ -25,6 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import SingleImageField from "@/components/admin/SingleImageField";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
@@ -153,6 +154,7 @@ const OFFER_SECTIONS = {
 } as const;
 
 export default function AdminPromotionsPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const { t, locale } = useLocale();
   const sections = OFFER_SECTIONS[locale] || OFFER_SECTIONS.ar;
   const [items, setItems] = useState<Promotion[]>([]);
@@ -286,7 +288,7 @@ export default function AdminPromotionsPage() {
         setItems((prev) =>
           prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p))
         );
-        setMessage(t("admin.promotions.updated"));
+        notifySaved();
       } else {
         const created = await apiFetch<Promotion | { promotion: Promotion }>(
           "/api/promotions",
@@ -297,7 +299,7 @@ export default function AdminPromotionsPage() {
             ? created.promotion
             : (created as Promotion);
         setItems((prev) => [row, ...prev]);
-        setMessage(t("admin.promotions.created"));
+        notifySaved();
       }
       setModalOpen(false);
     } catch (err) {

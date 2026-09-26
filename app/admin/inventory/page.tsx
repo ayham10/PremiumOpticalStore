@@ -704,27 +704,52 @@ export default function AdminInventoryPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => goTab("images")}
-                      className="flex flex-1 items-center justify-center gap-1.5 disabled:opacity-50"
-                      style={goldBtn}
-                    >
-                      التالي
-                      <ChevronLeft size={16} strokeWidth={2} />
-                    </button>
+                  <div className="admin-pe-step1-actions">
                     {hasPermission(role, "delete") && editing ? (
                       <button
                         type="button"
                         onClick={() => void onDelete(editing)}
-                        className="flex flex-1 items-center justify-center gap-1.5"
-                        style={dangerOutlineBtn}
+                        className="flex items-center justify-center gap-1.5"
+                        style={{
+                          ...dangerOutlineBtn,
+                          height: 42,
+                          fontSize: "0.8rem",
+                        }}
                       >
-                        <Trash2 size={15} strokeWidth={1.55} />
+                        <Trash2 size={14} strokeWidth={1.55} />
                         حذف المنتج
                       </button>
                     ) : null}
+                    {editing ? (
+                      <button
+                        type="button"
+                        onClick={() => void onSubmit()}
+                        disabled={saving}
+                        className="flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        style={{
+                          ...outlineGoldBtn,
+                          height: 42,
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        <Save size={14} strokeWidth={1.7} />
+                        {saving ? "جارٍ الحفظ…" : "حفظ التغييرات"}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => goTab("images")}
+                      disabled={saving}
+                      className="flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      style={{
+                        ...goldBtn,
+                        height: 42,
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      التالي
+                      <ChevronLeft size={15} strokeWidth={2} />
+                    </button>
                   </div>
                 </>
               ) : null}

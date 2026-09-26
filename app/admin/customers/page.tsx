@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import type { AdminSession, Appointment, Customer } from "@/lib/types";
@@ -28,6 +29,7 @@ const emptyForm = {
 };
 
 export default function AdminCustomersPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [role, setRole] = useState<AdminSession["role"]>("admin");
@@ -122,7 +124,7 @@ export default function AdminCustomersPage() {
         setCustomers((prev) =>
           prev.map((c) => (c.id === editing.id ? { ...c, ...row } : c))
         );
-        setMessage("Customer updated");
+        notifySaved();
       } else {
         const created = await apiFetch<Customer | { customer: Customer }>(
           "/api/customers",
@@ -133,7 +135,7 @@ export default function AdminCustomersPage() {
             ? created.customer
             : (created as Customer);
         setCustomers((prev) => [row, ...prev]);
-        setMessage("Customer added");
+        notifySaved();
       }
       setModalOpen(false);
     } catch (err) {

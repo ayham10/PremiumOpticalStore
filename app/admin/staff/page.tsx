@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, UserRound } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import type { ServiceType, StaffMember, UserRole } from "@/lib/types";
 
@@ -72,6 +73,7 @@ function fromStaff(s: StaffMember): StaffForm {
 }
 
 export default function AdminStaffPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -156,7 +158,7 @@ export default function AdminStaffPage() {
         setStaff((prev) =>
           prev.map((s) => (s.id === editing.id ? { ...s, ...row } : s))
         );
-        setMessage("Staff member updated");
+        notifySaved();
       } else {
         const created = await apiFetch<StaffMember | { staff: StaffMember }>(
           "/api/staff",
@@ -167,7 +169,7 @@ export default function AdminStaffPage() {
             ? created.staff
             : (created as StaffMember);
         setStaff((prev) => [row, ...prev]);
-        setMessage("Staff member added");
+        notifySaved();
       }
       setModalOpen(false);
     } catch (err) {

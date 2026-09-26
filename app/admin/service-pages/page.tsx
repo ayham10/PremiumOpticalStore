@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Contact, Eye, Home, RotateCcw, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
@@ -31,6 +32,7 @@ type Tab = "homepage" | "eyeExam" | "contactLenses";
 
 export default function AdminServicePagesPage() {
   const { t } = useLocale();
+  const { notifySaved } = useAdminSuccessNotice();
   const [tab, setTab] = useState<Tab>("homepage");
   const [pages, setPages] = useState<ServicePagesSettings>(
     cloneServicePages(),
@@ -135,7 +137,7 @@ export default function AdminServicePagesPage() {
       setPages(mergeServicePages(next ?? merged));
       invalidatePublicCache("settings:");
       window.dispatchEvent(new Event("oyon:branding-saved"));
-      setMessage(t("admin.servicePages.saved"));
+      notifySaved();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("admin.servicePages.saveError"),

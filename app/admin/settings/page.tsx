@@ -33,6 +33,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import BookingMessagesSettingsSection from "@/components/admin/BookingMessagesSettingsSection";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import CategoryDefaultImagesSection from "@/components/admin/CategoryDefaultImagesSection";
@@ -169,6 +170,7 @@ export default function AdminSettingsPage() {
 
 function AdminSettingsPageInner() {
   const { t } = useLocale();
+  const { notifySaved } = useAdminSuccessNotice();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<StoreSettings>(EMPTY_SETTINGS);
   const [whatsappTemplates, setWhatsappTemplates] = useState<string[]>([
@@ -350,7 +352,7 @@ function AdminSettingsPageInner() {
       setForm(next);
       invalidatePublicCache("settings:");
       invalidatePublicCache("product:");
-      setMessage(t("admin.settings.saved"));
+      notifySaved();
       window.dispatchEvent(new Event("oyon:branding-saved"));
       window.dispatchEvent(new Event("oyon:availability-saved"));
     } catch (err) {

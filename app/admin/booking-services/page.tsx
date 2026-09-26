@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import {
   BookingServiceIcon,
   BookingServiceIconPicker,
@@ -120,6 +121,7 @@ function notifyBookingServicesSaved() {
 }
 
 export default function AdminBookingServicesPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const { t, locale } = useLocale();
   const [items, setItems] = useState<BookingService[]>([]);
   const [role, setRole] = useState<AdminSession["role"]>("admin");
@@ -194,7 +196,7 @@ export default function AdminBookingServicesPage() {
         },
       );
       setItems(data.services || next);
-      setMessage(t("admin.bookingServices.reordered"));
+      notifySaved();
       notifyBookingServicesSaved();
     } catch (err) {
       setMessage(
@@ -242,7 +244,7 @@ export default function AdminBookingServicesPage() {
             .map((s) => (s.id === editing.id ? updated.service : s))
             .sort((a, b) => a.sortOrder - b.sortOrder),
         );
-        setMessage(t("admin.bookingServices.updated"));
+        notifySaved();
       } else {
         const created = await apiFetch<{ service: BookingService }>(
           "/api/booking-services",
@@ -251,7 +253,7 @@ export default function AdminBookingServicesPage() {
         setItems((prev) =>
           [...prev, created.service].sort((a, b) => a.sortOrder - b.sortOrder),
         );
-        setMessage(t("admin.bookingServices.created"));
+        notifySaved();
       }
       setModalOpen(false);
       notifyBookingServicesSaved();

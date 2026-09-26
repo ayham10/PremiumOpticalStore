@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Palette, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import BrandingSettingsSection from "@/components/admin/BrandingSettingsSection";
 import { apiFetch } from "@/lib/admin-api";
 import { DEFAULT_BRANDING, mergeBranding } from "@/lib/branding";
@@ -59,6 +60,7 @@ function normalizeSettings(data: StoreSettings | { settings: StoreSettings }): S
 }
 
 export default function AdminBrandingPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const [form, setForm] = useState<StoreSettings>(EMPTY_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -94,7 +96,7 @@ export default function AdminBrandingPage() {
         { method: "PUT", body: JSON.stringify({ settings: form }) },
       );
       setForm(normalizeSettings(saved));
-      setMessage("Branding saved — applied to website, admin, login, and favicon");
+      notifySaved();
       window.dispatchEvent(new Event("oyon:branding-saved"));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Save failed");
