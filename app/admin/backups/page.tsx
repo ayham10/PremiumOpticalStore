@@ -92,6 +92,7 @@ export default function AdminBackupsPage() {
       label: t("admin.backups.cardSize"),
       value: latest ? formatBackupBytes(latest.sizeBytes) : "—",
       icon: HardDrive,
+      compact: false,
     },
     {
       key: "media",
@@ -100,6 +101,7 @@ export default function AdminBackupsPage() {
         data?.media.protectedCount ?? latest?.mediaObjectCount ?? null,
       ),
       icon: ImageIcon,
+      compact: false,
     },
     {
       key: "retention",
@@ -108,6 +110,7 @@ export default function AdminBackupsPage() {
         days: data?.retentionDays ?? 30,
       }),
       icon: Timer,
+      compact: false,
     },
   ] as const;
 
