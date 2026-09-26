@@ -125,6 +125,31 @@ That is Vercel’s **platform** 404 (`x-vercel-error: NOT_FOUND`), not the Next.
 
 Probe: `GET /api/health` should return `{ ok: true }` when the Next.js runtime is serving.
 
+## Backups
+
+Production business data is the `lumina_store` / `default` JSON document plus files in the public `lumina-media` bucket. Daily backups write **only** to a private `oyon-backups` bucket (never back into live store or media).
+
+Each snapshot stores the **complete `AppData` object** (`appData`) plus a `sections` summary so a future restore can copy one field at a time (`eyeExamAppointments`, `products`, `lensInventory`, `settings`, …). Restore is not implemented yet. Any future restore must first call `createPreRestoreSnapshot()` so the current production blob is saved under `store/pre-restore/`.
+
+Layout inside `oyon-backups`:
+
+| Path | Purpose |
+| --- | --- |
+| `store/daily/YYYY-MM-DD.json` | Full AppData snapshot (Jerusalem date, ~30 days kept) |
+| `store/pre-restore/*.json` | Mandatory pre-restore copies (future) |
+| `media/objects/<live-path>` | Incremental copies of `lumina-media` files |
+| `media/index.json` | Size / `updated_at` index so unchanged files are not re-copied |
+
+### Manual setup
+
+1. In the Supabase SQL editor, run the `oyon-backups` block in `supabase/storage.sql` **or** let the first backup job create the bucket (`public: false`).
+2. In **Storage**, confirm `oyon-backups` is **private**. Do not add a public read policy.
+3. In Vercel, set `CRON_SECRET` (same bearer used by `/api/cron/backups`). Optional: `SUPABASE_BACKUP_BUCKET=oyon-backups`.
+4. After deploy, Vercel Cron hits `GET /api/cron/backups` daily at `00:00 UTC` with `Authorization: Bearer $CRON_SECRET`.
+5. Hobby plans may not run cron. Trigger the same URL manually or from an external scheduler.
+
+The job is read-only against `lumina_store` and `lumina-media`. It does not seed, delete, or update production business data.
+
 ## Design notes
 
 Light premium direction (Warby Parker / Apple–inspired): navy accent (`--accent`), Fraunces display typography, Manrope body, large spacing, restrained motion. Brand **LUMINA** is the hero signal on the landing page with a full-bleed looping video.

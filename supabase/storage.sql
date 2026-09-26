@@ -10,3 +10,11 @@ to public
 using (bucket_id = 'lumina-media');
 
 -- Service role (server API) bypasses RLS for uploads/deletes.
+
+-- Private OYON backups. Never public. Daily AppData snapshots + incremental media.
+insert into storage.buckets (id, name, public)
+values ('oyon-backups', 'oyon-backups', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Public read oyon backups" on storage.objects;
+drop policy if exists "Public write oyon backups" on storage.objects;
