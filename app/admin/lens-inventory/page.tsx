@@ -178,7 +178,7 @@ export default function AdminLensInventoryPage() {
         <p className="admin-muted">{t("admin.lensInventory.loading")}</p>
       ) : (
         <>
-          <div className="admin-lens-matrices">
+          <div className="admin-lens-matrices" dir="ltr">
             <LensMatrix
               title={t("admin.lensInventory.minusTitle")}
               type="minus"
@@ -377,15 +377,23 @@ function LensMatrix({
 }) {
   const { t } = useLocale();
   return (
-    <section className="admin-card admin-lens-card">
+    <section className="admin-card admin-lens-card" dir="rtl">
       <h2>{title}</h2>
       <div className="admin-lens-scroll" dir="ltr">
-        <table className="admin-lens-matrix">
+        <table className="admin-lens-matrix" dir="ltr">
+          <colgroup>
+            <col className="admin-lens-col-sph" />
+            {LENS_CYL.map((cyl) => (
+              <col key={cyl} className="admin-lens-col-cyl" />
+            ))}
+          </colgroup>
           <thead>
             <tr>
-              <th>SPH \ CYL</th>
+              <th scope="col">SPH \ CYL</th>
               {LENS_CYL.map((cyl) => (
-                <th key={cyl}>{cyl}</th>
+                <th key={cyl} scope="col">
+                  {cyl}
+                </th>
               ))}
             </tr>
           </thead>
@@ -404,7 +412,7 @@ function LensMatrix({
                         onClick={() => onEdit(type, sph, cyl)}
                         aria-label={`${t("admin.lensInventory.editTitle")} ${lensSignLabel(type)} ${sph} ${cyl}`}
                       >
-                        {cell.currentStock} / {cell.desiredStock}
+                        {cell.currentStock}/{cell.desiredStock}
                       </button>
                     </td>
                   );
