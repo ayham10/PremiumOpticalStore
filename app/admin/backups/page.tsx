@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   CalendarDays,
@@ -12,12 +13,10 @@ import {
   DatabaseBackup,
   Image as ImageIcon,
   Info,
-  Lock,
   Package,
   Settings,
   ShieldCheck,
   Tag,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
@@ -34,19 +33,24 @@ import {
   type BackupStatusSummary,
   type ManualBackupClientResult,
 } from "@/lib/backup-status";
+import type {
+  RestoreCategory,
+  RestoreExecuteClientResult,
+  RestorePreviewResult,
+} from "@/lib/restore-status";
+import { isLiveRestoreUiAllowed } from "@/lib/restore-status";
 
 const HISTORY_PREVIEW = 5;
 
 const RESTORE_ITEMS: Array<{
-  key: "appointments" | "products" | "lenses" | "settings" | "promotions" | "customers";
+  key: RestoreCategory;
   icon: LucideIcon;
 }> = [
-  { key: "appointments", icon: CalendarDays },
+  { key: "bookings", icon: CalendarDays },
   { key: "products", icon: Package },
   { key: "lenses", icon: Database },
   { key: "settings", icon: Settings },
   { key: "promotions", icon: Tag },
-  { key: "customers", icon: Users },
 ];
 
 function statusIcon(status: BackupHealthStatus | BackupRowStatus) {
@@ -73,6 +77,13 @@ export default function AdminBackupsPage() {
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<RestoreCategory[]>([]);
+  const [restoreError, setRestoreError] = useState("");
+  const [previewing, setPreviewing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [preview, setPreview] = useState<RestorePreviewResult | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) {
@@ -139,6 +150,92 @@ export default function AdminBackupsPage() {
       setCreating(false);
     }
   }, [load, notifySaved, t]);
+
+  const toggleCategory = useCallback((key: RestoreCategory) => {
+    setSelectedCategories((current) =>
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key],
+    );
+    setRestoreError("");
+  }, []);
+
+  const selectedBackup =
+    data?.history.find((row) => row.id === selectedBackupId) ?? null;
+
+  const openPreview = useCallback(async () => {
+    if (!selectedBackupId || selectedCategories.length === 0 || previewing) return;
+    setPreviewing(true);
+    setRestoreError("");
+    setConfirmOpen(false);
+    try {
+      const result = await apiFetch<RestorePreviewResult>(
+        "/api/admin/backups/restore/preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            backupId: selectedBackupId,
+            categories: selectedCategories,
+          }),
+        },
+      );
+      setPreview(result);
+    } catch (err) {
+      setPreview(null);
+      if (err instanceof ApiError && err.status === 403) {
+        setRestoreError(t("admin.backups.restoreForbidden"));
+      } else {
+        setRestoreError(
+          err instanceof Error ? err.message : t("admin.backups.restorePreviewError"),
+        );
+      }
+    } finally {
+      setPreviewing(false);
+    }
+  }, [previewing, selectedBackupId, selectedCategories, t]);
+
+  const liveRestoreAllowed = isLiveRestoreUiAllowed();
+
+  const runRestore = useCallback(async () => {
+    if (!preview || restoring || !liveRestoreAllowed) return;
+    setRestoring(true);
+    setRestoreError("");
+    try {
+      await apiFetch<RestoreExecuteClientResult>(
+        "/api/admin/backups/restore",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            backupId: preview.backup.id,
+            categories: preview.categories,
+            confirm: true,
+          }),
+        },
+      );
+      setPreview(null);
+      setConfirmOpen(false);
+      notifySaved({
+        title: t("admin.backups.restoreSuccess"),
+        detail: formatBackupDateTime(preview.backup.createdAt),
+      });
+      await load({ silent: true });
+    } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.message === t("admin.backups.restoreProductionOnly")
+      ) {
+        setRestoreError(t("admin.backups.restoreProductionOnly"));
+      } else if (err instanceof ApiError && err.status === 403) {
+        setRestoreError(t("admin.backups.restoreForbidden"));
+      } else {
+        setRestoreError(
+          err instanceof Error ? err.message : t("admin.backups.restoreError"),
+        );
+      }
+    } finally {
+      setRestoring(false);
+    }
+  }, [liveRestoreAllowed, load, notifySaved, preview, restoring, t]);
 
   const lastSuccessful = lastSuccessfulOf(data);
   const status = data?.status ?? "none";
@@ -332,10 +429,15 @@ export default function AdminBackupsPage() {
               ) : (
                 visibleHistory.map((row, index) => (
                   <HistoryRow
-                    key={`${row.kind}-${row.date}-${row.createdAt}`}
+                    key={row.id}
                     row={row}
                     t={t}
                     current={index === 0}
+                    selected={row.id === selectedBackupId}
+                    onSelect={() => {
+                      setSelectedBackupId(row.id);
+                      setRestoreError("");
+                    }}
                   />
                 ))
               )}
@@ -350,9 +452,14 @@ export default function AdminBackupsPage() {
           ) : (
             visibleHistory.map((row) => (
               <HistoryMobileRow
-                key={`${row.kind}-${row.date}-${row.createdAt}`}
+                key={row.id}
                 row={row}
                 t={t}
+                selected={row.id === selectedBackupId}
+                onSelect={() => {
+                  setSelectedBackupId(row.id);
+                  setRestoreError("");
+                }}
               />
             ))
           )}
@@ -368,21 +475,58 @@ export default function AdminBackupsPage() {
             </div>
           </div>
           <p className="admin-backups-lead">{t("admin.backups.restoreLead")}</p>
+          <p className="admin-backups-restore-pick">
+            {selectedBackup
+              ? `${t("admin.backups.restoreSelected")} ${formatBackupDateTime(selectedBackup.createdAt)} — ${
+                  selectedBackup.kind === "manual"
+                    ? t("admin.backups.kindManual")
+                    : t("admin.backups.kindDaily")
+                }`
+              : t("admin.backups.restorePickBackup")}
+          </p>
           <ul>
             {RESTORE_ITEMS.map((item) => {
               const Icon = item.icon;
+              const active = selectedCategories.includes(item.key);
               return (
                 <li key={item.key}>
-                  <Icon size={14} strokeWidth={1.7} aria-hidden />
-                  <span>{t(`admin.backups.restore_${item.key}`)}</span>
+                  <button
+                    type="button"
+                    className={active ? "is-active" : undefined}
+                    onClick={() => toggleCategory(item.key)}
+                  >
+                    <Icon size={14} strokeWidth={1.7} aria-hidden />
+                    <span>{t(`admin.backups.restore_${item.key}`)}</span>
+                  </button>
                 </li>
               );
             })}
           </ul>
-          <button type="button" className="admin-backups-soon" disabled>
-            <Lock size={13} strokeWidth={1.8} aria-hidden />
-            {t("admin.backups.comingSoon")}
+          {restoreError ? (
+            <p className="admin-backups-action-error" role="alert">
+              {restoreError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="admin-backups-restore-go"
+            disabled={
+              !selectedBackupId ||
+              selectedCategories.length === 0 ||
+              previewing ||
+              restoring
+            }
+            onClick={() => void openPreview()}
+          >
+            {previewing
+              ? t("admin.backups.restorePreviewing")
+              : t("admin.backups.restorePreview")}
           </button>
+          {!liveRestoreAllowed ? (
+            <p className="admin-backups-restore-prod-only" role="status">
+              {t("admin.backups.restoreProductionOnly")}
+            </p>
+          ) : null}
         </section>
 
         <section className="admin-backups-card admin-backups-auto">
@@ -424,6 +568,22 @@ export default function AdminBackupsPage() {
           </p>
         </section>
       </div>
+      {preview ? (
+        <RestoreDialog
+          preview={preview}
+          confirmOpen={confirmOpen}
+          restoring={restoring}
+          executeAllowed={liveRestoreAllowed}
+          t={t}
+          onClose={() => {
+            if (restoring) return;
+            setPreview(null);
+            setConfirmOpen(false);
+          }}
+          onAskConfirm={() => setConfirmOpen(true)}
+          onConfirm={() => void runRestore()}
+        />
+      ) : null}
     </div>
   );
 }
@@ -470,13 +630,22 @@ function HistoryRow({
   row,
   t,
   current,
+  selected,
+  onSelect,
 }: {
   row: BackupHistoryItem;
   t: (key: string) => string;
   current?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   return (
-    <tr className={current ? "is-current" : undefined}>
+    <tr
+      className={[current ? "is-current" : "", selected ? "is-selected" : ""]
+        .filter(Boolean)
+        .join(" ") || undefined}
+      onClick={row.status === "success" ? onSelect : undefined}
+    >
       <td>
         <span className="admin-backups-date-cell">
           {formatBackupDate(row.date)}
@@ -497,12 +666,19 @@ function HistoryRow({
 function HistoryMobileRow({
   row,
   t,
+  selected,
+  onSelect,
 }: {
   row: BackupHistoryItem;
   t: (key: string) => string;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   return (
-    <article className="admin-backups-history-item">
+    <article
+      className={`admin-backups-history-item${selected ? " is-selected" : ""}`}
+      onClick={row.status === "success" ? onSelect : undefined}
+    >
       <div>
         <strong>
           {formatBackupDate(row.date)} • {formatBackupTime(row.createdAt)}{" "}
@@ -520,5 +696,114 @@ function HistoryMobileRow({
         </span>
       </p>
     </article>
+  );
+}
+
+function RestoreDialog({
+  preview,
+  confirmOpen,
+  restoring,
+  executeAllowed,
+  t,
+  onClose,
+  onAskConfirm,
+  onConfirm,
+}: {
+  preview: RestorePreviewResult;
+  confirmOpen: boolean;
+  restoring: boolean;
+  executeAllowed: boolean;
+  t: (key: string) => string;
+  onClose: () => void;
+  onAskConfirm: () => void;
+  onConfirm: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="admin-restore-overlay"
+      role="presentation"
+      dir="rtl"
+      onClick={restoring ? undefined : onClose}
+    >
+      <div
+        className="admin-restore-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-restore-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="admin-restore-title">
+          {confirmOpen
+            ? t("admin.backups.restoreConfirmTitle")
+            : t("admin.backups.restorePreviewTitle")}
+        </h2>
+        <p className="admin-restore-meta">
+          {formatBackupDateTime(preview.backup.createdAt)} —{" "}
+          {preview.backup.kind === "manual"
+            ? t("admin.backups.kindManual")
+            : t("admin.backups.kindDaily")}
+        </p>
+        <ul className="admin-restore-sections">
+          {preview.sections.map((section) => (
+            <li key={section.category}>
+              <strong>{t(`admin.backups.restore_${section.category}`)}</strong>
+              <span>
+                {t("admin.backups.restoreLiveCount")} {section.liveCount}
+              </span>
+              <span>
+                {t("admin.backups.restoreBackupCount")} {section.backupCount}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="admin-restore-warning">
+          <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+          {t("admin.backups.restoreWarning")}
+        </p>
+        <div className="admin-restore-actions">
+          <button
+            type="button"
+            className="admin-restore-cancel"
+            disabled={restoring}
+            onClick={onClose}
+          >
+            {t("admin.backups.restoreCancel")}
+          </button>
+          {confirmOpen ? (
+            executeAllowed ? (
+              <button
+                type="button"
+                className="admin-restore-confirm"
+                disabled={restoring}
+                onClick={onConfirm}
+              >
+                {restoring
+                  ? t("admin.backups.restoreRunning")
+                  : t("admin.backups.restoreConfirm")}
+              </button>
+            ) : (
+              <p className="admin-restore-prod-only" role="status">
+                {t("admin.backups.restoreProductionOnly")}
+              </p>
+            )
+          ) : (
+            <button
+              type="button"
+              className="admin-restore-next"
+              onClick={onAskConfirm}
+            >
+              {t("admin.backups.restoreContinue")}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

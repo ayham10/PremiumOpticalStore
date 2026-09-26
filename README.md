@@ -129,7 +129,7 @@ Probe: `GET /api/health` should return `{ ok: true }` when the Next.js runtime i
 
 Production business data is the `lumina_store` / `default` JSON document plus files in the public `lumina-media` bucket. Daily backups write **only** to a private `oyon-backups` bucket (never back into live store or media).
 
-Each snapshot stores the **complete `AppData` object** (`appData`) plus a `sections` summary so a future restore can copy one field at a time (`eyeExamAppointments`, `products`, `lensInventory`, `settings`, …). Restore is not implemented yet. Any future restore must first call `createPreRestoreSnapshot()` so the current production blob is saved under `store/pre-restore/`.
+Each snapshot stores the **complete `AppData` object** (`appData`) plus a `sections` summary. Selective Admin restore (`POST /api/admin/backups/restore`) copies only chosen categories, and only after `createPreRestoreSnapshot()` writes the current live blob to `store/pre-restore/`. The browser sends a server-issued backup id (`daily|manual:<createdAt>`), never a storage path. Restore does not delete or overwrite `lumina-media`.
 
 The daily JSON is written **last**, and only after every live media file is already in the backup index. If the Vercel 60s function budget runs out, the job stops starting new copies, keeps progress in `media/index.json`, does **not** write `store/daily/YYYY-MM-DD.json`, and returns HTTP 503. The next cron run resumes unchanged files as skips and continues the rest.
 
@@ -139,7 +139,7 @@ Layout inside `oyon-backups`:
 | --- | --- |
 | `store/daily/YYYY-MM-DD.json` | Full AppData snapshot (Jerusalem date, ~30 days kept) |
 | `store/manual/YYYY-MM-DDTHH-mm-ss.json` | Admin “Backup Now” restore points (never auto-deleted) |
-| `store/pre-restore/*.json` | Mandatory pre-restore copies (future) |
+| `store/pre-restore/*.json` | Mandatory complete live copies taken immediately before a restore |
 | `media/objects/<live-path>` | Incremental copies of `lumina-media` files |
 | `media/index.json` | Size / `updated_at` index so unchanged files are not re-copied |
 

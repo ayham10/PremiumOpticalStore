@@ -11,6 +11,7 @@ export type BackupRowStatus = "success" | "warning" | "failed";
 export type BackupHistoryKind = "daily" | "manual";
 
 export type BackupHistoryItem = {
+  id: string;
   kind: BackupHistoryKind;
   date: string;
   createdAt: string;

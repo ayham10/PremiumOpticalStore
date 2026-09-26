@@ -904,8 +904,10 @@ function toHistoryItem(
   sizeBytes: number,
   snapshot: OyonStoreSnapshot,
 ): BackupHistoryItem {
+  const kind = snapshot.purpose === "manual" ? "manual" : "daily";
   return {
-    kind: snapshot.purpose === "manual" ? "manual" : "daily",
+    id: `${kind}:${snapshot.createdAt}`,
+    kind,
     date,
     createdAt: snapshot.createdAt,
     sizeBytes,
@@ -1044,4 +1046,36 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
     history,
     media,
   };
+}
+
+/**
+ * Resolve a client backup id (`daily|manual:<createdAt>`) to a completed
+ * snapshot. Never returns a storage path. Rejects incomplete JSON.
+ */
+export async function loadRestorableSnapshot(
+  id: string,
+): Promise<OyonStoreSnapshot | null> {
+  const sep = id.indexOf(":");
+  if (sep < 0) return null;
+  const kind = id.slice(0, sep);
+  const createdAt = id.slice(sep + 1);
+  if ((kind !== "daily" && kind !== "manual") || !createdAt) return null;
+
+  const prefix = kind === "manual" ? MANUAL_PREFIX : DAILY_PREFIX;
+  const objects = await listPrefix(BACKUP_BUCKET, prefix.replace(/\/$/, ""));
+  for (const object of objects) {
+    try {
+      const { bytes } = await downloadObject(BACKUP_BUCKET, object.path);
+      const parsed = JSON.parse(
+        Buffer.from(bytes).toString("utf8"),
+      ) as unknown;
+      if (!isListedSnapshot(parsed)) continue;
+      if (parsed.purpose !== kind || parsed.createdAt !== createdAt) continue;
+      if (!parsed.appData || typeof parsed.appData !== "object") return null;
+      return parsed;
+    } catch (error) {
+      console.error("Restore snapshot lookup skipped unreadable object", error);
+    }
+  }
+  return null;
 }
