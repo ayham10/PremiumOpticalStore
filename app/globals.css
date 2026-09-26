@@ -16748,8 +16748,9 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 }
 
 .admin-backups-page {
-  --bk-card: #10151c;
-  --bk-border: rgba(212, 175, 106, 0.22);
+  --bk-card: #07111a;
+  --bk-surface: #0d1a25;
+  --bk-border: rgba(201, 157, 61, 0.45);
   --bk-muted: #8b929c;
   --bk-text: #f4f6f8;
   --bk-gold: #d4af6a;
@@ -16765,7 +16766,7 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   background: var(--bk-card) !important;
   border: 1px solid var(--bk-border) !important;
   border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28) !important;
+  box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   color: var(--bk-text);
@@ -17012,7 +17013,7 @@ html.admin-dark .admin-backups-page .admin-backups-card,
 }
 
 .admin-backups-history tr.is-current td {
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--bk-surface);
 }
 
 .admin-backups-history tr:last-child td {
@@ -17096,9 +17097,9 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   gap: 0.4rem;
   min-height: 40px;
   padding: 0.45rem 0.5rem;
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid var(--bk-border);
   border-radius: 12px;
-  background: #0c1117;
+  background: var(--bk-surface);
   color: #e8eaed;
   font-size: 0.72rem;
   font-weight: 700;
@@ -17118,9 +17119,9 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   width: 100%;
   min-height: 42px;
   margin-top: auto;
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid var(--bk-border);
   border-radius: 12px;
-  background: #0c1117;
+  background: var(--bk-surface);
   color: #c8cdd4;
   font: inherit;
   font-size: 0.86rem;
