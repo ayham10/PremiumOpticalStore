@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import {
+  Blend,
   CalendarDays,
   ChevronDown,
   Clock3,
@@ -346,7 +347,7 @@ export default function AdminDashboardPage() {
     {
       href: "/admin/lens-inventory",
       label: "مخزون العدسات",
-      icon: Contact,
+      icon: Blend,
     },
   ];
 
