@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, productPublicKey } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import { productDisplayImage } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
@@ -103,6 +103,7 @@ export default function RelatedProductsCarousel({
         aria-label={heading}
       >
         {products.map((product) => {
+          const href = `/product/${productPublicKey(product)}`;
           const image = productDisplayImage(product, defaults);
           const categoryLabel =
             dict.shop.categories[
@@ -112,7 +113,7 @@ export default function RelatedProductsCarousel({
           return (
             <article key={product.id} className="product-related-card">
               <SaveReturnLink
-                href={`/product/${product.slug}`}
+                href={href}
                 className="product-related-media"
                 aria-label={product.name}
               >
@@ -129,7 +130,7 @@ export default function RelatedProductsCarousel({
               <div className="product-related-body">
                 <span className="product-related-cat">{categoryLabel}</span>
                 <SaveReturnLink
-                  href={`/product/${product.slug}`}
+                  href={href}
                   className="product-related-name"
                 >
                   {product.name}

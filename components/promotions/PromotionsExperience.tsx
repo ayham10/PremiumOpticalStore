@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, productPublicKey } from "@/lib/format";
 import type { Product, Promotion } from "@/lib/types";
 import { productDisplayImage } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
@@ -375,6 +375,7 @@ function PromoProductCard({
 }) {
   const { t } = useLocale();
   const defaults = useCategoryDefaultImages();
+  const href = `/product/${productPublicKey(product)}`;
   const image = productDisplayImage(product, defaults);
   const original = product.sellingPrice;
   const discounted = computeDiscountedPrice(original, promo);
@@ -385,7 +386,7 @@ function PromoProductCard({
     <article className="promo-product-card" role="listitem">
       <div className="promo-product-media">
         <Link
-          href={`/product/${product.slug}`}
+          href={href}
           className="promo-product-link"
           aria-label={product.name}
         >
@@ -408,7 +409,7 @@ function PromoProductCard({
           </span>
         ) : null}
       </div>
-      <Link href={`/product/${product.slug}`} className="promo-product-name">
+      <Link href={href} className="promo-product-name">
         {product.name}
       </Link>
       <div className="promo-product-prices">

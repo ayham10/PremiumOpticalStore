@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertTriangle, CalendarCheck2 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, productPublicKey } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
@@ -27,6 +27,7 @@ import {
 function ContactLensCard({ product }: { product: Product }) {
   const { t, dict } = useLocale();
   const defaults = useCategoryDefaultImages();
+  const href = `/product/${productPublicKey(product)}`;
   const image = productDisplayImage(product, defaults);
   const typeLabel = product.lensType
     ? dict.product.attrs[product.lensType] || product.lensType
@@ -35,7 +36,7 @@ function ContactLensCard({ product }: { product: Product }) {
   return (
     <article className="frames-product-card cl-product-card">
       <Link
-        href={`/product/${product.slug}`}
+        href={href}
         className="frames-product-media cl-product-media"
         aria-label={product.name}
       >
@@ -50,14 +51,14 @@ function ContactLensCard({ product }: { product: Product }) {
       </Link>
       <div className="frames-product-body">
         {typeLabel ? <span className="cl-product-type">{typeLabel}</span> : null}
-        <Link href={`/product/${product.slug}`} className="frames-product-name">
+        <Link href={href} className="frames-product-name">
           {product.name}
         </Link>
         <div className="frames-product-meta">
           <strong className="frames-product-price">
             {formatPrice(product.sellingPrice)}
           </strong>
-          <Link href={`/product/${product.slug}`} className="frames-product-view">
+          <Link href={href} className="frames-product-view">
             {t("shop.view")}
           </Link>
         </div>

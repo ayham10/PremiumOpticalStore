@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/lib/types";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, productPublicKey } from "@/lib/format";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { productDisplayImage } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
@@ -11,6 +11,7 @@ import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 export default function ProductCard({ product }: { product: Product }) {
   const { t, dict } = useLocale();
   const defaults = useCategoryDefaultImages();
+  const href = `/product/${productPublicKey(product)}`;
   const image = productDisplayImage(product, defaults);
   const categoryLabel =
     dict.shop.categories[product.category as keyof typeof dict.shop.categories] ||
@@ -19,7 +20,7 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-white shadow-[var(--shadow-soft)] transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow)]">
       <Link
-        href={`/product/${product.slug}`}
+        href={href}
         className="relative block aspect-[4/5] overflow-hidden bg-[var(--mist)]"
       >
         <Image
@@ -38,7 +39,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
         ) : null}
         <Link
-          href={`/product/${product.slug}`}
+          href={href}
           className="font-[family-name:var(--font-display)] text-2xl"
         >
           {product.name}
@@ -47,7 +48,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className="mt-auto flex items-center justify-between pt-4">
           <strong className="text-lg">{formatPrice(product.sellingPrice)}</strong>
           <Link
-            href={`/product/${product.slug}`}
+            href={href}
             className="btn btn-ghost !min-h-10 !px-4 !text-sm"
           >
             {t("shop.view")}

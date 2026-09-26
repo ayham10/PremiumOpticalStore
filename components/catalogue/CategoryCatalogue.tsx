@@ -17,7 +17,7 @@ import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, productPublicKey } from "@/lib/format";
 import {
   cachedJsonFetch,
   peekPublicCache,
@@ -47,6 +47,7 @@ export function sortProducts(items: Product[], sort: CatalogueSort): Product[] {
 export function CatalogueProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
   const defaults = useCategoryDefaultImages();
+  const href = `/product/${productPublicKey(product)}`;
   const image = productDisplayImage(product, defaults);
   const [saved, setSaved] = useState(false);
 
@@ -79,7 +80,7 @@ export function CatalogueProductCard({ product }: { product: Product }) {
   return (
     <article className="frames-product-card">
       <SaveReturnLink
-        href={`/product/${product.slug}`}
+        href={href}
         className="frames-product-media"
         aria-label={product.name}
       >
@@ -94,7 +95,7 @@ export function CatalogueProductCard({ product }: { product: Product }) {
         />
       </SaveReturnLink>
       <div className="frames-product-body">
-        <SaveReturnLink href={`/product/${product.slug}`} className="frames-product-name">
+        <SaveReturnLink href={href} className="frames-product-name">
           {product.name}
         </SaveReturnLink>
         <div className="frames-product-meta">

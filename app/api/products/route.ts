@@ -157,7 +157,10 @@ export async function GET(request: Request) {
     }
 
     if (slug) {
-      const product = products.find((p) => p.slug === slug) || null;
+      const product =
+        products.find(
+          (p) => p.slug?.trim() === slug || p.id === slug,
+        ) || null;
       const related = product
         ? products
             .filter(

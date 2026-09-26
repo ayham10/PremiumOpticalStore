@@ -60,3 +60,11 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+/** Public product URL key: keep a real slug, otherwise use the stable id. */
+export function productPublicKey(product: {
+  id: string;
+  slug?: string | null;
+}): string {
+  return product.slug?.trim() || product.id;
+}
