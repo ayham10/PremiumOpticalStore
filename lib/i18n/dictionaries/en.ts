@@ -342,6 +342,7 @@ export type Dictionary = {
     bookingServices: Record<string, string>;
     settings: Record<string, string>;
     stock: Record<string, string>;
+    servicePages: Record<string, string>;
     common: Record<string, string>;
   };
   days: Record<string, string>;
@@ -1118,6 +1119,7 @@ const en: Dictionary = {
       inventory: "Products",
       products: "Products",
       stock: "Stock",
+      servicePages: "Service Pages",
       promotions: "Offers",
       media: "Library",
       staff: "Team",
@@ -1649,6 +1651,38 @@ const en: Dictionary = {
       exportFilename: "oyon-stock",
       unknownDate: "—",
       invalidQty: "Enter a whole number of 0 or more.",
+    },
+    servicePages: {
+      title: "Service Pages",
+      kicker: "Website copy",
+      description:
+        "Edit Eye Exam and Contact Lenses text. Save writes to the live website — no redeploy required.",
+      tabEyeExam: "Eye Exam",
+      tabContactLenses: "Contact Lenses",
+      hero: "Hero",
+      eyebrow: "Small label",
+      mainTitle: "Main title",
+      body: "Description",
+      bookingButton: "Booking button text",
+      features: "Features",
+      featureN: "Feature {n}",
+      featureTitle: "Title",
+      featureDescription: "Description",
+      benefits: "Benefits",
+      benefitsTitle: "Section title",
+      benefitN: "Bullet {n}",
+      warning: "Information / warning",
+      warningText: "Warning text",
+      save: "Save Changes",
+      saving: "Saving…",
+      saved: "Changes saved. The live pages will use this text.",
+      saveError: "Could not save service pages",
+      loadError: "Could not load service pages",
+      loading: "Loading service pages…",
+      restore: "Restore Original Text",
+      restoreConfirm:
+        "Replace this page’s fields with the original OYON text? You still need to click Save Changes to publish.",
+      restored: "Original text restored in the form. Click Save Changes to publish.",
     },
     common: {
       add: "Add",

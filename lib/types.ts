@@ -424,6 +424,38 @@ export interface StoreSettings {
   adminDisplayNames?: Record<string, string>;
   /** Fallback product photos by category when a product has no images of its own. */
   categoryDefaultImages?: CategoryDefaultImages;
+  /** Owner-editable Eye Exam / Contact Lenses page copy. */
+  servicePages?: ServicePagesSettings;
+}
+
+export interface ServicePageFeature {
+  title: string;
+  description: string;
+}
+
+export interface EyeExamServicePage {
+  eyebrow: string;
+  title: string;
+  description: string;
+  bookingButtonText: string;
+  features: ServicePageFeature[];
+  benefitsTitle: string;
+  benefits: string[];
+}
+
+export interface ContactLensesServicePage {
+  eyebrow: string;
+  title: string;
+  description: string;
+  bookingButtonText: string;
+  features: ServicePageFeature[];
+  warningTitle?: string;
+  warningText: string;
+}
+
+export interface ServicePagesSettings {
+  eyeExam: EyeExamServicePage;
+  contactLenses: ContactLensesServicePage;
 }
 
 export interface AdminSession {

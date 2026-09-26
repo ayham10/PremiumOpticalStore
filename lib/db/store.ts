@@ -3,6 +3,7 @@ import path from "path";
 import { mergeBranding } from "@/lib/branding";
 import { mergeBookingMessages } from "@/lib/booking-messages";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
+import { publicServicePages } from "@/lib/service-pages";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
 import { createSeedData } from "@/lib/seed";
 import type { AppData } from "@/lib/types";
@@ -156,6 +157,7 @@ function normalizeData(data: AppData): AppData {
       categoryDefaultImages: mergeCategoryDefaultImages(
         data.settings?.categoryDefaultImages,
       ),
+      servicePages: publicServicePages(data.settings?.servicePages),
     },
     version: data.version || 1,
     updatedAt: data.updatedAt || new Date().toISOString(),

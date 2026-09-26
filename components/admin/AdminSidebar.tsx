@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Package,
   Warehouse,
+  FileText,
   Tag,
   ImageIcon,
   Settings,
@@ -97,6 +98,12 @@ const NAV: Array<{
     labelKey: "admin.sidebar.promotions",
     permission: "promotions",
     icon: Tag,
+  },
+  {
+    href: "/admin/service-pages",
+    labelKey: "admin.sidebar.servicePages",
+    permission: "settings",
+    icon: FileText,
   },
   {
     href: "/admin/settings",
