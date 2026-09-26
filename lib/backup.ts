@@ -892,6 +892,7 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
       localTime: utcMidnightLocalTime("Asia/Jerusalem"),
     },
     latest,
+    lastSuccessful: latest,
     history,
     media,
   };

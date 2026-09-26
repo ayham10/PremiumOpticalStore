@@ -1,6 +1,13 @@
 /** Client-safe backup summary types. No storage paths, URLs, or secrets. */
 
-export type BackupHealthStatus = "healthy" | "warning" | "none";
+/**
+ * `failed` is reserved for a confirmed unsuccessful backup attempt.
+ * The current read-only API only sees completed daily JSON snapshots, so it
+ * cannot distinguish a failed cron run from a late/missing snapshot and
+ * never emits `failed`.
+ */
+export type BackupHealthStatus = "healthy" | "warning" | "failed" | "none";
+export type BackupRowStatus = "success" | "warning" | "failed";
 
 export type BackupHistoryItem = {
   date: string;
@@ -13,7 +20,7 @@ export type BackupHistoryItem = {
   promotions: number | null;
   settingsIncluded: boolean;
   mediaObjectCount: number | null;
-  status: "success";
+  status: BackupRowStatus;
 };
 
 export type BackupStatusSummary = {
@@ -27,6 +34,7 @@ export type BackupStatusSummary = {
     localTime: string;
   };
   latest: BackupHistoryItem | null;
+  lastSuccessful: BackupHistoryItem | null;
   history: BackupHistoryItem[];
   media: {
     protectedCount: number | null;
