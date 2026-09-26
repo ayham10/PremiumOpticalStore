@@ -18,6 +18,11 @@ import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import { productDisplayImage } from "@/lib/product-images";
 import {
+  pickServiceFeatures,
+  pickServiceText,
+} from "@/lib/service-pages";
+import { useServicePages } from "@/lib/use-service-pages";
+import {
   rememberCategoryDefaultImages,
   useCategoryDefaultImages,
 } from "@/lib/use-category-default-images";
@@ -93,6 +98,15 @@ const FEATURES = [
 
 export default function ContactLensesPage() {
   const { t, rtl } = useLocale();
+  const saved = useServicePages()?.contactLenses;
+  const title = pickServiceText(saved?.title, t("contactLenses.title"));
+  const features = pickServiceFeatures(
+    saved?.features,
+    FEATURES.map(({ titleKey, textKey }) => ({
+      title: t(titleKey),
+      description: t(textKey),
+    })),
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -137,7 +151,7 @@ export default function ContactLensesPage() {
 
   return (
     <div className="frames-page cl-page" dir={rtl ? "rtl" : "ltr"}>
-      <section className="cl-hero" aria-label={t("contactLenses.title")}>
+      <section className="cl-hero" aria-label={title}>
         <div className="cl-hero-media">
           {reduceMotion ? (
             <Image
@@ -164,16 +178,23 @@ export default function ContactLensesPage() {
         </div>
         <span className="cl-hero-veil" aria-hidden />
         <div className="cl-hero-copy">
-          <p className="cl-eyebrow">{t("contactLenses.eyebrow")}</p>
-          <h1 className="cl-title">{t("contactLenses.title")}</h1>
-          <p className="cl-description">{t("contactLenses.description")}</p>
+          <p className="cl-eyebrow">
+            {pickServiceText(saved?.eyebrow, t("contactLenses.eyebrow"))}
+          </p>
+          <h1 className="cl-title">{title}</h1>
+          <p className="cl-description">
+            {pickServiceText(saved?.description, t("contactLenses.description"))}
+          </p>
           <div className="cl-hero-actions">
             <Link
               href="/book?type=contact_lens_fitting"
               className="btn btn-copper cl-book-btn"
             >
               <CalendarCheck2 size={18} strokeWidth={1.8} aria-hidden />
-              {t("contactLenses.bookCta")}
+              {pickServiceText(
+                saved?.bookingButtonText,
+                t("contactLenses.bookCta"),
+              )}
             </Link>
           </div>
         </div>
@@ -182,14 +203,18 @@ export default function ContactLensesPage() {
       <div className="cl-inner">
         <section className="cl-features" aria-label={t("contactLenses.info.aria")}>
           <div className="cl-features-grid">
-            {FEATURES.map(({ key, Icon, titleKey, textKey }) => (
+            {FEATURES.map(({ key, Icon }, index) => (
               <article key={key} className="cl-feature">
                 <span className="cl-feature-orb" aria-hidden>
                   <Icon size={18} strokeWidth={1.7} />
                 </span>
                 <div className="cl-feature-copy">
-                  <h2 className="cl-feature-title">{t(titleKey)}</h2>
-                  <p className="cl-feature-text">{t(textKey)}</p>
+                  <h2 className="cl-feature-title">
+                    {features[index]?.title}
+                  </h2>
+                  <p className="cl-feature-text">
+                    {features[index]?.description}
+                  </p>
                 </div>
               </article>
             ))}
@@ -198,7 +223,9 @@ export default function ContactLensesPage() {
 
         <aside className="cl-safety" role="note">
           <AlertTriangle className="cl-safety-icon" size={18} strokeWidth={1.7} aria-hidden />
-          <p>{t("contactLenses.safety")}</p>
+          <p>
+            {pickServiceText(saved?.warningText, t("contactLenses.safety"))}
+          </p>
         </aside>
 
         <section className="cl-catalogue-block" aria-labelledby="cl-catalogue-heading">

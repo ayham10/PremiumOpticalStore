@@ -12,6 +12,7 @@ import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/bookin
 import { getTwilioWhatsAppPublicStatus } from "@/lib/twilio/config";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
 import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
+import { persistServicePages, publicServicePages } from "@/lib/service-pages";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
     categoryDefaultImages: mergeCategoryDefaultImages(
       settings.categoryDefaultImages,
     ),
+    servicePages: publicServicePages(settings.servicePages),
   };
 }
 
@@ -151,6 +153,9 @@ export async function PUT(request: Request) {
           ...store.settings.categoryDefaultImages,
           ...patch.categoryDefaultImages,
         }),
+        servicePages: patch.servicePages
+          ? persistServicePages(store.settings.servicePages, patch.servicePages)
+          : store.settings.servicePages,
         branding: mergeBranding({
           ...store.settings.branding,
           ...(patch.branding || {}),

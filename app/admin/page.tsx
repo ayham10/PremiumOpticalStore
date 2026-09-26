@@ -332,6 +332,11 @@ export default function AdminDashboardPage() {
       label: "تعديل العروض",
       icon: Percent,
     },
+    {
+      href: "/admin/service-pages",
+      label: "تعديل محتوى الموقع",
+      icon: Eye,
+    },
   ];
 
   return (

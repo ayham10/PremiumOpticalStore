@@ -15968,3 +15968,79 @@ select.admin-pe-input {
 .admin-stock-current strong {
   color: #d4af37;
 }
+
+.admin-service-pages {
+  max-width: var(--admin-content-max, 1200px);
+}
+
+.admin-service-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.admin-service-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #c8cdd4;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-service-tabs button.is-active {
+  border-color: rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.12);
+  color: #d4af37;
+}
+
+.admin-service-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: #d4af37;
+}
+
+.admin-service-field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-service-feature {
+  border: 1px solid rgba(42, 47, 54, 0.95);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem 0.2rem;
+  margin-bottom: 0.85rem;
+  background: rgba(11, 15, 20, 0.35);
+}
+
+.admin-service-feature > p {
+  margin: 0 0 0.65rem;
+  color: #d4af37;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-service-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 767px) {
+  .admin-service-tabs button,
+  .admin-service-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .admin-service-actions {
+    justify-content: stretch;
+  }
+}
