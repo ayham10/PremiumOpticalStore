@@ -23,6 +23,7 @@ import {
   PlusCircle,
   RefreshCw,
   User,
+  Warehouse,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -336,6 +337,16 @@ export default function AdminDashboardPage() {
       href: "/admin/service-pages",
       label: "تعديل محتوى الموقع",
       icon: Eye,
+    },
+    {
+      href: "/admin/stock",
+      label: "مخزون المنتجات",
+      icon: Warehouse,
+    },
+    {
+      href: "/admin/lens-inventory",
+      label: "مخزون العدسات",
+      icon: Contact,
     },
   ];
 

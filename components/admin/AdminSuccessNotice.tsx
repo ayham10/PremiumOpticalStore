@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
 
 export const ADMIN_SAVE_SUCCESS_MESSAGE = "تم حفظ التغييرات بنجاح";
@@ -61,6 +62,12 @@ function AdminSuccessNoticeDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -70,9 +77,9 @@ function AdminSuccessNoticeDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!mounted || !open) return null;
 
-  return (
+  return createPortal(
     <div
       className="admin-save-notice"
       role="presentation"
@@ -98,6 +105,7 @@ function AdminSuccessNoticeDialog({
           {ADMIN_SAVE_CONTINUE_LABEL}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
