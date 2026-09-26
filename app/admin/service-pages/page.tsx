@@ -7,6 +7,14 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
 import {
+  CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
+  EYE_EXAM_DEFAULT_FEATURE_ICONS,
+  SERVICE_FEATURE_ICON_IDS,
+  SERVICE_FEATURE_ICONS,
+  pickServiceFeatureIcon,
+  type ServiceFeatureIconId,
+} from "@/lib/service-page-icons";
+import {
   cloneServicePages,
   hasHomepageSettings,
   mergeServicePages,
@@ -270,6 +278,16 @@ export default function AdminServicePagesPage() {
             {eye.features.map((feature, index) => (
               <div key={`ee-f-${index}`} className="admin-service-feature">
                 <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+                <FeatureIconPicker
+                  label={t("admin.servicePages.featureIcon")}
+                  value={feature.icon}
+                  fallback={EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"}
+                  onChange={(icon) => {
+                    const next = [...eye.features];
+                    next[index] = { ...next[index], icon };
+                    updateEyeExam("features", next);
+                  }}
+                />
                 <Field
                   label={t("admin.servicePages.featureTitle")}
                   value={feature.title}
@@ -346,6 +364,18 @@ export default function AdminServicePagesPage() {
             {lenses.features.map((feature, index) => (
               <div key={`cl-f-${index}`} className="admin-service-feature">
                 <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+                <FeatureIconPicker
+                  label={t("admin.servicePages.featureIcon")}
+                  value={feature.icon}
+                  fallback={
+                    CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
+                  }
+                  onChange={(icon) => {
+                    const next = [...lenses.features];
+                    next[index] = { ...next[index], icon };
+                    updateLenses("features", next);
+                  }}
+                />
                 <Field
                   label={t("admin.servicePages.featureTitle")}
                   value={feature.title}
@@ -400,6 +430,48 @@ export default function AdminServicePagesPage() {
           <Save size={16} />
           {saving ? t("admin.servicePages.saving") : t("admin.servicePages.save")}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function FeatureIconPicker({
+  label,
+  value,
+  fallback,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  fallback: ServiceFeatureIconId;
+  onChange: (icon: ServiceFeatureIconId) => void;
+}) {
+  const selected = pickServiceFeatureIcon(value, fallback);
+  return (
+    <div className="admin-service-icon-picker">
+      <span className="label">{label}</span>
+      <div
+        className="admin-service-icon-grid"
+        role="listbox"
+        aria-label={label}
+      >
+        {SERVICE_FEATURE_ICON_IDS.map((id) => {
+          const Icon = SERVICE_FEATURE_ICONS[id];
+          const isSelected = selected === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              className={isSelected ? "is-selected" : ""}
+              onClick={() => onChange(id)}
+              title={id}
+            >
+              <Icon size={18} strokeWidth={1.7} aria-hidden />
+            </button>
+          );
+        })}
       </div>
     </div>
   );

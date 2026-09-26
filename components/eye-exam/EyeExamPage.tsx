@@ -1,17 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Check,
-  Clock3,
-  Eye,
-  Lock,
-  ShieldCheck,
-  Target,
-  UserRound,
-} from "lucide-react";
+import { Check, Lock, Target } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import EyeExamHeroVideo from "@/components/eye-exam/EyeExamHeroVideo";
+import {
+  EYE_EXAM_DEFAULT_FEATURE_ICONS,
+  resolveServiceFeatureIcon,
+} from "@/lib/service-page-icons";
 import {
   pickServiceBenefits,
   pickServiceFeatures,
@@ -20,10 +16,10 @@ import {
 import { useServicePages } from "@/lib/use-service-pages";
 
 const FEATURES = [
-  { key: "specialists", Icon: UserRound },
-  { key: "duration", Icon: Clock3 },
-  { key: "equipment", Icon: ShieldCheck },
-  { key: "comprehensive", Icon: Eye },
+  { key: "specialists" },
+  { key: "duration" },
+  { key: "equipment" },
+  { key: "comprehensive" },
 ] as const;
 
 export default function EyeExamPage() {
@@ -73,21 +69,27 @@ export default function EyeExamPage() {
           aria-label={t("eyeExam.features.aria")}
         >
           <div className="eye-exam-features-grid">
-            {FEATURES.map(({ key, Icon }, index) => (
-              <article key={key} className="eye-exam-feature">
-                <span className="eye-exam-feature-orb" aria-hidden>
-                  <Icon size={22} strokeWidth={1.85} />
-                </span>
-                <div className="eye-exam-feature-copy">
-                  <p className="eye-exam-feature-title">
-                    {features[index]?.title}
-                  </p>
-                  <p className="eye-exam-feature-lead">
-                    {features[index]?.description}
-                  </p>
-                </div>
-              </article>
-            ))}
+            {FEATURES.map(({ key }, index) => {
+              const Icon = resolveServiceFeatureIcon(
+                features[index]?.icon,
+                EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye",
+              );
+              return (
+                <article key={key} className="eye-exam-feature">
+                  <span className="eye-exam-feature-orb" aria-hidden>
+                    <Icon size={22} strokeWidth={1.85} />
+                  </span>
+                  <div className="eye-exam-feature-copy">
+                    <p className="eye-exam-feature-title">
+                      {features[index]?.title}
+                    </p>
+                    <p className="eye-exam-feature-lead">
+                      {features[index]?.description}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 

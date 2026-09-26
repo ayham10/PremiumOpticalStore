@@ -1,3 +1,7 @@
+import {
+  pickServiceFeatureIcon,
+  type ServiceFeatureIconId,
+} from "@/lib/service-page-icons";
 import type {
   ContactLensesServicePage,
   EyeExamServicePage,
@@ -16,12 +20,13 @@ export const DEFAULT_SERVICE_PAGES: ServicePagesSettings = {
       "فحص دقيق بأحدث الأجهزة مع أخصائيين معتمدين لضمان رؤية أوضح وحياة أفضل.",
     bookingButtonText: "احجز فحص نظر",
     features: [
-      { title: "أخصائيون معتمدون", description: "خبرة موثوقة" },
-      { title: "20 - 30 دقيقة فقط", description: "حجز سريع وسهل" },
-      { title: "أجهزة حديثة ودقيقة", description: "نتائج دقيقة" },
+      { title: "أخصائيون معتمدون", description: "خبرة موثوقة", icon: "user-round" },
+      { title: "20 - 30 دقيقة فقط", description: "حجز سريع وسهل", icon: "clock-3" },
+      { title: "أجهزة حديثة ودقيقة", description: "نتائج دقيقة", icon: "shield-check" },
       {
         title: "فحص شامل لجميع جوانب الرؤية",
         description: "حدة النظر وصحة العين",
+        icon: "eye",
       },
     ],
     benefitsTitle: "ما يميز فحص النظر لدينا",
@@ -43,18 +48,22 @@ export const DEFAULT_SERVICE_PAGES: ServicePagesSettings = {
       {
         title: "ملاءمة احترافية",
         description: "قياسات دقيقة واختيار العدسة المناسبة لعينيك.",
+        icon: "ruler",
       },
       {
         title: "عدسات يومية أو شهرية",
         description: "اختر مدة الاستخدام التي تناسب نمط حياتك.",
+        icon: "droplets",
       },
       {
         title: "متابعة وإرشاد",
         description: "نصائح حول الراحة والعناية والاستخدام الآمن.",
+        icon: "heart-handshake",
       },
       {
         title: "سلامة عينيك أولاً",
         description: "ملاءمة مهنية واستخدام يومي حذر.",
+        icon: "shield-check",
       },
     ],
     warningText:
@@ -89,9 +98,11 @@ function mergeFeature(
   fallback: ServicePageFeature,
 ): ServicePageFeature {
   const row = asRecord(saved);
+  const fallbackIcon = (fallback.icon || "eye") as ServiceFeatureIconId;
   return {
     title: cleanText(row.title) || fallback.title,
     description: cleanText(row.description) || fallback.description,
+    icon: pickServiceFeatureIcon(cleanText(row.icon) || undefined, fallbackIcon),
   };
 }
 
@@ -248,14 +259,15 @@ export function pickServiceText(
 
 export function pickServiceFeatures(
   saved: ServicePageFeature[] | undefined,
-  fallbacks: Array<{ title: string; description: string }>,
-): Array<{ title: string; description: string }> {
+  fallbacks: Array<{ title: string; description: string; icon?: string }>,
+): Array<{ title: string; description: string; icon?: string }> {
   return fallbacks.map((fallback, index) => ({
     title: pickServiceText(saved?.[index]?.title, fallback.title),
     description: pickServiceText(
       saved?.[index]?.description,
       fallback.description,
     ),
+    icon: saved?.[index]?.icon || fallback.icon,
   }));
 }
 

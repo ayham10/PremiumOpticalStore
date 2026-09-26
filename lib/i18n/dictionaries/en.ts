@@ -1670,6 +1670,7 @@ const en: Dictionary = {
       serviceLabelN: "{n}.",
       features: "Features",
       featureN: "Feature {n}",
+      featureIcon: "Icon",
       featureTitle: "Title",
       featureDescription: "Description",
       benefits: "Benefits",
@@ -1683,10 +1684,11 @@ const en: Dictionary = {
       saveError: "Could not save service pages",
       loadError: "Could not load service pages",
       loading: "Loading service pages…",
-      restore: "Restore Original Text",
+      restore: "استعادة المحتوى الأصلي",
       restoreConfirm:
-        "Replace this page’s fields with the original OYON text? You still need to click Save Changes to publish.",
-      restored: "Original text restored in the form. Click Save Changes to publish.",
+        "Replace this page’s fields with the original OYON text and icons? You still need to click Save Changes to publish.",
+      restored:
+        "Original content restored in the form. Click Save Changes to publish.",
     },
     common: {
       add: "Add",

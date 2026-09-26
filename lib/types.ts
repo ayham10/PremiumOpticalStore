@@ -431,6 +431,8 @@ export interface StoreSettings {
 export interface ServicePageFeature {
   title: string;
   description: string;
+  /** Whitelisted Lucide icon id from lib/service-page-icons. */
+  icon?: string;
 }
 
 export interface EyeExamServicePage {

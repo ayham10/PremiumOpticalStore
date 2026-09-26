@@ -16027,6 +16027,38 @@ select.admin-pe-input {
   font-weight: 700;
 }
 
+.admin-service-icon-picker {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-service-icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.admin-service-icon-grid button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #c8cdd4;
+  cursor: pointer;
+}
+
+.admin-service-icon-grid button.is-selected {
+  border-color: rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.12);
+  color: #d4af37;
+}
+
 .admin-service-actions {
   display: flex;
   flex-wrap: wrap;

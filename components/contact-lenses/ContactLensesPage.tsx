@@ -3,20 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  CalendarCheck2,
-  Droplets,
-  HeartHandshake,
-  Ruler,
-  ShieldCheck,
-} from "lucide-react";
+import { AlertTriangle, CalendarCheck2 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import { productDisplayImage } from "@/lib/product-images";
+import {
+  CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
+  resolveServiceFeatureIcon,
+} from "@/lib/service-page-icons";
 import {
   pickServiceFeatures,
   pickServiceText,
@@ -72,25 +69,21 @@ function ContactLensCard({ product }: { product: Product }) {
 const FEATURES = [
   {
     key: "fitting",
-    Icon: Ruler,
     titleKey: "contactLenses.info.fittingTitle",
     textKey: "contactLenses.info.fittingText",
   },
   {
     key: "options",
-    Icon: Droplets,
     titleKey: "contactLenses.info.optionsTitle",
     textKey: "contactLenses.info.optionsText",
   },
   {
     key: "support",
-    Icon: HeartHandshake,
     titleKey: "contactLenses.info.supportTitle",
     textKey: "contactLenses.info.supportText",
   },
   {
     key: "safety",
-    Icon: ShieldCheck,
     titleKey: "contactLenses.info.safetyTitle",
     textKey: "contactLenses.info.safetyText",
   },
@@ -203,21 +196,27 @@ export default function ContactLensesPage() {
       <div className="cl-inner">
         <section className="cl-features" aria-label={t("contactLenses.info.aria")}>
           <div className="cl-features-grid">
-            {FEATURES.map(({ key, Icon }, index) => (
-              <article key={key} className="cl-feature">
-                <span className="cl-feature-orb" aria-hidden>
-                  <Icon size={18} strokeWidth={1.7} />
-                </span>
-                <div className="cl-feature-copy">
-                  <h2 className="cl-feature-title">
-                    {features[index]?.title}
-                  </h2>
-                  <p className="cl-feature-text">
-                    {features[index]?.description}
-                  </p>
-                </div>
-              </article>
-            ))}
+            {FEATURES.map(({ key }, index) => {
+              const Icon = resolveServiceFeatureIcon(
+                features[index]?.icon,
+                CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check",
+              );
+              return (
+                <article key={key} className="cl-feature">
+                  <span className="cl-feature-orb" aria-hidden>
+                    <Icon size={18} strokeWidth={1.7} />
+                  </span>
+                  <div className="cl-feature-copy">
+                    <h2 className="cl-feature-title">
+                      {features[index]?.title}
+                    </h2>
+                    <p className="cl-feature-text">
+                      {features[index]?.description}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 
