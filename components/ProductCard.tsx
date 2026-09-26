@@ -32,9 +32,11 @@ export default function ProductCard({ product }: { product: Product }) {
         <span className="absolute start-3 top-3 pill bg-white/90">{categoryLabel}</span>
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-5">
-        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
-          {product.brand}
-        </div>
+        {product.brand ? (
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--slate)]">
+            {product.brand}
+          </div>
+        ) : null}
         <Link
           href={`/product/${product.slug}`}
           className="font-[family-name:var(--font-display)] text-2xl"

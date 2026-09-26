@@ -9,16 +9,13 @@ import {
   type CSSProperties,
 } from "react";
 import {
-  ArrowRight,
-  Barcode,
   Box,
   Calendar,
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleDot,
   FileText,
-  Glasses,
-  Hash,
   ImageIcon,
   Layers,
   Minus,
@@ -26,10 +23,8 @@ import {
   Plus,
   Save,
   Search,
-  Star,
   Tag,
   Trash2,
-  Truck,
   Wallet,
 } from "lucide-react";
 import AdminProductCard from "@/components/admin/AdminProductCard";
@@ -79,8 +74,17 @@ type ProductForm = {
   status: ProductStatus;
 };
 
-type EditorTab = "details" | "images" | "stock";
+type EditorTab = "details" | "images";
 type SortMode = "newest" | "name";
+type SuccessKind = "add" | "edit";
+
+function usesLensType(category: ProductCategory): boolean {
+  return (
+    category === "Contact Lenses" ||
+    category === "Prescription Glasses" ||
+    category === "Sunglasses"
+  );
+}
 
 const emptyForm = (): ProductForm => ({
   name: "",
@@ -111,24 +115,26 @@ function unwrapList<T>(data: unknown, keys: string[]): T[] {
   return [];
 }
 
-function toPayload(form: ProductForm) {
+function toPayload(form: ProductForm, existing?: Product | null) {
   return {
     name: form.name,
     slug: slugify(form.name),
     category: form.category,
-    brand: form.brand,
-    frameType: form.frameType || undefined,
-    lensType: form.lensType || undefined,
-    barcode: form.barcode || undefined,
-    sku: form.sku,
+    brand: form.brand || existing?.brand || "",
+    frameType: form.frameType || existing?.frameType || undefined,
+    lensType: usesLensType(form.category)
+      ? form.lensType || existing?.lensType || undefined
+      : existing?.lensType || undefined,
+    barcode: form.barcode || existing?.barcode || undefined,
+    sku: form.sku || existing?.sku || undefined,
     description: form.description,
     images: form.images.filter(Boolean),
-    purchasePrice: Number(form.purchasePrice) || 0,
+    purchasePrice: Number(form.purchasePrice) || existing?.purchasePrice || 0,
     sellingPrice: Number(form.sellingPrice) || 0,
     stockQuantity: Number(form.stockQuantity) || 0,
-    minimumStock: Number(form.minimumStock) || 0,
-    supplierId: form.supplier || undefined,
-    supplier: form.supplier || undefined,
+    minimumStock: Number(form.minimumStock) || existing?.minimumStock || 5,
+    supplierId: form.supplier || existing?.supplierId || undefined,
+    supplier: form.supplier || existing?.supplierId || undefined,
     status: form.status,
   };
 }
@@ -160,13 +166,6 @@ function statusLabel(status: ProductStatus): string {
   if (status === "out_of_stock") return "غير متوفر";
   return status;
 }
-
-const editorCard: CSSProperties = {
-  background: CARD_BG,
-  border: `1px solid ${BORDER}`,
-  borderRadius: 14,
-  padding: 16,
-};
 
 const goldBtn: CSSProperties = {
   height: 48,
@@ -213,7 +212,9 @@ export default function AdminInventoryPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<EditorTab | "overview">("overview");
+  const [tab, setTab] = useState<EditorTab>("details");
+  const [success, setSuccess] = useState<SuccessKind | null>(null);
+  const [savedProduct, setSavedProduct] = useState<Product | null>(null);
   const [listPage, setListPage] = useState(1);
   const PAGE_SIZE = 16;
 
@@ -277,27 +278,50 @@ export default function AdminInventoryPage() {
     setEditing(null);
     setForm(emptyForm());
     setTab("details");
+    setSuccess(null);
+    setSavedProduct(null);
+    setMessage("");
     setEditorOpen(true);
   }
 
   function openEdit(p: Product) {
     setEditing(p);
     setForm(fromProduct(p));
-    setTab("overview");
+    setTab("details");
+    setSuccess(null);
+    setSavedProduct(null);
+    setMessage("");
     setEditorOpen(true);
   }
 
   function closeEditor() {
     setEditorOpen(false);
     setEditing(null);
-    setTab("overview");
+    setTab("details");
+    setSuccess(null);
+    setSavedProduct(null);
+  }
+
+  function addAnotherProduct() {
+    setEditing(null);
+    setForm(emptyForm());
+    setTab("details");
+    setSuccess(null);
+    setSavedProduct(null);
+    setMessage("");
+    setEditorOpen(true);
   }
 
   async function onSubmit(e?: FormEvent) {
     e?.preventDefault();
+    if (!form.name.trim()) {
+      setTab("details");
+      setMessage("أدخل اسم المنتج");
+      return;
+    }
     setSaving(true);
     setMessage("");
-    const payload = toPayload(form);
+    const payload = toPayload(form, editing);
     try {
       if (editing) {
         const updated = await apiFetch<Product | { product: Product }>(
@@ -312,7 +336,8 @@ export default function AdminInventoryPage() {
           prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p)),
         );
         setEditing({ ...editing, ...row });
-        setMessage("تم حفظ المنتج");
+        setSavedProduct({ ...editing, ...row });
+        setSuccess("edit");
       } else {
         const created = await apiFetch<Product | { product: Product }>(
           "/api/products",
@@ -323,10 +348,11 @@ export default function AdminInventoryPage() {
             ? created.product
             : (created as Product);
         setProducts((prev) => [row, ...prev]);
-        setMessage("تمت إضافة المنتج");
-        setEditorOpen(false);
+        setSavedProduct(row);
+        setSuccess("add");
       }
     } catch (err) {
+      setSuccess(null);
       setMessage(err instanceof Error ? err.message : "فشل الحفظ");
     } finally {
       setSaving(false);
@@ -391,11 +417,9 @@ export default function AdminInventoryPage() {
 
   /* ───────────── Edit / Add page ───────────── */
   if (editorOpen) {
-    const thumb = form.images[0];
     const tabs: { id: EditorTab; label: string; icon: typeof Package }[] = [
       { id: "details", label: "بيانات المنتج", icon: Package },
       { id: "images", label: "الصور", icon: ImageIcon },
-      { id: "stock", label: "المخزون والسعر", icon: Wallet },
     ];
     const stockQty = Number(form.stockQuantity) || 0;
     const updatedLabel = editing?.updatedAt
@@ -415,10 +439,7 @@ export default function AdminInventoryPage() {
         <header className="admin-pe-header">
           <button
             type="button"
-            onClick={() => {
-              if (editing && tab !== "overview") setTab("overview");
-              else closeEditor();
-            }}
+            onClick={closeEditor}
             aria-label="رجوع"
             className="admin-pe-back"
           >
@@ -437,124 +458,15 @@ export default function AdminInventoryPage() {
           <p
             className="mb-4 rounded-[12px] px-3 py-2 text-sm"
             style={{
-              background: "rgba(212,175,106,0.12)",
-              border: "1px solid rgba(212,175,106,0.35)",
-              color: GOLD,
+              border: "1px solid rgba(224,122,122,0.35)",
+              background: "rgba(224,122,122,0.12)",
+              color: "var(--danger)",
             }}
           >
             {message}
           </p>
         ) : null}
 
-        {editing && tab === "overview" ? (
-          <div className="space-y-4">
-            <section
-              className="flex gap-3"
-              style={{
-                ...editorCard,
-                padding: 12,
-              }}
-            >
-              <div
-                className="shrink-0 overflow-hidden"
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 12,
-                  background: PAGE_BG,
-                  border: `1px solid ${BORDER}`,
-                }}
-              >
-                {thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumb} alt="" className="h-full w-full object-cover" />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h2
-                    className="m-0 text-[1rem] font-semibold leading-snug"
-                    style={{ color: "#FFFFFF" }}
-                  >
-                    {form.name || "—"}
-                  </h2>
-                  {form.status === "active" ? (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] font-bold"
-                      style={{
-                        background: "rgba(94,196,154,0.16)",
-                        color: "#5EC49A",
-                      }}
-                    >
-                      نشط
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mb-0 mt-1 text-[0.8rem]" style={{ color: MUTED }}>
-                  {[form.brand, form.category].filter(Boolean).join(" • ")}
-                </p>
-                <span
-                  className="mt-2 inline-block rounded-full px-2 py-0.5 text-[0.7rem]"
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    color: MUTED,
-                    border: `1px solid ${BORDER}`,
-                  }}
-                >
-                  {form.sku || "SKU"}
-                </span>
-              </div>
-            </section>
-
-            <div className="space-y-3">
-              {tabs.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className="flex w-full items-center gap-3 text-start"
-                  style={{
-                    background: CARD_BG,
-                    border: `1px solid ${BORDER}`,
-                    borderRadius: 16,
-                    padding: "14px 14px",
-                    minHeight: 64,
-                  }}
-                >
-                  <span
-                    className="grid place-items-center rounded-[10px]"
-                    style={{
-                      width: 36,
-                      height: 36,
-                      background: "rgba(212,175,106,0.08)",
-                      border: "1px solid rgba(212,175,106,0.3)",
-                      color: GOLD,
-                    }}
-                  >
-                    <Icon size={17} strokeWidth={1.55} />
-                  </span>
-                  <span className="flex-1 text-[0.92rem] font-semibold" style={{ color: "#FFFFFF" }}>
-                    {label}
-                  </span>
-                  <ArrowRight size={16} strokeWidth={1.55} color={MUTED} />
-                </button>
-              ))}
-            </div>
-
-            {hasPermission(role, "delete") && editing ? (
-              <button
-                type="button"
-                onClick={() => void onDelete(editing)}
-                className="mt-2 flex w-full items-center justify-center gap-2"
-                style={dangerOutlineBtn}
-              >
-                <Trash2 size={16} strokeWidth={1.55} />
-                حذف المنتج
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <>
             <div className="admin-pe-tabs" role="tablist">
               {tabs.map(({ id, label, icon: Icon }) => (
                 <button
@@ -622,30 +534,7 @@ export default function AdminInventoryPage() {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-brand">
-                        <Star size={13} strokeWidth={1.7} />
-                        العلامة التجارية
-                      </label>
-                      <input
-                        id="p-brand"
-                        className="admin-pe-input"
-                        value={form.brand}
-                        onChange={(e) => setField("brand", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-frame">
-                        <Glasses size={13} strokeWidth={1.7} />
-                        نوع الإطار
-                      </label>
-                      <input
-                        id="p-frame"
-                        className="admin-pe-input"
-                        value={form.frameType}
-                        onChange={(e) => setField("frameType", e.target.value)}
-                      />
-                    </div>
+                    {usesLensType(form.category) ? (
                     <div>
                       <label className="admin-pe-label" htmlFor="p-lens">
                         <CircleDot size={13} strokeWidth={1.7} />
@@ -658,50 +547,7 @@ export default function AdminInventoryPage() {
                         onChange={(e) => setField("lensType", e.target.value)}
                       />
                     </div>
-                    <div className="admin-pe-pair">
-                      <div>
-                        <label className="admin-pe-label" htmlFor="p-sku">
-                          <Hash size={13} strokeWidth={1.7} />
-                          SKU
-                        </label>
-                        <input
-                          id="p-sku"
-                          className="admin-pe-input"
-                          value={form.sku}
-                          onChange={(e) => setField("sku", e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="admin-pe-label" htmlFor="p-barcode">
-                          <Barcode size={13} strokeWidth={1.7} />
-                          الباركود
-                        </label>
-                        <div className="admin-pe-control">
-                          <input
-                            id="p-barcode"
-                            className="admin-pe-input has-end-icon"
-                            value={form.barcode}
-                            onChange={(e) => setField("barcode", e.target.value)}
-                          />
-                          <span className="admin-pe-end-icon">
-                            <Barcode size={15} strokeWidth={1.5} />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-supplier">
-                        <Truck size={13} strokeWidth={1.7} />
-                        المورد
-                      </label>
-                      <input
-                        id="p-supplier"
-                        className="admin-pe-input"
-                        value={form.supplier}
-                        onChange={(e) => setField("supplier", e.target.value)}
-                      />
-                    </div>
+                    ) : null}
                     <div>
                       <label className="admin-pe-label" htmlFor="p-description">
                         <FileText size={13} strokeWidth={1.7} />
@@ -719,6 +565,94 @@ export default function AdminInventoryPage() {
                         <span className="admin-pe-count is-bottom">
                           {form.description.length}/300
                         </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="admin-pe-label" htmlFor="p-selling">
+                        <Wallet size={13} strokeWidth={1.7} />
+                        سعر البيع (₪)
+                      </label>
+                      <input
+                        id="p-selling"
+                        type="number"
+                        min="0"
+                        step="1"
+                        className="admin-pe-input"
+                        value={form.sellingPrice}
+                        onChange={(e) =>
+                          setField("sellingPrice", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="admin-pe-label" htmlFor="p-stock">
+                        <Package size={13} strokeWidth={1.7} />
+                        كمية المخزون
+                      </label>
+                      <div className="admin-pe-stepper">
+                        <button
+                          type="button"
+                          aria-label="إنقاص"
+                          className="admin-pe-stepper-btn"
+                          onClick={() =>
+                            setField(
+                              "stockQuantity",
+                              String(Math.max(0, stockQty - 1)),
+                            )
+                          }
+                        >
+                          <Minus size={15} strokeWidth={2} />
+                        </button>
+                        <input
+                          id="p-stock"
+                          type="number"
+                          min="0"
+                          value={form.stockQuantity}
+                          onChange={(e) =>
+                            setField("stockQuantity", e.target.value)
+                          }
+                        />
+                        <button
+                          type="button"
+                          aria-label="زيادة"
+                          className="admin-pe-stepper-btn"
+                          onClick={() =>
+                            setField("stockQuantity", String(stockQty + 1))
+                          }
+                        >
+                          <Plus size={15} strokeWidth={2} />
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="admin-pe-label" htmlFor="p-status">
+                        حالة المنتج
+                      </label>
+                      <div className="admin-pe-status">
+                        <span
+                          className={
+                            form.status === "active"
+                              ? "admin-pe-status-dot is-active"
+                              : "admin-pe-status-dot"
+                          }
+                        />
+                        <select
+                          id="p-status"
+                          className="admin-pe-input"
+                          value={form.status}
+                          onChange={(e) =>
+                            setField(
+                              "status",
+                              e.target.value as ProductStatus,
+                            )
+                          }
+                        >
+                          <option value="active">نشط</option>
+                          <option value="draft">غير نشط</option>
+                          <option value="archived">مؤرشف</option>
+                          <option value="out_of_stock">غير متوفر</option>
+                        </select>
                       </div>
                     </div>
                     <div className="admin-pe-meta">
@@ -782,13 +716,17 @@ export default function AdminInventoryPage() {
 
                   <div className="flex gap-2.5">
                     <button
-                      type="button"
-                      onClick={() => goTab("stock")}
-                      className="flex flex-1 items-center justify-center gap-1.5"
+                      type="submit"
+                      disabled={saving}
+                      className="flex flex-1 items-center justify-center gap-1.5 disabled:opacity-50"
                       style={goldBtn}
                     >
-                      التالي
-                      <ChevronLeft size={16} strokeWidth={2} />
+                      <Save size={16} strokeWidth={1.7} />
+                      {saving
+                        ? "جارٍ الحفظ…"
+                        : editing
+                          ? "حفظ التغييرات"
+                          : "إضافة المنتج"}
                     </button>
                     <button
                       type="button"
@@ -802,209 +740,71 @@ export default function AdminInventoryPage() {
                   </div>
                 </>
               ) : null}
+            </form>
 
-              {tab === "stock" ? (
-                <>
-                  <div className="admin-pe-stock-wrap">
-                    <div className="admin-pe-card admin-pe-price-card">
-                      <h2 className="admin-pe-card-title">
-                        <Wallet size={16} strokeWidth={1.7} />
-                        السعر
-                      </h2>
-                      <div className="admin-pe-fields is-2 admin-pe-price-fields">
-                        <div>
-                          <label className="admin-pe-label" htmlFor="p-selling">
-                            السعر (₪)
-                          </label>
-                          <input
-                            id="p-selling"
-                            type="number"
-                            className="admin-pe-input"
-                            value={form.sellingPrice}
-                            onChange={(e) =>
-                              setField("sellingPrice", e.target.value)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="admin-pe-label" htmlFor="p-purchase">
-                            سعر الشراء
-                          </label>
-                          <input
-                            id="p-purchase"
-                            type="number"
-                            className="admin-pe-input"
-                            value={form.purchasePrice}
-                            onChange={(e) =>
-                              setField("purchasePrice", e.target.value)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="admin-pe-label" htmlFor="p-currency">
-                            العملة
-                          </label>
-                          <div className="admin-pe-input" id="p-currency">
-                            ILS — شيكل
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="admin-pe-card">
-                      <h2 className="admin-pe-card-title">
-                        <Package size={16} strokeWidth={1.7} />
-                        المخزون
-                      </h2>
-                      <div className="admin-pe-fields">
-                        <div>
-                          <label className="admin-pe-label" htmlFor="p-stock">
-                            الكمية المتوفرة
-                          </label>
-                          <div className="admin-pe-stepper">
-                            <button
-                              type="button"
-                              aria-label="إنقاص"
-                              className="admin-pe-stepper-btn"
-                              onClick={() =>
-                                setField(
-                                  "stockQuantity",
-                                  String(Math.max(0, stockQty - 1)),
-                                )
-                              }
-                            >
-                              <Minus size={15} strokeWidth={2} />
-                            </button>
-                            <input
-                              id="p-stock"
-                              type="number"
-                              value={form.stockQuantity}
-                              onChange={(e) =>
-                                setField("stockQuantity", e.target.value)
-                              }
-                            />
-                            <button
-                              type="button"
-                              aria-label="زيادة"
-                              className="admin-pe-stepper-btn"
-                              onClick={() =>
-                                setField("stockQuantity", String(stockQty + 1))
-                              }
-                            >
-                              <Plus size={15} strokeWidth={2} />
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="admin-pe-label" htmlFor="p-min">
-                            الحد الأدنى
-                          </label>
-                          <input
-                            id="p-min"
-                            type="number"
-                            className="admin-pe-input"
-                            value={form.minimumStock}
-                            onChange={(e) =>
-                              setField("minimumStock", e.target.value)
-                            }
-                          />
-                          <p className="admin-pe-hint">
-                            يُستخدم لتنبيهات انخفاض المخزون
-                          </p>
-                        </div>
-                        <div>
-                          <label className="admin-pe-label" htmlFor="p-status">
-                            حالة المنتج
-                          </label>
-                          <div className="admin-pe-status">
-                            <span
-                              className={
-                                form.status === "active"
-                                  ? "admin-pe-status-dot is-active"
-                                  : "admin-pe-status-dot"
-                              }
-                            />
-                            <select
-                              id="p-status"
-                              className="admin-pe-input"
-                              value={form.status}
-                              onChange={(e) =>
-                                setField(
-                                  "status",
-                                  e.target.value as ProductStatus,
-                                )
-                              }
-                            >
-                              <option value="active">نشط</option>
-                              <option value="draft">غير نشط</option>
-                              <option value="archived">مؤرشف</option>
-                              <option value="out_of_stock">غير متوفر</option>
-                            </select>
-                          </div>
-                          <p className="admin-pe-hint">
-                            {form.status === "active"
-                              ? "المنتج متاح للمبيعات"
-                              : "المنتج غير ظاهر للمبيعات حالياً"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="admin-pe-card is-summary">
-                      <h2 className="admin-pe-card-title">
-                        <CircleDot size={16} strokeWidth={1.7} />
-                        ملخص المنتج
-                      </h2>
-                      <div className="admin-pe-summary-row">
-                        <span>السعر</span>
-                        <strong>
-                          ₪{Number(form.sellingPrice || 0).toLocaleString("en-US")}
-                        </strong>
-                      </div>
-                      <div className="admin-pe-summary-row">
-                        <span>المخزون</span>
-                        <strong>{stockQty}</strong>
-                      </div>
-                      <div className="admin-pe-summary-row">
-                        <span>الحالة</span>
-                        <span
-                          className={
-                            form.status === "active"
-                              ? "admin-pe-pill is-active"
-                              : "admin-pe-pill"
-                          }
-                        >
-                          {statusLabel(form.status)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2.5">
+        {success ? (
+          <div
+            className="admin-pe-success"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-pe-success-title"
+          >
+            <div className="admin-pe-success-card">
+              <span className="admin-pe-success-check" aria-hidden>
+                <Check size={22} strokeWidth={2.4} />
+              </span>
+              <h2 id="admin-pe-success-title">
+                {success === "add"
+                  ? "تم إضافة المنتج بنجاح"
+                  : "تم تحديث المنتج بنجاح"}
+              </h2>
+              <div className="admin-pe-success-actions">
+                {success === "add" ? (
+                  <>
                     <button
-                      type="submit"
-                      disabled={saving}
-                      className="flex flex-1 items-center justify-center gap-1.5 disabled:opacity-50"
+                      type="button"
                       style={goldBtn}
+                      onClick={addAnotherProduct}
                     >
-                      <Save size={16} strokeWidth={1.7} />
-                      {saving ? "جارٍ الحفظ…" : "حفظ التغييرات"}
+                      إضافة منتج آخر
                     </button>
                     <button
                       type="button"
-                      onClick={() => goTab("images")}
-                      className="flex flex-1 items-center justify-center gap-1.5"
                       style={outlineGoldBtn}
+                      onClick={closeEditor}
                     >
-                      <ChevronRight size={16} strokeWidth={2} />
-                      السابق
+                      الانتقال إلى المنتجات
                     </button>
-                  </div>
-                </>
-              ) : null}
-            </form>
-          </>
-        )}
+                  </>
+                ) : (
+                  <>
+                    {savedProduct?.slug ? (
+                      <a
+                        href={`/product/${savedProduct.slug}`}
+                        style={{
+                          ...goldBtn,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textDecoration: "none",
+                        }}
+                      >
+                        الانتقال إلى المنتج
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      style={outlineGoldBtn}
+                      onClick={closeEditor}
+                    >
+                      العودة إلى المنتجات
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
 

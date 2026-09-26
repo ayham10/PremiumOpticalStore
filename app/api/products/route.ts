@@ -62,14 +62,18 @@ function sanitizeProductInput(
   existing?: Product
 ): Omit<Product, "id" | "createdAt" | "updatedAt"> | null {
   const name = (input.name ?? existing?.name)?.trim();
-  const brand = (input.brand ?? existing?.brand)?.trim();
+  const brand = (input.brand ?? existing?.brand ?? "").trim();
   const category = input.category ?? existing?.category;
   const description = (input.description ?? existing?.description ?? "").trim();
-  const sku = (input.sku ?? existing?.sku)?.trim();
+  const skuRaw = (input.sku ?? existing?.sku)?.trim();
 
-  if (!name || !brand || !category || !sku || !isProductCategory(category)) {
+  if (!name || !category || !isProductCategory(category)) {
     return null;
   }
+
+  const sku =
+    skuRaw ||
+    `OY-${(slugify(name) || "item").slice(0, 18)}-${Date.now().toString(36)}`;
 
   const sellingPrice = Number(input.sellingPrice ?? existing?.sellingPrice ?? 0);
   const purchasePrice = Number(input.purchasePrice ?? existing?.purchasePrice ?? 0);

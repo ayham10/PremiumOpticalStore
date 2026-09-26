@@ -131,7 +131,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const product = payload.product;
   const related = payload.related || [];
   const settings = payload.settings;
-  const inquiry = `Hello Oyon, I'm interested in ${product.name} (${product.sku}).`;
+  const inquiry = `Hello Oyon, I'm interested in ${product.name}.`;
   const waHref = storeWhatsAppHref(settings?.whatsapp, inquiry);
 
   const images = productDisplayGallery(product, defaults);
@@ -152,9 +152,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const isSunglasses = product.category === "Sunglasses";
   const isContactLenses = product.category === "Contact Lenses";
-  const frameLabel = product.frameType
-    ? dict.product.attrs[product.frameType] || product.frameType
-    : null;
   const lensLabel = product.lensType
     ? dict.product.attrs[product.lensType] || product.lensType
     : null;
@@ -216,7 +213,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           </div>
 
           <div className="product-info">
-            <span className="product-brand">{product.brand}</span>
             <h1 className="product-name">{product.name}</h1>
             <p className="product-category">{categoryLabel}</p>
             <p className="product-price">
@@ -232,16 +228,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <p className="product-description">{description}</p>
 
             <dl className="product-meta">
-              {frameLabel && !isContactLenses ? (
-                <div>
-                  <dt>
-                    {isSunglasses
-                      ? t("product.frameShape")
-                      : t("product.frame")}
-                  </dt>
-                  <dd>{frameLabel}</dd>
-                </div>
-              ) : null}
               {lensLabel ? (
                 <div>
                   <dt>
@@ -278,10 +264,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   <dd>{dict.product.attrs.UV400 || "UV400"}</dd>
                 </div>
               ) : null}
-              <div>
-                <dt>{t("product.sku")}</dt>
-                <dd>{product.sku}</dd>
-              </div>
               <div>
                 <dt>{t("product.availability")}</dt>
                 <dd>{availabilityLabel}</dd>
