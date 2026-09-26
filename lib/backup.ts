@@ -63,9 +63,12 @@ export type OyonStoreSnapshot = {
 };
 
 export type BackupRunResult = {
-  ok: true;
+  ok: boolean;
+  complete: boolean;
+  timedOut: boolean;
+  remainingMedia: number;
   purpose: BackupPurpose;
-  snapshotPath: string;
+  snapshotPath: string | null;
   createdAt: string;
   store: {
     table: string;
@@ -111,6 +114,8 @@ const DAILY_PREFIX = "store/daily/";
 const PRE_RESTORE_PREFIX = "store/pre-restore/";
 const MEDIA_OBJECT_PREFIX = "media/objects/";
 const MEDIA_INDEX_PATH = "media/index.json";
+/** Stop starting new copies before Vercel kills the function (maxDuration 60s). */
+const BACKUP_TIME_BUDGET_MS = 45_000;
 
 function requireConfig() {
   const config = supabaseServerConfig() ?? supabaseConfig();
@@ -491,23 +496,50 @@ async function readMediaIndex(): Promise<MediaIndex> {
   return { version: 1, objects: {} };
 }
 
-async function copyMediaIncrementally(liveObjects: StorageObject[]) {
+function mediaIndexMatches(
+  object: StorageObject,
+  index: MediaIndex,
+): boolean {
+  const known = index.objects[object.path];
+  return Boolean(
+    known &&
+      known.size === object.size &&
+      (known.updatedAt || "") === (object.updatedAt || ""),
+  );
+}
+
+async function writeMediaIndex(index: MediaIndex) {
+  await uploadObject(
+    BACKUP_BUCKET,
+    MEDIA_INDEX_PATH,
+    JSON.stringify(index),
+    "application/json",
+  );
+}
+
+async function copyMediaIncrementally(
+  liveObjects: StorageObject[],
+  deadlineMs: number,
+) {
   const index = await readMediaIndex();
   const now = new Date().toISOString();
   let copied = 0;
   let alreadyPresent = 0;
   let skippedUnchanged = 0;
   let failed = 0;
+  let remaining = 0;
+  let timedOut = false;
 
   for (const object of liveObjects) {
-    const backupPath = joinPath(MEDIA_OBJECT_PREFIX, object.path);
-    const known = index.objects[object.path];
-    if (
-      known &&
-      known.size === object.size &&
-      (known.updatedAt || "") === (object.updatedAt || "")
-    ) {
+    const existed = Boolean(index.objects[object.path]);
+    if (mediaIndexMatches(object, index)) {
       skippedUnchanged += 1;
+      continue;
+    }
+
+    if (Date.now() >= deadlineMs) {
+      timedOut = true;
+      remaining += 1;
       continue;
     }
 
@@ -515,7 +547,7 @@ async function copyMediaIncrementally(liveObjects: StorageObject[]) {
       const file = await downloadObject(MEDIA_BUCKET, object.path);
       await uploadObject(
         BACKUP_BUCKET,
-        backupPath,
+        joinPath(MEDIA_OBJECT_PREFIX, object.path),
         file.bytes,
         file.contentType,
       );
@@ -524,22 +556,31 @@ async function copyMediaIncrementally(liveObjects: StorageObject[]) {
         updatedAt: object.updatedAt,
         backedUpAt: now,
       };
-      if (known) alreadyPresent += 1;
+      await writeMediaIndex(index);
+      if (existed) alreadyPresent += 1;
       else copied += 1;
     } catch (error) {
       failed += 1;
+      remaining += 1;
       console.error(`Backup media copy failed for ${object.path}`, error);
     }
   }
 
-  await uploadObject(
-    BACKUP_BUCKET,
-    MEDIA_INDEX_PATH,
-    JSON.stringify(index),
-    "application/json",
-  );
+  const complete =
+    !timedOut &&
+    failed === 0 &&
+    liveObjects.every((object) => mediaIndexMatches(object, index));
 
-  return { index, copied, alreadyPresent, skippedUnchanged, failed };
+  return {
+    index,
+    copied,
+    alreadyPresent,
+    skippedUnchanged,
+    failed,
+    remaining,
+    timedOut,
+    complete,
+  };
 }
 
 function dailySnapshotDate(path: string): string | null {
@@ -614,36 +655,46 @@ async function writeSnapshot(
   purpose: BackupPurpose,
   pruneDaily: boolean,
 ): Promise<BackupRunResult> {
+  const startedAt = Date.now();
+  const deadlineMs = startedAt + BACKUP_TIME_BUDGET_MS;
   await ensureBackupBucket();
 
   const live = await readLiveStoreRow();
   const liveMedia = await listPrefix(MEDIA_BUCKET, "");
+  const media = await copyMediaIncrementally(liveMedia, deadlineMs);
+
   const snapshot = buildSnapshot(purpose, live, liveMedia);
-  const snapshotJson = JSON.stringify(snapshot);
-  const snapshotPath =
+  const intendedPath =
     purpose === "pre-restore"
       ? `${PRE_RESTORE_PREFIX}${isoStamp()}.json`
       : `${DAILY_PREFIX}${jerusalemDate()}.json`;
 
-  await uploadObject(
-    BACKUP_BUCKET,
-    snapshotPath,
-    snapshotJson,
-    "application/json",
-  );
+  let snapshotPath: string | null = null;
+  let prunedDailySnapshots: string[] = [];
+  let prunedMediaObjects = 0;
 
-  const media = await copyMediaIncrementally(liveMedia);
-  const prunedDailySnapshots = pruneDaily
-    ? await pruneDailySnapshots(BACKUP_RETENTION_DAYS)
-    : [];
-  const prunedMediaObjects = pruneDaily
-    ? await pruneUnreferencedMedia(media.index)
-    : 0;
+  if (media.complete) {
+    await uploadObject(
+      BACKUP_BUCKET,
+      intendedPath,
+      JSON.stringify(snapshot),
+      "application/json",
+    );
+    snapshotPath = intendedPath;
+    if (pruneDaily) {
+      prunedDailySnapshots = await pruneDailySnapshots(BACKUP_RETENTION_DAYS);
+      prunedMediaObjects = await pruneUnreferencedMedia(media.index);
+    }
+  }
 
   const estimatedBackupBytes = await estimateBackupBytes();
+  const liveBytes = liveMedia.reduce((sum, item) => sum + item.size, 0);
 
   return {
-    ok: true,
+    ok: media.complete,
+    complete: media.complete,
+    timedOut: media.timedOut,
+    remainingMedia: media.remaining,
     purpose,
     snapshotPath,
     createdAt: snapshot.createdAt,
@@ -655,7 +706,7 @@ async function writeSnapshot(
     },
     media: {
       liveObjectCount: liveMedia.length,
-      liveBytes: liveMedia.reduce((sum, item) => sum + item.size, 0),
+      liveBytes,
       copied: media.copied,
       alreadyPresent: media.alreadyPresent,
       skippedUnchanged: media.skippedUnchanged,
@@ -666,7 +717,7 @@ async function writeSnapshot(
     estimatedBackupBytes,
     sizes: {
       luminaStorePayloadBytes: live.payloadBytes,
-      luminaMediaBytes: liveMedia.reduce((sum, item) => sum + item.size, 0),
+      luminaMediaBytes: liveBytes,
       estimatedBackupStorageBytes: estimatedBackupBytes,
     },
   };

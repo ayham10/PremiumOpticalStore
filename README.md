@@ -131,6 +131,8 @@ Production business data is the `lumina_store` / `default` JSON document plus fi
 
 Each snapshot stores the **complete `AppData` object** (`appData`) plus a `sections` summary so a future restore can copy one field at a time (`eyeExamAppointments`, `products`, `lensInventory`, `settings`, …). Restore is not implemented yet. Any future restore must first call `createPreRestoreSnapshot()` so the current production blob is saved under `store/pre-restore/`.
 
+The daily JSON is written **last**, and only after every live media file is already in the backup index. If the Vercel 60s function budget runs out, the job stops starting new copies, keeps progress in `media/index.json`, does **not** write `store/daily/YYYY-MM-DD.json`, and returns HTTP 503. The next cron run resumes unchanged files as skips and continues the rest.
+
 Layout inside `oyon-backups`:
 
 | Path | Purpose |
@@ -145,7 +147,7 @@ Layout inside `oyon-backups`:
 1. In the Supabase SQL editor, run the `oyon-backups` block in `supabase/storage.sql` **or** let the first backup job create the bucket (`public: false`).
 2. In **Storage**, confirm `oyon-backups` is **private**. Do not add a public read policy.
 3. In Vercel, set `CRON_SECRET` (same bearer used by `/api/cron/backups`). Optional: `SUPABASE_BACKUP_BUCKET=oyon-backups`.
-4. After deploy, Vercel Cron hits `GET /api/cron/backups` daily at `00:00 UTC` with `Authorization: Bearer $CRON_SECRET`.
+4. After deploy, Vercel Cron hits `GET /api/cron/backups` daily at `00:00 UTC`. Vercel sends `Authorization: Bearer $CRON_SECRET` when that env var is set. The route requires that exact header (401 if `CRON_SECRET` is missing or wrong).
 5. Hobby plans may not run cron. Trigger the same URL manually or from an external scheduler.
 
 The job is read-only against `lumina_store` and `lumina-media`. It does not seed, delete, or update production business data.
