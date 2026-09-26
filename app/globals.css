@@ -16774,8 +16774,9 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 html.admin-dark .admin-backups-page .admin-backups-card,
 .admin-shell .admin-backups-page .admin-backups-card,
 .admin-backups-card {
-  background: var(--bk-card) !important;
-  border: 1px solid var(--bk-border) !important;
+  background: #07111a !important;
+  background-color: #07111a !important;
+  border: 1px solid rgba(201, 157, 61, 0.45) !important;
   border-radius: 18px;
   box-shadow: none !important;
   backdrop-filter: none !important;
@@ -17006,6 +17007,13 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   overflow-x: auto;
 }
 
+.admin-backups-history,
+.admin-backups-history-desktop,
+.admin-backups-history table {
+  background: #07111a;
+  background-color: #07111a;
+}
+
 .admin-backups-history table {
   width: 100%;
   min-width: 34rem;
@@ -17025,11 +17033,13 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   color: var(--bk-muted);
   font-size: 0.72rem;
   font-weight: 700;
+  background: #0d1a25;
 }
 
 .admin-backups-history td {
   color: var(--bk-text);
   font-weight: 600;
+  background: #07111a;
 }
 
 .admin-backups-date-cell {
@@ -17064,7 +17074,7 @@ html.admin-dark .admin-backups-page .admin-backups-card,
 }
 
 .admin-backups-history tr.is-current td {
-  background: var(--bk-surface);
+  background: #0d1a25;
 }
 
 .admin-backups-history tr:last-child td {
@@ -17148,9 +17158,9 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   gap: 0.4rem;
   min-height: 40px;
   padding: 0.45rem 0.5rem;
-  border: 1px solid var(--bk-border);
+  border: 1px solid rgba(201, 157, 61, 0.45);
   border-radius: 12px;
-  background: var(--bk-surface);
+  background: #0d1a25;
   color: #e8eaed;
   font-size: 0.72rem;
   font-weight: 700;
@@ -17170,9 +17180,9 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   width: 100%;
   min-height: 42px;
   margin-top: auto;
-  border: 1px solid var(--bk-border);
+  border: 1px solid rgba(201, 157, 61, 0.45);
   border-radius: 12px;
-  background: var(--bk-surface);
+  background: #0d1a25;
   color: #c8cdd4;
   font: inherit;
   font-size: 0.86rem;
@@ -17192,7 +17202,12 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.28rem;
+  gap: 0.22rem;
+  min-height: 96px;
+  padding: 0.55rem 0.35rem 0.5rem;
+  border: 1px solid rgba(201, 157, 61, 0.45);
+  border-radius: 12px;
+  background: #0d1a25;
 }
 
 .admin-backups-auto dl svg,
@@ -17204,7 +17219,7 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 999px;
-  background: var(--bk-success);
+  background: var(--bk-muted);
 }
 
 .admin-backups-auto dt {
@@ -17219,6 +17234,44 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   color: #ffffff;
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+.admin-backups-auto-note {
+  margin: 0;
+  color: var(--bk-muted);
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.admin-backups-auto dl > div.is-healthy i {
+  background: var(--bk-success);
+}
+
+.admin-backups-auto dl > div.is-healthy dd {
+  color: var(--bk-success);
+}
+
+.admin-backups-auto dl > div.is-warning i {
+  background: #e6c58a;
+}
+
+.admin-backups-auto dl > div.is-warning dd {
+  color: #e6c58a;
+}
+
+.admin-backups-auto dl > div.is-pending i {
+  background: var(--bk-muted);
+}
+
+.admin-backups-auto dl > div.is-failed i,
+.admin-backups-auto dl > div.is-none i {
+  background: #e07a7a;
+}
+
+.admin-backups-auto dl > div.is-failed dd,
+.admin-backups-auto dl > div.is-none dd {
+  color: #e07a7a;
 }
 
 .admin-backups-info-bar {

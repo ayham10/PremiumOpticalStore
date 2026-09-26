@@ -143,6 +143,26 @@ export default function AdminBackupsPage() {
   const lastSuccessful = lastSuccessfulOf(data);
   const status = data?.status ?? "none";
   const StatusIcon = statusIcon(status);
+  const autoConfigured = Boolean(data?.automatic.enabled);
+  const autoBoxStatus = !data
+    ? "pending"
+    : autoConfigured && status === "healthy"
+      ? "healthy"
+      : status === "warning"
+        ? "warning"
+        : status === "failed"
+          ? "failed"
+          : "none";
+  const autoBoxLabel =
+    autoBoxStatus === "pending"
+      ? "—"
+      : autoBoxStatus === "healthy"
+        ? t("admin.backups.automaticOn")
+        : autoBoxStatus === "warning"
+          ? t("admin.backups.autoStatusWarning")
+          : autoBoxStatus === "failed"
+            ? t("admin.backups.autoStatusFailed")
+            : t("admin.backups.autoStatusNone");
   const history = data?.history ?? [];
   const visibleHistory = showAllHistory
     ? history
@@ -376,18 +396,24 @@ export default function AdminBackupsPage() {
           <dl>
             <div>
               <Clock3 size={16} strokeWidth={1.7} aria-hidden />
-              <dd>00:00 UTC</dd>
               <dt>{t("admin.backups.autoTime")}</dt>
+              <dd>{data?.automatic.localTime || "03:00"}</dd>
+              <p className="admin-backups-auto-note">
+                {t("admin.backups.autoTimeZone")}
+              </p>
             </div>
             <div>
               <CalendarDays size={16} strokeWidth={1.7} aria-hidden />
-              <dd>{t("admin.backups.autoDaily")}</dd>
               <dt>{t("admin.backups.autoSchedule")}</dt>
+              <dd>{t("admin.backups.autoEveryDay")}</dd>
+              <p className="admin-backups-auto-note">
+                {t("admin.backups.autoDailyCopy")}
+              </p>
             </div>
-            <div>
+            <div className={`is-${autoBoxStatus}`}>
               <i />
-              <dd>{t("admin.backups.automaticOn")}</dd>
               <dt>{t("admin.backups.statusTitleShort")}</dt>
+              <dd>{autoBoxLabel}</dd>
             </div>
           </dl>
           <p className="admin-backups-info-bar">
