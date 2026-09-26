@@ -79,6 +79,12 @@ function sanitizeProductInput(
   const purchasePrice = Number(input.purchasePrice ?? existing?.purchasePrice ?? 0);
   const stockQuantity = Number(input.stockQuantity ?? existing?.stockQuantity ?? 0);
   const minimumStock = Number(input.minimumStock ?? existing?.minimumStock ?? 0);
+  const wholeStock = Number.isFinite(stockQuantity)
+    ? Math.max(0, Math.floor(stockQuantity))
+    : 0;
+  const wholeMinimum = Number.isFinite(minimumStock)
+    ? Math.max(0, Math.floor(minimumStock))
+    : 0;
   const status = (input.status ?? existing?.status ?? "active") as ProductStatus;
 
   const slug =
@@ -101,8 +107,8 @@ function sanitizeProductInput(
       : existing?.images ?? [],
     purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
     sellingPrice: Number.isFinite(sellingPrice) ? sellingPrice : 0,
-    stockQuantity: Number.isFinite(stockQuantity) ? stockQuantity : 0,
-    minimumStock: Number.isFinite(minimumStock) ? minimumStock : 0,
+    stockQuantity: wholeStock,
+    minimumStock: wholeMinimum,
     supplierId: input.supplierId ?? existing?.supplierId,
     status,
     featured: Boolean(input.featured ?? existing?.featured ?? false),

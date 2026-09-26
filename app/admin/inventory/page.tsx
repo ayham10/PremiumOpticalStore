@@ -115,6 +115,13 @@ function unwrapList<T>(data: unknown, keys: string[]): T[] {
   return [];
 }
 
+function parseWholeNonNeg(value: string, fallback: number): number {
+  if (value.trim() === "") return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.floor(parsed));
+}
+
 function toPayload(form: ProductForm, existing?: Product | null) {
   return {
     name: form.name,
@@ -130,9 +137,12 @@ function toPayload(form: ProductForm, existing?: Product | null) {
     description: form.description,
     images: form.images.filter(Boolean),
     purchasePrice: Number(form.purchasePrice) || existing?.purchasePrice || 0,
-    sellingPrice: Number(form.sellingPrice) || 0,
-    stockQuantity: Number(form.stockQuantity) || 0,
-    minimumStock: Number(form.minimumStock) || existing?.minimumStock || 5,
+    sellingPrice: parseWholeNonNeg(form.sellingPrice, 0),
+    stockQuantity: parseWholeNonNeg(form.stockQuantity, 0),
+    minimumStock: parseWholeNonNeg(
+      form.minimumStock,
+      existing?.minimumStock ?? 5,
+    ),
     supplierId: form.supplier || existing?.supplierId || undefined,
     supplier: form.supplier || existing?.supplierId || undefined,
     status: form.status,
@@ -588,7 +598,7 @@ export default function AdminInventoryPage() {
                     <div>
                       <label className="admin-pe-label" htmlFor="p-stock">
                         <Package size={13} strokeWidth={1.7} />
-                        كمية المخزون
+                        الكمية المتوفرة
                       </label>
                       <div className="admin-pe-stepper">
                         <button
@@ -608,6 +618,8 @@ export default function AdminInventoryPage() {
                           id="p-stock"
                           type="number"
                           min="0"
+                          step="1"
+                          inputMode="numeric"
                           value={form.stockQuantity}
                           onChange={(e) =>
                             setField("stockQuantity", e.target.value)
@@ -624,6 +636,23 @@ export default function AdminInventoryPage() {
                           <Plus size={15} strokeWidth={2} />
                         </button>
                       </div>
+                    </div>
+                    <div>
+                      <label className="admin-pe-label" htmlFor="p-min">
+                        الحد الأدنى للمخزون
+                      </label>
+                      <input
+                        id="p-min"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputMode="numeric"
+                        className="admin-pe-input"
+                        value={form.minimumStock}
+                        onChange={(e) =>
+                          setField("minimumStock", e.target.value)
+                        }
+                      />
                     </div>
                     <div>
                       <label className="admin-pe-label" htmlFor="p-status">
