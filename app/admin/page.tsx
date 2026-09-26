@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
     },
     {
       href: "/admin/service-pages",
-      label: "تعديل صفحات الخدمات",
+      label: "تعديل محتوى الموقع",
       icon: Eye,
     },
   ];

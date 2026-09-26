@@ -12,7 +12,7 @@ import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/bookin
 import { getTwilioWhatsAppPublicStatus } from "@/lib/twilio/config";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
 import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
-import { mergeServicePages, publicServicePages } from "@/lib/service-pages";
+import { persistServicePages, publicServicePages } from "@/lib/service-pages";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -154,18 +154,7 @@ export async function PUT(request: Request) {
           ...patch.categoryDefaultImages,
         }),
         servicePages: patch.servicePages
-          ? mergeServicePages({
-              ...store.settings.servicePages,
-              ...patch.servicePages,
-              eyeExam: {
-                ...store.settings.servicePages?.eyeExam,
-                ...(patch.servicePages.eyeExam || {}),
-              },
-              contactLenses: {
-                ...store.settings.servicePages?.contactLenses,
-                ...(patch.servicePages.contactLenses || {}),
-              },
-            })
+          ? persistServicePages(store.settings.servicePages, patch.servicePages)
           : store.settings.servicePages,
         branding: mergeBranding({
           ...store.settings.branding,

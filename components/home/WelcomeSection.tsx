@@ -6,6 +6,8 @@ import { CalendarDays, ChevronDown, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import OyonLogo from "@/components/branding/OyonLogo";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { pickServiceText } from "@/lib/service-pages";
+import { useServicePages } from "@/lib/use-service-pages";
 import type { StoreSettings } from "@/lib/types";
 
 function HeroSubtitle({ text }: { text: string }) {
@@ -28,6 +30,7 @@ function HeroSubtitle({ text }: { text: string }) {
 
 export default function WelcomeSection() {
   const { t, locale } = useLocale();
+  const hero = useServicePages()?.homepage?.hero;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [content, setContent] = useState<StoreSettings["content"]>();
   const [videoReady, setVideoReady] = useState(false);
@@ -107,9 +110,22 @@ export default function WelcomeSection() {
     });
   }
 
-  const heroTitle = content?.heroTitle?.[locale]?.trim() || t("hero.title");
-  // Approved hero subtitle copy (ignore CMS override so spacing/text stay consistent)
-  const welcomeLine = t("home.welcomeLine");
+  const fallbackTitle = content?.heroTitle?.[locale]?.trim() || t("hero.title");
+  const heroTitle = pickServiceText(hero?.title, fallbackTitle);
+  const fallbackLine = t("home.welcomeLine");
+  const fallbackLabels = fallbackLine.split(/\s*•\s*/).filter(Boolean);
+  const welcomeLine = hero
+    ? fallbackLabels
+        .map((label, index) =>
+          pickServiceText(hero.serviceLabels?.[index], label),
+        )
+        .join(" • ")
+    : fallbackLine;
+  const bookLabel = pickServiceText(
+    hero?.bookingButtonText,
+    t("home.bookAppointment"),
+  );
+  const shopLabel = pickServiceText(hero?.shopButtonText, t("home.shopNow"));
 
   return (
     <section className="home-welcome" aria-label="Welcome">
@@ -160,11 +176,11 @@ export default function WelcomeSection() {
           dir="ltr"
         >
           <Link href="/book" className="home-welcome-cta home-welcome-cta--primary">
-            <span>{t("home.bookAppointment")}</span>
+            <span>{bookLabel}</span>
             <CalendarDays size={17} aria-hidden />
           </Link>
           <Link href="/shop" className="home-welcome-cta home-welcome-cta--secondary">
-            <span>{t("home.shopNow")}</span>
+            <span>{shopLabel}</span>
             <ShoppingBag size={17} aria-hidden />
           </Link>
         </motion.div>

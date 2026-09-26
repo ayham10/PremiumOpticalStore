@@ -1,6 +1,8 @@
 import type {
   ContactLensesServicePage,
   EyeExamServicePage,
+  HomepageHeroContent,
+  HomepageServicePage,
   ServicePageFeature,
   ServicePagesSettings,
 } from "@/lib/types";
@@ -57,6 +59,18 @@ export const DEFAULT_SERVICE_PAGES: ServicePagesSettings = {
     ],
     warningText:
       "يجب اختيار العدسات اللاصقة بملاءمة مهنية. لا تستخدم العدسات لمدة أطول من الموصى بها، وأوقف استخدامها عند الشعور بألم أو احمرار أو انزعاج غير طبيعي.",
+  },
+  homepage: {
+    hero: {
+      title: "عِش الحياة بوضوح",
+      serviceLabels: [
+        "إطارات طبية",
+        "نظارات شمسية",
+        "فحص نظر احترافي",
+      ],
+      bookingButtonText: "احجز موعدًا",
+      shopButtonText: "تسوق الآن",
+    },
   },
 };
 
@@ -127,7 +141,34 @@ function mergeContactLenses(saved: unknown): ContactLensesServicePage {
   };
 }
 
-/** Fill missing fields with current production defaults. Safe for Admin + persist. */
+function mergeHomepageHero(saved: unknown): HomepageHeroContent {
+  const raw = asRecord(saved);
+  const base = DEFAULT_SERVICE_PAGES.homepage!.hero;
+  const labels = Array.isArray(raw.serviceLabels) ? raw.serviceLabels : [];
+  return {
+    title: cleanText(raw.title) || base.title,
+    serviceLabels: base.serviceLabels.map((fallback, index) => {
+      const value = labels[index];
+      return typeof value === "string" && value.trim() ? value : fallback;
+    }),
+    bookingButtonText:
+      cleanText(raw.bookingButtonText) || base.bookingButtonText,
+    shopButtonText: cleanText(raw.shopButtonText) || base.shopButtonText,
+  };
+}
+
+function mergeHomepage(saved: unknown): HomepageServicePage {
+  const raw = asRecord(saved);
+  return { hero: mergeHomepageHero(raw.hero) };
+}
+
+export function hasHomepageSettings(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const homepage = (value as { homepage?: unknown }).homepage;
+  return Boolean(homepage && typeof homepage === "object");
+}
+
+/** Fill missing fields with current production defaults. Safe for Admin form. */
 export function mergeServicePages(
   incoming?: unknown,
 ): ServicePagesSettings {
@@ -135,15 +176,66 @@ export function mergeServicePages(
   return {
     eyeExam: mergeEyeExam(raw.eyeExam),
     contactLenses: mergeContactLenses(raw.contactLenses),
+    homepage: mergeHomepage(raw.homepage),
   };
 }
 
-/** Public whitelist: service-page copy only. */
+/**
+ * Persist Eye Exam / Contact Lenses without inventing Homepage data.
+ * Homepage is written only when it already exists or the patch includes it.
+ */
+export function persistServicePages(
+  stored?: unknown,
+  patch?: unknown,
+): ServicePagesSettings {
+  const storedRaw = asRecord(stored);
+  const patchRaw = asRecord(patch);
+  const merged = mergeServicePages({
+    ...storedRaw,
+    ...patchRaw,
+    eyeExam: {
+      ...asRecord(storedRaw.eyeExam),
+      ...asRecord(patchRaw.eyeExam),
+    },
+    contactLenses: {
+      ...asRecord(storedRaw.contactLenses),
+      ...asRecord(patchRaw.contactLenses),
+    },
+  });
+
+  if (hasHomepageSettings(stored) || hasHomepageSettings(patch)) {
+    return {
+      ...merged,
+      homepage: mergeHomepage({
+        ...asRecord(storedRaw.homepage),
+        ...asRecord(patchRaw.homepage),
+        hero: {
+          ...asRecord(asRecord(storedRaw.homepage).hero),
+          ...asRecord(asRecord(patchRaw.homepage).hero),
+        },
+      }),
+    };
+  }
+
+  return {
+    eyeExam: merged.eyeExam,
+    contactLenses: merged.contactLenses,
+  };
+}
+
+/** Public whitelist: service-page copy only. Does not invent unsaved Homepage. */
 export function publicServicePages(
   incoming?: unknown,
 ): ServicePagesSettings | undefined {
   if (!incoming || typeof incoming !== "object") return undefined;
-  return mergeServicePages(incoming);
+  const merged = mergeServicePages(incoming);
+  if (!hasHomepageSettings(incoming)) {
+    return {
+      eyeExam: merged.eyeExam,
+      contactLenses: merged.contactLenses,
+    };
+  }
+  return merged;
 }
 
 export function pickServiceText(

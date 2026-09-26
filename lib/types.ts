@@ -424,7 +424,7 @@ export interface StoreSettings {
   adminDisplayNames?: Record<string, string>;
   /** Fallback product photos by category when a product has no images of its own. */
   categoryDefaultImages?: CategoryDefaultImages;
-  /** Owner-editable Eye Exam / Contact Lenses page copy. */
+  /** Owner-editable Homepage / Eye Exam / Contact Lenses page copy. */
   servicePages?: ServicePagesSettings;
 }
 
@@ -453,9 +453,21 @@ export interface ContactLensesServicePage {
   warningText: string;
 }
 
+export interface HomepageHeroContent {
+  title: string;
+  serviceLabels: string[];
+  bookingButtonText: string;
+  shopButtonText: string;
+}
+
+export interface HomepageServicePage {
+  hero: HomepageHeroContent;
+}
+
 export interface ServicePagesSettings {
   eyeExam: EyeExamServicePage;
   contactLenses: ContactLensesServicePage;
+  homepage?: HomepageServicePage;
 }
 
 export interface AdminSession {

@@ -1,27 +1,33 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Contact, Eye, RotateCcw, Save } from "lucide-react";
+import { Contact, Eye, Home, RotateCcw, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
-import { cloneServicePages, mergeServicePages } from "@/lib/service-pages";
+import {
+  cloneServicePages,
+  hasHomepageSettings,
+  mergeServicePages,
+} from "@/lib/service-pages";
 import type {
   ContactLensesServicePage,
   EyeExamServicePage,
+  HomepageHeroContent,
   ServicePagesSettings,
   StoreSettings,
 } from "@/lib/types";
 
-type Tab = "eyeExam" | "contactLenses";
+type Tab = "homepage" | "eyeExam" | "contactLenses";
 
 export default function AdminServicePagesPage() {
   const { t } = useLocale();
-  const [tab, setTab] = useState<Tab>("eyeExam");
+  const [tab, setTab] = useState<Tab>("homepage");
   const [pages, setPages] = useState<ServicePagesSettings>(
     cloneServicePages(),
   );
+  const [homepagePersisted, setHomepagePersisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -34,11 +40,14 @@ export default function AdminServicePagesPage() {
       const data = await apiFetch<{ settings: StoreSettings }>(
         "/api/settings?admin=1",
       );
-      setPages(mergeServicePages(data.settings?.servicePages));
+      const incoming = data.settings?.servicePages;
+      setHomepagePersisted(hasHomepageSettings(incoming));
+      setPages(mergeServicePages(incoming));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("admin.servicePages.loadError"),
       );
+      setHomepagePersisted(false);
       setPages(cloneServicePages());
     } finally {
       setLoading(false);
@@ -69,11 +78,27 @@ export default function AdminServicePagesPage() {
     }));
   }
 
-  function restoreCurrent() {
-    if (!confirm(t("admin.servicePages.restoreConfirm"))) return;
+  function updateHomepageHero<K extends keyof HomepageHeroContent>(
+    key: K,
+    value: HomepageHeroContent[K],
+  ) {
     setPages((prev) => ({
       ...prev,
-      [tab]: cloneServicePages()[tab],
+      homepage: {
+        hero: {
+          ...(prev.homepage?.hero ?? cloneServicePages().homepage!.hero),
+          [key]: value,
+        },
+      },
+    }));
+  }
+
+  function restoreCurrent() {
+    if (!confirm(t("admin.servicePages.restoreConfirm"))) return;
+    const original = cloneServicePages();
+    setPages((prev) => ({
+      ...prev,
+      [tab]: original[tab],
     }));
     setMessage(t("admin.servicePages.restored"));
   }
@@ -83,16 +108,23 @@ export default function AdminServicePagesPage() {
     setMessage("");
     setError("");
     try {
+      const merged = mergeServicePages(pages);
+      const includeHomepage = homepagePersisted || tab === "homepage";
+      const servicePages = includeHomepage
+        ? merged
+        : { eyeExam: merged.eyeExam, contactLenses: merged.contactLenses };
       const saved = await apiFetch<{ settings: StoreSettings }>(
         "/api/settings",
         {
           method: "PUT",
-          body: JSON.stringify({
-            settings: { servicePages: mergeServicePages(pages) },
-          }),
+          body: JSON.stringify({ settings: { servicePages } }),
         },
       );
-      setPages(mergeServicePages(saved.settings?.servicePages ?? pages));
+      const next = saved.settings?.servicePages;
+      setHomepagePersisted(
+        includeHomepage || hasHomepageSettings(next),
+      );
+      setPages(mergeServicePages(next ?? merged));
       invalidatePublicCache("settings:");
       window.dispatchEvent(new Event("oyon:branding-saved"));
       setMessage(t("admin.servicePages.saved"));
@@ -105,6 +137,7 @@ export default function AdminServicePagesPage() {
     }
   }
 
+  const home = pages.homepage ?? cloneServicePages().homepage!;
   const eye = pages.eyeExam;
   const lenses = pages.contactLenses;
 
@@ -118,6 +151,16 @@ export default function AdminServicePagesPage() {
       />
 
       <div className="admin-service-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "homepage"}
+          className={tab === "homepage" ? "is-active" : ""}
+          onClick={() => setTab("homepage")}
+        >
+          <Home size={16} strokeWidth={1.6} />
+          {t("admin.servicePages.tabHome")}
+        </button>
         <button
           type="button"
           role="tab"
@@ -153,6 +196,48 @@ export default function AdminServicePagesPage() {
 
       {loading ? (
         <p className="admin-muted">{t("admin.servicePages.loading")}</p>
+      ) : tab === "homepage" ? (
+        <div className="admin-service-editor space-y-4">
+          <section className="admin-card admin-service-card">
+            <h2>{t("admin.servicePages.hero")}</h2>
+            <Field
+              label={t("admin.servicePages.mainTitle")}
+              value={home.hero.title}
+              onChange={(value) => updateHomepageHero("title", value)}
+            />
+          </section>
+
+          <section className="admin-card admin-service-card">
+            <h2>{t("admin.servicePages.serviceLabels")}</h2>
+            {home.hero.serviceLabels.map((label, index) => (
+              <Field
+                key={`home-label-${index}`}
+                label={t("admin.servicePages.serviceLabelN", { n: index + 1 })}
+                value={label}
+                onChange={(value) => {
+                  const next = [...home.hero.serviceLabels];
+                  next[index] = value;
+                  updateHomepageHero("serviceLabels", next);
+                }}
+              />
+            ))}
+          </section>
+
+          <section className="admin-card admin-service-card">
+            <Field
+              label={t("admin.servicePages.bookingButton")}
+              value={home.hero.bookingButtonText}
+              onChange={(value) =>
+                updateHomepageHero("bookingButtonText", value)
+              }
+            />
+            <Field
+              label={t("admin.servicePages.shopButton")}
+              value={home.hero.shopButtonText}
+              onChange={(value) => updateHomepageHero("shopButtonText", value)}
+            />
+          </section>
+        </div>
       ) : tab === "eyeExam" ? (
         <div className="admin-service-editor space-y-4">
           <section className="admin-card admin-service-card">
