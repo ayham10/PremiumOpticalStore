@@ -239,6 +239,14 @@ export function formatLensOrderDate(value = new Date()): string {
   });
 }
 
+function escapeLensOrderText(value: string | number): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function buildLensOrderDocumentHtml(
   rows: LensOrderRow[],
   generatedAt = new Date(),
@@ -246,11 +254,14 @@ export function buildLensOrderDocumentHtml(
   const totals = lensOrderTotals(rows);
   const body = rows
     .map(
-      (row) => `
+      (row, index) => `
         <tr>
-          <td>${lensSignLabel(row.type)}</td>
-          <td>${row.sph}</td>
-          <td>${row.cyl}</td>
+          <td class="num">${index + 1}</td>
+          <td>${escapeLensOrderText(lensSignLabel(row.type))}</td>
+          <td class="ltr">${escapeLensOrderText(row.sph)}</td>
+          <td class="ltr">${escapeLensOrderText(row.cyl)}</td>
+          <td class="num">${row.currentStock}</td>
+          <td class="num">${row.desiredStock}</td>
           <td class="qty">${row.quantityToOrder}</td>
         </tr>`,
     )
@@ -262,56 +273,118 @@ export function buildLensOrderDocumentHtml(
   <meta charset="utf-8" />
   <title>OYON OPTICS — طلبية عدسات</title>
   <style>
-    @page { size: A4; margin: 16mm; }
+    @page { size: A4 portrait; margin: 10mm; }
     html, body {
       margin: 0;
       padding: 0;
       background: #fff;
-      color: #111;
+      color: #1a1f26;
       font-family: "Noto Sans Arabic", "Arial", sans-serif;
     }
-    body { padding: 8mm 4mm; }
-    h1, h2, p { margin: 0; }
-    .header { margin-bottom: 18px; }
-    .brand { font-size: 22px; font-weight: 800; letter-spacing: 0.04em; }
-    .title { margin-top: 4px; font-size: 18px; font-weight: 700; }
-    .date { margin-top: 8px; font-size: 13px; color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    th, td {
-      border: 1px solid #222;
-      padding: 8px 10px;
-      text-align: right;
-      font-size: 13px;
+    body { padding: 0; }
+    h1, p { margin: 0; }
+    .sheet { max-width: 190mm; margin: 0 auto; }
+    .header { text-align: right; }
+    .brand {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #0b1722;
     }
-    th { background: #f3f3f3; font-weight: 700; }
-    td.qty, th.qty { font-weight: 800; text-align: center; }
-    .totals { margin-top: 18px; font-size: 14px; }
-    .totals p { margin: 4px 0; }
+    .title {
+      margin-top: 2px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #0b1722;
+    }
+    .date { margin-top: 3px; font-size: 11px; color: #4b5560; }
+    .rule {
+      height: 1px;
+      margin: 8px 0 7px;
+      background: #d4af6a;
+    }
+    .summary {
+      margin: 0 0 8px;
+      font-size: 11.5px;
+      color: #2a3138;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    th, td {
+      border: 1px solid #c5ccd3;
+      padding: 5px 6px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.35;
+      vertical-align: middle;
+    }
+    th {
+      background: #0b1722;
+      color: #f4f7fa;
+      font-weight: 700;
+    }
+    tbody tr:nth-child(even) td { background: #f4f6f8; }
+    tbody tr:nth-child(odd) td { background: #fff; }
+    td.ltr {
+      direction: ltr;
+      unicode-bidi: isolate;
+      font-variant-numeric: tabular-nums;
+    }
+    td.num { font-variant-numeric: tabular-nums; }
+    td.qty {
+      color: #b8862b;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .total {
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #0b1722;
+    }
+    .footer {
+      margin-top: 10px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: #8a929c;
+      text-align: center;
+    }
     @media print {
       body { padding: 0; }
+      .sheet { max-width: none; }
     }
   </style>
 </head>
 <body>
-  <header class="header">
-    <p class="brand">OYON OPTICS</p>
-    <h1 class="title">طلبية عدسات</h1>
-    <p class="date">${formatLensOrderDate(generatedAt)}</p>
-  </header>
-  <table>
-    <thead>
-      <tr>
-        <th>نوع العدسة</th>
-        <th>SPH</th>
-        <th>CYL</th>
-        <th class="qty">كمية الطلب</th>
-      </tr>
-    </thead>
-    <tbody>${body || `<tr><td colspan="4">لا توجد أصناف للطلب</td></tr>`}</tbody>
-  </table>
-  <div class="totals">
-    <p>إجمالي الأصناف: ${totals.combinations}</p>
-    <p>إجمالي الكمية: ${totals.quantity}</p>
+  <div class="sheet">
+    <header class="header">
+      <p class="brand">OYON OPTICS</p>
+      <h1 class="title">طلبية عدسات</h1>
+      <p class="date">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
+    </header>
+    <div class="rule"></div>
+    <p class="summary">إجمالي الأصناف: ${totals.combinations} | إجمالي الكمية: ${totals.quantity}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>نوع العدسة</th>
+          <th>SPH</th>
+          <th>CYL</th>
+          <th>المخزون الحالي</th>
+          <th>المخزون المطلوب</th>
+          <th>كمية الطلب</th>
+        </tr>
+      </thead>
+      <tbody>${body || `<tr><td colspan="7">لا توجد أصناف للطلب</td></tr>`}</tbody>
+    </table>
+    <p class="total">إجمالي العدسات المطلوبة: ${totals.quantity}</p>
+    <p class="footer">OYON OPTICS</p>
   </div>
 </body>
 </html>`;

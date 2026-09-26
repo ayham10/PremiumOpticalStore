@@ -276,6 +276,8 @@ export default function AdminLensInventoryPage() {
       )}
 
       <AdminModal
+        compact
+        className="admin-lens-edit-modal"
         open={Boolean(editor)}
         title={t("admin.lensInventory.editTitle")}
         onClose={() => {
@@ -290,21 +292,28 @@ export default function AdminLensInventoryPage() {
               void saveCell();
             }}
           >
-            <p>
-              {t("admin.lensInventory.colType")}: <strong>{lensSignLabel(editor.type)}</strong>
-            </p>
-            <p>
-              SPH: <strong>{editor.sph}</strong>
-            </p>
-            <p>
-              CYL: <strong>{editor.cyl}</strong>
-            </p>
+            <div className="admin-lens-edit-meta">
+              <p>
+                <span>{t("admin.lensInventory.colType")}</span>
+                <strong>{lensSignLabel(editor.type)}</strong>
+              </p>
+              <p>
+                <span>SPH</span>
+                <strong dir="ltr">{editor.sph}</strong>
+              </p>
+              <p>
+                <span>CYL</span>
+                <strong dir="ltr">{editor.cyl}</strong>
+              </p>
+            </div>
             <label>
               <span>{t("admin.lensInventory.colCurrent")}</span>
               <input
                 className="input"
                 inputMode="numeric"
                 min={0}
+                max={9999}
+                maxLength={4}
                 step={1}
                 value={editor.currentStock}
                 onChange={(event) =>
@@ -318,6 +327,8 @@ export default function AdminLensInventoryPage() {
                 className="input"
                 inputMode="numeric"
                 min={0}
+                max={9999}
+                maxLength={4}
                 step={1}
                 value={editor.desiredStock}
                 onChange={(event) =>

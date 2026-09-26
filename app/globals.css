@@ -16624,32 +16624,70 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   font-size: 0.86rem;
 }
 
-.admin-lens-edit {
-  display: grid;
-  gap: 0.7rem;
+html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
+.admin-lens-page .admin-card.admin-lens-edit-modal {
+  width: min(340px, calc(100vw - 24px));
+  max-width: min(340px, calc(100vw - 24px));
+  padding: 0.85rem 0.9rem 0.8rem;
 }
 
-.admin-lens-edit p {
+.admin-lens-edit-modal .admin-section-title {
+  font-size: 0.92rem;
+}
+
+.admin-lens-edit {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-lens-edit-meta {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.admin-lens-edit-meta p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 0;
   color: #c8cdd4;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
+}
+
+.admin-lens-edit-meta strong {
+  color: #f2f6f8;
+  font-size: 0.8rem;
+  unicode-bidi: isolate;
 }
 
 .admin-lens-edit label {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.22rem;
 }
 
 .admin-lens-edit label span {
   color: #9aa1aa;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
+}
+
+.admin-lens-edit .input {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 0.7rem;
 }
 
 .admin-lens-edit-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  margin-top: 0.1rem;
+}
+
+.admin-lens-edit-actions .btn {
+  min-height: 40px;
+  padding: 0 0.85rem;
 }
 
 @media (max-width: 767px) {
