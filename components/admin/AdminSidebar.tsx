@@ -14,6 +14,7 @@ import {
   Tag,
   ImageIcon,
   Settings,
+  DatabaseBackup,
   LogOut,
   Menu,
   MoreHorizontal,
@@ -111,6 +112,12 @@ const NAV: Array<{
     labelKey: "admin.sidebar.servicePages",
     permission: "settings",
     icon: FileText,
+  },
+  {
+    href: "/admin/backups",
+    labelKey: "admin.sidebar.backups",
+    permission: "settings",
+    icon: DatabaseBackup,
   },
   {
     href: "/admin/settings",

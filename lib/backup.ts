@@ -1,3 +1,8 @@
+import {
+  type BackupHealthStatus,
+  type BackupHistoryItem,
+  type BackupStatusSummary,
+} from "@/lib/backup-status";
 import { supabaseConfig } from "@/lib/db/store";
 import {
   getStoragePathFromUrl,
@@ -734,4 +739,160 @@ export async function runDailyBackup(): Promise<BackupRunResult> {
  */
 export async function createPreRestoreSnapshot(): Promise<BackupRunResult> {
   return writeSnapshot("pre-restore", false);
+}
+
+function sectionCount(
+  sections: Record<string, SectionSummary> | undefined,
+  key: RestorableSection,
+): number | null {
+  const summary = sections?.[key];
+  return summary?.type === "array" && typeof summary.count === "number"
+    ? summary.count
+    : null;
+}
+
+function isCompletedDailySnapshot(
+  value: unknown,
+): value is OyonStoreSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snapshot = value as Partial<OyonStoreSnapshot>;
+  return (
+    snapshot.kind === "oyon-store-snapshot" &&
+    snapshot.purpose === "daily" &&
+    Boolean(snapshot.createdAt) &&
+    Boolean(snapshot.sections) &&
+    typeof snapshot.sections === "object"
+  );
+}
+
+function toHistoryItem(
+  date: string,
+  sizeBytes: number,
+  snapshot: OyonStoreSnapshot,
+): BackupHistoryItem {
+  return {
+    date,
+    createdAt: snapshot.createdAt,
+    sizeBytes,
+    appointments: sectionCount(snapshot.sections, "eyeExamAppointments"),
+    products: sectionCount(snapshot.sections, "products"),
+    lensInventory: sectionCount(snapshot.sections, "lensInventory"),
+    customers: sectionCount(snapshot.sections, "customers"),
+    promotions: sectionCount(snapshot.sections, "promotions"),
+    settingsIncluded: snapshot.sections.settings?.type === "object",
+    mediaObjectCount:
+      typeof snapshot.media?.liveObjectCount === "number"
+        ? snapshot.media.liveObjectCount
+        : null,
+    status: "success",
+  };
+}
+
+function utcMidnightLocalTime(timeZone: string, now = new Date()): string {
+  const utcMidnight = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(utcMidnight));
+}
+
+async function readMediaStatusSafe(): Promise<BackupStatusSummary["media"]> {
+  try {
+    const { bytes } = await downloadObject(BACKUP_BUCKET, MEDIA_INDEX_PATH);
+    const parsed = JSON.parse(Buffer.from(bytes).toString("utf8")) as MediaIndex;
+    if (parsed?.version !== 1 || !parsed.objects || typeof parsed.objects !== "object") {
+      throw new Error("invalid media index");
+    }
+    let lastSyncedAt: string | null = null;
+    for (const entry of Object.values(parsed.objects)) {
+      if (entry?.backedUpAt && (!lastSyncedAt || entry.backedUpAt > lastSyncedAt)) {
+        lastSyncedAt = entry.backedUpAt;
+      }
+    }
+    return {
+      protectedCount: Object.keys(parsed.objects).length,
+      incremental: true,
+      lastSyncedAt,
+    };
+  } catch {
+    return {
+      protectedCount: null,
+      incremental: true,
+      lastSyncedAt: null,
+    };
+  }
+}
+
+/**
+ * Read-only Admin summary. Lists retained daily snapshots and returns
+ * counts/metadata only — never appData, paths, signed URLs, or credentials.
+ */
+export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
+  const objects = await listPrefix(BACKUP_BUCKET, DAILY_PREFIX.replace(/\/$/, ""));
+  const daily = objects
+    .map((object) => {
+      const date = dailySnapshotDate(object.path);
+      return date ? { object, date } : null;
+    })
+    .filter((item): item is { object: StorageObject; date: string } => item != null)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const history: BackupHistoryItem[] = [];
+  for (const item of daily) {
+    try {
+      const { bytes } = await downloadObject(BACKUP_BUCKET, item.object.path);
+      const parsed = JSON.parse(
+        Buffer.from(bytes).toString("utf8"),
+      ) as unknown;
+      if (!isCompletedDailySnapshot(parsed)) continue;
+      history.push(
+        toHistoryItem(
+          item.date,
+          item.object.size || bytes.byteLength,
+          parsed,
+        ),
+      );
+    } catch (error) {
+      console.error(`Backup status skipped unreadable snapshot ${item.date}`, error);
+    }
+  }
+
+  const latest = history[0] ?? null;
+  const today = jerusalemDate();
+  const yesterday = shiftIsoDate(today, -1);
+  const status: BackupHealthStatus = !latest
+    ? "none"
+    : latest.date >= yesterday
+      ? "healthy"
+      : "warning";
+
+  const media = await readMediaStatusSafe();
+  if (media.protectedCount == null && latest?.mediaObjectCount != null) {
+    media.protectedCount = latest.mediaObjectCount;
+  }
+
+  return {
+    status,
+    retentionDays: BACKUP_RETENTION_DAYS,
+    automatic: {
+      enabled: true,
+      schedule: "daily",
+      timeUtc: "00:00",
+      localTimeZone: "Asia/Jerusalem",
+      localTime: utcMidnightLocalTime("Asia/Jerusalem"),
+    },
+    latest,
+    history,
+    media,
+  };
 }

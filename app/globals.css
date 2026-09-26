@@ -523,6 +523,7 @@ html.admin-dark .admin-set,
 html.admin-dark .admin-pe-editor,
 html.admin-dark .admin-lens-page,
 html.admin-dark .admin-stock-page,
+html.admin-dark .admin-backups-page,
 html.admin-dark .admin-main,
 html.admin-dark body > .flex.min-h-screen.items-center.justify-center {
   background: transparent !important;
@@ -16743,5 +16744,218 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
     width: var(--lens-sph-w);
     min-width: var(--lens-sph-w);
     max-width: var(--lens-sph-w);
+  }
+}
+
+.admin-backups-page {
+  max-width: var(--admin-content-max, 1200px);
+}
+
+.admin-backups-page .admin-page-header {
+  margin-bottom: 0.15rem;
+}
+
+.admin-backups-page .admin-kicker {
+  margin: 0;
+  color: #d4af6a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.admin-backups-page .admin-page-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.55rem, 3vw, 1.95rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.admin-backups-page .admin-page-desc {
+  margin-top: 0.4rem;
+  max-width: 40rem;
+  color: #8d949d;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.admin-backups-status {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-backups-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.45rem;
+}
+
+.admin-backups-status-text {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.admin-backups-status.is-healthy .admin-backups-status-row {
+  color: #5ec49a;
+}
+
+.admin-backups-status.is-warning .admin-backups-status-row {
+  color: #e6c58a;
+}
+
+.admin-backups-status.is-none .admin-backups-status-row {
+  color: #e07a7a;
+}
+
+.admin-backups-status-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.admin-backups-status-meta dt,
+.admin-backups-meta-list dt {
+  margin: 0;
+  color: #a7adb5;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.admin-backups-status-meta dd,
+.admin-backups-meta-list dd {
+  margin: 0.2rem 0 0;
+  color: #f5f5f5;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .admin-backups-status {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .admin-backups-status-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.admin-backups-card-value {
+  margin: 0.2rem 0 0;
+  color: #f5f5f5;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.admin-backups-card-value.is-compact {
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.admin-backups-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  color: #d4af6a;
+}
+
+.admin-backups-section-head h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.admin-backups-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-backups-section-grid article {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(42, 47, 54, 0.95);
+  border-radius: 14px;
+  background: rgba(8, 12, 17, 0.35);
+}
+
+.admin-backups-count {
+  margin: 0.25rem 0 0;
+  color: #f5f5f5;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.admin-backups-settings-note,
+.admin-backups-note {
+  margin: 0.85rem 0 0;
+  line-height: 1.55;
+}
+
+.admin-backups-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #5ec49a;
+  font-weight: 700;
+}
+
+.admin-backups-meta-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .admin-backups-section-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .admin-backups-meta-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-backups-restore-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-backups-restore-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(42, 47, 54, 0.95);
+  border-radius: 14px;
+  background: rgba(8, 12, 17, 0.35);
+  color: #f2f4f6;
+  font-weight: 600;
+}
+
+.admin-backups-restore-list .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .admin-backups-restore-list li {
+    flex-wrap: wrap;
+  }
+
+  .admin-backups-restore-list .btn {
+    width: auto;
   }
 }
