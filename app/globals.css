@@ -521,6 +521,7 @@ html.admin-dark .admin-home,
 html.admin-dark .admin-bookings-page,
 html.admin-dark .admin-set,
 html.admin-dark .admin-pe-editor,
+html.admin-dark .admin-lens-page,
 html.admin-dark .admin-stock-page,
 html.admin-dark .admin-main,
 html.admin-dark body > .flex.min-h-screen.items-center.justify-center {
@@ -16308,6 +16309,230 @@ select.admin-pe-input {
 
   .admin-service-pages .input,
   .admin-service-pages .textarea {
+    width: 100%;
+  }
+}
+
+.admin-lens-page {
+  max-width: var(--admin-content-max, 1200px);
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.admin-lens-card,
+.admin-lens-legend,
+.admin-lens-order {
+  padding: 0.95rem 1.05rem;
+}
+
+.admin-lens-card h2,
+.admin-lens-legend h2,
+.admin-lens-order h2 {
+  margin: 0 0 0.75rem;
+  color: #d4af6a;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.admin-lens-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 0.25rem;
+}
+
+.admin-lens-matrix {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0.28rem;
+}
+
+.admin-lens-matrix th {
+  padding: 0.28rem 0.2rem;
+  color: #c8cdd4;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-lens-matrix th:first-child,
+.admin-lens-matrix td:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: rgba(8, 12, 17, 0.92);
+}
+
+.admin-lens-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.35rem;
+  min-height: 2.05rem;
+  padding: 0.2rem 0.28rem;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 106, 0.18);
+  background: rgba(8, 12, 17, 0.55);
+  color: #d7dbe0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-lens-cell.is-green {
+  border-color: rgba(94, 196, 154, 0.55);
+  background: rgba(94, 196, 154, 0.16);
+  color: #7ee0b4;
+}
+
+.admin-lens-cell.is-gold {
+  border-color: rgba(212, 175, 106, 0.62);
+  background: rgba(212, 175, 106, 0.16);
+  color: #e6c58a;
+}
+
+.admin-lens-cell.is-red {
+  border-color: rgba(224, 122, 122, 0.6);
+  background: rgba(224, 122, 122, 0.16);
+  color: #f0a0a0;
+}
+
+.admin-lens-legend ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-lens-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #c8cdd4;
+  font-size: 0.82rem;
+}
+
+.admin-lens-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-lens-swatch.is-green {
+  background: #5ec49a;
+}
+
+.admin-lens-swatch.is-gold {
+  background: #d4af6a;
+}
+
+.admin-lens-swatch.is-red {
+  background: #e07a7a;
+}
+
+.admin-lens-swatch.is-neutral {
+  background: #2a3038;
+}
+
+.admin-lens-order-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-lens-order-head p {
+  margin: 0.2rem 0 0;
+  color: #c8cdd4;
+  font-size: 0.86rem;
+}
+
+.admin-lens-order-sep {
+  margin-inline: 0.45rem;
+  color: #8a929c;
+}
+
+.admin-lens-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-lens-order-wrap {
+  overflow-x: auto;
+}
+
+.admin-lens-order table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+}
+
+.admin-lens-order th,
+.admin-lens-order td {
+  padding: 0.5rem 0.55rem;
+  border-bottom: 1px solid rgba(212, 175, 106, 0.16);
+  text-align: right;
+  font-size: 0.84rem;
+}
+
+.admin-lens-order th {
+  color: #d4af6a;
+  font-weight: 700;
+}
+
+.admin-lens-qty {
+  color: #e6c58a;
+  font-weight: 800;
+}
+
+.admin-lens-error {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(224, 122, 122, 0.35);
+  background: rgba(224, 122, 122, 0.12);
+  color: #e07a7a;
+  font-size: 0.86rem;
+}
+
+.admin-lens-edit {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-lens-edit p {
+  margin: 0;
+  color: #c8cdd4;
+  font-size: 0.88rem;
+}
+
+.admin-lens-edit label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.admin-lens-edit label span {
+  color: #9aa1aa;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.admin-lens-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .admin-lens-order-actions,
+  .admin-lens-order-actions .btn {
     width: 100%;
   }
 }

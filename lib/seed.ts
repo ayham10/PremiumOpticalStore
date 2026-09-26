@@ -644,6 +644,7 @@ export function createSeedData(): AppData {
     eyeExamAvailability: createSeedEyeExamAvailability(),
     eyeExamAppointments: [],
     bookingServices: createDefaultBookingServices(timestamp),
+    lensInventory: [],
     settings: DEFAULT_SETTINGS,
     updatedAt: timestamp,
   };

@@ -342,6 +342,7 @@ export type Dictionary = {
     bookingServices: Record<string, string>;
     settings: Record<string, string>;
     stock: Record<string, string>;
+    lensInventory: Record<string, string>;
     servicePages: Record<string, string>;
     common: Record<string, string>;
   };
@@ -1119,6 +1120,7 @@ const en: Dictionary = {
       inventory: "Products",
       products: "Products",
       stock: "Stock",
+      lensInventory: "مخزون العدسات",
       servicePages: "Website content",
       promotions: "Offers",
       media: "Library",
@@ -1689,6 +1691,37 @@ const en: Dictionary = {
         "Replace this page’s fields with the original OYON text and icons? You still need to click Save Changes to publish.",
       restored:
         "Original content restored in the form. Click Save Changes to publish.",
+    },
+    lensInventory: {
+      kicker: "Inventory",
+      title: "مخزون العدسات",
+      description:
+        "Track current and desired SPH/CYL lens stock. The proposed order list updates automatically.",
+      loading: "Loading lens inventory…",
+      loadError: "Could not load lens inventory",
+      saveError: "Could not save lens inventory",
+      invalidQty: "Enter a whole number of 0 or more.",
+      minusTitle: "عدسات (-)",
+      plusTitle: "عدسات (+)",
+      legendTitle: "دليل الألوان",
+      legendGreen: "أخضر: المخزون الحالي يكفي المطلوب.",
+      legendGold: "ذهبي: يوجد مخزون جزئي ويجب الشراء.",
+      legendRed: "أحمر: لا يوجد مخزون ويجب الشراء.",
+      legendNeutral: "رمادي: لا يوجد مخزون مطلوب.",
+      orderTitle: "قائمة الطلبية المقترحة",
+      totalItems: "إجمالي الأصناف",
+      totalQty: "إجمالي الكمية",
+      orderEmpty: "لا توجد أصناف تحتاج شراء.",
+      download: "تحميل قائمة الطلبية",
+      print: "طباعة",
+      colType: "نوع العدسة",
+      colCurrent: "المخزون الحالي",
+      colDesired: "المخزون المطلوب",
+      colOrder: "كمية الطلب",
+      editTitle: "تعديل المخزون",
+      cancel: "إلغاء",
+      save: "حفظ",
+      saving: "جارٍ الحفظ…",
     },
     common: {
       add: "Add",

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CalendarClock,
   ClipboardList,
+  Contact,
   Package,
   Warehouse,
   FileText,
@@ -86,6 +87,12 @@ const NAV: Array<{
     labelKey: "admin.sidebar.stock",
     permission: "inventory",
     icon: Warehouse,
+  },
+  {
+    href: "/admin/lens-inventory",
+    labelKey: "admin.sidebar.lensInventory",
+    permission: "inventory",
+    icon: Contact,
   },
   {
     href: "/admin/media",

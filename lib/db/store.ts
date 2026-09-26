@@ -3,6 +3,7 @@ import path from "path";
 import { mergeBranding } from "@/lib/branding";
 import { mergeBookingMessages } from "@/lib/booking-messages";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
+import { normalizeLensInventory } from "@/lib/lens-inventory";
 import { publicServicePages } from "@/lib/service-pages";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
 import { createSeedData } from "@/lib/seed";
@@ -149,6 +150,7 @@ function normalizeData(data: AppData): AppData {
       : createSeedData().eyeExamAvailability,
     eyeExamAppointments,
     bookingServices,
+    lensInventory: normalizeLensInventory(data.lensInventory),
     settings: {
       ...createSeedData().settings,
       ...(data.settings || {}),

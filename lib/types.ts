@@ -479,6 +479,17 @@ export interface AdminSession {
   role: UserRole;
 }
 
+export type LensInventorySign = "minus" | "plus";
+
+export interface LensInventoryCell {
+  type: LensInventorySign;
+  sph: string;
+  cyl: string;
+  currentStock: number;
+  desiredStock: number;
+  updatedAt: string;
+}
+
 export interface AppData {
   version: number;
   products: Product[];
@@ -497,6 +508,7 @@ export interface AppData {
   eyeExamAvailability: EyeExamAvailability[];
   eyeExamAppointments: EyeExamAppointment[];
   bookingServices: BookingService[];
+  lensInventory: LensInventoryCell[];
   settings: StoreSettings;
   updatedAt: string;
 }
