@@ -377,7 +377,7 @@ function LensMatrix({
   return (
     <section className="admin-card admin-lens-card">
       <h2>{title}</h2>
-      <div className="admin-lens-scroll">
+      <div className="admin-lens-scroll" dir="ltr">
         <table className="admin-lens-matrix">
           <thead>
             <tr>
