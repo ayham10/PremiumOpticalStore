@@ -138,9 +138,12 @@ Layout inside `oyon-backups`:
 | Path | Purpose |
 | --- | --- |
 | `store/daily/YYYY-MM-DD.json` | Full AppData snapshot (Jerusalem date, ~30 days kept) |
+| `store/manual/YYYY-MM-DDTHH-mm-ss.json` | Admin “Backup Now” restore points (never auto-deleted) |
 | `store/pre-restore/*.json` | Mandatory pre-restore copies (future) |
 | `media/objects/<live-path>` | Incremental copies of `lumina-media` files |
 | `media/index.json` | Size / `updated_at` index so unchanged files are not re-copied |
+
+Admins with the settings permission can start a manual snapshot from `/admin/backups` (`POST /api/admin/backups`). That route never accepts a bucket/path from the browser and never exposes `CRON_SECRET` or service-role keys. Manual files are collision-safe (`-1`, `-2`, … if two land in the same second) and are **not** pruned by the 30-day daily retention job. Daily media GC still keeps files referenced by any remaining manual snapshot.
 
 ### Manual setup
 

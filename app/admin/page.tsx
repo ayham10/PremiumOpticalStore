@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import {
   Blend,
+  DatabaseBackup,
   CalendarDays,
   ChevronDown,
   Clock3,
@@ -348,6 +349,11 @@ export default function AdminDashboardPage() {
       href: "/admin/lens-inventory",
       label: "مخزون العدسات",
       icon: Blend,
+    },
+    {
+      href: "/admin/backups",
+      label: "النسخ الاحتياطي",
+      icon: DatabaseBackup,
     },
   ];
 
