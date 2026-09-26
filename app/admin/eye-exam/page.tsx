@@ -40,6 +40,7 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AvailabilityCalendarPanel from "@/components/admin/AvailabilityCalendarPanel";
 import BookingsPanel from "@/components/admin/BookingsPanel";
 import ManualBookingModal from "@/components/admin/ManualBookingModal";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type {
@@ -124,6 +125,7 @@ function parseIsoDate(iso: string): Date | null {
 }
 
 function AdminEyeExamPageInner() {
+  const { notifySaved } = useAdminSuccessNotice();
   const { t, locale, rtl } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -379,7 +381,7 @@ function AdminEyeExamPageInner() {
         method: "PATCH",
         body: JSON.stringify({ id: editing.id, ...editForm }),
       });
-      setMessage(t("admin.bookings.saved"));
+      notifySaved();
       setEditing(null);
       await loadAppointments();
       await loadAvailability();

@@ -16169,57 +16169,59 @@ select.admin-pe-input {
   box-shadow: 0 0 12px rgba(212, 175, 106, 0.14);
 }
 
-.admin-save-toast {
+.admin-save-notice {
   position: fixed;
-  bottom: 1.15rem;
-  left: 50%;
-  z-index: 120;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  width: max-content;
-  max-width: min(28rem, calc(100vw - 1.5rem));
-  min-height: 2.65rem;
-  padding: 0.5rem 0.45rem 0.5rem 0.7rem;
-  border-radius: 12px;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 1.15rem;
+  background: rgba(11, 14, 20, 0.78);
+}
+
+.admin-save-notice-card {
+  width: min(100%, 20rem);
+  padding: 1.35rem 1.2rem 1.15rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  background: #151a21;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.admin-save-notice-check {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 0.75rem;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.14);
   border: 1px solid rgba(212, 175, 55, 0.55);
-  background: #0b0f14;
-  color: #f4efe3;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
-  transform: translateX(-50%);
+  color: #d4af37;
 }
 
-.admin-save-toast-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.55rem;
-  height: 1.55rem;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(46, 184, 108, 0.16);
-  color: #3ddc84;
-}
-
-.admin-save-toast-text {
-  margin: 0;
-  font-size: 0.86rem;
+.admin-save-notice-card h2 {
+  margin: 0 0 1rem;
+  color: #fff;
+  font-size: 1.02rem;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
-.admin-save-toast-close {
+.admin-save-notice-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.55rem;
-  height: 1.55rem;
-  margin-inline-start: 0.15rem;
-  padding: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 1rem;
   border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #8a929c;
+  border-radius: 12px;
+  background: #d4af37;
+  color: #0b0e14;
+  font-size: 0.92rem;
+  font-weight: 700;
   cursor: pointer;
 }
 

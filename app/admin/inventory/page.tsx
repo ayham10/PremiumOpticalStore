@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import AdminProductCard from "@/components/admin/AdminProductCard";
 import ProductImagesField from "@/components/admin/ProductImagesField";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import { slugify } from "@/lib/format";
@@ -76,7 +77,7 @@ type ProductForm = {
 
 type EditorTab = "details" | "images";
 type SortMode = "newest" | "name";
-type SuccessKind = "add" | "edit";
+type SuccessKind = "add";
 
 function usesLensType(category: ProductCategory): boolean {
   return (
@@ -209,6 +210,7 @@ const dangerOutlineBtn: CSSProperties = {
 
 
 export default function AdminInventoryPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const [products, setProducts] = useState<Product[]>([]);
   const [role, setRole] = useState<AdminSession["role"]>("admin");
   const [query, setQuery] = useState("");
@@ -224,7 +226,6 @@ export default function AdminInventoryPage() {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<EditorTab>("details");
   const [success, setSuccess] = useState<SuccessKind | null>(null);
-  const [savedProduct, setSavedProduct] = useState<Product | null>(null);
   const [listPage, setListPage] = useState(1);
   const PAGE_SIZE = 16;
 
@@ -289,7 +290,6 @@ export default function AdminInventoryPage() {
     setForm(emptyForm());
     setTab("details");
     setSuccess(null);
-    setSavedProduct(null);
     setMessage("");
     setEditorOpen(true);
   }
@@ -299,7 +299,6 @@ export default function AdminInventoryPage() {
     setForm(fromProduct(p));
     setTab("details");
     setSuccess(null);
-    setSavedProduct(null);
     setMessage("");
     setEditorOpen(true);
   }
@@ -309,7 +308,6 @@ export default function AdminInventoryPage() {
     setEditing(null);
     setTab("details");
     setSuccess(null);
-    setSavedProduct(null);
   }
 
   function addAnotherProduct() {
@@ -317,7 +315,6 @@ export default function AdminInventoryPage() {
     setForm(emptyForm());
     setTab("details");
     setSuccess(null);
-    setSavedProduct(null);
     setMessage("");
     setEditorOpen(true);
   }
@@ -346,8 +343,7 @@ export default function AdminInventoryPage() {
           prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p)),
         );
         setEditing({ ...editing, ...row });
-        setSavedProduct({ ...editing, ...row });
-        setSuccess("edit");
+        notifySaved();
       } else {
         const created = await apiFetch<Product | { product: Product }>(
           "/api/products",
@@ -358,7 +354,6 @@ export default function AdminInventoryPage() {
             ? created.product
             : (created as Product);
         setProducts((prev) => [row, ...prev]);
-        setSavedProduct(row);
         setSuccess("add");
       }
     } catch (err) {
@@ -796,7 +791,7 @@ export default function AdminInventoryPage() {
               ) : null}
             </form>
 
-        {success ? (
+        {success === "add" ? (
           <div
             className="admin-pe-success"
             role="dialog"
@@ -807,54 +802,22 @@ export default function AdminInventoryPage() {
               <span className="admin-pe-success-check" aria-hidden>
                 <Check size={22} strokeWidth={2.4} />
               </span>
-              <h2 id="admin-pe-success-title">
-                {success === "add"
-                  ? "تم إضافة المنتج بنجاح"
-                  : "تم تحديث المنتج بنجاح"}
-              </h2>
+              <h2 id="admin-pe-success-title">تم إضافة المنتج بنجاح</h2>
               <div className="admin-pe-success-actions">
-                {success === "add" ? (
-                  <>
-                    <button
-                      type="button"
-                      style={goldBtn}
-                      onClick={addAnotherProduct}
-                    >
-                      إضافة منتج آخر
-                    </button>
-                    <button
-                      type="button"
-                      style={outlineGoldBtn}
-                      onClick={closeEditor}
-                    >
-                      الانتقال إلى المنتجات
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {savedProduct?.slug ? (
-                      <a
-                        href={`/product/${savedProduct.slug}`}
-                        style={{
-                          ...goldBtn,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textDecoration: "none",
-                        }}
-                      >
-                        الانتقال إلى المنتج
-                      </a>
-                    ) : null}
-                    <button
-                      type="button"
-                      style={outlineGoldBtn}
-                      onClick={closeEditor}
-                    >
-                      العودة إلى المنتجات
-                    </button>
-                  </>
-                )}
+                <button
+                  type="button"
+                  style={goldBtn}
+                  onClick={addAnotherProduct}
+                >
+                  إضافة منتج آخر
+                </button>
+                <button
+                  type="button"
+                  style={outlineGoldBtn}
+                  onClick={closeEditor}
+                >
+                  الانتقال إلى المنتجات
+                </button>
               </div>
             </div>
           </div>

@@ -30,12 +30,10 @@ export default function AccountSettingsModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setError("");
-    setSuccess("");
     setLoading(true);
     void (async () => {
       try {
@@ -54,7 +52,6 @@ export default function AccountSettingsModal({ open, onClose }: Props) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     if (!name.trim()) {
       setError(t("admin.account.nameRequired"));
@@ -70,7 +67,6 @@ export default function AccountSettingsModal({ open, onClose }: Props) {
         method: "PUT",
         body: JSON.stringify({ name: name.trim() }),
       });
-      setSuccess(data.message || t("admin.account.saved"));
       notifySaved();
       window.dispatchEvent(
         new CustomEvent("oyon:account-updated", { detail: data.user })
@@ -104,19 +100,6 @@ export default function AccountSettingsModal({ open, onClose }: Props) {
               {error}
             </p>
           ) : null}
-          {success ? (
-            <p
-              className="rounded-[12px] px-3 py-2 text-sm"
-              style={{
-                background: "rgba(212,175,55,0.12)",
-                border: "1px solid rgba(212,175,55,0.35)",
-                color: GOLD,
-              }}
-            >
-              {success}
-            </p>
-          ) : null}
-
           <div>
             <label
               className="mb-1.5 block text-[0.78rem] font-medium"

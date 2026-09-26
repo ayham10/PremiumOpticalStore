@@ -12,6 +12,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import { formatDate } from "@/lib/format";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
@@ -37,6 +38,7 @@ function unwrapList<T>(data: unknown): T[] {
 }
 
 export default function AdminAppointmentsPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const { t } = useLocale();
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,11 @@ export default function AdminAppointmentsPage() {
     });
   }, [items, query, statusFilter]);
 
-  async function patchAppointment(id: string, body: Record<string, unknown>) {
+  async function patchAppointment(
+    id: string,
+    body: Record<string, unknown>,
+    options?: { notice?: boolean },
+  ) {
     setBusyId(id);
     setMessage("");
     try {
@@ -97,7 +103,8 @@ export default function AdminAppointmentsPage() {
           ? updated.appointment
           : (updated as Appointment);
       setItems((prev) => prev.map((a) => (a.id === id ? { ...a, ...row } : a)));
-      setMessage("Appointment updated");
+      if (options?.notice) notifySaved();
+      else setMessage("Appointment updated");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Update failed");
     } finally {
@@ -112,18 +119,22 @@ export default function AdminAppointmentsPage() {
   async function submitReschedule(e: FormEvent) {
     e.preventDefault();
     if (!rescheduleTarget) return;
-    await patchAppointment(rescheduleTarget.id, {
-      date: rescheduleDate,
-      startTime: rescheduleTime,
-      status: "rescheduled",
-    });
+    await patchAppointment(
+      rescheduleTarget.id,
+      {
+        date: rescheduleDate,
+        startTime: rescheduleTime,
+        status: "rescheduled",
+      },
+      { notice: true },
+    );
     setRescheduleTarget(null);
   }
 
   async function submitNotes(e: FormEvent) {
     e.preventDefault();
     if (!notesTarget) return;
-    await patchAppointment(notesTarget.id, { notes: notesValue });
+    await patchAppointment(notesTarget.id, { notes: notesValue }, { notice: true });
     setNotesTarget(null);
   }
 

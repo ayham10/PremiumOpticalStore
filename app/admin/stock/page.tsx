@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
@@ -79,6 +80,7 @@ function csvCell(value: string | number): string {
 }
 
 export default function AdminStockPage() {
+  const { notifySaved } = useAdminSuccessNotice();
   const { t, locale } = useLocale();
   const defaults = useCategoryDefaultImages();
   const [products, setProducts] = useState<Product[]>([]);
@@ -233,7 +235,7 @@ export default function AdminStockPage() {
       invalidatePublicCache("product:");
       invalidatePublicCache("products:");
       setEditing(null);
-      setMessage(t("admin.stock.saved"));
+      notifySaved();
     } catch (err) {
       setMessage(
         err instanceof Error ? err.message : t("admin.stock.saveError"),

@@ -196,7 +196,6 @@ export default function AdminBookingServicesPage() {
         },
       );
       setItems(data.services || next);
-      notifySaved();
       notifyBookingServicesSaved();
     } catch (err) {
       setMessage(

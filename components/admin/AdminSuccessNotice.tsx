@@ -10,10 +10,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 
-const AUTO_HIDE_MS = 2500;
 export const ADMIN_SAVE_SUCCESS_MESSAGE = "تم حفظ التغييرات بنجاح";
+export const ADMIN_SAVE_CONTINUE_LABEL = "متابعة";
 
 type AdminSuccessNoticeContextValue = {
   notifySaved: () => void;
@@ -36,70 +36,73 @@ export function AdminSuccessNoticeProvider({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const timerRef = useRef<number | null>(null);
 
   const hide = useCallback(() => {
     setOpen(false);
-    if (timerRef.current != null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
   }, []);
 
   const notifySaved = useCallback(() => {
     setOpen(true);
-    if (timerRef.current != null) window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => {
-      setOpen(false);
-      timerRef.current = null;
-    }, AUTO_HIDE_MS);
   }, []);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current != null) window.clearTimeout(timerRef.current);
-    },
-    [],
-  );
 
   const value = useMemo(() => ({ notifySaved }), [notifySaved]);
 
   return (
     <AdminSuccessNoticeContext.Provider value={value}>
       {children}
-      <AdminSuccessNoticeToast open={open} onClose={hide} />
+      <AdminSuccessNoticeDialog open={open} onClose={hide} />
     </AdminSuccessNoticeContext.Provider>
   );
 }
 
-function AdminSuccessNoticeToast({
+function AdminSuccessNoticeDialog({
   open,
   onClose,
 }: {
   open: boolean;
   onClose: () => void;
 }) {
+  const continueRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    continueRef.current?.focus();
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
     <div
-      className="admin-save-toast"
-      role="status"
-      aria-live="polite"
+      className="admin-save-notice"
+      role="presentation"
       dir="rtl"
+      onClick={onClose}
     >
-      <span className="admin-save-toast-check" aria-hidden>
-        <Check size={15} strokeWidth={2.6} />
-      </span>
-      <p className="admin-save-toast-text">{ADMIN_SAVE_SUCCESS_MESSAGE}</p>
-      <button
-        type="button"
-        className="admin-save-toast-close"
-        onClick={onClose}
-        aria-label="إغلاق"
+      <div
+        className="admin-save-notice-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-save-notice-title"
+        onClick={(event) => event.stopPropagation()}
       >
-        <X size={14} strokeWidth={2} />
-      </button>
+        <span className="admin-save-notice-check" aria-hidden>
+          <Check size={22} strokeWidth={2.4} />
+        </span>
+        <h2 id="admin-save-notice-title">{ADMIN_SAVE_SUCCESS_MESSAGE}</h2>
+        <button
+          ref={continueRef}
+          type="button"
+          className="admin-save-notice-btn"
+          onClick={onClose}
+        >
+          {ADMIN_SAVE_CONTINUE_LABEL}
+        </button>
+      </div>
     </div>
   );
 }
