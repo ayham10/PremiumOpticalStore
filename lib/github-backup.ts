@@ -67,6 +67,7 @@ export type GithubCommitFile = {
 };
 
 export type GithubRepoClient = {
+  probeRepository: () => Promise<void>;
   readJsonFile: (path: string) => Promise<unknown | null>;
   commitFiles: (files: GithubCommitFile[], message: string) => Promise<string>;
 };
@@ -102,6 +103,10 @@ type GithubEnvConfig = {
   repo: string;
   branch: string;
 };
+
+export function isAbsentStorageStatus(status: number): boolean {
+  return status === 400 || status === 404;
+}
 
 function githubEnvConfig(): GithubEnvConfig {
   const token = process.env.GITHUB_BACKUP_TOKEN?.trim() || "";
@@ -233,7 +238,7 @@ async function listLiveMediaDefault(): Promise<LiveMediaObject[]> {
   return out;
 }
 
-async function downloadStorageObject(
+export async function downloadStorageObject(
   bucket: string,
   path: string,
 ): Promise<{ bytes: Uint8Array; contentType: string } | null> {
@@ -242,7 +247,7 @@ async function downloadStorageObject(
     `${config.url}/storage/v1/object/${bucket}/${path}`,
     { headers: storageHeaders(config), cache: "no-store" },
   );
-  if (response.status === 404) return null;
+  if (isAbsentStorageStatus(response.status)) return null;
   if (!response.ok) {
     throw new Error(`GITHUB_BACKUP_MEDIA_DOWNLOAD_FAILED:${response.status}`);
   }
@@ -270,10 +275,13 @@ type GithubApiResult = {
   data: unknown;
 };
 
+type GithubApiKind = "repo" | "file" | "ref" | "write";
+
 async function githubApi(
   config: GithubEnvConfig,
   path: string,
   init?: RequestInit,
+  options?: { kind?: GithubApiKind; allow?: number[] },
 ): Promise<GithubApiResult> {
   const response = await fetch(`https://api.github.com${path}`, {
     ...init,
@@ -296,14 +304,39 @@ async function githubApi(
       data = null;
     }
   }
-  if (!response.ok) {
-    console.error("GitHub backup API failed", response.status);
+  const allowed = options?.allow?.includes(response.status) ?? false;
+  if (!response.ok && !allowed) {
+    const kind = options?.kind;
+    if (kind === "repo") {
+      console.error("GitHub backup repository inaccessible", response.status);
+    } else if (kind === "write") {
+      console.error("GitHub backup write failed", response.status);
+    } else if (kind === "ref") {
+      console.error("GitHub backup ref lookup failed", response.status);
+    } else if (kind === "file") {
+      console.error("GitHub backup file lookup failed", response.status);
+    } else {
+      console.error("GitHub backup API failed", response.status);
+    }
   }
   return { ok: response.ok, status: response.status, data };
 }
 
-function createDefaultGithubClient(): GithubRepoClient {
+export function createGithubRepoClient(): GithubRepoClient {
   return {
+    async probeRepository() {
+      const config = githubEnvConfig();
+      const result = await githubApi(
+        config,
+        `/repos/${config.owner}/${config.repo}`,
+        undefined,
+        { kind: "repo" },
+      );
+      if (!result.ok) {
+        throw new Error("GITHUB_BACKUP_REPO_INACCESSIBLE");
+      }
+    },
+
     async readJsonFile(path: string) {
       const config = githubEnvConfig();
       const encoded = path
@@ -313,6 +346,8 @@ function createDefaultGithubClient(): GithubRepoClient {
       const result = await githubApi(
         config,
         `/repos/${config.owner}/${config.repo}/contents/${encoded}?ref=${encodeURIComponent(config.branch)}`,
+        undefined,
+        { kind: "file", allow: [404] },
       );
       if (result.status === 404) return null;
       if (!result.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
@@ -334,6 +369,8 @@ function createDefaultGithubClient(): GithubRepoClient {
       const ref = await githubApi(
         config,
         `/repos/${config.owner}/${config.repo}/git/ref/heads/${encodeURIComponent(config.branch)}`,
+        undefined,
+        { kind: "ref", allow: [404, 409] },
       );
 
       let parentSha: string | null = null;
@@ -345,6 +382,8 @@ function createDefaultGithubClient(): GithubRepoClient {
           const commit = await githubApi(
             config,
             `/repos/${config.owner}/${config.repo}/git/commits/${parentSha}`,
+            undefined,
+            { kind: "write" },
           );
           if (!commit.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
           baseTree =
@@ -373,6 +412,7 @@ function createDefaultGithubClient(): GithubRepoClient {
               encoding: "base64",
             }),
           },
+          { kind: "write" },
         );
         if (!blob.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
         const sha = (blob.data as { sha?: string }).sha;
@@ -394,6 +434,7 @@ function createDefaultGithubClient(): GithubRepoClient {
         config,
         `/repos/${config.owner}/${config.repo}/git/trees`,
         { method: "POST", body: JSON.stringify(treeBody) },
+        { kind: "write" },
       );
       if (!tree.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
       const treeSha = (tree.data as { sha?: string }).sha;
@@ -409,6 +450,7 @@ function createDefaultGithubClient(): GithubRepoClient {
         config,
         `/repos/${config.owner}/${config.repo}/git/commits`,
         { method: "POST", body: JSON.stringify(commitBody) },
+        { kind: "write" },
       );
       if (!commit.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
       const commitSha = (commit.data as { sha?: string }).sha;
@@ -422,6 +464,7 @@ function createDefaultGithubClient(): GithubRepoClient {
             method: "PATCH",
             body: JSON.stringify({ sha: commitSha }),
           },
+          { kind: "write" },
         );
         if (!updated.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
       } else {
@@ -435,6 +478,7 @@ function createDefaultGithubClient(): GithubRepoClient {
               sha: commitSha,
             }),
           },
+          { kind: "write" },
         );
         if (!created.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
       }
@@ -454,7 +498,7 @@ const defaultDeps: GithubBackupDependencies = {
   listLiveMedia: listLiveMediaDefault,
   downloadProtected: downloadProtectedDefault,
   downloadLive: downloadLiveDefault,
-  github: createDefaultGithubClient(),
+  github: createGithubRepoClient(),
 };
 
 function utf8Bytes(value: string): Uint8Array {
@@ -503,6 +547,8 @@ export async function runGithubBackupAll(
     const deadlineMs = startedAt + budget;
     const createdAt = new Date(startedAt).toISOString();
     const purpose: GithubBackupPurpose = "admin-all";
+
+    await deps.github.probeRepository();
 
     const live = await deps.readLive();
     if (!live.payload || typeof live.payload !== "object") {
@@ -563,8 +609,15 @@ export async function runGithubBackupAll(
       } catch (error) {
         failed += 1;
         remaining += 1;
-        console.error("GitHub backup media copy failed");
-        void error;
+        const message = error instanceof Error ? error.message : "";
+        if (
+          message === "GITHUB_BACKUP_LIVE_MEDIA_MISSING" ||
+          message.startsWith("GITHUB_BACKUP_MEDIA_DOWNLOAD_FAILED:")
+        ) {
+          console.error("GitHub backup media source missing");
+        } else {
+          console.error("GitHub backup media copy failed");
+        }
       }
     }
 

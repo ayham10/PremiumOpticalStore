@@ -189,6 +189,8 @@ export default function AdminBackupsPage() {
         setGithubError(t("admin.backups.backupAllInProgress"));
       } else if (err instanceof ApiError && err.status === 403) {
         setGithubError(t("admin.backups.backupAllForbidden"));
+      } else if (err instanceof ApiError && err.status === 502) {
+        setGithubError(t("admin.backups.backupAllRepoInaccessible"));
       } else if (err instanceof ApiError && err.status === 503) {
         setGithubError(t("admin.backups.backupAllIncomplete"));
       } else {

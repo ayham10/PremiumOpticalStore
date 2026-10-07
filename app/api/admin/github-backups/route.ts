@@ -66,6 +66,18 @@ export async function POST() {
         { status: 503, headers: PRIVATE_HEADERS },
       );
     }
+    if (message === "GITHUB_BACKUP_REPO_INACCESSIBLE") {
+      return NextResponse.json(
+        { error: "تعذر الوصول إلى مستودع النسخ على GitHub." },
+        { status: 502, headers: PRIVATE_HEADERS },
+      );
+    }
+    if (message === "GITHUB_BACKUP_API_FAILED") {
+      return NextResponse.json(
+        { error: "تعذر إنشاء النسخة على GitHub." },
+        { status: 500, headers: PRIVATE_HEADERS },
+      );
+    }
     console.error("GitHub backup failed");
     return NextResponse.json(
       { error: "تعذر إنشاء النسخة على GitHub." },
