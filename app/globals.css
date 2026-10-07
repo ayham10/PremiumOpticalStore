@@ -16909,6 +16909,13 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   opacity: 0.78;
 }
 
+.admin-backups-all {
+  margin-top: 0.55rem;
+  background: #0d1a25;
+  color: #e6c56a;
+  border: 1px solid rgba(201, 157, 61, 0.45);
+}
+
 .admin-backups-action-error {
   color: #e07a7a !important;
 }
