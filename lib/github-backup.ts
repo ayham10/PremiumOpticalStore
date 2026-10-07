@@ -16,8 +16,10 @@ const GITHUB_MEDIA_PREFIX = `${GITHUB_PREFIX}media/`;
 const GITHUB_INDEX_PATH = `${GITHUB_PREFIX}media-index.json`;
 const GITHUB_INFO_PATH = `${GITHUB_PREFIX}backup-info.json`;
 const GITHUB_BOOTSTRAP_PATH = `${GITHUB_PREFIX}.keep`;
-/** Stop starting new copies before Vercel kills the function (maxDuration 60s). */
-const GITHUB_TIME_BUDGET_MS = 45_000;
+/** Stop starting new copies in time to commit and return before Vercel maxDuration 60s. */
+const GITHUB_TIME_BUDGET_MS = 30_000;
+/** Never start more media work this close to the Vercel 60s kill. */
+const GITHUB_HARD_STOP_MS = 50_000;
 /** GitHub git-blob hard limit. */
 const GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024;
 const STORE_TABLE = process.env.SUPABASE_STORE_TABLE || "lumina_store";
@@ -69,6 +71,7 @@ export type GithubCommitFile = {
 
 export type GithubRepoClient = {
   probeRepository: () => Promise<void>;
+  ensureReady: () => Promise<void>;
   readJsonFile: (path: string) => Promise<unknown | null>;
   commitFiles: (files: GithubCommitFile[], message: string) => Promise<string>;
 };
@@ -388,18 +391,22 @@ async function bootstrapEmptyGithubRepo(config: GithubEnvConfig): Promise<void> 
     },
     { kind: "write" },
   );
-  if (!result.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+  if (result.ok) return;
+  if (result.status === 409 || result.status === 422) {
+    const existing = await readBranchHead(config);
+    if (!("missing" in existing)) return;
+  }
+  throw new Error("GITHUB_BACKUP_API_FAILED");
 }
 
 async function readBranchHead(
   config: GithubEnvConfig,
 ): Promise<{ parentSha: string; baseTree: string } | { missing: true; empty: boolean }> {
-  const ref = await githubApi(
-    config,
-    `/repos/${config.owner}/${config.repo}/git/ref/heads/${encodeURIComponent(config.branch)}`,
-    undefined,
-    { kind: "ref", allow: [404] },
-  );
+  const refPath = `/repos/${config.owner}/${config.repo}/git/ref/heads/${encodeURIComponent(config.branch)}`;
+  const ref = await githubApi(config, refPath, undefined, {
+    kind: "ref",
+    allow: [404, 409],
+  });
 
   if (ref.status === 404) {
     return { missing: true, empty: true };
@@ -409,6 +416,7 @@ async function readBranchHead(
     if (isEmptyGithubRepositoryMessage(githubResponseMessage(ref.data))) {
       return { missing: true, empty: true };
     }
+    logGithubFailure("ref", "GET", refPath, ref.status, ref.data);
     throw new Error("GITHUB_BACKUP_API_FAILED");
   }
 
@@ -541,6 +549,11 @@ export function createGithubRepoClient(): GithubRepoClient {
       }
     },
 
+    async ensureReady() {
+      const config = githubEnvConfig();
+      await resolveExistingBranchHead(config);
+    },
+
     async readJsonFile(path: string) {
       const config = githubEnvConfig();
       const encoded = encodeGithubContentPath(path);
@@ -629,11 +642,12 @@ export async function runGithubBackupAll(
     const now = deps.now ?? Date.now;
     const startedAt = now();
     const budget = deps.timeBudgetMs ?? GITHUB_TIME_BUDGET_MS;
-    const deadlineMs = startedAt + budget;
+    const deadlineMs = Math.min(startedAt + budget, startedAt + GITHUB_HARD_STOP_MS);
     const createdAt = new Date(startedAt).toISOString();
     const purpose: GithubBackupPurpose = "admin-all";
 
     await deps.github.probeRepository();
+    await deps.github.ensureReady();
 
     const live = await deps.readLive();
     if (!live.payload || typeof live.payload !== "object") {
