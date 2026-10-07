@@ -15,6 +15,7 @@ const GITHUB_DATABASE_PATH = `${GITHUB_PREFIX}database.json`;
 const GITHUB_MEDIA_PREFIX = `${GITHUB_PREFIX}media/`;
 const GITHUB_INDEX_PATH = `${GITHUB_PREFIX}media-index.json`;
 const GITHUB_INFO_PATH = `${GITHUB_PREFIX}backup-info.json`;
+const GITHUB_BOOTSTRAP_PATH = `${GITHUB_PREFIX}.keep`;
 /** Stop starting new copies before Vercel kills the function (maxDuration 60s). */
 const GITHUB_TIME_BUDGET_MS = 45_000;
 /** GitHub git-blob hard limit. */
@@ -277,12 +278,66 @@ type GithubApiResult = {
 
 type GithubApiKind = "repo" | "file" | "ref" | "write";
 
+function redactGithubSecrets(value: string): string {
+  return value
+    .replace(/github_pat_[A-Za-z0-9_]+/g, "[redacted]")
+    .replace(/ghp_[A-Za-z0-9]+/g, "[redacted]")
+    .replace(/gho_[A-Za-z0-9]+/g, "[redacted]")
+    .replace(/ghu_[A-Za-z0-9]+/g, "[redacted]")
+    .replace(/ghs_[A-Za-z0-9]+/g, "[redacted]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]");
+}
+
+export function githubResponseMessage(data: unknown): string {
+  if (!data || typeof data !== "object") return "";
+  const message = (data as { message?: unknown }).message;
+  if (typeof message !== "string") return "";
+  return redactGithubSecrets(message.replace(/\s+/g, " ").trim()).slice(0, 200);
+}
+
+export function formatGithubBackupDiagnostic(
+  method: string,
+  path: string,
+  status: number,
+  data: unknown,
+): string {
+  const safePath = redactGithubSecrets(path);
+  const message = githubResponseMessage(data);
+  return `${method} ${safePath} → ${status}${message ? `: ${message}` : ""}`;
+}
+
+function isEmptyGithubRepositoryMessage(message: string): boolean {
+  return /git repository is empty/i.test(message);
+}
+
+function logGithubFailure(
+  kind: GithubApiKind | undefined,
+  method: string,
+  path: string,
+  status: number,
+  data: unknown,
+) {
+  const detail = formatGithubBackupDiagnostic(method, path, status, data);
+  if (kind === "repo") {
+    console.error("GitHub backup repository inaccessible:", detail);
+  } else if (kind === "write") {
+    console.error("GitHub backup write failed:", detail);
+  } else if (kind === "ref") {
+    console.error("GitHub backup ref lookup failed:", detail);
+  } else if (kind === "file") {
+    console.error("GitHub backup file lookup failed:", detail);
+  } else {
+    console.error("GitHub backup API failed:", detail);
+  }
+}
+
 async function githubApi(
   config: GithubEnvConfig,
   path: string,
   init?: RequestInit,
   options?: { kind?: GithubApiKind; allow?: number[] },
 ): Promise<GithubApiResult> {
+  const method = (init?.method || "GET").toUpperCase();
   const response = await fetch(`https://api.github.com${path}`, {
     ...init,
     headers: {
@@ -306,20 +361,169 @@ async function githubApi(
   }
   const allowed = options?.allow?.includes(response.status) ?? false;
   if (!response.ok && !allowed) {
-    const kind = options?.kind;
-    if (kind === "repo") {
-      console.error("GitHub backup repository inaccessible", response.status);
-    } else if (kind === "write") {
-      console.error("GitHub backup write failed", response.status);
-    } else if (kind === "ref") {
-      console.error("GitHub backup ref lookup failed", response.status);
-    } else if (kind === "file") {
-      console.error("GitHub backup file lookup failed", response.status);
-    } else {
-      console.error("GitHub backup API failed", response.status);
-    }
+    logGithubFailure(options?.kind, method, path, response.status, data);
   }
   return { ok: response.ok, status: response.status, data };
+}
+
+function encodeGithubContentPath(path: string): string {
+  return path
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+}
+
+async function bootstrapEmptyGithubRepo(config: GithubEnvConfig): Promise<void> {
+  const encoded = encodeGithubContentPath(GITHUB_BOOTSTRAP_PATH);
+  const result = await githubApi(
+    config,
+    `/repos/${config.owner}/${config.repo}/contents/${encoded}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        message: "OYON GitHub backup initialize",
+        content: Buffer.from("\n", "utf8").toString("base64"),
+        branch: config.branch,
+      }),
+    },
+    { kind: "write" },
+  );
+  if (!result.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+}
+
+async function readBranchHead(
+  config: GithubEnvConfig,
+): Promise<{ parentSha: string; baseTree: string } | { missing: true; empty: boolean }> {
+  const ref = await githubApi(
+    config,
+    `/repos/${config.owner}/${config.repo}/git/ref/heads/${encodeURIComponent(config.branch)}`,
+    undefined,
+    { kind: "ref", allow: [404] },
+  );
+
+  if (ref.status === 404) {
+    return { missing: true, empty: true };
+  }
+
+  if (ref.status === 409) {
+    if (isEmptyGithubRepositoryMessage(githubResponseMessage(ref.data))) {
+      return { missing: true, empty: true };
+    }
+    throw new Error("GITHUB_BACKUP_API_FAILED");
+  }
+
+  if (!ref.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+  const parentSha = (ref.data as { object?: { sha?: string } }).object?.sha;
+  if (!parentSha) throw new Error("GITHUB_BACKUP_API_FAILED");
+
+  const commit = await githubApi(
+    config,
+    `/repos/${config.owner}/${config.repo}/git/commits/${parentSha}`,
+    undefined,
+    { kind: "write" },
+  );
+  if (!commit.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+  const baseTree = (commit.data as { tree?: { sha?: string } }).tree?.sha;
+  if (!baseTree) throw new Error("GITHUB_BACKUP_API_FAILED");
+  return { parentSha, baseTree };
+}
+
+async function resolveExistingBranchHead(
+  config: GithubEnvConfig,
+): Promise<{ parentSha: string; baseTree: string }> {
+  const first = await readBranchHead(config);
+  if (!("missing" in first)) return first;
+
+  await bootstrapEmptyGithubRepo(config);
+  const after = await readBranchHead(config);
+  if ("missing" in after) throw new Error("GITHUB_BACKUP_API_FAILED");
+  return after;
+}
+
+async function commitOntoExistingBranch(
+  config: GithubEnvConfig,
+  files: GithubCommitFile[],
+  message: string,
+  head: { parentSha: string; baseTree: string },
+): Promise<string> {
+  const treeItems: Array<{
+    path: string;
+    mode: "100644";
+    type: "blob";
+    sha: string;
+  }> = [];
+
+  for (const file of files) {
+    if (file.bytes.byteLength > GITHUB_MAX_FILE_BYTES) {
+      throw new Error("GITHUB_BACKUP_FILE_TOO_LARGE");
+    }
+    const blob = await githubApi(
+      config,
+      `/repos/${config.owner}/${config.repo}/git/blobs`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          content: Buffer.from(file.bytes).toString("base64"),
+          encoding: "base64",
+        }),
+      },
+      { kind: "write" },
+    );
+    if (!blob.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+    const sha = (blob.data as { sha?: string }).sha;
+    if (!sha) throw new Error("GITHUB_BACKUP_API_FAILED");
+    treeItems.push({
+      path: file.path,
+      mode: "100644",
+      type: "blob",
+      sha,
+    });
+  }
+
+  const tree = await githubApi(
+    config,
+    `/repos/${config.owner}/${config.repo}/git/trees`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tree: treeItems,
+        base_tree: head.baseTree,
+      }),
+    },
+    { kind: "write" },
+  );
+  if (!tree.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+  const treeSha = (tree.data as { sha?: string }).sha;
+  if (!treeSha) throw new Error("GITHUB_BACKUP_API_FAILED");
+
+  const commit = await githubApi(
+    config,
+    `/repos/${config.owner}/${config.repo}/git/commits`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        tree: treeSha,
+        parents: [head.parentSha],
+      }),
+    },
+    { kind: "write" },
+  );
+  if (!commit.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+  const commitSha = (commit.data as { sha?: string }).sha;
+  if (!commitSha) throw new Error("GITHUB_BACKUP_API_FAILED");
+
+  const updated = await githubApi(
+    config,
+    `/repos/${config.owner}/${config.repo}/git/refs/heads/${encodeURIComponent(config.branch)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ sha: commitSha }),
+    },
+    { kind: "write" },
+  );
+  if (!updated.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+  return commitSha;
 }
 
 export function createGithubRepoClient(): GithubRepoClient {
@@ -339,10 +543,7 @@ export function createGithubRepoClient(): GithubRepoClient {
 
     async readJsonFile(path: string) {
       const config = githubEnvConfig();
-      const encoded = path
-        .split("/")
-        .map((part) => encodeURIComponent(part))
-        .join("/");
+      const encoded = encodeGithubContentPath(path);
       const result = await githubApi(
         config,
         `/repos/${config.owner}/${config.repo}/contents/${encoded}?ref=${encodeURIComponent(config.branch)}`,
@@ -366,124 +567,8 @@ export function createGithubRepoClient(): GithubRepoClient {
 
     async commitFiles(files, message) {
       const config = githubEnvConfig();
-      const ref = await githubApi(
-        config,
-        `/repos/${config.owner}/${config.repo}/git/ref/heads/${encodeURIComponent(config.branch)}`,
-        undefined,
-        { kind: "ref", allow: [404, 409] },
-      );
-
-      let parentSha: string | null = null;
-      let baseTree: string | null = null;
-      if (ref.status !== 404 && ref.status !== 409) {
-        if (!ref.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-        parentSha = (ref.data as { object?: { sha?: string } }).object?.sha ?? null;
-        if (parentSha) {
-          const commit = await githubApi(
-            config,
-            `/repos/${config.owner}/${config.repo}/git/commits/${parentSha}`,
-            undefined,
-            { kind: "write" },
-          );
-          if (!commit.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-          baseTree =
-            (commit.data as { tree?: { sha?: string } }).tree?.sha ?? null;
-        }
-      }
-
-      const treeItems: Array<{
-        path: string;
-        mode: "100644";
-        type: "blob";
-        sha: string;
-      }> = [];
-
-      for (const file of files) {
-        if (file.bytes.byteLength > GITHUB_MAX_FILE_BYTES) {
-          throw new Error("GITHUB_BACKUP_FILE_TOO_LARGE");
-        }
-        const blob = await githubApi(
-          config,
-          `/repos/${config.owner}/${config.repo}/git/blobs`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              content: Buffer.from(file.bytes).toString("base64"),
-              encoding: "base64",
-            }),
-          },
-          { kind: "write" },
-        );
-        if (!blob.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-        const sha = (blob.data as { sha?: string }).sha;
-        if (!sha) throw new Error("GITHUB_BACKUP_API_FAILED");
-        treeItems.push({
-          path: file.path,
-          mode: "100644",
-          type: "blob",
-          sha,
-        });
-      }
-
-      const treeBody: {
-        tree: typeof treeItems;
-        base_tree?: string;
-      } = { tree: treeItems };
-      if (baseTree) treeBody.base_tree = baseTree;
-      const tree = await githubApi(
-        config,
-        `/repos/${config.owner}/${config.repo}/git/trees`,
-        { method: "POST", body: JSON.stringify(treeBody) },
-        { kind: "write" },
-      );
-      if (!tree.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-      const treeSha = (tree.data as { sha?: string }).sha;
-      if (!treeSha) throw new Error("GITHUB_BACKUP_API_FAILED");
-
-      const commitBody: {
-        message: string;
-        tree: string;
-        parents?: string[];
-      } = { message, tree: treeSha };
-      if (parentSha) commitBody.parents = [parentSha];
-      const commit = await githubApi(
-        config,
-        `/repos/${config.owner}/${config.repo}/git/commits`,
-        { method: "POST", body: JSON.stringify(commitBody) },
-        { kind: "write" },
-      );
-      if (!commit.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-      const commitSha = (commit.data as { sha?: string }).sha;
-      if (!commitSha) throw new Error("GITHUB_BACKUP_API_FAILED");
-
-      if (parentSha) {
-        const updated = await githubApi(
-          config,
-          `/repos/${config.owner}/${config.repo}/git/refs/heads/${encodeURIComponent(config.branch)}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ sha: commitSha }),
-          },
-          { kind: "write" },
-        );
-        if (!updated.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-      } else {
-        const created = await githubApi(
-          config,
-          `/repos/${config.owner}/${config.repo}/git/refs`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              ref: `refs/heads/${config.branch}`,
-              sha: commitSha,
-            }),
-          },
-          { kind: "write" },
-        );
-        if (!created.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
-      }
-
-      return commitSha;
+      const head = await resolveExistingBranchHead(config);
+      return commitOntoExistingBranch(config, files, message, head);
     },
   };
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   createGithubRepoClient,
   downloadStorageObject,
+  formatGithubBackupDiagnostic,
   isAbsentStorageStatus,
   isGithubBackupAllowed,
   resetGithubBackupInFlightForTests,
@@ -134,6 +135,24 @@ assert.equal(isAbsentStorageStatus(404), true);
 assert.equal(isAbsentStorageStatus(401), false);
 assert.equal(isAbsentStorageStatus(403), false);
 assert.equal(isAbsentStorageStatus(500), false);
+assert.equal(
+  formatGithubBackupDiagnostic(
+    "POST",
+    "/repos/ayham10/oyon-backups/git/blobs",
+    409,
+    { message: "Git Repository is empty." },
+  ),
+  "POST /repos/ayham10/oyon-backups/git/blobs → 409: Git Repository is empty.",
+);
+assert.equal(
+  formatGithubBackupDiagnostic(
+    "POST",
+    "/repos/ayham10/oyon-backups/git/blobs",
+    409,
+    { message: "leak github_pat_test_secret_value and Bearer abc" },
+  ).includes("github_pat_test_secret_value"),
+  false,
+);
 
 async function run() {
   const live = sampleApp();
@@ -495,17 +514,261 @@ async function run() {
       true,
     );
 
+    function jsonResponse(status: number, body: unknown) {
+      return new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    function recorded(input: RequestInfo | URL, init?: RequestInit) {
+      const method = (init?.method || "GET").toUpperCase();
+      const url = String(input);
+      let body: unknown = null;
+      if (init?.body) {
+        try {
+          body = JSON.parse(String(init.body)) as unknown;
+        } catch {
+          body = null;
+        }
+      }
+      const call = { method, url, body };
+      urls.push(`${method} ${url}`);
+      return call;
+    }
+
+    const existingCalls: Array<{ method: string; url: string; body: unknown }> =
+      [];
     urls.length = 0;
     errorLogs.length = 0;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      urls.push(`${init?.method || "GET"} ${String(input)}`);
-      if (String(input).includes("/git/ref/heads/main")) {
-        return new Response("Not Found", { status: 404 });
+      const call = recorded(input, init);
+      existingCalls.push(call);
+      if (call.method === "GET" && call.url.endsWith("/git/ref/heads/main")) {
+        return jsonResponse(200, {
+          ref: "refs/heads/main",
+          object: { sha: "readme-commit-sha", type: "commit" },
+        });
       }
-      if (String(input).endsWith("/git/blobs") && init?.method === "POST") {
-        return new Response("Server Error", { status: 500 });
+      if (
+        call.method === "GET" &&
+        call.url.endsWith("/git/commits/readme-commit-sha")
+      ) {
+        return jsonResponse(200, {
+          sha: "readme-commit-sha",
+          tree: { sha: "readme-tree-sha" },
+        });
       }
-      throw new Error(`unexpected fetch ${String(input)}`);
+      if (call.method === "POST" && call.url.endsWith("/git/blobs")) {
+        return jsonResponse(201, { sha: "blob-sha-1" });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/trees")) {
+        return jsonResponse(201, { sha: "tree-sha-2" });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/commits")) {
+        return jsonResponse(201, { sha: "commit-sha-2" });
+      }
+      if (
+        call.method === "PATCH" &&
+        call.url.endsWith("/git/refs/heads/main")
+      ) {
+        return jsonResponse(200, {
+          ref: "refs/heads/main",
+          object: { sha: "commit-sha-2" },
+        });
+      }
+      throw new Error(`unexpected fetch ${call.method} ${call.url}`);
+    }) as typeof fetch;
+
+    const existingClient = createGithubRepoClient();
+    const existingSha = await existingClient.commitFiles(
+      [{ path: "backups/media-index.json", bytes: bytesOf("{}") }],
+      "OYON GitHub backup existing main",
+    );
+    assert.equal(existingSha, "commit-sha-2");
+    assert.equal(
+      existingCalls.some(
+        (call) => call.method === "POST" && call.url.endsWith("/git/refs"),
+      ),
+      false,
+    );
+    assert.equal(
+      existingCalls.some((call) =>
+        call.url.includes("/contents/backups/.keep"),
+      ),
+      false,
+    );
+    const treeCall = existingCalls.find(
+      (call) => call.method === "POST" && call.url.endsWith("/git/trees"),
+    );
+    assert.equal(
+      (treeCall?.body as { base_tree?: string } | null)?.base_tree,
+      "readme-tree-sha",
+    );
+    const commitCall = existingCalls.find(
+      (call) => call.method === "POST" && call.url.endsWith("/git/commits"),
+    );
+    assert.deepEqual(
+      (commitCall?.body as { parents?: string[] } | null)?.parents,
+      ["readme-commit-sha"],
+    );
+    assert.equal(
+      existingCalls.some(
+        (call) => call.method === "PATCH" && call.url.endsWith("/git/refs/heads/main"),
+      ),
+      true,
+    );
+    assert.equal(errorLogs.length, 0);
+
+    const emptyCalls: Array<{ method: string; url: string; body: unknown }> = [];
+    let emptyRefReads = 0;
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const call = recorded(input, init);
+      emptyCalls.push(call);
+      if (call.method === "GET" && call.url.endsWith("/git/ref/heads/main")) {
+        emptyRefReads += 1;
+        if (emptyRefReads === 1) {
+          return jsonResponse(409, { message: "Git Repository is empty." });
+        }
+        return jsonResponse(200, {
+          ref: "refs/heads/main",
+          object: { sha: "bootstrap-commit-sha", type: "commit" },
+        });
+      }
+      if (
+        call.method === "PUT" &&
+        call.url.endsWith("/contents/backups/.keep")
+      ) {
+        return jsonResponse(201, { content: { path: "backups/.keep" } });
+      }
+      if (
+        call.method === "GET" &&
+        call.url.endsWith("/git/commits/bootstrap-commit-sha")
+      ) {
+        return jsonResponse(200, {
+          sha: "bootstrap-commit-sha",
+          tree: { sha: "bootstrap-tree-sha" },
+        });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/blobs")) {
+        return jsonResponse(201, { sha: "blob-sha-empty" });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/trees")) {
+        return jsonResponse(201, { sha: "tree-sha-empty" });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/commits")) {
+        return jsonResponse(201, { sha: "commit-sha-empty" });
+      }
+      if (
+        call.method === "PATCH" &&
+        call.url.endsWith("/git/refs/heads/main")
+      ) {
+        return jsonResponse(200, { object: { sha: "commit-sha-empty" } });
+      }
+      throw new Error(`unexpected fetch ${call.method} ${call.url}`);
+    }) as typeof fetch;
+
+    const emptyClient = createGithubRepoClient();
+    const emptySha = await emptyClient.commitFiles(
+      [{ path: "backups/media-index.json", bytes: bytesOf("{}") }],
+      "OYON GitHub backup empty repo",
+    );
+    assert.equal(emptySha, "commit-sha-empty");
+    assert.equal(
+      emptyCalls.some(
+        (call) =>
+          call.method === "PUT" && call.url.endsWith("/contents/backups/.keep"),
+      ),
+      true,
+    );
+    assert.equal(
+      emptyCalls.some(
+        (call) => call.method === "POST" && call.url.endsWith("/git/refs"),
+      ),
+      false,
+    );
+    const emptyTree = emptyCalls.find(
+      (call) => call.method === "POST" && call.url.endsWith("/git/trees"),
+    );
+    assert.equal(
+      (emptyTree?.body as { base_tree?: string } | null)?.base_tree,
+      "bootstrap-tree-sha",
+    );
+    const emptyCommit = emptyCalls.find(
+      (call) => call.method === "POST" && call.url.endsWith("/git/commits"),
+    );
+    assert.deepEqual(
+      (emptyCommit?.body as { parents?: string[] } | null)?.parents,
+      ["bootstrap-commit-sha"],
+    );
+    assert.equal(
+      emptyCalls.some(
+        (call) => call.method === "PATCH" && call.url.endsWith("/git/refs/heads/main"),
+      ),
+      true,
+    );
+
+    const conflictCalls: Array<{ method: string; url: string; body: unknown }> =
+      [];
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const call = recorded(input, init);
+      conflictCalls.push(call);
+      if (call.method === "GET" && call.url.endsWith("/git/ref/heads/main")) {
+        return jsonResponse(409, { message: "Repository is unavailable." });
+      }
+      throw new Error(`unexpected fetch ${call.method} ${call.url}`);
+    }) as typeof fetch;
+
+    const conflictClient = createGithubRepoClient();
+    await assert.rejects(
+      () =>
+        conflictClient.commitFiles(
+          [{ path: "backups/media-index.json", bytes: bytesOf("{}") }],
+          "OYON GitHub backup conflict",
+        ),
+      /GITHUB_BACKUP_API_FAILED/,
+    );
+    assert.equal(
+      conflictCalls.some(
+        (call) => call.method === "POST" && call.url.endsWith("/git/refs"),
+      ),
+      false,
+    );
+    assert.equal(
+      conflictCalls.some((call) => call.url.includes("/git/blobs")),
+      false,
+    );
+    assert.equal(
+      errorLogs.some((line) =>
+        line.includes(
+          "GitHub backup ref lookup failed: GET /repos/ayham10/oyon-backups/git/ref/heads/main → 409: Repository is unavailable.",
+        ),
+      ),
+      true,
+    );
+
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      recorded(input, init);
+      const method = (init?.method || "GET").toUpperCase();
+      const url = String(input);
+      if (method === "GET" && url.endsWith("/git/ref/heads/main")) {
+        return jsonResponse(200, {
+          object: { sha: "readme-commit-sha", type: "commit" },
+        });
+      }
+      if (method === "GET" && url.endsWith("/git/commits/readme-commit-sha")) {
+        return jsonResponse(200, { tree: { sha: "readme-tree-sha" } });
+      }
+      if (method === "POST" && url.endsWith("/git/blobs")) {
+        return jsonResponse(409, { message: "Git Repository is empty." });
+      }
+      throw new Error(`unexpected fetch ${method} ${url}`);
     }) as typeof fetch;
 
     const writeClient = createGithubRepoClient();
@@ -518,13 +781,18 @@ async function run() {
       /GITHUB_BACKUP_API_FAILED/,
     );
     assert.equal(
-      errorLogs.some((line) => line.includes("GitHub backup write failed")),
+      errorLogs.some((line) =>
+        line.includes(
+          "GitHub backup write failed: POST /repos/ayham10/oyon-backups/git/blobs → 409: Git Repository is empty.",
+        ),
+      ),
       true,
     );
     assert.equal(
       errorLogs.some((line) => line.includes("GitHub backup API failed")),
       false,
     );
+    assert.equal(errorLogs.join("\n").includes("github_pat_test_secret_value"), false);
 
     urls.length = 0;
     errorLogs.length = 0;
@@ -609,6 +877,10 @@ async function run() {
         firstRunMissingFilesOk: true,
         storage400FallsBackToLive: true,
         expectedGithub404Quiet: true,
+        existingMainPatchesRef: true,
+        emptyRepoContentsBootstrap: true,
+        github409NotCreateMain: true,
+        diagnosticsRedactToken: true,
       },
       null,
       2,
