@@ -103,6 +103,9 @@ function createMemoryGithub(initial: Record<string, Uint8Array | string> = {}) {
     async probeRepository() {
       return;
     },
+    async ensureReady() {
+      return;
+    },
     async readJsonFile(path: string) {
       const bytes = files.get(path);
       if (!bytes) return null;
@@ -710,6 +713,123 @@ async function run() {
       true,
     );
 
+    resetGithubBackupInFlightForTests();
+    const backupOrder: string[] = [];
+    let ready = false;
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const call = recorded(input, init);
+      if (
+        call.method === "GET" &&
+        call.url === "https://api.github.com/repos/ayham10/oyon-backups"
+      ) {
+        backupOrder.push("probe");
+        return jsonResponse(200, { default_branch: "main" });
+      }
+      if (call.method === "GET" && call.url.endsWith("/git/ref/heads/main")) {
+        if (!ready) {
+          backupOrder.push("get-ref-empty");
+          return jsonResponse(409, { message: "Git Repository is empty." });
+        }
+        backupOrder.push("get-ref-ready");
+        return jsonResponse(200, {
+          ref: "refs/heads/main",
+          object: { sha: "bootstrap-commit-sha", type: "commit" },
+        });
+      }
+      if (
+        call.method === "PUT" &&
+        call.url.endsWith("/contents/backups/.keep")
+      ) {
+        backupOrder.push("bootstrap");
+        ready = true;
+        return jsonResponse(201, { content: { path: "backups/.keep" } });
+      }
+      if (
+        call.method === "GET" &&
+        call.url.endsWith("/git/commits/bootstrap-commit-sha")
+      ) {
+        backupOrder.push("get-commit");
+        return jsonResponse(200, {
+          sha: "bootstrap-commit-sha",
+          tree: { sha: "bootstrap-tree-sha" },
+        });
+      }
+      if (call.method === "GET" && call.url.includes("/contents/")) {
+        return jsonResponse(404, { message: "Not Found" });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/blobs")) {
+        backupOrder.push("blob");
+        return jsonResponse(201, { sha: `blob-${backupOrder.length}` });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/trees")) {
+        const body = call.body as { base_tree?: string; tree?: unknown[] };
+        assert.equal(body.base_tree, "bootstrap-tree-sha");
+        backupOrder.push("tree");
+        return jsonResponse(201, { sha: `tree-${backupOrder.length}` });
+      }
+      if (call.method === "POST" && call.url.endsWith("/git/commits")) {
+        const body = call.body as { parents?: string[] };
+        assert.deepEqual(body.parents, ["bootstrap-commit-sha"]);
+        backupOrder.push("commit");
+        return jsonResponse(201, { sha: `commit-${backupOrder.length}` });
+      }
+      if (
+        call.method === "PATCH" &&
+        call.url.endsWith("/git/refs/heads/main")
+      ) {
+        backupOrder.push("patch");
+        return jsonResponse(200, { object: { sha: "patched" } });
+      }
+      throw new Error(`unexpected fetch ${call.method} ${call.url}`);
+    }) as typeof fetch;
+
+    const emptyRun = await runGithubBackupAll({
+      vercelEnv: "production",
+      readLive: async () => {
+        backupOrder.push("readLive");
+        return {
+          payload: structuredClone(live),
+          updatedAt: live.updatedAt,
+          payloadBytes: Buffer.byteLength(JSON.stringify(live)),
+        };
+      },
+      listLiveMedia: async () => {
+        backupOrder.push("listLiveMedia");
+        return [
+          {
+            path: "products/frame.jpg",
+            size: productBytes.byteLength,
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ];
+      },
+      downloadProtected: async () => {
+        backupOrder.push("downloadProtected");
+        return { bytes: productBytes, contentType: "image/jpeg" };
+      },
+      downloadLive: async () => {
+        backupOrder.push("downloadLive");
+        throw new Error("should not download live");
+      },
+      github: createGithubRepoClient(),
+    });
+    assert.equal(emptyRun.complete, true);
+    assert.ok(backupOrder.indexOf("probe") < backupOrder.indexOf("get-ref-empty"));
+    assert.ok(backupOrder.indexOf("get-ref-empty") < backupOrder.indexOf("bootstrap"));
+    assert.ok(backupOrder.indexOf("bootstrap") < backupOrder.indexOf("get-ref-ready"));
+    assert.ok(backupOrder.indexOf("get-ref-ready") < backupOrder.indexOf("readLive"));
+    assert.ok(backupOrder.indexOf("bootstrap") < backupOrder.indexOf("readLive"));
+    assert.ok(backupOrder.indexOf("bootstrap") < backupOrder.indexOf("listLiveMedia"));
+    assert.ok(backupOrder.indexOf("bootstrap") < backupOrder.indexOf("downloadProtected"));
+    assert.equal(backupOrder.includes("downloadLive"), false);
+    assert.equal(backupOrder.includes("patch"), true);
+    assert.equal(
+      urls.some((line) => line.startsWith("POST https://api.github.com") && line.endsWith("/git/refs")),
+      false,
+    );
+
     const conflictCalls: Array<{ method: string; url: string; body: unknown }> =
       [];
     urls.length = 0;
@@ -881,6 +1001,7 @@ async function run() {
         emptyRepoContentsBootstrap: true,
         github409NotCreateMain: true,
         diagnosticsRedactToken: true,
+        emptyBootstrapBeforeMedia: true,
       },
       null,
       2,
