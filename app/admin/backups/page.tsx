@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
+  Archive,
   CalendarDays,
   ChevronLeft,
   CircleCheck,
@@ -39,6 +40,10 @@ import type {
   RestorePreviewResult,
 } from "@/lib/restore-status";
 import { isLiveRestoreUiAllowed } from "@/lib/restore-status";
+import {
+  isGithubBackupUiAllowed,
+  type GithubBackupClientResult,
+} from "@/lib/github-backup-status";
 
 const HISTORY_PREVIEW = 5;
 
@@ -76,6 +81,9 @@ export default function AdminBackupsPage() {
   const [actionError, setActionError] = useState("");
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(false);
+  const [githubCreating, setGithubCreating] = useState(false);
+  const githubCreatingRef = useRef(false);
+  const [githubError, setGithubError] = useState("");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<RestoreCategory[]>([]);
@@ -150,6 +158,47 @@ export default function AdminBackupsPage() {
       setCreating(false);
     }
   }, [load, notifySaved, t]);
+
+  const githubBackupAllowed = isGithubBackupUiAllowed();
+
+  const createGithubBackup = useCallback(async () => {
+    if (githubCreatingRef.current || !githubBackupAllowed) return;
+    githubCreatingRef.current = true;
+    setGithubCreating(true);
+    setGithubError("");
+    try {
+      const result = await apiFetch<GithubBackupClientResult>(
+        "/api/admin/github-backups",
+        { method: "POST" },
+      );
+      if (!result.complete) {
+        setGithubError(t("admin.backups.backupAllIncomplete"));
+        return;
+      }
+      notifySaved({
+        title: t("admin.backups.backupAllSuccess"),
+        detail: formatBackupDateTime(result.createdAt),
+      });
+    } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.message === t("admin.backups.backupAllProductionOnly")
+      ) {
+        setGithubError(t("admin.backups.backupAllProductionOnly"));
+      } else if (err instanceof ApiError && err.status === 409) {
+        setGithubError(t("admin.backups.backupAllInProgress"));
+      } else if (err instanceof ApiError && err.status === 403) {
+        setGithubError(t("admin.backups.backupAllForbidden"));
+      } else if (err instanceof ApiError && err.status === 503) {
+        setGithubError(t("admin.backups.backupAllIncomplete"));
+      } else {
+        setGithubError(t("admin.backups.backupAllError"));
+      }
+    } finally {
+      githubCreatingRef.current = false;
+      setGithubCreating(false);
+    }
+  }, [githubBackupAllowed, notifySaved, t]);
 
   const toggleCategory = useCallback((key: RestoreCategory) => {
     setSelectedCategories((current) =>
@@ -355,6 +404,30 @@ export default function AdminBackupsPage() {
             </p>
           ) : (
             <p>{t("admin.backups.createNowHint")}</p>
+          )}
+          <button
+            type="button"
+            className="admin-backups-now admin-backups-all"
+            disabled={githubCreating || !githubBackupAllowed}
+            onClick={() => void createGithubBackup()}
+          >
+            <Archive size={16} strokeWidth={1.8} aria-hidden />
+            <span>
+              {githubCreating
+                ? t("admin.backups.backupAllRunning")
+                : t("admin.backups.backupAll")}
+            </span>
+          </button>
+          {githubError ? (
+            <p className="admin-backups-action-error" role="alert">
+              {githubError}
+            </p>
+          ) : githubBackupAllowed ? (
+            <p>{t("admin.backups.backupAllHint")}</p>
+          ) : (
+            <p className="admin-backups-restore-prod-only" role="status">
+              {t("admin.backups.backupAllProductionOnly")}
+            </p>
           )}
         </div>
       </section>
