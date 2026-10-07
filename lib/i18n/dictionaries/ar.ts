@@ -1388,6 +1388,7 @@ const ar: Dictionary = {
       backupAllInProgress: "جاري إنشاء نسخة GitHub بالفعل. انتظر ثم أعد المحاولة.",
       backupAllForbidden: "لا تملك صلاحية إنشاء نسخة GitHub.",
       backupAllProductionOnly: "النسخ إلى GitHub متاح فقط في بيئة الإنتاج",
+      backupAllRepoInaccessible: "تعذر الوصول إلى مستودع النسخ على GitHub.",
       kindDaily: "تلقائي",
       kindManual: "يدوي",
       automaticOn: "مُفعّل",

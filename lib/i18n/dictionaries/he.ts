@@ -1387,6 +1387,7 @@ const he: Dictionary = {
       backupAllInProgress: "גיבוי GitHub כבר רץ. המתינו ונסו שוב.",
       backupAllForbidden: "אין הרשאה ליצור גיבוי GitHub.",
       backupAllProductionOnly: "גיבוי GitHub זמין רק בסביבת הייצור",
+      backupAllRepoInaccessible: "לא ניתן לגשת למאגר הגיבוי ב-GitHub.",
       kindDaily: "אוטומטי",
       kindManual: "ידני",
       automaticOn: "פעיל",

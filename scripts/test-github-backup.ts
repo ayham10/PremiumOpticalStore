@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import {
+  createGithubRepoClient,
+  downloadStorageObject,
+  isAbsentStorageStatus,
+  isGithubBackupAllowed,
   resetGithubBackupInFlightForTests,
   runGithubBackupAll,
   toGithubBackupClientResult,
   type GithubBackupDependencies,
   type GithubCommitFile,
 } from "../lib/github-backup";
-import { isGithubBackupAllowed } from "../lib/github-backup";
 import type { AppData } from "../lib/types";
 
 function sampleApp(overrides: Partial<AppData> = {}): AppData {
@@ -96,6 +99,9 @@ function createMemoryGithub(initial: Record<string, Uint8Array | string> = {}) {
   return {
     files,
     commits,
+    async probeRepository() {
+      return;
+    },
     async readJsonFile(path: string) {
       const bytes = files.get(path);
       if (!bytes) return null;
@@ -123,6 +129,11 @@ assert.equal(isGithubBackupAllowed("production"), true);
 assert.equal(isGithubBackupAllowed("preview"), false);
 assert.equal(isGithubBackupAllowed("development"), false);
 assert.equal(isGithubBackupAllowed(undefined), false);
+assert.equal(isAbsentStorageStatus(400), true);
+assert.equal(isAbsentStorageStatus(404), true);
+assert.equal(isAbsentStorageStatus(401), false);
+assert.equal(isAbsentStorageStatus(403), false);
+assert.equal(isAbsentStorageStatus(500), false);
 
 async function run() {
   const live = sampleApp();
@@ -305,6 +316,285 @@ async function run() {
   assert.equal(failed.failed, 1);
   assert.equal(failGithub.files.has("backups/database.json"), false);
 
+  resetGithubBackupInFlightForTests();
+  const probeGithub = createMemoryGithub();
+  let probeReadLive = 0;
+  let probeListMedia = 0;
+  let probeProtected = 0;
+  let probeLive = 0;
+  await assert.rejects(
+    () =>
+      runGithubBackupAll({
+        ...baseDeps(probeGithub),
+        github: {
+          ...probeGithub,
+          async probeRepository() {
+            throw new Error("GITHUB_BACKUP_REPO_INACCESSIBLE");
+          },
+        },
+        readLive: async () => {
+          probeReadLive += 1;
+          throw new Error("should not read live after inaccessible repo");
+        },
+        listLiveMedia: async () => {
+          probeListMedia += 1;
+          return [];
+        },
+        downloadProtected: async () => {
+          probeProtected += 1;
+          return null;
+        },
+        downloadLive: async () => {
+          probeLive += 1;
+          throw new Error("should not download live after inaccessible repo");
+        },
+      }),
+    /GITHUB_BACKUP_REPO_INACCESSIBLE/,
+  );
+  assert.equal(probeGithub.commits.length, 0);
+  assert.equal(probeReadLive, 0);
+  assert.equal(probeListMedia, 0);
+  assert.equal(probeProtected, 0);
+  assert.equal(probeLive, 0);
+
+  resetGithubBackupInFlightForTests();
+  const firstRunGithub = createMemoryGithub();
+  assert.equal(firstRunGithub.files.has("backups/media-index.json"), false);
+  assert.equal(firstRunGithub.files.has("backups/backup-info.json"), false);
+  const firstRun = await runGithubBackupAll(baseDeps(firstRunGithub));
+  assert.equal(firstRun.complete, true);
+  assert.equal(firstRun.copied, 2);
+  assert.equal(firstRunGithub.files.has("backups/media-index.json"), true);
+  assert.equal(firstRunGithub.files.has("backups/backup-info.json"), true);
+  assert.equal(firstRunGithub.files.has("backups/database.json"), true);
+
+  resetGithubBackupInFlightForTests();
+  const fallbackGithub = createMemoryGithub();
+  const fallbackProtected: string[] = [];
+  const fallbackLive: string[] = [];
+  const fallback = await runGithubBackupAll({
+    ...baseDeps(fallbackGithub, {
+      protectedCalls: fallbackProtected,
+      liveCalls: fallbackLive,
+    }),
+    listLiveMedia: async () => [
+      {
+        path: "products/frame.jpg",
+        size: productBytes.byteLength,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
+    downloadProtected: async (path) => {
+      fallbackProtected.push(path);
+      return null;
+    },
+    downloadLive: async (path) => {
+      fallbackLive.push(path);
+      if (path === "products/frame.jpg") {
+        return { bytes: galleryBytes, contentType: "image/jpeg" };
+      }
+      throw new Error("unexpected live download");
+    },
+  });
+  assert.equal(fallback.complete, true);
+  assert.deepEqual(fallbackProtected, ["products/frame.jpg"]);
+  assert.deepEqual(fallbackLive, ["products/frame.jpg"]);
+  assert.equal(
+    Buffer.from(
+      fallbackGithub.files.get("backups/media/products/frame.jpg")!,
+    ).toString(),
+    "live-gallery-bytes",
+  );
+
+  resetGithubBackupInFlightForTests();
+  const missingLiveGithub = createMemoryGithub();
+  const missingLive = await runGithubBackupAll({
+    ...baseDeps(missingLiveGithub),
+    listLiveMedia: async () => [
+      {
+        path: "products/gone.jpg",
+        size: 8,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
+    downloadProtected: async () => null,
+    downloadLive: async () => {
+      throw new Error("GITHUB_BACKUP_LIVE_MEDIA_MISSING");
+    },
+  });
+  assert.equal(missingLive.complete, false);
+  assert.equal(missingLive.failed, 1);
+  assert.equal(missingLiveGithub.files.has("backups/database.json"), false);
+
+  const originalFetch = globalThis.fetch;
+  const originalToken = process.env.GITHUB_BACKUP_TOKEN;
+  const originalOwner = process.env.GITHUB_BACKUP_OWNER;
+  const originalRepo = process.env.GITHUB_BACKUP_REPO;
+  const originalBranch = process.env.GITHUB_BACKUP_BRANCH;
+  const originalSupabaseUrl = process.env.SUPABASE_URL;
+  const originalSupabaseKey = process.env.SUPABASE_SECRET_KEY;
+  const originalLogs = console.error;
+  const errorLogs: string[] = [];
+  console.error = (...args: unknown[]) => {
+    errorLogs.push(args.map((value) => String(value)).join(" "));
+  };
+
+  process.env.GITHUB_BACKUP_TOKEN = "github_pat_test_secret_value";
+  process.env.GITHUB_BACKUP_OWNER = "ayham10";
+  process.env.GITHUB_BACKUP_REPO = "oyon-backups";
+  process.env.GITHUB_BACKUP_BRANCH = "main";
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SECRET_KEY = "sb-test-secret-key";
+
+  try {
+    const urls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return new Response("Not Found", { status: 404 });
+    }) as typeof fetch;
+
+    const inaccessible = createGithubRepoClient();
+    await assert.rejects(
+      () => inaccessible.probeRepository(),
+      /GITHUB_BACKUP_REPO_INACCESSIBLE/,
+    );
+    assert.deepEqual(urls, [
+      "https://api.github.com/repos/ayham10/oyon-backups",
+    ]);
+    assert.equal(
+      errorLogs.some((line) => line.includes("repository inaccessible")),
+      true,
+    );
+    assert.equal(
+      errorLogs.some((line) => line.includes("GitHub backup API failed")),
+      false,
+    );
+
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("/contents/backups/media-index.json")) {
+        return new Response("Not Found", { status: 404 });
+      }
+      if (url.includes("/contents/backups/backup-info.json")) {
+        return new Response("Not Found", { status: 404 });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    }) as typeof fetch;
+
+    const filesClient = createGithubRepoClient();
+    assert.equal(await filesClient.readJsonFile("backups/media-index.json"), null);
+    assert.equal(await filesClient.readJsonFile("backups/backup-info.json"), null);
+    assert.equal(errorLogs.length, 0);
+    assert.equal(
+      urls[0]?.includes(
+        "/repos/ayham10/oyon-backups/contents/backups/media-index.json?ref=main",
+      ),
+      true,
+    );
+
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      urls.push(`${init?.method || "GET"} ${String(input)}`);
+      if (String(input).includes("/git/ref/heads/main")) {
+        return new Response("Not Found", { status: 404 });
+      }
+      if (String(input).endsWith("/git/blobs") && init?.method === "POST") {
+        return new Response("Server Error", { status: 500 });
+      }
+      throw new Error(`unexpected fetch ${String(input)}`);
+    }) as typeof fetch;
+
+    const writeClient = createGithubRepoClient();
+    await assert.rejects(
+      () =>
+        writeClient.commitFiles(
+          [{ path: "backups/media-index.json", bytes: bytesOf("{}") }],
+          "OYON GitHub backup test",
+        ),
+      /GITHUB_BACKUP_API_FAILED/,
+    );
+    assert.equal(
+      errorLogs.some((line) => line.includes("GitHub backup write failed")),
+      true,
+    );
+    assert.equal(
+      errorLogs.some((line) => line.includes("GitHub backup API failed")),
+      false,
+    );
+
+    urls.length = 0;
+    errorLogs.length = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      const url = String(input);
+      if (url.endsWith("/oyon-backups/media/objects/products/frame.jpg")) {
+        return new Response("bad request", { status: 400 });
+      }
+      if (url.endsWith("/oyon-backups/media/objects/products/missing.jpg")) {
+        return new Response("not found", { status: 404 });
+      }
+      if (url.endsWith("/lumina-media/products/frame.jpg")) {
+        return new Response("live-bytes", {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      if (url.endsWith("/oyon-backups/media/objects/products/broken.jpg")) {
+        return new Response("oops", { status: 500 });
+      }
+      throw new Error(`unexpected storage fetch ${url}`);
+    }) as typeof fetch;
+
+    const missingProtected400 = await downloadStorageObject(
+      "oyon-backups",
+      "media/objects/products/frame.jpg",
+    );
+    const missingProtected404 = await downloadStorageObject(
+      "oyon-backups",
+      "media/objects/products/missing.jpg",
+    );
+    const liveSource = await downloadStorageObject(
+      "lumina-media",
+      "products/frame.jpg",
+    );
+    assert.equal(missingProtected400, null);
+    assert.equal(missingProtected404, null);
+    assert.equal(Buffer.from(liveSource!.bytes).toString(), "live-bytes");
+    await assert.rejects(
+      () =>
+        downloadStorageObject(
+          "oyon-backups",
+          "media/objects/products/broken.jpg",
+        ),
+      /GITHUB_BACKUP_MEDIA_DOWNLOAD_FAILED:500/,
+    );
+
+    const joinedLogs = errorLogs.join("\n");
+    assert.equal(joinedLogs.includes("github_pat_test_secret_value"), false);
+    assert.equal(joinedLogs.includes("sb-test-secret-key"), false);
+    assert.equal(joinedLogs.includes("Bearer"), false);
+    assert.equal(joinedLogs.includes("Authorization"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalLogs;
+    if (originalToken === undefined) delete process.env.GITHUB_BACKUP_TOKEN;
+    else process.env.GITHUB_BACKUP_TOKEN = originalToken;
+    if (originalOwner === undefined) delete process.env.GITHUB_BACKUP_OWNER;
+    else process.env.GITHUB_BACKUP_OWNER = originalOwner;
+    if (originalRepo === undefined) delete process.env.GITHUB_BACKUP_REPO;
+    else process.env.GITHUB_BACKUP_REPO = originalRepo;
+    if (originalBranch === undefined) delete process.env.GITHUB_BACKUP_BRANCH;
+    else process.env.GITHUB_BACKUP_BRANCH = originalBranch;
+    if (originalSupabaseUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = originalSupabaseUrl;
+    if (originalSupabaseKey === undefined) delete process.env.SUPABASE_SECRET_KEY;
+    else process.env.SUPABASE_SECRET_KEY = originalSupabaseKey;
+  }
+
   console.log(
     JSON.stringify(
       {
@@ -315,6 +605,10 @@ async function run() {
         neverDelete: true,
         resumeWithoutDatabase: true,
         tooLargeBlocksComplete: true,
+        probeStopsBeforeMedia: true,
+        firstRunMissingFilesOk: true,
+        storage400FallsBackToLive: true,
+        expectedGithub404Quiet: true,
       },
       null,
       2,

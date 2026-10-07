@@ -1760,6 +1760,7 @@ const en: Dictionary = {
       backupAllInProgress: "A GitHub backup is already running. Wait, then try again.",
       backupAllForbidden: "You do not have permission to create a GitHub backup.",
       backupAllProductionOnly: "GitHub backup is available only in the production environment",
+      backupAllRepoInaccessible: "Could not access the GitHub backup repository.",
       kindDaily: "Automatic",
       kindManual: "Manual",
       automaticOn: "Enabled",
