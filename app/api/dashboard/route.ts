@@ -4,6 +4,7 @@ import { getStore } from "@/lib/db/store";
 import { handleRouteError } from "@/lib/api/helpers";
 import {
   formatEyeExamDateDisplay,
+  isScheduledClinicBooking,
   isValidIsoDate,
   normalizeAppointmentType,
   todayInJerusalem,
@@ -71,7 +72,7 @@ function toRecentBooking(a: EyeExamAppointment): DashboardRecentBooking {
 export async function GET() {
   try {
     await requireSession("dashboard");
-    const { data, storage } = await getStore();
+    const { data, storage } = await getStore({ bypassCache: true });
 
     // Exact same array Clinic Bookings appointments tab reads
     const clinicAppointments = customerFacingAppointments(
@@ -88,8 +89,8 @@ export async function GET() {
       appointmentTime: (a.appointmentTime || "").slice(0, 5),
     }));
 
-    const activeAppointments = normalized.filter(
-      (a) => a.status !== "cancelled",
+    const activeAppointments = normalized.filter((a) =>
+      isScheduledClinicBooking(a.status),
     );
 
     const todayAppointments = activeAppointments.filter(

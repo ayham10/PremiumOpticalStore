@@ -59,7 +59,11 @@ import {
   resolveCustomerConfirmationTemplate,
   shouldDispatchBookingMessages,
 } from "../lib/booking-messaging";
-import { formatEyeExamDateDisplay, hasEyeExamSlotConflict } from "../lib/eye-exam";
+import {
+  formatEyeExamDateDisplay,
+  hasEyeExamSlotConflict,
+  isScheduledClinicBooking,
+} from "../lib/eye-exam";
 import { sanitizeTwilioContentSid } from "../lib/twilio/content-sid-format";
 import { resetTwilioContentSidMapForTests } from "../lib/twilio/content-sids";
 import type { EyeExamAppointment } from "../lib/types";
@@ -556,6 +560,41 @@ assert.equal(
   defaults.customerConfirmation.manageTemplateEnabled,
   false,
 );
+assert.equal(isScheduledClinicBooking("confirmed"), true);
+assert.equal(isScheduledClinicBooking("completed"), true);
+assert.equal(isScheduledClinicBooking("no-show"), true);
+assert.equal(isScheduledClinicBooking("cancelled"), false);
+
+const canceledOccupancy = appointment({
+  id: "eea_cancelled_slot",
+  firstName: "ملغى",
+  lastName: "فحص",
+  status: "cancelled",
+  appointmentDate: "2026-10-15",
+  appointmentTime: "10:30",
+});
+assert.equal(
+  hasEyeExamSlotConflict([canceledOccupancy], "2026-10-15", "10:30"),
+  false,
+);
+
+const moved = {
+  ...customerA,
+  appointmentDate: "2026-10-16",
+  appointmentTime: "09:00",
+};
+assert.equal(
+  hasEyeExamSlotConflict([moved], customerA.appointmentDate, customerA.appointmentTime),
+  false,
+);
+assert.equal(
+  hasEyeExamSlotConflict([moved], "2026-10-16", "09:00"),
+  true,
+);
+assert.equal(
+  [moved].filter((item) => item.id === customerA.id).length,
+  1,
+);
 
 const futureBooking = appointment({
   id: "eea_admin_link",
@@ -688,5 +727,42 @@ const editBookingCss = readFileSync(
 );
 assert.match(editBookingCss, /admin-edit-booking-manage-generate/);
 assert.match(editBookingCss, /\.admin-edit-booking-manage[\s\S]*overflow-x:\s*hidden/);
+
+const bookingsPanelSrc = readFileSync(
+  join(process.cwd(), "components/admin/BookingsPanel.tsx"),
+  "utf8",
+);
+assert.match(bookingsPanelSrc, /status !== "cancelled"/);
+assert.match(bookingsPanelSrc, /liveAppointments/);
+
+const dashboardSrc = readFileSync(
+  join(process.cwd(), "app/api/dashboard/route.ts"),
+  "utf8",
+);
+assert.match(dashboardSrc, /isScheduledClinicBooking/);
+assert.match(dashboardSrc, /bypassCache:\s*true/);
+
+const availabilityAdminSrc = readFileSync(
+  join(process.cwd(), "app/api/admin/eye-exam/availability/route.ts"),
+  "utf8",
+);
+assert.match(availabilityAdminSrc, /isActiveEyeExamBooking/);
+assert.match(availabilityAdminSrc, /bypassCache:\s*true/);
+
+const availableTimesSrc = readFileSync(
+  join(process.cwd(), "app/api/eye-exam/available-times/route.ts"),
+  "utf8",
+);
+assert.match(availableTimesSrc, /bypassCache:\s*true/);
+assert.match(availableTimesSrc, /listBookableTimes/);
+
+const managePatchSrc = readFileSync(
+  join(process.cwd(), "app/api/booking/manage/route.ts"),
+  "utf8",
+);
+assert.doesNotMatch(managePatchSrc, /dispatchBookingMessages/);
+assert.doesNotMatch(managePatchSrc, /sendSms/);
+assert.match(managePatchSrc, /status: "cancelled"/);
+assert.match(managePatchSrc, /hasEyeExamSlotConflict/);
 
 console.log("booking-manage tests passed");

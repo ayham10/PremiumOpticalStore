@@ -100,7 +100,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data } = await getStore();
+    const { data } = await getStore({ bypassCache: true });
     const live = findAppointmentByManageTokenHash(data.eyeExamAppointments, token);
     const access = evaluateManageAccess(live);
     if (!access.ok) return noStore(fail(access.reason));

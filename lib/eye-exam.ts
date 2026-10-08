@@ -214,6 +214,11 @@ export function isActiveEyeExamBooking(status: EyeExamAppointment["status"]) {
   return ACTIVE_STATUSES.has(status);
 }
 
+/** Live clinic schedule: canceled bookings stay in history but leave the calendar. */
+export function isScheduledClinicBooking(status: EyeExamAppointment["status"]) {
+  return status !== "cancelled";
+}
+
 export function hasEyeExamSlotConflict(
   appointments: EyeExamAppointment[],
   date: string,

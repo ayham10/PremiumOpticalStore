@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     const type = searchParams.get("type")?.trim();
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
 
-    const { data } = await getStore();
+    const { data } = await getStore({ bypassCache: true });
     let items = customerFacingAppointments([...data.eyeExamAppointments]);
 
     if (status && STATUSES.has(status as EyeExamAppointmentStatus)) {

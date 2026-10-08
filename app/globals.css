@@ -1733,6 +1733,30 @@ body.admin-home-active .admin-main {
   cursor: pointer;
 }
 
+.abk-row.is-cancelled td,
+.abk-card.is-cancelled {
+  opacity: 0.62;
+}
+
+.abk-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #2a2f36;
+  background: rgba(8, 12, 17, 0.86);
+  color: #cfd5dc;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.abk-status.is-cancelled {
+  border-color: rgba(224, 122, 122, 0.45);
+  color: #e07a7a;
+}
+
 .abk-row:hover td,
 .abk-row:focus-within td {
   border-color: rgba(212, 175, 55, 0.72);

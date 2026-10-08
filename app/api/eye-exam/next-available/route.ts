@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       ? typeParam
       : normalizeAppointmentType(typeParam);
 
-    const { data } = await getStore();
+    const { data } = await getStore({ bypassCache: true });
     const today = todayInJerusalem();
     const maxDate = publicBookingCalendarMaxDate(today);
 

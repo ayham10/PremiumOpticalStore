@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const { data } = await getStore();
+    const { data } = await getStore({ bypassCache: true });
     const existing = data.eyeExamAvailability.find((d) => d.date === date);
     const resolved = resolveAvailabilityDay(existing, data.settings, date);
     const day =

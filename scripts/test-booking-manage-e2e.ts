@@ -33,13 +33,23 @@ const {
   findAppointmentByManageTokenHash,
   hashBookingManageToken,
 } = await import("../lib/booking-manage-token");
-const { listBookableTimes } = await import("../lib/eye-exam");
+const {
+  hasEyeExamSlotConflict,
+  isScheduledClinicBooking,
+  listBookableTimes,
+} = await import("../lib/eye-exam");
 const { POST: bookPost } = await import("../app/api/eye-exam/book/route");
 const { GET: manageGet, PATCH: managePatch } = await import(
   "../app/api/booking/manage/route"
 );
 const { GET: availableTimesGet } = await import(
   "../app/api/eye-exam/available-times/route"
+);
+const { GET: availableDatesGet } = await import(
+  "../app/api/eye-exam/available-dates/route"
+);
+const { GET: nextAvailableGet } = await import(
+  "../app/api/eye-exam/next-available/route"
 );
 
 const seed = createSeedData();
@@ -67,6 +77,23 @@ function jsonRequest(
 
 async function readJson(response: Response) {
   return (await response.json()) as Record<string, unknown>;
+}
+
+async function publicTimes(date: string, type: string) {
+  const response = await availableTimesGet(
+    jsonRequest(
+      `http://localhost/api/eye-exam/available-times?date=${date}&type=${type}`,
+    ),
+  );
+  const body = await readJson(response);
+  assert.equal(response.status, 200, String(body.error || response.status));
+  return (body.times as string[]) || [];
+}
+
+function scheduledRows() {
+  return (getIsolatedStore()?.eyeExamAppointments || []).filter((item) =>
+    isScheduledClinicBooking(item.status),
+  );
 }
 
 async function bookCustomer(input: {
@@ -106,6 +133,35 @@ async function bookCustomer(input: {
   const token = takeE2EManageToken(appointment.id);
   assert.ok(token, "book handler must issue a management token");
   return { appointment, token };
+}
+
+async function bookAttempt(input: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  language: "ar" | "he";
+  date: string;
+  time: string;
+  type: string;
+}) {
+  const response = await bookPost(
+    jsonRequest("http://localhost/api/eye-exam/book", {
+      method: "POST",
+      body: JSON.stringify({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        phone: input.phone,
+        language: input.language,
+        appointmentDate: input.date,
+        appointmentTime: input.time,
+        appointmentType: input.type,
+      }),
+    }),
+  );
+  const body = await readJson(response);
+  return { status: response.status, body };
 }
 
 const first = await bookCustomer({
@@ -181,6 +237,31 @@ assert.equal(
   "Dana Cohen",
 );
 
+const occupiedAfterTwo = await publicTimes(slot!.date, slot!.appointmentType);
+assert.equal(occupiedAfterTwo.includes(slot!.time), false);
+assert.equal(occupiedAfterTwo.includes(secondTime!), false);
+assert.equal(scheduledRows().length, 2);
+assert.equal(
+  hasEyeExamSlotConflict(
+    getIsolatedStore()!.eyeExamAppointments,
+    slot!.date,
+    slot!.time,
+  ),
+  true,
+);
+const datesAfterTwo = await availableDatesGet(
+  jsonRequest(
+    `http://localhost/api/eye-exam/available-dates?type=${slot!.appointmentType}`,
+  ),
+);
+const datesAfterTwoBody = await readJson(datesAfterTwo);
+assert.equal(datesAfterTwo.status, 200);
+assert.ok(
+  ((datesAfterTwoBody.dates as Array<{ date: string }>) || []).some(
+    (item) => item.date === slot!.date,
+  ),
+);
+
 const storeBeforeRotate = getIsolatedStore();
 assert.ok(storeBeforeRotate);
 const secondRow = storeBeforeRotate!.eyeExamAppointments.find(
@@ -252,16 +333,11 @@ const expiredBlock = planAdminManageLinkGeneration(
 assert.equal(expiredBlock.ok, false);
 if (!expiredBlock.ok) assert.equal(expiredBlock.error, "EXPIRED");
 
-const timesRes = await availableTimesGet(
-  jsonRequest(
-    `http://localhost/api/eye-exam/available-times?date=${slot!.date}&type=${slot!.appointmentType}`,
-  ),
+const openTimes = await publicTimes(slot!.date, slot!.appointmentType);
+const rescheduleTime = openTimes.find(
+  (time) => time !== firstAppt.appointmentTime && time !== secondTime,
 );
-const timesBody = await readJson(timesRes);
-assert.equal(timesRes.status, 200);
-const openTimes = timesBody.times as string[];
-const rescheduleTime =
-  openTimes.find((time) => time !== firstAppt.appointmentTime) || secondTime!;
+assert.ok(rescheduleTime, "need a free slot to reschedule without overlapping");
 
 const reschedule = await managePatch(
   jsonRequest("http://localhost/api/booking/manage", {
@@ -291,6 +367,34 @@ assert.equal(refresh.status, 200);
 assert.equal(
   (refreshBody.appointment as { appointmentTime: string }).appointmentTime,
   rescheduleTime,
+);
+
+const afterReschedule = getIsolatedStore()!;
+assert.equal(
+  afterReschedule.eyeExamAppointments.filter(
+    (item) => item.id === first.appointment.id,
+  ).length,
+  1,
+);
+assert.equal(scheduledRows().length, 2);
+const timesAfterReschedule = await publicTimes(slot!.date, slot!.appointmentType);
+assert.equal(timesAfterReschedule.includes(slot!.time), true);
+assert.equal(timesAfterReschedule.includes(rescheduleTime!), false);
+assert.equal(
+  hasEyeExamSlotConflict(
+    afterReschedule.eyeExamAppointments,
+    slot!.date,
+    slot!.time,
+  ),
+  false,
+);
+assert.equal(
+  hasEyeExamSlotConflict(
+    afterReschedule.eyeExamAppointments,
+    slot!.date,
+    rescheduleTime!,
+  ),
+  true,
 );
 
 const cancel = await managePatch(
@@ -326,6 +430,93 @@ const mutateCancelled = await managePatch(
   }),
 );
 assert.ok(mutateCancelled.status === 410 || mutateCancelled.status === 409);
+
+const afterCancel = getIsolatedStore()!;
+const cancelledRow = afterCancel.eyeExamAppointments.find(
+  (item) => item.id === first.appointment.id,
+);
+assert.ok(cancelledRow, "canceled bookings must remain in history");
+assert.equal(cancelledRow!.status, "cancelled");
+assert.equal(scheduledRows().length, 1);
+assert.equal(
+  scheduledRows().some((item) => item.id === first.appointment.id),
+  false,
+);
+const timesAfterCancel = await publicTimes(slot!.date, slot!.appointmentType);
+assert.equal(timesAfterCancel.includes(rescheduleTime!), true);
+assert.equal(
+  hasEyeExamSlotConflict(
+    afterCancel.eyeExamAppointments,
+    slot!.date,
+    rescheduleTime!,
+  ),
+  false,
+);
+
+const rebooked = await bookCustomer({
+  firstName: "Rami",
+  lastName: "Nassar",
+  email: "rami-e2e@oyonoptics.invalid",
+  phone: "+972503333333",
+  language: "ar",
+  date: slot!.date,
+  time: rescheduleTime!,
+  type: slot!.appointmentType,
+});
+assert.equal(rebooked.appointment.appointmentTime, rescheduleTime);
+assert.notEqual(rebooked.appointment.id, first.appointment.id);
+assert.equal(scheduledRows().length, 2);
+assert.equal(
+  getIsolatedStore()!.eyeExamAppointments.filter(
+    (item) => item.id === first.appointment.id && item.status === "cancelled",
+  ).length,
+  1,
+);
+const timesAfterRebook = await publicTimes(slot!.date, slot!.appointmentType);
+assert.equal(timesAfterRebook.includes(rescheduleTime!), false);
+
+const raceTime = timesAfterRebook.find((time) => time !== secondTime);
+assert.ok(raceTime, "need a remaining free slot for a double-book race");
+const [raceA, raceB] = await Promise.all([
+  bookAttempt({
+    firstName: "Lina",
+    lastName: "Haddad",
+    email: "lina-e2e@oyonoptics.invalid",
+    phone: "+972504444444",
+    language: "ar",
+    date: slot!.date,
+    time: raceTime!,
+    type: slot!.appointmentType,
+  }),
+  bookAttempt({
+    firstName: "Omar",
+    lastName: "Aziz",
+    email: "omar-e2e@oyonoptics.invalid",
+    phone: "+972505555555",
+    language: "he",
+    date: slot!.date,
+    time: raceTime!,
+    type: slot!.appointmentType,
+  }),
+]);
+const raceStatuses = [raceA.status, raceB.status].sort();
+assert.deepEqual(raceStatuses, [201, 409]);
+assert.equal(
+  scheduledRows().filter(
+    (item) =>
+      item.appointmentDate === slot!.date && item.appointmentTime === raceTime,
+  ).length,
+  1,
+);
+
+const nextAvailable = await nextAvailableGet(
+  jsonRequest(
+    `http://localhost/api/eye-exam/next-available?type=${slot!.appointmentType}`,
+  ),
+);
+const nextAvailableBody = await readJson(nextAvailable);
+assert.equal(nextAvailable.status, 200);
+assert.equal(nextAvailableBody.available, true);
 
 const invalidGet = await manageGet(
   jsonRequest("http://localhost/api/booking/manage", {

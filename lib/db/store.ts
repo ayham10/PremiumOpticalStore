@@ -248,20 +248,23 @@ function normalizeData(data: AppData): AppData {
   };
 }
 
-export async function getStore(): Promise<{ data: AppData; storage: StorageMode }> {
+export async function getStore(opts?: {
+  bypassCache?: boolean;
+}): Promise<{ data: AppData; storage: StorageMode }> {
   if (isBookingE2EIsolated()) {
     const isolated = getIsolatedStore();
     if (isolated) return { data: isolated, storage: "filesystem" };
   }
   const now = Date.now();
   if (
+    !opts?.bypassCache &&
     memoryStore &&
     now - memoryStore.at < STORE_CACHE_TTL_MS &&
     !storeInflight
   ) {
     return { data: memoryStore.data, storage: memoryStore.storage };
   }
-  if (storeInflight) return storeInflight;
+  if (!opts?.bypassCache && storeInflight) return storeInflight;
 
   storeInflight = (async () => {
     const result = await readStoreUncached();

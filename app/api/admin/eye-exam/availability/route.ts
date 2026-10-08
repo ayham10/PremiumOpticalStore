@@ -11,7 +11,9 @@ import {
   formatEyeExamDateDisplay,
   hasEyeExamSlotConflict,
   inferPeriodsFromSlots,
+  isActiveEyeExamBooking,
   isClinicAppointmentType,
+  isScheduledClinicBooking,
   isValidIsoDate,
   parseTimeToMinutes,
   periodsForDay,
@@ -91,14 +93,14 @@ export async function GET() {
 
     // Read-only: materialize schedule in memory for the picker/calendar.
     // Persist via settings save, booking, or explicit availability mutations.
-    const { data } = await getStore();
+    const { data } = await getStore({ bypassCache: true });
     const availability = ensureFutureAvailability(
       data.eyeExamAvailability,
       data.settings,
     );
     const bookedByKey = new Map<string, { name: string; id: string }>();
     for (const a of data.eyeExamAppointments) {
-      if (a.status === "cancelled") continue;
+      if (!isActiveEyeExamBooking(a.status)) continue;
       if (isSilentManageTestAppointment(a)) continue;
       const key = `${a.appointmentDate}|${a.appointmentTime}`;
       if (!bookedByKey.has(key)) {
@@ -431,7 +433,7 @@ export async function DELETE(request: Request) {
       const hasBookings = store.eyeExamAppointments.some(
         (a) =>
           a.appointmentDate === day.date &&
-          a.status !== "cancelled" &&
+          isScheduledClinicBooking(a.status) &&
           !isSilentManageTestAppointment(a),
       );
       if (hasBookings) throw new Error("HAS_BOOKINGS");
