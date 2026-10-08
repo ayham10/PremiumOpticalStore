@@ -8,6 +8,7 @@ import {
   normalizeAppointmentType,
   todayInJerusalem,
 } from "@/lib/eye-exam";
+import { customerFacingAppointments } from "@/lib/booking-silent-test";
 import type {
   DashboardRecentBooking,
   DashboardStats,
@@ -73,7 +74,9 @@ export async function GET() {
     const { data, storage } = await getStore();
 
     // Exact same array Clinic Bookings appointments tab reads
-    const clinicAppointments = [...(data.eyeExamAppointments || [])];
+    const clinicAppointments = customerFacingAppointments(
+      data.eyeExamAppointments || [],
+    );
 
     const today = todayInJerusalem();
     const weekDates = jerusalemWeekDates(today);

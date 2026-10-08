@@ -1,4 +1,5 @@
 import { newId } from "@/lib/auth";
+import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
 import {
   BUILTIN_CLINIC_APPOINTMENT_TYPES,
   isBookingServiceKey,
@@ -228,6 +229,7 @@ export function hasEyeExamSlotConflict(
 
   return appointments.some((a) => {
     if (a.id === excludeId) return false;
+    if (isSilentManageTestAppointment(a)) return false;
     if (a.appointmentDate !== date || a.appointmentTime !== time) return false;
     if (!isActiveEyeExamBooking(a.status)) return false;
     if (shared) return true;

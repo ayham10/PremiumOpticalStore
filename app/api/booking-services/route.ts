@@ -9,6 +9,7 @@ import {
   serializePublicBookingService,
   sortBookingServices,
 } from "@/lib/booking-services";
+import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
 import { getStore, invalidateStoreCache, updateStore } from "@/lib/db/store";
 import {
   handleRouteError,
@@ -273,7 +274,10 @@ export async function DELETE(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
       const row = store.bookingServices[index];
       const hasBookings = store.eyeExamAppointments.some(
-        (a) => a.appointmentType === row.key && a.status !== "cancelled",
+        (a) =>
+          a.appointmentType === row.key &&
+          a.status !== "cancelled" &&
+          !isSilentManageTestAppointment(a),
       );
       if (hasBookings) {
         store.bookingServices[index] = {

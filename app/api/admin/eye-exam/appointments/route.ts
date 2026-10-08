@@ -18,6 +18,10 @@ import {
   computeManageTokenExpiresAt,
   omitManageTokenSecrets,
 } from "@/lib/booking-manage-token";
+import {
+  customerFacingAppointments,
+  isSilentManageTestAppointment,
+} from "@/lib/booking-silent-test";
 import type {
   ClinicAppointmentType,
   EyeExamAppointmentStatus,
@@ -42,7 +46,7 @@ export async function GET(request: Request) {
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
 
     const { data } = await getStore();
-    let items = [...data.eyeExamAppointments];
+    let items = customerFacingAppointments([...data.eyeExamAppointments]);
 
     if (status && STATUSES.has(status as EyeExamAppointmentStatus)) {
       items = items.filter((a) => a.status === status);
@@ -118,6 +122,9 @@ export async function PATCH(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
 
       const current = store.eyeExamAppointments[index];
+      if (isSilentManageTestAppointment(current)) {
+        throw new Error("SILENT_TEST");
+      }
       const nextStatus =
         body.status && STATUSES.has(body.status) ? body.status : current.status;
 
@@ -251,6 +258,12 @@ export async function PATCH(request: Request) {
       }
       if (error.message === "SLOT_TAKEN") {
         return jsonError("That time slot is already booked", 409);
+      }
+      if (error.message === "SILENT_TEST") {
+        return jsonError(
+          "Silent test appointments can only be changed from the management link or deleted from the admin test page.",
+          409,
+        );
       }
     }
     return handleRouteError(error);

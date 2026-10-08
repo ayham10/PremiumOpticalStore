@@ -28,6 +28,7 @@ import {
   CUSTOMER_MANAGE_TEMPLATE_NAME,
 } from "@/lib/booking-manage-token";
 import { shouldSkipBookingWhatsApp } from "@/lib/booking-manage-test";
+import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
 import {
   formatPhoneForWhatsAppWeb,
   isWhatsAppWebServiceConfigured,
@@ -457,12 +458,28 @@ async function sendAppointmentReminder(
  * sendConfiguredTemplate for future reuse and are not deleted.
  * Never throws — messaging failures must not affect the booking.
  */
+export function shouldDispatchBookingMessages(
+  appointment: EyeExamAppointment,
+  vercelEnv: string | undefined = process.env.VERCEL_ENV,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  if (isSilentManageTestAppointment(appointment)) return false;
+  if (shouldSkipBookingWhatsApp(vercelEnv, nodeEnv)) return false;
+  return true;
+}
+
 export async function dispatchBookingMessages(
   appointment: EyeExamAppointment,
   opts?: { manageToken?: string },
 ): Promise<void> {
   try {
-    if (shouldSkipBookingWhatsApp()) {
+    if (isSilentManageTestAppointment(appointment)) {
+      console.info("[WhatsApp] skipped — silent admin manage test", {
+        appointmentId: appointment.id,
+      });
+      return;
+    }
+    if (!shouldDispatchBookingMessages(appointment)) {
       console.info("[WhatsApp] skipped — Preview/dev test environment", {
         appointmentId: appointment.id,
       });
@@ -606,6 +623,7 @@ export async function processDueAppointmentReminders(): Promise<{
   const appointments = store.eyeExamAppointments || [];
   for (const appointment of appointments) {
     if (appointment.status !== "confirmed") continue;
+    if (isSilentManageTestAppointment(appointment)) continue;
     const didSend = await sendAppointmentReminder(
       appointment,
       store,

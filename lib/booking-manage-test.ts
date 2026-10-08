@@ -1,3 +1,4 @@
+import { BOOKING_MANAGE_ORIGIN } from "@/lib/booking-manage-constants";
 import { bookingManageUrlForOrigin } from "@/lib/booking-manage-token";
 import {
   createDefaultBookingServices,
@@ -5,7 +6,13 @@ import {
   pickLocalized,
 } from "@/lib/booking-services";
 import {
+  customerFacingAppointments,
+  isSilentManageTestAppointment,
+} from "@/lib/booking-silent-test";
+import {
+  formatEyeExamDateDisplay,
   listBookableTimes,
+  normalizeAppointmentType,
   resolvePublicAvailability,
 } from "@/lib/eye-exam";
 import { createSeedData } from "@/lib/seed";
@@ -15,6 +22,11 @@ import type { Locale } from "@/lib/i18n/config";
 export const PREVIEW_TEST_MAX_APPOINTMENTS = 5;
 export const PREVIEW_TEST_PHONE = "+972500000001";
 export const PREVIEW_TEST_EMAIL = "preview-manage-test@oyonoptics.invalid";
+
+export type BookingManageTestMode =
+  | "preview-isolated"
+  | "production-silent"
+  | "disabled";
 
 /** Production is always blocked. Preview, Vercel development, and local are allowed. */
 export function isBookingManagePreviewTestAllowed(
@@ -27,6 +39,25 @@ export function isBookingManagePreviewTestAllowed(
   return false;
 }
 
+export function bookingManageTestMode(
+  vercelEnv: string | undefined = process.env.VERCEL_ENV,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): BookingManageTestMode {
+  if (vercelEnv === "production") return "production-silent";
+  if (isBookingManagePreviewTestAllowed(vercelEnv, nodeEnv)) {
+    return "preview-isolated";
+  }
+  if (!vercelEnv && nodeEnv === "production") return "production-silent";
+  return "disabled";
+}
+
+export function isBookingManageAdminTestAllowed(
+  vercelEnv: string | undefined = process.env.VERCEL_ENV,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  return bookingManageTestMode(vercelEnv, nodeEnv) !== "disabled";
+}
+
 /** Skip live Twilio/WhatsApp on Preview, Vercel development, and local. Never skip Production. */
 export function shouldSkipBookingWhatsApp(
   vercelEnv: string | undefined = process.env.VERCEL_ENV,
@@ -37,7 +68,12 @@ export function shouldSkipBookingWhatsApp(
   return !vercelEnv && nodeEnv !== "production";
 }
 
-export function bookingManageOriginFromRequest(request: Request): string {
+export function bookingManageOriginFromRequest(
+  request: Request,
+  vercelEnv: string | undefined = process.env.VERCEL_ENV,
+): string {
+  if (vercelEnv === "production") return BOOKING_MANAGE_ORIGIN;
+
   const forwardedHost = request.headers
     .get("x-forwarded-host")
     ?.split(",")[0]
@@ -67,26 +103,27 @@ export function capPreviewManageTestAppointments(
   return items.slice(0, max);
 }
 
-/** Seed schedule only — never reads live customer appointments. */
-export function pickPreviewTestSlot(
-  store: AppData = createSeedData(),
+function pickSlotFromStore(
+  store: AppData,
+  appointments: EyeExamAppointment[],
 ): {
   date: string;
   time: string;
-  appointmentType: string;
+  appointmentType: EyeExamAppointment["appointmentType"];
 } | null {
   const services = store.bookingServices?.length
     ? store.bookingServices
     : createDefaultBookingServices();
-  const appointmentType =
+  const appointmentType = normalizeAppointmentType(
     services.find((item) => isActiveBookingServiceKey(item.key, services))
-      ?.key || "eye_exam";
+      ?.key || "eye_exam",
+  );
   const days = resolvePublicAvailability(
     store.eyeExamAvailability,
     store.settings,
   );
   for (const day of days) {
-    const times = listBookableTimes(day, [], {
+    const times = listBookableTimes(day, appointments, {
       appointmentType,
     });
     if (times[0]) {
@@ -94,6 +131,29 @@ export function pickPreviewTestSlot(
     }
   }
   return null;
+}
+
+/** Seed schedule only — never reads live customer appointments. */
+export function pickPreviewTestSlot(
+  store: AppData = createSeedData(),
+): {
+  date: string;
+  time: string;
+  appointmentType: EyeExamAppointment["appointmentType"];
+} | null {
+  return pickSlotFromStore(store, []);
+}
+
+/** Live clinic schedule, ignoring silent-test occupancy so customers keep the slot. */
+export function pickSilentTestSlot(store: AppData): {
+  date: string;
+  time: string;
+  appointmentType: EyeExamAppointment["appointmentType"];
+} | null {
+  return pickSlotFromStore(
+    store,
+    customerFacingAppointments(store.eyeExamAppointments || []),
+  );
 }
 
 export function previewTestServiceLabel(
@@ -107,3 +167,18 @@ export function previewTestServiceLabel(
     : appointmentType;
 }
 
+export function publicAdminTestAppointmentView(
+  appointment: EyeExamAppointment,
+  serviceLabel: string,
+) {
+  return {
+    id: appointment.id,
+    customerName: `${appointment.firstName} ${appointment.lastName}`.trim(),
+    service: serviceLabel,
+    appointmentDate: appointment.appointmentDate,
+    appointmentTime: appointment.appointmentTime,
+    status: appointment.status,
+    dateLabel: formatEyeExamDateDisplay(appointment.appointmentDate),
+    silentTest: isSilentManageTestAppointment(appointment),
+  };
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { newId, requireSession } from "@/lib/auth";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
+import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   buildDefaultSlots,
@@ -98,6 +99,7 @@ export async function GET() {
     const bookedByKey = new Map<string, { name: string; id: string }>();
     for (const a of data.eyeExamAppointments) {
       if (a.status === "cancelled") continue;
+      if (isSilentManageTestAppointment(a)) continue;
       const key = `${a.appointmentDate}|${a.appointmentTime}`;
       if (!bookedByKey.has(key)) {
         bookedByKey.set(key, {
@@ -427,7 +429,10 @@ export async function DELETE(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
       const day = store.eyeExamAvailability[index];
       const hasBookings = store.eyeExamAppointments.some(
-        (a) => a.appointmentDate === day.date && a.status !== "cancelled",
+        (a) =>
+          a.appointmentDate === day.date &&
+          a.status !== "cancelled" &&
+          !isSilentManageTestAppointment(a),
       );
       if (hasBookings) throw new Error("HAS_BOOKINGS");
 

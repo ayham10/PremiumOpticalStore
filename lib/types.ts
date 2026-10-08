@@ -181,6 +181,11 @@ export interface EyeExamAppointment {
   manageTokenHash?: string;
   manageTokenExpiresAt?: string;
   manageTokenRevokedAt?: string | null;
+  /**
+   * Admin-only silent manage-flow fixture. Never send WhatsApp/SMS.
+   * Excluded from public availability and dashboard stats.
+   */
+  silentTest?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -517,8 +522,8 @@ export interface AppData {
   eyeExamAvailability: EyeExamAvailability[];
   eyeExamAppointments: EyeExamAppointment[];
   /**
-   * Preview/dev-only booking-manage fixtures. Never mixed into customer
-   * `eyeExamAppointments`, availability conflicts, or Production WhatsApp.
+   * Legacy unused field. Preview fixtures live in a dedicated lumina_store
+   * row. Production silent tests are flagged rows inside `eyeExamAppointments`.
    */
   previewManageTestAppointments?: EyeExamAppointment[];
   bookingServices: BookingService[];

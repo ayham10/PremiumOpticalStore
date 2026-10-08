@@ -7,10 +7,17 @@ import {
 } from "../lib/booking-manage-constants";
 import {
   bookingManageOriginFromRequest,
+  bookingManageTestMode,
+  isBookingManageAdminTestAllowed,
   isBookingManagePreviewTestAllowed,
   pickPreviewTestSlot,
   shouldSkipBookingWhatsApp,
 } from "../lib/booking-manage-test";
+import {
+  customerFacingAppointments,
+  isSilentManageTestAppointment,
+  SILENT_MANAGE_TEST_ID_PREFIX,
+} from "../lib/booking-silent-test";
 import {
   DEFAULT_BOOKING_MANAGE_TEST_STORE_ID,
   parsePreviewTestPayload,
@@ -38,8 +45,9 @@ import {
   LIVE_CUSTOMER_CONFIRMATION_TEMPLATE,
   OWNER_NOTIFICATION_TEMPLATE,
   resolveCustomerConfirmationTemplate,
+  shouldDispatchBookingMessages,
 } from "../lib/booking-messaging";
-import { formatEyeExamDateDisplay } from "../lib/eye-exam";
+import { formatEyeExamDateDisplay, hasEyeExamSlotConflict } from "../lib/eye-exam";
 import { sanitizeTwilioContentSid } from "../lib/twilio/content-sid-format";
 import { resetTwilioContentSidMapForTests } from "../lib/twilio/content-sids";
 import type { EyeExamAppointment } from "../lib/types";
@@ -273,16 +281,60 @@ assert.match(messaging, /OWNER_NOTIFICATION_TEMPLATE = "owner_notification"/);
 assert.match(messaging, /APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder"/);
 assert.match(messaging, /manageTemplateEnabled === true/);
 assert.match(messaging, /shouldSkipBookingWhatsApp/);
+assert.match(messaging, /isSilentManageTestAppointment/);
+assert.match(messaging, /shouldDispatchBookingMessages/);
+assert.doesNotMatch(messaging, /oyon_booking_manage_v2_he/);
 
 assert.equal(isBookingManagePreviewTestAllowed("production", "production"), false);
 assert.equal(isBookingManagePreviewTestAllowed("preview", "production"), true);
 assert.equal(isBookingManagePreviewTestAllowed("development", "production"), true);
 assert.equal(isBookingManagePreviewTestAllowed(undefined, "development"), true);
 assert.equal(isBookingManagePreviewTestAllowed(undefined, "production"), false);
+assert.equal(bookingManageTestMode("production", "production"), "production-silent");
+assert.equal(bookingManageTestMode("preview", "production"), "preview-isolated");
+assert.equal(isBookingManageAdminTestAllowed("production", "production"), true);
 
 assert.equal(shouldSkipBookingWhatsApp("production", "production"), false);
 assert.equal(shouldSkipBookingWhatsApp("preview", "production"), true);
 assert.equal(shouldSkipBookingWhatsApp("development", "production"), true);
+
+const silentTest = appointment({
+  id: `${SILENT_MANAGE_TEST_ID_PREFIX}abc`,
+  firstName: "OYON",
+  lastName: "TEST",
+  silentTest: true,
+  smsStatus: "simulated",
+});
+const liveCustomer = appointment({
+  id: "eea_live",
+  firstName: "Real",
+  lastName: "Customer",
+});
+assert.equal(isSilentManageTestAppointment(silentTest), true);
+assert.equal(isSilentManageTestAppointment(liveCustomer), false);
+assert.deepEqual(customerFacingAppointments([silentTest, liveCustomer]).map((item) => item.id), [
+  "eea_live",
+]);
+assert.equal(
+  hasEyeExamSlotConflict([silentTest], "2026-10-15", "10:30"),
+  false,
+);
+assert.equal(
+  hasEyeExamSlotConflict([liveCustomer], "2026-10-15", "10:30"),
+  true,
+);
+assert.equal(
+  shouldDispatchBookingMessages(silentTest, "production", "production"),
+  false,
+);
+assert.equal(
+  shouldDispatchBookingMessages(liveCustomer, "production", "production"),
+  true,
+);
+assert.equal(
+  shouldDispatchBookingMessages(liveCustomer, "preview", "production"),
+  false,
+);
 
 const previewOrigin = bookingManageOriginFromRequest(
   new Request("https://example.vercel.app/api/internal/booking-manage-test", {
@@ -291,6 +343,7 @@ const previewOrigin = bookingManageOriginFromRequest(
       "x-forwarded-proto": "https",
     },
   }),
+  "preview",
 );
 assert.equal(previewOrigin, "https://premiumopticalstore-git-preview.vercel.app");
 assert.equal(
@@ -298,17 +351,57 @@ assert.equal(
   `https://premiumopticalstore-git-preview.vercel.app/appointments/manage/${issuedA.token}`,
 );
 assert.notEqual(previewOrigin, "https://oyonoptics.com");
+assert.equal(
+  bookingManageOriginFromRequest(
+    new Request("https://oyonoptics.com/api/internal/booking-manage-test", {
+      headers: {
+        host: "oyonoptics.com",
+        "x-forwarded-proto": "https",
+      },
+    }),
+    "production",
+  ),
+  "https://oyonoptics.com",
+);
 
 const testApi = readFileSync(
   join(process.cwd(), "app/api/internal/booking-manage-test/route.ts"),
   "utf8",
 );
 assert.doesNotMatch(testApi, /dispatchBookingMessages/);
-assert.doesNotMatch(testApi, /updateStore/);
-assert.doesNotMatch(testApi, /eyeExamAppointments/);
+assert.doesNotMatch(testApi, /sendSms/);
+assert.match(testApi, /updateStore/);
+assert.match(testApi, /silentTest: true/);
 assert.match(testApi, /writePreviewTestAppointments/);
 assert.match(testApi, /isBookingManagePreviewTestAllowed/);
+assert.match(testApi, /role !== "admin"/);
+assert.match(testApi, /isSilentManageTestAppointment/);
 assert.doesNotMatch(testApi, /writeFilesystem|\/var\/task\/data/);
+assert.doesNotMatch(testApi, /oyon_booking_manage_v2_he/);
+
+const adminTestPage = readFileSync(
+  join(process.cwd(), "app/admin/dev/booking-manage/page.tsx"),
+  "utf8",
+);
+assert.match(adminTestPage, /Create test appointment/);
+assert.match(adminTestPage, /Delete/);
+assert.doesNotMatch(adminTestPage, /bypass|skipNotifications|skip WhatsApp checkbox/i);
+
+const smsProvider = readFileSync(join(process.cwd(), "lib/sms/provider.ts"), "utf8");
+assert.match(smsProvider, /SILENT_MANAGE_TEST_ID_PREFIX/);
+
+const dashboardApi = readFileSync(
+  join(process.cwd(), "app/api/dashboard/route.ts"),
+  "utf8",
+);
+assert.match(dashboardApi, /customerFacingAppointments/);
+
+const managePatch = readFileSync(
+  join(process.cwd(), "app/api/booking/manage/route.ts"),
+  "utf8",
+);
+assert.doesNotMatch(managePatch, /dispatchBookingMessages/);
+assert.doesNotMatch(managePatch, /sendSms/);
 
 const missingSecret = resolvePreviewTestStoreConfig({
   SUPABASE_URL: "https://example.supabase.co",

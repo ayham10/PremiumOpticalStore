@@ -1,3 +1,4 @@
+import { SILENT_MANAGE_TEST_ID_PREFIX } from "@/lib/booking-silent-test";
 import type { SmsLog } from "@/lib/types";
 
 export type SmsType = SmsLog["type"];
@@ -156,6 +157,13 @@ export function getSmsProviderName(): string {
 }
 
 export async function sendSms(payload: SmsPayload): Promise<SmsResult> {
+  if (payload.appointmentId?.startsWith(SILENT_MANAGE_TEST_ID_PREFIX)) {
+    console.info("[SMS] skipped — silent admin manage test", {
+      appointmentId: payload.appointmentId,
+    });
+    return { ok: true, provider: "console", status: "simulated" };
+  }
+
   const to = normalizePhone(payload.to);
   const provider = getSmsProviderName();
 
