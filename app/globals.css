@@ -1077,6 +1077,10 @@ body.admin-home-active .admin-main {
     box-sizing: border-box;
   }
 
+  .admin-main:has(.admin-lens-page) {
+    --admin-content-max: 1400px;
+  }
+
   .admin-main > .admin-dashboard.admin-home {
     grid-column: 2;
     width: 100%;
@@ -16354,10 +16358,10 @@ body > .admin-save-notice,
 }
 
 .admin-lens-page {
-  --lens-sph-w: 14%;
-  --lens-cyl-w: calc(86% / 9);
+  --lens-sph-w: 65px;
+  --lens-sph-only-w: 55px;
   --lens-row-h: 32px;
-  --lens-head-h: 32px;
+  --lens-head-h: 36px;
   --lens-cols: 9;
   --lens-bg: #07111a;
   --lens-cell: #0d1a25;
@@ -16366,7 +16370,7 @@ body > .admin-save-notice,
   --lens-corner: #0d1a26;
   --lens-sph: #0a151f;
   --lens-line: rgba(92, 112, 130, 0.34);
-  max-width: var(--admin-content-max, 1200px);
+  max-width: 1400px;
   display: grid;
   gap: 1rem;
   min-width: 0;
@@ -16376,7 +16380,7 @@ body > .admin-save-notice,
   display: grid;
   grid-template-columns: 1fr;
   align-items: start;
-  gap: 0.85rem;
+  gap: 18px;
   width: 100%;
   min-width: 0;
   direction: ltr;
@@ -16391,7 +16395,7 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   min-width: 0;
   height: fit-content;
   min-height: 0;
-  padding: 10px 8px 8px;
+  padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(212, 175, 106, 0.34);
   background: #08131d !important;
@@ -16433,8 +16437,8 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
 
 .admin-lens-matrix {
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  min-width: calc(var(--lens-sph-w) + var(--lens-sph-only-w) + (48px * 8));
+  max-width: none;
   table-layout: fixed;
   border-collapse: collapse;
   border-spacing: 0;
@@ -16447,8 +16451,12 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   width: var(--lens-sph-w);
 }
 
+.admin-lens-matrix col.admin-lens-col-sph-only {
+  width: var(--lens-sph-only-w);
+}
+
 .admin-lens-matrix col.admin-lens-col-cyl {
-  width: var(--lens-cyl-w);
+  width: auto;
 }
 
 .admin-lens-matrix th,
@@ -16472,7 +16480,7 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   height: var(--lens-head-h);
   background: var(--lens-head);
   color: #dce6ee;
-  font-size: 0.64rem;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
 }
@@ -16483,18 +16491,25 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   left: 0;
   z-index: 2;
   width: var(--lens-sph-w);
-  min-width: 0;
-  max-width: none;
+  min-width: var(--lens-sph-w);
+  max-width: var(--lens-sph-w);
   background: var(--lens-sph);
   color: #f2f6f8;
-  font-size: 0.66rem;
+  font-size: 12px;
   font-weight: 700;
+}
+
+.admin-lens-matrix th:nth-child(2),
+.admin-lens-matrix td:nth-child(2) {
+  width: var(--lens-sph-only-w);
+  min-width: var(--lens-sph-only-w);
+  max-width: var(--lens-sph-only-w);
 }
 
 .admin-lens-matrix thead th:first-child {
   z-index: 3;
   background: var(--lens-corner);
-  font-size: 0.6rem;
+  font-size: 12px;
 }
 
 .admin-lens-matrix tbody td {
@@ -16530,7 +16545,7 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   background-clip: padding-box;
   color: #d7dee6;
   font: inherit;
-  font-size: 0.7rem;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -16732,7 +16747,15 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 
 @media (min-width: 768px) {
   .admin-lens-matrices {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 660px) minmax(0, 660px);
+    gap: 18px;
+    justify-content: start;
+  }
+
+  html.admin-dark .admin-shell .admin-card.admin-lens-card,
+  .admin-lens-page .admin-card.admin-lens-card {
+    width: 100%;
+    max-width: 660px;
   }
 }
 
@@ -16761,8 +16784,8 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
   .admin-lens-matrix th:first-child,
   .admin-lens-matrix td:first-child {
     width: var(--lens-sph-w);
-    min-width: 0;
-    max-width: none;
+    min-width: var(--lens-sph-w);
+    max-width: var(--lens-sph-w);
   }
 }
 
