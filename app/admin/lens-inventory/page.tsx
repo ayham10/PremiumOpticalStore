@@ -11,8 +11,10 @@ import {
   LENS_CYL,
   LENS_MINUS_SPH,
   LENS_PLUS_SPH,
+  LENS_SPH_ONLY_CYL,
   buildLensOrderDocumentHtml,
   buildLensOrderRows,
+  formatLensCylDisplay,
   getLensCell,
   lensOrderTotals,
   lensSignLabel,
@@ -30,16 +32,29 @@ type Editor = {
   desiredStock: string;
 };
 
+function printWhenFontsReady(win: Window | null) {
+  if (!win) return;
+  let printed = false;
+  const go = () => {
+    if (printed) return;
+    printed = true;
+    win.focus();
+    win.print();
+  };
+  const fonts = win.document.fonts;
+  if (fonts?.ready) {
+    void fonts.ready.then(go, go);
+  }
+  setTimeout(go, 1200);
+}
+
 function openOrderDocument(html: string, print: boolean) {
   const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
   if (popup) {
     popup.document.open();
     popup.document.write(html);
     popup.document.close();
-    if (print) {
-      popup.focus();
-      setTimeout(() => popup.print(), 250);
-    }
+    if (print) printWhenFontsReady(popup);
     return;
   }
   const iframe = document.createElement("iframe");
@@ -56,9 +71,8 @@ function openOrderDocument(html: string, print: boolean) {
   doc.open();
   doc.write(html);
   doc.close();
-  iframe.contentWindow?.focus();
-  iframe.contentWindow?.print();
-  setTimeout(() => iframe.remove(), 1000);
+  if (print) printWhenFontsReady(iframe.contentWindow);
+  setTimeout(() => iframe.remove(), 4000);
 }
 
 function downloadOrderDocument(html: string) {
@@ -265,7 +279,11 @@ export default function AdminLensInventoryPage() {
                   </thead>
                   <tbody>
                     {orderRows.map((row, index) => (
-                      <OrderRowView key={`${row.type}-${row.sph}-${row.cyl}`} row={row} index={index + 1} />
+                      <OrderRowView
+                        key={`${row.type}-${row.sph}-${row.cyl}`}
+                        row={row}
+                        index={index + 1}
+                      />
                     ))}
                   </tbody>
                 </table>
@@ -303,7 +321,7 @@ export default function AdminLensInventoryPage() {
               </p>
               <p>
                 <span>CYL</span>
-                <strong dir="ltr">{editor.cyl}</strong>
+                <strong dir="ltr">{formatLensCylDisplay(editor.cyl)}</strong>
               </p>
             </div>
             <label>
@@ -365,11 +383,43 @@ function OrderRowView({ row, index }: { row: LensOrderRow; index: number }) {
       <td>{index}</td>
       <td>{lensSignLabel(row.type)}</td>
       <td>{row.sph}</td>
-      <td>{row.cyl}</td>
+      <td>{formatLensCylDisplay(row.cyl)}</td>
       <td>{row.currentStock}</td>
       <td>{row.desiredStock}</td>
       <td className="admin-lens-qty">{row.quantityToOrder}</td>
     </tr>
+  );
+}
+
+function LensStockCell({
+  type,
+  sph,
+  cyl,
+  items,
+  onEdit,
+  ariaExtra,
+}: {
+  type: LensInventorySign;
+  sph: string;
+  cyl: string;
+  items: LensInventoryCell[];
+  onEdit: (type: LensInventorySign, sph: string, cyl: string) => void;
+  ariaExtra: string;
+}) {
+  const { t } = useLocale();
+  const cell = getLensCell(items, type, sph, cyl);
+  const tone = lensStockTone(cell.currentStock, cell.desiredStock);
+  return (
+    <td>
+      <button
+        type="button"
+        className={`admin-lens-cell is-${tone}`}
+        onClick={() => onEdit(type, sph, cyl)}
+        aria-label={`${t("admin.lensInventory.editTitle")} ${lensSignLabel(type)} ${sph} ${ariaExtra}`}
+      >
+        {cell.currentStock}/{cell.desiredStock}
+      </button>
+    </td>
   );
 }
 
@@ -386,7 +436,6 @@ function LensMatrix({
   items: LensInventoryCell[];
   onEdit: (type: LensInventorySign, sph: string, cyl: string) => void;
 }) {
-  const { t } = useLocale();
   return (
     <section className="admin-card admin-lens-card" dir="rtl">
       <h2>{title}</h2>
@@ -394,13 +443,15 @@ function LensMatrix({
         <table className="admin-lens-matrix" dir="ltr">
           <colgroup>
             <col className="admin-lens-col-sph" />
+            <col className="admin-lens-col-cyl" />
             {LENS_CYL.map((cyl) => (
               <col key={cyl} className="admin-lens-col-cyl" />
             ))}
           </colgroup>
           <thead>
             <tr>
-              <th scope="col">SPH \ CYL</th>
+              <th scope="col">SPH/CYL</th>
+              <th scope="col">SPH</th>
               {LENS_CYL.map((cyl) => (
                 <th key={cyl} scope="col">
                   {cyl}
@@ -412,22 +463,25 @@ function LensMatrix({
             {sphs.map((sph) => (
               <tr key={sph}>
                 <th scope="row">{sph}</th>
-                {LENS_CYL.map((cyl) => {
-                  const cell = getLensCell(items, type, sph, cyl);
-                  const tone = lensStockTone(cell.currentStock, cell.desiredStock);
-                  return (
-                    <td key={cyl}>
-                      <button
-                        type="button"
-                        className={`admin-lens-cell is-${tone}`}
-                        onClick={() => onEdit(type, sph, cyl)}
-                        aria-label={`${t("admin.lensInventory.editTitle")} ${lensSignLabel(type)} ${sph} ${cyl}`}
-                      >
-                        {cell.currentStock}/{cell.desiredStock}
-                      </button>
-                    </td>
-                  );
-                })}
+                <LensStockCell
+                  type={type}
+                  sph={sph}
+                  cyl={LENS_SPH_ONLY_CYL}
+                  items={items}
+                  onEdit={onEdit}
+                  ariaExtra="SPH"
+                />
+                {LENS_CYL.map((cyl) => (
+                  <LensStockCell
+                    key={cyl}
+                    type={type}
+                    sph={sph}
+                    cyl={cyl}
+                    items={items}
+                    onEdit={onEdit}
+                    ariaExtra={cyl}
+                  />
+                ))}
               </tr>
             ))}
           </tbody>

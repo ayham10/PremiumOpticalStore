@@ -54,6 +54,9 @@ export const LENS_CYL = [
   "-2.00",
 ] as const;
 
+/** Spherical-only stock. Distinct from CYL columns so existing SPH/CYL cells never collide. */
+export const LENS_SPH_ONLY_CYL = "0.00";
+
 export type LensMinusSph = (typeof LENS_MINUS_SPH)[number];
 export type LensPlusSph = (typeof LENS_PLUS_SPH)[number];
 export type LensCyl = (typeof LENS_CYL)[number];
@@ -88,8 +91,16 @@ export function isAllowedSph(type: LensInventorySign, sph: string): boolean {
   return type === "minus" ? MINUS_SPH.has(sph) : PLUS_SPH.has(sph);
 }
 
+export function isSphOnlyCyl(cyl: string): boolean {
+  return cyl === LENS_SPH_ONLY_CYL;
+}
+
 export function isAllowedCyl(cyl: string): boolean {
-  return CYL.has(cyl);
+  return isSphOnlyCyl(cyl) || CYL.has(cyl);
+}
+
+export function formatLensCylDisplay(cyl: string): string {
+  return isSphOnlyCyl(cyl) ? "—" : cyl;
 }
 
 export function parseLensQty(value: unknown): number | null {
@@ -197,7 +208,7 @@ export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
   ];
   for (const table of tables) {
     for (const sph of table.sphs) {
-      for (const cyl of LENS_CYL) {
+      for (const cyl of [LENS_SPH_ONLY_CYL, ...LENS_CYL]) {
         const { currentStock, desiredStock } = getLensCell(
           items,
           table.type,
@@ -232,7 +243,7 @@ export function lensOrderTotals(rows: LensOrderRow[]): {
 }
 
 export function formatLensOrderDate(value = new Date()): string {
-  return value.toLocaleDateString("ar", {
+  return value.toLocaleDateString("he", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -259,19 +270,20 @@ export function buildLensOrderDocumentHtml(
           <td class="num">${index + 1}</td>
           <td>${escapeLensOrderText(lensSignLabel(row.type))}</td>
           <td class="ltr">${escapeLensOrderText(row.sph)}</td>
-          <td class="ltr">${escapeLensOrderText(row.cyl)}</td>
-          <td class="num">${row.currentStock}</td>
-          <td class="num">${row.desiredStock}</td>
+          <td class="ltr">${escapeLensOrderText(formatLensCylDisplay(row.cyl))}</td>
           <td class="qty">${row.quantityToOrder}</td>
         </tr>`,
     )
     .join("");
 
   return `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>OYON OPTICS — طلبية عدسات</title>
+  <title>OYON OPTICS — רשימת הזמנה לעדשות</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;700;800&display=swap" rel="stylesheet" />
   <style>
     @page { size: A4 portrait; margin: 10mm; }
     html, body {
@@ -279,17 +291,36 @@ export function buildLensOrderDocumentHtml(
       padding: 0;
       background: #fff;
       color: #1a1f26;
-      font-family: "Noto Sans Arabic", "Arial", sans-serif;
+      font-family: "Noto Sans Hebrew", "Arial Hebrew", "David", "Arial", sans-serif;
     }
     body { padding: 0; }
     h1, p { margin: 0; }
     .sheet { max-width: 190mm; margin: 0 auto; }
     .header { text-align: right; }
     .brand {
-      font-size: 15px;
+      direction: ltr;
+      unicode-bidi: isolate;
+      text-align: right;
+      white-space: nowrap;
+      font-size: 14px;
       font-weight: 800;
-      letter-spacing: 0.06em;
       color: #0b1722;
+    }
+    .brand-en {
+      direction: ltr;
+      unicode-bidi: isolate;
+      letter-spacing: 0.06em;
+    }
+    .brand-sep {
+      margin: 0 0.4em;
+      font-weight: 700;
+      letter-spacing: 0;
+      color: #0b1722;
+    }
+    .brand-he {
+      direction: rtl;
+      unicode-bidi: isolate;
+      letter-spacing: 0;
     }
     .title {
       margin-top: 2px;
@@ -313,6 +344,11 @@ export function buildLensOrderDocumentHtml(
       border-collapse: collapse;
       table-layout: fixed;
     }
+    col.idx { width: 8%; }
+    col.kind { width: 18%; }
+    col.sph { width: 16%; }
+    col.cyl { width: 16%; }
+    col.order { width: 42%; }
     thead { display: table-header-group; }
     tr { break-inside: avoid; page-break-inside: avoid; }
     th, td {
@@ -363,27 +399,32 @@ export function buildLensOrderDocumentHtml(
 <body>
   <div class="sheet">
     <header class="header">
-      <p class="brand">OYON OPTICS</p>
-      <h1 class="title">طلبية عدسات</h1>
+      <p class="brand"><span class="brand-en">OYON OPTICS</span><span class="brand-sep">|</span><span class="brand-he">עיון אופטיקה</span></p>
+      <h1 class="title">רשימת הזמנה לעדשות</h1>
       <p class="date">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
     </header>
     <div class="rule"></div>
-    <p class="summary">إجمالي الأصناف: ${totals.combinations} | إجمالي الكمية: ${totals.quantity}</p>
+    <p class="summary">סה״כ שורות: ${totals.combinations} | סה״כ להזמנה: ${totals.quantity}</p>
     <table>
+      <colgroup>
+        <col class="idx" />
+        <col class="kind" />
+        <col class="sph" />
+        <col class="cyl" />
+        <col class="order" />
+      </colgroup>
       <thead>
         <tr>
           <th>#</th>
-          <th>نوع العدسة</th>
+          <th>סוג עדשה</th>
           <th>SPH</th>
           <th>CYL</th>
-          <th>المخزون الحالي</th>
-          <th>المخزون المطلوب</th>
-          <th>كمية الطلب</th>
+          <th>כמות להזמנה</th>
         </tr>
       </thead>
-      <tbody>${body || `<tr><td colspan="7">لا توجد أصناف للطلب</td></tr>`}</tbody>
+      <tbody>${body || `<tr><td colspan="5">אין פריטים להזמנה</td></tr>`}</tbody>
     </table>
-    <p class="total">إجمالي العدسات المطلوبة: ${totals.quantity}</p>
+    <p class="total">סה״כ כמות להזמנה: ${totals.quantity}</p>
     <p class="footer">OYON OPTICS</p>
   </div>
 </body>
