@@ -323,6 +323,34 @@ assert.doesNotMatch(manageApi, /\botp\b/i);
 assert.match(manageApi, /rateLimit/);
 assert.match(manageApi, /x-booking-token/);
 assert.doesNotMatch(manageApi, /searchParams\.get\("token"\)/);
+assert.match(manageClient, /\/api\/booking\/manage/);
+assert.match(manageClient, /X-Booking-Token/);
+assert.match(manageClient, /\/api\/eye-exam\/available-dates/);
+assert.match(manageClient, /\/api\/eye-exam\/available-times/);
+assert.match(manageClient, /oyon-manage-page/);
+assert.match(manageClient, /manage\.statusConfirmed/);
+assert.match(manageClient, /Asia\/Jerusalem/);
+assert.doesNotMatch(manageClient, /window\.confirm/);
+assert.doesNotMatch(manageClient, /dispatchBookingMessages/);
+assert.doesNotMatch(manageClient, /sendSms/);
+assert.match(managePage, /oyon-manage-page/);
+assert.match(managePage, /EXPIRED_MANAGE_LINK_MESSAGE/);
+
+const arManage = readFileSync(
+  join(process.cwd(), "lib/i18n/dictionaries/ar.ts"),
+  "utf8",
+);
+assert.match(arManage, /موعد مؤكد/);
+assert.match(arManage, /إدارة حجزك/);
+assert.match(arManage, /تأكيد التغيير/);
+assert.match(arManage, /إلغاء الحجز/);
+assert.match(arManage, /إعادة جدولة الموعد/);
+
+const manageCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+assert.match(manageCss, /\.oyon-manage-page/);
+assert.match(manageCss, /minmax\(0,\s*0\.42fr\)\s+minmax\(0,\s*0\.58fr\)/);
+assert.match(manageCss, /\.oyon-manage-cancel/);
+assert.match(manageCss, /\.oyon-manage-confirm/);
 
 const messaging = readFileSync(
   join(process.cwd(), "lib/booking-messaging.ts"),
