@@ -516,6 +516,11 @@ export interface AppData {
   availability: StaffAvailability[];
   eyeExamAvailability: EyeExamAvailability[];
   eyeExamAppointments: EyeExamAppointment[];
+  /**
+   * Preview/dev-only booking-manage fixtures. Never mixed into customer
+   * `eyeExamAppointments`, availability conflicts, or Production WhatsApp.
+   */
+  previewManageTestAppointments?: EyeExamAppointment[];
   bookingServices: BookingService[];
   lensInventory: LensInventoryCell[];
   settings: StoreSettings;

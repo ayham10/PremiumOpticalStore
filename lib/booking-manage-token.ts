@@ -30,6 +30,11 @@ export function bookingManageUrl(token: string): string {
   return `${BOOKING_MANAGE_ORIGIN}${BOOKING_MANAGE_PATH}/${encodeURIComponent(token)}`;
 }
 
+export function bookingManageUrlForOrigin(origin: string, token: string): string {
+  const base = origin.replace(/\/$/, "");
+  return `${base}${BOOKING_MANAGE_PATH}/${encodeURIComponent(token)}`;
+}
+
 /** Twilio CTA dynamic path parameter — not the full URL. */
 export function bookingManageUrlParam(token: string): string {
   return token;

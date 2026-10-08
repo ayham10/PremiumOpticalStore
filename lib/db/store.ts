@@ -149,6 +149,10 @@ function normalizeData(data: AppData): AppData {
       ? data.eyeExamAvailability
       : createSeedData().eyeExamAvailability,
     eyeExamAppointments,
+    previewManageTestAppointments: (data.previewManageTestAppointments || []).slice(
+      0,
+      5,
+    ),
     bookingServices,
     lensInventory: normalizeLensInventory(data.lensInventory),
     settings: {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
 import { pickLocalized } from "@/lib/booking-services";
+import { isBookingManagePreviewTestAllowed } from "@/lib/booking-manage-test";
 import {
   canCustomerMutateBooking,
   computeManageTokenExpiresAt,
@@ -10,6 +11,7 @@ import {
   manageAccessMessage,
   publicManageAppointmentView,
 } from "@/lib/booking-manage-token";
+import type { AppData, EyeExamAppointment } from "@/lib/types";
 import {
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
@@ -17,6 +19,7 @@ import {
   isValidIsoDate,
   normalizeAppointmentType,
   parseTimeToMinutes,
+  resolveAvailabilityDay,
   withEyeExamLock,
 } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
@@ -31,6 +34,25 @@ function tokenFromRequest(request: Request, body?: { token?: string }): string {
     "";
   if (header) return header;
   return (body?.token || "").trim();
+}
+
+function locateManageAppointment(
+  store: AppData,
+  token: string,
+): { appointment: EyeExamAppointment | null; previewTest: boolean } {
+  const live = findAppointmentByManageTokenHash(
+    store.eyeExamAppointments,
+    token,
+  );
+  if (live) return { appointment: live, previewTest: false };
+  if (!isBookingManagePreviewTestAllowed()) {
+    return { appointment: null, previewTest: false };
+  }
+  const preview = findAppointmentByManageTokenHash(
+    store.previewManageTestAppointments || [],
+    token,
+  );
+  return { appointment: preview, previewTest: Boolean(preview) };
 }
 
 function fail(reason: "not_found" | "expired" | "revoked") {
@@ -61,11 +83,8 @@ export async function GET(request: Request) {
 
     const token = tokenFromRequest(request);
     const { data } = await getStore();
-    const found = findAppointmentByManageTokenHash(
-      data.eyeExamAppointments,
-      token,
-    );
-    const access = evaluateManageAccess(found);
+    const located = locateManageAppointment(data, token);
+    const access = evaluateManageAccess(located.appointment);
     if (!access.ok) return noStore(fail(access.reason));
 
     const service = data.bookingServices?.find(
@@ -120,22 +139,22 @@ export async function PATCH(request: Request) {
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
-        const found = findAppointmentByManageTokenHash(
-          store.eyeExamAppointments,
-          token,
-        );
-        const access = evaluateManageAccess(found);
+        const located = locateManageAppointment(store, token);
+        const access = evaluateManageAccess(located.appointment);
         if (!access.ok) throw new Error(access.reason.toUpperCase());
         if (!canCustomerMutateBooking(access.appointment)) {
           throw new Error("NOT_MUTABLE");
         }
 
-        const index = store.eyeExamAppointments.findIndex(
+        const list = located.previewTest
+          ? store.previewManageTestAppointments || []
+          : store.eyeExamAppointments;
+        const index = list.findIndex(
           (item) => item.id === access.appointment.id,
         );
         if (index < 0) throw new Error("NOT_FOUND");
 
-        const current = store.eyeExamAppointments[index];
+        const current = list[index];
         const now = new Date().toISOString();
         const slotMinutes = store.settings.appointmentSlotMinutes || 30;
 
@@ -146,7 +165,12 @@ export async function PATCH(request: Request) {
             manageTokenRevokedAt: now,
             updatedAt: now,
           };
-          store.eyeExamAppointments[index] = updated;
+          list[index] = updated;
+          if (located.previewTest) {
+            store.previewManageTestAppointments = list;
+          } else {
+            store.eyeExamAppointments = list;
+          }
           const service = store.bookingServices?.find(
             (item) => item.key === updated.appointmentType,
           );
@@ -155,13 +179,15 @@ export async function PATCH(request: Request) {
             : updated.appointmentType;
           publicView = publicManageAppointmentView(updated, serviceLabel);
           dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
-          pushActivity(store, {
-            actor: "customer",
-            action: "cancel",
-            entity: "eye_exam_appointment",
-            entityId: current.id,
-            detail: "customer cancelled via manage link",
-          });
+          if (!located.previewTest) {
+            pushActivity(store, {
+              actor: "customer",
+              action: "cancel",
+              entity: "eye_exam_appointment",
+              entityId: current.id,
+              detail: "customer cancelled via manage link",
+            });
+          }
           return store;
         }
 
@@ -171,11 +197,20 @@ export async function PATCH(request: Request) {
         if (parseTimeToMinutes(nextTime) == null) throw new Error("INVALID_TIME");
 
         const nextType = normalizeAppointmentType(current.appointmentType);
-        const day = getOpenAvailabilityForDate(
-          store.eyeExamAvailability,
-          nextDate,
-          nextType,
+        const existingDay = store.eyeExamAvailability.find(
+          (item) => item.date === nextDate,
         );
+        const resolved = located.previewTest
+          ? resolveAvailabilityDay(existingDay, store.settings, nextDate)
+          : existingDay;
+        const day =
+          resolved && resolved.isOpen
+            ? getOpenAvailabilityForDate([resolved], nextDate, nextType)
+            : getOpenAvailabilityForDate(
+                store.eyeExamAvailability,
+                nextDate,
+                nextType,
+              );
         if (!day) throw new Error("DATE_UNAVAILABLE");
         const slot = day.slots.find((item) => item.time === nextTime && item.isEnabled);
         if (!slot) throw new Error("TIME_UNAVAILABLE");
@@ -202,7 +237,12 @@ export async function PATCH(request: Request) {
           ),
           updatedAt: now,
         };
-        store.eyeExamAppointments[index] = updated;
+        list[index] = updated;
+        if (located.previewTest) {
+          store.previewManageTestAppointments = list;
+        } else {
+          store.eyeExamAppointments = list;
+        }
         const service = store.bookingServices?.find(
           (item) => item.key === updated.appointmentType,
         );
@@ -211,13 +251,15 @@ export async function PATCH(request: Request) {
           : updated.appointmentType;
         publicView = publicManageAppointmentView(updated, serviceLabel);
         dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
-        pushActivity(store, {
-          actor: "customer",
-          action: "update",
-          entity: "eye_exam_appointment",
-          entityId: current.id,
-          detail: `customer reschedule ${nextDate} ${nextTime}`,
-        });
+        if (!located.previewTest) {
+          pushActivity(store, {
+            actor: "customer",
+            action: "update",
+            entity: "eye_exam_appointment",
+            entityId: current.id,
+            detail: `customer reschedule ${nextDate} ${nextTime}`,
+          });
+        }
         return store;
       });
     });

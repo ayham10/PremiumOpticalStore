@@ -6,6 +6,12 @@ import {
   EXPIRED_MANAGE_LINK_MESSAGE,
 } from "../lib/booking-manage-constants";
 import {
+  bookingManageOriginFromRequest,
+  isBookingManagePreviewTestAllowed,
+  shouldSkipBookingWhatsApp,
+} from "../lib/booking-manage-test";
+import { bookingManageUrlForOrigin } from "../lib/booking-manage-token";
+import {
   bookingManageUrl,
   bookingManageUrlParam,
   buildManageTemplateContentVariables,
@@ -260,5 +266,45 @@ const messaging = readFileSync(
 assert.match(messaging, /OWNER_NOTIFICATION_TEMPLATE = "owner_notification"/);
 assert.match(messaging, /APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder"/);
 assert.match(messaging, /manageTemplateEnabled === true/);
+assert.match(messaging, /shouldSkipBookingWhatsApp/);
+
+assert.equal(isBookingManagePreviewTestAllowed("production", "production"), false);
+assert.equal(isBookingManagePreviewTestAllowed("preview", "production"), true);
+assert.equal(isBookingManagePreviewTestAllowed("development", "production"), true);
+assert.equal(isBookingManagePreviewTestAllowed(undefined, "development"), true);
+assert.equal(isBookingManagePreviewTestAllowed(undefined, "production"), false);
+
+assert.equal(shouldSkipBookingWhatsApp("production", "production"), false);
+assert.equal(shouldSkipBookingWhatsApp("preview", "production"), true);
+assert.equal(shouldSkipBookingWhatsApp("development", "production"), true);
+
+const previewOrigin = bookingManageOriginFromRequest(
+  new Request("https://example.vercel.app/api/internal/booking-manage-test", {
+    headers: {
+      host: "premiumopticalstore-git-preview.vercel.app",
+      "x-forwarded-proto": "https",
+    },
+  }),
+);
+assert.equal(previewOrigin, "https://premiumopticalstore-git-preview.vercel.app");
+assert.equal(
+  bookingManageUrlForOrigin(previewOrigin, issuedA.token),
+  `https://premiumopticalstore-git-preview.vercel.app/appointments/manage/${issuedA.token}`,
+);
+assert.notEqual(previewOrigin, "https://oyonoptics.com");
+
+const testApi = readFileSync(
+  join(process.cwd(), "app/api/internal/booking-manage-test/route.ts"),
+  "utf8",
+);
+assert.doesNotMatch(testApi, /dispatchBookingMessages/);
+assert.doesNotMatch(testApi, /eyeExamAppointments\.unshift/);
+assert.match(testApi, /previewManageTestAppointments/);
+assert.match(testApi, /isBookingManagePreviewTestAllowed/);
+
+assert.equal(
+  defaults.customerConfirmation.manageTemplateEnabled,
+  false,
+);
 
 console.log("booking-manage tests passed");

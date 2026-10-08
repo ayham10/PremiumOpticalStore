@@ -27,6 +27,7 @@ import {
   buildManageTemplateContentVariables,
   CUSTOMER_MANAGE_TEMPLATE_NAME,
 } from "@/lib/booking-manage-token";
+import { shouldSkipBookingWhatsApp } from "@/lib/booking-manage-test";
 import {
   formatPhoneForWhatsAppWeb,
   isWhatsAppWebServiceConfigured,
@@ -461,6 +462,13 @@ export async function dispatchBookingMessages(
   opts?: { manageToken?: string },
 ): Promise<void> {
   try {
+    if (shouldSkipBookingWhatsApp()) {
+      console.info("[WhatsApp] skipped — Preview/dev test environment", {
+        appointmentId: appointment.id,
+      });
+      return;
+    }
+
     invalidateStoreCache();
     const { data: store } = await getStore();
     const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
@@ -579,6 +587,10 @@ export async function processDueAppointmentReminders(): Promise<{
   checked: number;
   sent: number;
 }> {
+  if (shouldSkipBookingWhatsApp()) {
+    return { checked: 0, sent: 0 };
+  }
+
   invalidateStoreCache();
   const { data: store } = await getStore();
   const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
