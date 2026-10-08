@@ -30,6 +30,7 @@ import {
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms/provider";
 import { dispatchBookingMessages } from "@/lib/booking-messaging";
+import { isBookingE2EIsolated, recordE2EManageToken } from "@/lib/booking-e2e";
 import { issueBookingManageToken } from "@/lib/booking-manage-token";
 import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
@@ -214,6 +215,26 @@ export async function POST(request: Request) {
     }
 
     const saved = savedAppointment;
+    if (issuedManageToken) {
+      recordE2EManageToken(saved.id, issuedManageToken);
+    }
+    if (isBookingE2EIsolated()) {
+      return NextResponse.json(
+        {
+          appointment: {
+            id: saved.id,
+            firstName: saved.firstName,
+            lastName: saved.lastName,
+            appointmentDate: saved.appointmentDate,
+            appointmentTime: saved.appointmentTime,
+            appointmentType: saved.appointmentType,
+            dateLabel: formatEyeExamDateDisplay(saved.appointmentDate),
+            status: saved.status,
+          },
+        },
+        { status: 201 },
+      );
+    }
     const dateDisplay = formatEyeExamDateDisplay(saved.appointmentDate);
     const smsBody = eyeExamSmsBody(
       saved.language,

@@ -20,7 +20,10 @@ import {
   removeSilentManageTestAppointment,
   SILENT_MANAGE_TEST_ID_PREFIX,
 } from "../lib/booking-silent-test";
-import { supabaseConditionalPatchPath } from "../lib/db/store";
+import {
+  parseStoreVersion,
+  supabaseConditionalPatchPath,
+} from "../lib/db/store";
 import {
   DEFAULT_BOOKING_MANAGE_TEST_STORE_ID,
   parsePreviewTestPayload,
@@ -402,6 +405,13 @@ assert.equal(
   supabaseConditionalPatchPath("lumina_store", "default", 7),
   "lumina_store?id=eq.default&payload->>version=eq.7",
 );
+assert.equal(
+  supabaseConditionalPatchPath("lumina_store", "default", null),
+  "lumina_store?id=eq.default&payload->>version=is.null",
+);
+assert.equal(parseStoreVersion(4), 4);
+assert.equal(parseStoreVersion("12"), 12);
+assert.equal(parseStoreVersion(undefined), null);
 
 const previewOrigin = bookingManageOriginFromRequest(
   new Request("https://example.vercel.app/api/internal/booking-manage-test", {

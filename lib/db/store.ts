@@ -6,6 +6,11 @@ import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { normalizeLensInventory } from "@/lib/lens-inventory";
 import { publicServicePages } from "@/lib/service-pages";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
+import {
+  getIsolatedStore,
+  isBookingE2EIsolated,
+  setIsolatedStore,
+} from "@/lib/booking-e2e";
 import { createSeedData } from "@/lib/seed";
 import type { AppData } from "@/lib/types";
 
@@ -65,12 +70,27 @@ export class StoreWriteConflictError extends Error {
   }
 }
 
+export function parseStoreVersion(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return Number.parseInt(value.trim(), 10);
+  }
+  return null;
+}
+
 export function supabaseConditionalPatchPath(
   table: string,
   rowId: string,
-  version: number,
+  version: number | null,
 ): string {
-  return `${table}?id=eq.${encodeURIComponent(rowId)}&payload->>version=eq.${version}`;
+  const id = `id=eq.${encodeURIComponent(rowId)}`;
+  const cas =
+    version == null
+      ? "payload->>version=is.null"
+      : `payload->>version=eq.${version}`;
+  return `${table}?${id}&${cas}`;
 }
 
 type RemoteStoreRow = {
@@ -100,18 +120,15 @@ async function readSupabase(): Promise<RemoteStoreRow | null> {
     updated_at?: string | null;
   }>;
   if (!rows.length || !rows[0]?.payload) return null;
-  const rawVersion = rows[0].payload.version;
   return {
     payload: rows[0].payload,
-    rawVersion: typeof rawVersion === "number" && Number.isFinite(rawVersion)
-      ? rawVersion
-      : null,
+    rawVersion: parseStoreVersion(rows[0].payload.version),
   };
 }
 
 async function writeSupabase(
   data: AppData,
-  opts?: { ifVersion?: number },
+  opts?: { ifVersion?: number | null },
 ): Promise<void> {
   const config = supabaseConfig();
   if (!config) throw new Error("Supabase is not configured");
@@ -122,11 +139,11 @@ async function writeSupabase(
     updated_at: data.updatedAt,
   });
 
-  if (opts && typeof opts.ifVersion === "number") {
+  if (opts && "ifVersion" in opts) {
     const url = `${config.url}/rest/v1/${supabaseConditionalPatchPath(
       SUPABASE_TABLE,
       SUPABASE_ROW_ID,
-      opts.ifVersion,
+      opts.ifVersion ?? null,
     )}`;
     const response = await fetch(url, {
       method: "PATCH",
@@ -232,6 +249,10 @@ function normalizeData(data: AppData): AppData {
 }
 
 export async function getStore(): Promise<{ data: AppData; storage: StorageMode }> {
+  if (isBookingE2EIsolated()) {
+    const isolated = getIsolatedStore();
+    if (isolated) return { data: isolated, storage: "filesystem" };
+  }
   const now = Date.now();
   if (
     memoryStore &&
@@ -326,14 +347,14 @@ export async function replaceStorePayload(data: AppData): Promise<void> {
 
 export async function saveStore(
   data: AppData,
-  opts?: { ifVersion?: number },
+  opts?: { ifVersion?: number | null },
 ): Promise<{ storage: StorageMode }> {
   const normalized = normalizeData(data);
   const next: AppData = {
     ...normalized,
     version:
-      typeof opts?.ifVersion === "number"
-        ? opts.ifVersion + 1
+      opts && "ifVersion" in opts
+        ? (opts.ifVersion ?? 0) + 1
         : normalized.version || 1,
     updatedAt: new Date().toISOString(),
   };
@@ -373,6 +394,14 @@ const STORE_CONFLICT_RETRIES = 4;
 export async function updateStore(
   mutator: (data: AppData) => AppData | Promise<AppData>,
 ): Promise<{ data: AppData; storage: StorageMode }> {
+  if (isBookingE2EIsolated()) {
+    const isolated = getIsolatedStore();
+    if (isolated) {
+      const next = await mutator(structuredClone(isolated));
+      setIsolatedStore(next);
+      return { data: next, storage: "filesystem" };
+    }
+  }
   let lastError: unknown;
   for (let attempt = 0; attempt <= STORE_CONFLICT_RETRIES; attempt++) {
     const { data, storage, rawVersion } = await readStoreUncached();
@@ -380,9 +409,7 @@ export async function updateStore(
     try {
       const saved = await saveStore(
         next,
-        storage === "supabase" && typeof rawVersion === "number"
-          ? { ifVersion: rawVersion }
-          : undefined,
+        storage === "supabase" ? { ifVersion: rawVersion ?? null } : undefined,
       );
       return { data: next, storage: saved.storage };
     } catch (error) {

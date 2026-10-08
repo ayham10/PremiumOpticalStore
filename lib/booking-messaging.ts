@@ -28,6 +28,7 @@ import {
   CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
   CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
 } from "@/lib/booking-manage-token";
+import { isBookingE2EIsolated, recordE2EOutbound } from "@/lib/booking-e2e";
 import { shouldSkipBookingWhatsApp } from "@/lib/booking-manage-test";
 import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
 import {
@@ -483,6 +484,10 @@ export async function dispatchBookingMessages(
   opts?: { manageToken?: string },
 ): Promise<void> {
   try {
+    if (isBookingE2EIsolated()) {
+      recordE2EOutbound("whatsapp", appointment.id);
+      return;
+    }
     if (isSilentManageTestAppointment(appointment)) {
       console.info("[WhatsApp] skipped — silent admin manage test", {
         appointmentId: appointment.id,
