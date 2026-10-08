@@ -885,6 +885,20 @@ const he: Dictionary = {
       noAvailableTimes: "אין שעות פנויות בתאריך זה.",
       conflictError:
         "השעה נתפסה זה עתה. לוח הזמנים רוענן — אנא בחרו שעה אחרת.",
+      manageLinkTitle: "קישור ניהול התור",
+      manageLinkGenerate: "יצירת קישור ניהול התור",
+      manageLinkCopy: "העתקת הקישור",
+      manageLinkOpen: "פתיחת הקישור",
+      manageLinkCopied: "הקישור הועתק",
+      manageLinkGenerating: "יוצר…",
+      manageLinkRotateConfirm:
+        "קיים קישור ניהול תקף לתור זה. יצירת קישור חדש תפסיק את פעולת הקישור הקודם. להמשיך?",
+      manageLinkOnceHint:
+        "העתיקו את הקישור עכשיו. הוא לא יוצג שוב לאחר סגירת החלון.",
+      manageLinkCancelled: "לא ניתן ליצור קישור לתור שבוטל.",
+      manageLinkExpired: "לא ניתן ליצור קישור לתור שפג תוקפו.",
+      manageLinkError: "לא ניתן ליצור את קישור הניהול.",
+      manageLinkCopyError: "לא ניתן להעתיק את הקישור.",
     },
     promotions: {
       kicker: "שיווק",

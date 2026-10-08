@@ -30,6 +30,11 @@ import {
   resolvePreviewTestStoreConfig,
 } from "../lib/booking-manage-test-store";
 import {
+  adminManageLinkStatus,
+  bookingIdentitySnapshot,
+  planAdminManageLinkGeneration,
+} from "../lib/admin-manage-link";
+import {
   bookingManageUrl,
   bookingManageUrlForOrigin,
   bookingManageUrlParam,
@@ -551,5 +556,137 @@ assert.equal(
   defaults.customerConfirmation.manageTemplateEnabled,
   false,
 );
+
+const futureBooking = appointment({
+  id: "eea_admin_link",
+  firstName: "نور",
+  lastName: "خالد",
+  appointmentDate: "2099-03-15",
+  appointmentTime: "10:30",
+  status: "confirmed",
+});
+const firstIssue = planAdminManageLinkGeneration(futureBooking);
+assert.equal(firstIssue.ok, true);
+if (!firstIssue.ok) throw new Error("expected first admin link issue");
+assert.equal(firstIssue.rotated, false);
+assert.equal(firstIssue.next.manageTokenHash, hashBookingManageToken(firstIssue.token));
+assert.notEqual(firstIssue.next.manageTokenHash, firstIssue.token);
+assert.equal("manageToken" in firstIssue.next, false);
+assert.deepEqual(
+  bookingIdentitySnapshot(firstIssue.next),
+  bookingIdentitySnapshot(futureBooking),
+);
+const firstStatus = adminManageLinkStatus(firstIssue.next, 30, new Date("2099-03-01T00:00:00.000Z"));
+assert.equal(firstStatus.hasValidLink, true);
+assert.equal(firstStatus.canGenerate, true);
+
+const withoutConfirm = planAdminManageLinkGeneration(firstIssue.next);
+assert.equal(withoutConfirm.ok, false);
+if (!withoutConfirm.ok) assert.equal(withoutConfirm.error, "NEEDS_CONFIRM");
+
+const rotated = planAdminManageLinkGeneration(firstIssue.next, {
+  confirmRotate: true,
+});
+assert.equal(rotated.ok, true);
+if (!rotated.ok) throw new Error("expected rotate");
+assert.equal(rotated.rotated, true);
+assert.notEqual(rotated.token, firstIssue.token);
+assert.notEqual(rotated.next.manageTokenHash, firstIssue.next.manageTokenHash);
+assert.deepEqual(
+  bookingIdentitySnapshot(rotated.next),
+  bookingIdentitySnapshot(firstIssue.next),
+);
+assert.equal(
+  findAppointmentByManageTokenHash([rotated.next], firstIssue.token),
+  null,
+);
+assert.equal(
+  findAppointmentByManageTokenHash([rotated.next], rotated.token)?.id,
+  "eea_admin_link",
+);
+
+const cancelledIssue = planAdminManageLinkGeneration(
+  { ...futureBooking, status: "cancelled" },
+  { confirmRotate: true },
+);
+assert.equal(cancelledIssue.ok, false);
+if (!cancelledIssue.ok) assert.equal(cancelledIssue.error, "CANCELLED");
+assert.equal(
+  adminManageLinkStatus({ ...futureBooking, status: "cancelled" }).reason,
+  "cancelled",
+);
+
+const expiredIssue = planAdminManageLinkGeneration(
+  { ...futureBooking, appointmentDate: "2000-01-02", appointmentTime: "09:00" },
+  { confirmRotate: true },
+);
+assert.equal(expiredIssue.ok, false);
+if (!expiredIssue.ok) assert.equal(expiredIssue.error, "EXPIRED");
+
+const silentIssue = planAdminManageLinkGeneration({
+  ...futureBooking,
+  id: "eea_test_admin_link",
+  silentTest: true,
+});
+assert.equal(silentIssue.ok, false);
+if (!silentIssue.ok) assert.equal(silentIssue.error, "SILENT_TEST");
+
+const productionManageUrl = bookingManageUrlForOrigin(
+  "https://oyonoptics.com",
+  firstIssue.token,
+);
+assert.equal(
+  productionManageUrl,
+  `https://oyonoptics.com/appointments/manage/${firstIssue.token}`,
+);
+
+const manageLinkRoute = readFileSync(
+  join(process.cwd(), "app/api/admin/eye-exam/appointments/manage-link/route.ts"),
+  "utf8",
+);
+assert.match(manageLinkRoute, /role !== "admin"/);
+assert.match(manageLinkRoute, /planAdminManageLinkGeneration/);
+assert.match(manageLinkRoute, /bookingManageUrlForOrigin/);
+assert.match(manageLinkRoute, /needsConfirm: true/);
+assert.doesNotMatch(manageLinkRoute, /dispatchBookingMessages/);
+assert.doesNotMatch(manageLinkRoute, /sendSms/);
+assert.doesNotMatch(manageLinkRoute, /manageToken(?!Hash)/);
+
+const adminAppointmentsRoute = readFileSync(
+  join(process.cwd(), "app/api/admin/eye-exam/appointments/route.ts"),
+  "utf8",
+);
+assert.doesNotMatch(adminAppointmentsRoute, /issueBookingManageToken/);
+assert.doesNotMatch(adminAppointmentsRoute, /generateBookingManageToken/);
+assert.doesNotMatch(adminAppointmentsRoute, /dispatchBookingMessages/);
+assert.match(adminAppointmentsRoute, /computeManageTokenExpiresAt/);
+
+const editBookingPage = readFileSync(
+  join(process.cwd(), "app/admin/eye-exam/page.tsx"),
+  "utf8",
+);
+assert.match(editBookingPage, /admin-edit-booking-manage/);
+assert.match(editBookingPage, /admin\.bookings\.manageLinkTitle/);
+assert.match(editBookingPage, /admin\.bookings\.manageLinkGenerate/);
+assert.match(editBookingPage, /admin\.bookings\.manageLinkCopy/);
+assert.match(editBookingPage, /admin\.bookings\.manageLinkOpen/);
+assert.match(editBookingPage, /isAdmin/);
+assert.doesNotMatch(editBookingPage, /dispatchBookingMessages/);
+
+const arBookings = readFileSync(
+  join(process.cwd(), "lib/i18n/dictionaries/ar.ts"),
+  "utf8",
+);
+assert.match(arBookings, /رابط إدارة الموعد/);
+assert.match(arBookings, /إنشاء رابط إدارة الموعد/);
+assert.match(arBookings, /نسخ الرابط/);
+assert.match(arBookings, /فتح الرابط/);
+
+const editBookingCss = readFileSync(
+  join(process.cwd(), "app/globals.css"),
+  "utf8",
+);
+assert.match(editBookingCss, /admin-edit-booking-manage-generate/);
+assert.match(editBookingCss, /\.admin-edit-booking-manage[\s\S]*overflow-x:\s*hidden/);
 
 console.log("booking-manage tests passed");

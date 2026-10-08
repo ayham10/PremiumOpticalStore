@@ -885,6 +885,20 @@ const ar: Dictionary = {
       noAvailableTimes: "لا توجد أوقات متاحة في هذا التاريخ.",
       conflictError:
         "تم حجز هذا الوقت للتو. تم تحديث الجدول — يرجى اختيار وقت آخر.",
+      manageLinkTitle: "رابط إدارة الموعد",
+      manageLinkGenerate: "إنشاء رابط إدارة الموعد",
+      manageLinkCopy: "نسخ الرابط",
+      manageLinkOpen: "فتح الرابط",
+      manageLinkCopied: "تم نسخ الرابط",
+      manageLinkGenerating: "جارٍ الإنشاء…",
+      manageLinkRotateConfirm:
+        "يوجد رابط إدارة صالح لهذا الموعد. إنشاء رابط جديد سيوقف الرابط السابق ولن يعمل بعد ذلك. هل تريد المتابعة؟",
+      manageLinkOnceHint:
+        "انسخ الرابط الآن. لن يظهر مرة أخرى بعد إغلاق هذه النافذة.",
+      manageLinkCancelled: "لا يمكن إنشاء رابط لموعد ملغى.",
+      manageLinkExpired: "لا يمكن إنشاء رابط لموعد منتهٍ.",
+      manageLinkError: "تعذر إنشاء رابط الإدارة.",
+      manageLinkCopyError: "تعذر نسخ الرابط.",
     },
     promotions: {
       kicker: "التسويق",

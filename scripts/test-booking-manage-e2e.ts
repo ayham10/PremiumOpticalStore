@@ -24,8 +24,13 @@ const {
   EXPIRED_MANAGE_LINK_MESSAGE,
 } = await import("../lib/booking-manage-constants");
 const {
+  bookingIdentitySnapshot,
+  planAdminManageLinkGeneration,
+} = await import("../lib/admin-manage-link");
+const {
   buildManageTemplateContentVariables,
   bookingManageUrlParam,
+  findAppointmentByManageTokenHash,
   hashBookingManageToken,
 } = await import("../lib/booking-manage-token");
 const { listBookableTimes } = await import("../lib/eye-exam");
@@ -176,6 +181,77 @@ assert.equal(
   "Dana Cohen",
 );
 
+const storeBeforeRotate = getIsolatedStore();
+assert.ok(storeBeforeRotate);
+const secondRow = storeBeforeRotate!.eyeExamAppointments.find(
+  (item) => item.id === second.appointment.id,
+);
+assert.ok(secondRow);
+const identityBefore = bookingIdentitySnapshot(secondRow!);
+const unconfirmed = planAdminManageLinkGeneration(secondRow!);
+assert.equal(unconfirmed.ok, false);
+if (!unconfirmed.ok) assert.equal(unconfirmed.error, "NEEDS_CONFIRM");
+
+const adminLink = planAdminManageLinkGeneration(secondRow!, {
+  confirmRotate: true,
+});
+assert.equal(adminLink.ok, true);
+if (!adminLink.ok) throw new Error("expected admin rotate");
+assert.notEqual(adminLink.token, second.token);
+assert.deepEqual(bookingIdentitySnapshot(adminLink.next), identityBefore);
+const rotatedStore = getIsolatedStore();
+assert.ok(rotatedStore);
+const rotateIndex = rotatedStore!.eyeExamAppointments.findIndex(
+  (item) => item.id === second.appointment.id,
+);
+rotatedStore!.eyeExamAppointments[rotateIndex] = adminLink.next;
+setIsolatedStore(rotatedStore!);
+assert.equal(
+  findAppointmentByManageTokenHash(
+    getIsolatedStore()!.eyeExamAppointments,
+    second.token,
+  ),
+  null,
+);
+
+const oldTokenGet = await manageGet(
+  jsonRequest("http://localhost/api/booking/manage", {
+    headers: { "x-booking-token": second.token },
+  }),
+);
+assert.equal(oldTokenGet.status, 404);
+
+const rotatedGet = await manageGet(
+  jsonRequest("http://localhost/api/booking/manage", {
+    headers: { "x-booking-token": adminLink.token },
+  }),
+);
+const rotatedView = await readJson(rotatedGet);
+assert.equal(rotatedGet.status, 200);
+assert.equal("otp" in rotatedView, false);
+assert.equal(
+  (rotatedView.appointment as { customerName: string }).customerName,
+  "Dana Cohen",
+);
+
+const cancelledBlock = planAdminManageLinkGeneration(
+  { ...adminLink.next, status: "cancelled" },
+  { confirmRotate: true },
+);
+assert.equal(cancelledBlock.ok, false);
+if (!cancelledBlock.ok) assert.equal(cancelledBlock.error, "CANCELLED");
+
+const expiredBlock = planAdminManageLinkGeneration(
+  {
+    ...adminLink.next,
+    appointmentDate: "2000-01-02",
+    appointmentTime: "09:00",
+  },
+  { confirmRotate: true },
+);
+assert.equal(expiredBlock.ok, false);
+if (!expiredBlock.ok) assert.equal(expiredBlock.error, "EXPIRED");
+
 const timesRes = await availableTimesGet(
   jsonRequest(
     `http://localhost/api/eye-exam/available-times?date=${slot!.date}&type=${slot!.appointmentType}`,
@@ -260,15 +336,15 @@ assert.equal(invalidGet.status, 404);
 
 const live = getIsolatedStore();
 assert.ok(live);
-const secondRow = live!.eyeExamAppointments.find(
+const rotatedRow = live!.eyeExamAppointments.find(
   (item) => item.id === second.appointment.id,
 );
-assert.ok(secondRow);
-secondRow!.manageTokenExpiresAt = "2000-01-01T00:00:00.000Z";
+assert.ok(rotatedRow);
+rotatedRow!.manageTokenExpiresAt = "2000-01-01T00:00:00.000Z";
 setIsolatedStore(live!);
 const expiredGet = await manageGet(
   jsonRequest("http://localhost/api/booking/manage", {
-    headers: { "x-booking-token": second.token },
+    headers: { "x-booking-token": adminLink.token },
   }),
 );
 const expiredBody = await readJson(expiredGet);
@@ -314,6 +390,24 @@ assert.doesNotMatch(
 );
 const storeSource = readFileSync(join(process.cwd(), "lib/db/store.ts"), "utf8");
 assert.match(storeSource, /payload->>version=is\.null/);
+const manageLinkSource = readFileSync(
+  join(process.cwd(), "app/api/admin/eye-exam/appointments/manage-link/route.ts"),
+  "utf8",
+);
+assert.match(manageLinkSource, /role !== "admin"/);
+assert.doesNotMatch(manageLinkSource, /dispatchBookingMessages/);
+assert.doesNotMatch(manageLinkSource, /sendSms/);
+const patchAppointmentsSource = readFileSync(
+  join(process.cwd(), "app/api/admin/eye-exam/appointments/route.ts"),
+  "utf8",
+);
+assert.doesNotMatch(patchAppointmentsSource, /issueBookingManageToken/);
+const editModalSource = readFileSync(
+  join(process.cwd(), "app/admin/eye-exam/page.tsx"),
+  "utf8",
+);
+assert.match(editModalSource, /admin-edit-booking-manage/);
+assert.match(editModalSource, /admin\.bookings\.manageLinkGenerate/);
 
 endIsolatedStore();
 console.log("booking-manage isolated handler e2e passed");

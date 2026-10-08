@@ -1254,6 +1254,22 @@ const en: Dictionary = {
       noAvailableTimes: "No available times on this date.",
       conflictError:
         "That time was just taken. The schedule has been refreshed — please pick another slot.",
+      manageLinkTitle: "Appointment management link",
+      manageLinkGenerate: "Generate management link",
+      manageLinkCopy: "Copy link",
+      manageLinkOpen: "Open link",
+      manageLinkCopied: "Link copied",
+      manageLinkGenerating: "Generating…",
+      manageLinkRotateConfirm:
+        "A valid management link already exists for this appointment. Generating a new link will stop the previous one from working. Continue?",
+      manageLinkOnceHint:
+        "Copy the link now. It will not be shown again after this window is closed.",
+      manageLinkCancelled:
+        "A management link cannot be generated for a canceled appointment.",
+      manageLinkExpired:
+        "A management link cannot be generated for an expired appointment.",
+      manageLinkError: "Could not generate the management link.",
+      manageLinkCopyError: "Could not copy the link.",
     },
     promotions: {
       kicker: "Marketing",
