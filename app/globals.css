@@ -16354,12 +16354,11 @@ body > .admin-save-notice,
 }
 
 .admin-lens-page {
-  --lens-sph-w: 64px;
-  --lens-cyl-w: 50px;
+  --lens-sph-w: 14%;
+  --lens-cyl-w: calc(86% / 9);
   --lens-row-h: 32px;
   --lens-head-h: 32px;
   --lens-cols: 9;
-  --lens-table-w: calc(var(--lens-sph-w) + (var(--lens-cyl-w) * var(--lens-cols)));
   --lens-bg: #07111a;
   --lens-cell: #0d1a25;
   --lens-cell-inner: #101e2a;
@@ -16433,9 +16432,9 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
 }
 
 .admin-lens-matrix {
-  width: var(--lens-table-w);
-  min-width: var(--lens-table-w);
-  max-width: var(--lens-table-w);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   border-spacing: 0;
@@ -16454,15 +16453,17 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
 
 .admin-lens-matrix th,
 .admin-lens-matrix td {
-  width: var(--lens-cyl-w);
+  width: auto;
   height: var(--lens-row-h);
-  min-width: var(--lens-cyl-w);
-  max-width: var(--lens-cyl-w);
+  min-width: 0;
+  max-width: none;
   padding: 0;
   border: 1px solid var(--lens-line);
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
   box-sizing: border-box;
   background: var(--lens-cell);
 }
@@ -16482,8 +16483,8 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   left: 0;
   z-index: 2;
   width: var(--lens-sph-w);
-  min-width: var(--lens-sph-w);
-  max-width: var(--lens-sph-w);
+  min-width: 0;
+  max-width: none;
   background: var(--lens-sph);
   color: #f2f6f8;
   font-size: 0.66rem;
@@ -16760,8 +16761,8 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
   .admin-lens-matrix th:first-child,
   .admin-lens-matrix td:first-child {
     width: var(--lens-sph-w);
-    min-width: var(--lens-sph-w);
-    max-width: var(--lens-sph-w);
+    min-width: 0;
+    max-width: none;
   }
 }
 
