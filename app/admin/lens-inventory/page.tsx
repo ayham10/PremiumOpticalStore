@@ -443,7 +443,7 @@ function LensMatrix({
         <table className="admin-lens-matrix" dir="ltr">
           <colgroup>
             <col className="admin-lens-col-sph" />
-            <col className="admin-lens-col-cyl" />
+            <col className="admin-lens-col-sph-only" />
             {LENS_CYL.map((cyl) => (
               <col key={cyl} className="admin-lens-col-cyl" />
             ))}
