@@ -199,6 +199,11 @@ assert.match(html, /lang="he"/);
 assert.match(html, /dir="rtl"/);
 assert.match(html, /Noto Sans Hebrew/);
 assert.match(html, /OYON OPTICS/);
+assert.match(html, /עיון אופטיקה/);
+assert.match(
+  html,
+  /class="brand-en">OYON OPTICS<\/span><span class="brand-sep">\|<\/span><span class="brand-he">עיון אופטיקה<\/span>/,
+);
 assert.match(html, /רשימת הזמנה לעדשות/);
 assert.match(html, /סה״כ שורות: 4/);
 assert.match(html, /סה״כ להזמנה: 10/);

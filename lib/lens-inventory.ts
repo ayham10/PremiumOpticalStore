@@ -298,10 +298,29 @@ export function buildLensOrderDocumentHtml(
     .sheet { max-width: 190mm; margin: 0 auto; }
     .header { text-align: right; }
     .brand {
-      font-size: 15px;
+      direction: ltr;
+      unicode-bidi: isolate;
+      text-align: right;
+      white-space: nowrap;
+      font-size: 14px;
       font-weight: 800;
-      letter-spacing: 0.06em;
       color: #0b1722;
+    }
+    .brand-en {
+      direction: ltr;
+      unicode-bidi: isolate;
+      letter-spacing: 0.06em;
+    }
+    .brand-sep {
+      margin: 0 0.4em;
+      font-weight: 700;
+      letter-spacing: 0;
+      color: #0b1722;
+    }
+    .brand-he {
+      direction: rtl;
+      unicode-bidi: isolate;
+      letter-spacing: 0;
     }
     .title {
       margin-top: 2px;
@@ -380,7 +399,7 @@ export function buildLensOrderDocumentHtml(
 <body>
   <div class="sheet">
     <header class="header">
-      <p class="brand">OYON OPTICS</p>
+      <p class="brand"><span class="brand-en">OYON OPTICS</span><span class="brand-sep">|</span><span class="brand-he">עיון אופטיקה</span></p>
       <h1 class="title">רשימת הזמנה לעדשות</h1>
       <p class="date">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
     </header>
