@@ -14,6 +14,10 @@ import {
   parseTimeToMinutes,
   sanitizeName,
 } from "@/lib/eye-exam";
+import {
+  computeManageTokenExpiresAt,
+  omitManageTokenSecrets,
+} from "@/lib/booking-manage-token";
 import type {
   ClinicAppointmentType,
   EyeExamAppointmentStatus,
@@ -76,7 +80,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       appointments: items.map((a) => ({
-        ...a,
+        ...omitManageTokenSecrets(a),
         appointmentType: normalizeAppointmentType(a.appointmentType),
         dateLabel: formatEyeExamDateDisplay(a.appointmentDate),
         fullName: `${a.firstName} ${a.lastName}`.trim(),
@@ -178,6 +182,7 @@ export async function PATCH(request: Request) {
         }
       }
 
+      const slotMinutes = store.settings.appointmentSlotMinutes || 30;
       updated = {
         ...current,
         firstName,
@@ -188,6 +193,13 @@ export async function PATCH(request: Request) {
         appointmentTime: nextTime,
         appointmentType: nextType,
         status: nextStatus,
+        manageTokenExpiresAt: scheduleChanged
+          ? computeManageTokenExpiresAt(nextDate, nextTime, slotMinutes)
+          : current.manageTokenExpiresAt,
+        manageTokenRevokedAt:
+          nextStatus === "cancelled"
+            ? current.manageTokenRevokedAt || new Date().toISOString()
+            : current.manageTokenRevokedAt,
         updatedAt: new Date().toISOString(),
       };
       store.eyeExamAppointments[index] = updated;
@@ -205,7 +217,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       appointment: {
-        ...updated!,
+        ...omitManageTokenSecrets(updated!),
         appointmentType: normalizeAppointmentType(updated!.appointmentType),
         dateLabel: formatEyeExamDateDisplay(updated!.appointmentDate),
         fullName: `${updated!.firstName} ${updated!.lastName}`.trim(),

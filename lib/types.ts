@@ -177,6 +177,10 @@ export interface EyeExamAppointment {
   notes?: string;
   smsStatus: "queued" | "sent" | "failed" | "simulated" | "pending";
   smsError?: string;
+  /** SHA-256 hex of the WhatsApp management token. Never store the raw token. */
+  manageTokenHash?: string;
+  manageTokenExpiresAt?: string;
+  manageTokenRevokedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -358,6 +362,11 @@ export interface BookingMessagesSettings {
     enabled: boolean;
     templateName: string;
     body: string;
+    /** Pending Twilio CTA template. Off until Meta approval. */
+    manageTemplateName?: string;
+    manageTemplateEnabled?: boolean;
+    /** Twilio Content SID (HX…). Configured after Meta approval; never hardcode secrets. */
+    manageTemplateContentSid?: string;
   };
   ownerNotification: {
     enabled: boolean;

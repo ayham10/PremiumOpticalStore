@@ -981,7 +981,9 @@ const en: Dictionary = {
   manage: {
     eyebrow: "Appointments",
     title: "Manage your booking",
-    lead: "Enter your booking code to view, reschedule, or cancel.",
+    lead: "View and manage your appointment from the secure WhatsApp link.",
+    service: "Service",
+    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
     token: "Booking code",
     find: "Find booking",
     loading: "Loading…",
@@ -1573,6 +1575,14 @@ const en: Dictionary = {
       bmMetaTestSuccess: "Meta WhatsApp Cloud API connected.",
       bmMetaTestError: "Meta connection test failed.",
       bmCustomer: "Customer confirmation",
+      bmManageTemplate: "Booking management template",
+      bmManageTemplateName: "oyon_booking_manage_v2_ar",
+      bmManageTemplateHint:
+        "Pending Meta approval. Keep this off until the Twilio Content SID is mapped in TWILIO_WHATSAPP_CONTENT_SIDS. Live bookings keep using the current confirmation template.",
+      bmManageTemplateEnable: "Activate after approval",
+      bmManageTemplateSid: "Twilio Content SID",
+      bmManageTemplateSidHint:
+        "Paste the HX Content SID after Meta approval. Do not store Account SID or Auth Token here.",
       bmOwner: "Owner notification",
       bmReminder: "Appointment reminder",
       bmEnabled: "Enabled",

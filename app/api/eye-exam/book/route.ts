@@ -30,6 +30,7 @@ import {
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms/provider";
 import { dispatchBookingMessages } from "@/lib/booking-messaging";
+import { issueBookingManageToken } from "@/lib/booking-manage-token";
 import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
     }
 
     let savedAppointment: EyeExamAppointment | undefined;
+    let issuedManageToken: string | undefined;
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
@@ -160,6 +162,13 @@ export async function POST(request: Request) {
         }
 
         const now = new Date().toISOString();
+        const slotMinutes = store.settings.appointmentSlotMinutes || 30;
+        const issued = issueBookingManageToken(
+          appointmentDate,
+          appointmentTime,
+          slotMinutes,
+        );
+        issuedManageToken = issued.token;
         const created: EyeExamAppointment = {
           id: newId("eea"),
           firstName,
@@ -173,6 +182,9 @@ export async function POST(request: Request) {
           language,
           ...(notes ? { notes } : {}),
           smsStatus: "pending",
+          manageTokenHash: issued.manageTokenHash,
+          manageTokenExpiresAt: issued.manageTokenExpiresAt,
+          manageTokenRevokedAt: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -232,7 +244,9 @@ export async function POST(request: Request) {
     const saved = savedAppointment;
 
     after(async () => {
-      await dispatchBookingMessages(saved);
+      await dispatchBookingMessages(saved, {
+        manageToken: issuedManageToken,
+      });
     });
 
     return NextResponse.json(

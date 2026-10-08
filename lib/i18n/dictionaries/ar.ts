@@ -612,7 +612,9 @@ const ar: Dictionary = {
   manage: {
     eyebrow: "المواعيد",
     title: "إدارة حجزك",
-    lead: "أدخل رمز الحجز للعرض أو إعادة الجدولة أو الإلغاء.",
+    lead: "عرض تفاصيل الموعد وإدارته من رابط واتساب الآمن.",
+    service: "الخدمة",
+    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
     token: "رمز الحجز",
     find: "البحث عن الحجز",
     loading: "جارٍ التحميل…",
@@ -1201,6 +1203,14 @@ const ar: Dictionary = {
       bmMetaTestSuccess: "تم الاتصال بـ Meta WhatsApp Cloud API.",
       bmMetaTestError: "فشل اختبار اتصال Meta.",
       bmCustomer: "تأكيد العميل",
+      bmManageTemplate: "قالب إدارة الموعد",
+      bmManageTemplateName: "oyon_booking_manage_v2_ar",
+      bmManageTemplateHint:
+        "بانتظار موافقة Meta. أبقِ هذا الخيار متوقفاً حتى يتم ربط Content SID في TWILIO_WHATSAPP_CONTENT_SIDS. الحجوزات الحالية تبقى على قالب التأكيد المعتمد.",
+      bmManageTemplateEnable: "تفعيل بعد الموافقة",
+      bmManageTemplateSid: "Twilio Content SID",
+      bmManageTemplateSidHint:
+        "الصق معرّف Content SID (HX…) بعد موافقة Meta. لا تضع هنا Account SID أو Auth Token.",
       bmOwner: "إشعار المالك",
       bmReminder: "تذكير الموعد",
       bmEnabled: "مفعّل",

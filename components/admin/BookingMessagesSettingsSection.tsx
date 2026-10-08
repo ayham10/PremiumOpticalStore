@@ -839,6 +839,68 @@ export default function BookingMessagesSettingsSection({
       <section className="admin-bm-card">
         <header className="admin-bm-card-head">
           <span className="admin-bm-card-title">
+            <MessageCircle className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
+            {t("admin.settings.bmManageTemplate")}
+          </span>
+          <ToggleRow
+            id="bm-manage-template-enabled"
+            label={t("admin.settings.bmManageTemplateEnable")}
+            checked={value.customerConfirmation.manageTemplateEnabled === true}
+            onChange={(manageTemplateEnabled) =>
+              onChange({
+                ...value,
+                customerConfirmation: {
+                  ...value.customerConfirmation,
+                  manageTemplateEnabled,
+                },
+              })
+            }
+          />
+        </header>
+        <p className="admin-bm-hint">{t("admin.settings.bmManageTemplateHint")}</p>
+        <div className="admin-bm-field">
+          <label className="admin-bm-field-label" htmlFor="bm-manage-content-sid">
+            {t("admin.settings.bmManageTemplateSid")}
+          </label>
+          <input
+            id="bm-manage-content-sid"
+            className="input admin-bm-input"
+            dir="ltr"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="HX…"
+            value={value.customerConfirmation.manageTemplateContentSid || ""}
+            onChange={(e) =>
+              onChange({
+                ...value,
+                customerConfirmation: {
+                  ...value.customerConfirmation,
+                  manageTemplateContentSid: e.target.value.trim(),
+                },
+              })
+            }
+          />
+          <p className="admin-bm-placeholders">
+            {t("admin.settings.bmManageTemplateSidHint")}
+          </p>
+        </div>
+        <WhatsAppMessagePreview
+          templateName={
+            value.customerConfirmation.manageTemplateName ||
+            t("admin.settings.bmManageTemplateName")
+          }
+          text={`{{1}} ${t("common.name")}
+{{2}} ${t("manage.service")}
+{{3}} ${t("common.date")}
+{{4}} ${t("common.time")}
+{{5}} https://oyonoptics.com/appointments/manage/{{5}}`}
+          disabled={!value.customerConfirmation.manageTemplateEnabled}
+        />
+      </section>
+
+      <section className="admin-bm-card">
+        <header className="admin-bm-card-head">
+          <span className="admin-bm-card-title">
             <UserRound className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
             {t("admin.settings.bmOwner")}
           </span>

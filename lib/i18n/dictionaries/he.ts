@@ -612,7 +612,9 @@ const he: Dictionary = {
   manage: {
     eyebrow: "תורים",
     title: "ניהול התור",
-    lead: "הזינו את קוד ההזמנה לצפייה, שינוי מועד או ביטול.",
+    lead: "צפייה בפרטי התור וניהולו דרך קישור WhatsApp מאובטח.",
+    service: "שירות",
+    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
     token: "קוד הזמנה",
     find: "איתור תור",
     loading: "טוען…",
@@ -1201,6 +1203,14 @@ const he: Dictionary = {
       bmMetaTestSuccess: "החיבור ל-Meta WhatsApp Cloud API הצליח.",
       bmMetaTestError: "בדיקת חיבור Meta נכשלה.",
       bmCustomer: "אישור ללקוח",
+      bmManageTemplate: "תבנית ניהול תור",
+      bmManageTemplateName: "oyon_booking_manage_v2_ar",
+      bmManageTemplateHint:
+        "ממתין לאישור Meta. השאירו כבוי עד מיפוי Content SID ב-TWILIO_WHATSAPP_CONTENT_SIDS. הזמנות חיות ממשיכות בתבנית האישור הקיימת.",
+      bmManageTemplateEnable: "הפעלה לאחר אישור",
+      bmManageTemplateSid: "Twilio Content SID",
+      bmManageTemplateSidHint:
+        "הדביקו את ה-Content SID (HX…) לאחר אישור Meta. אל תשמרו כאן Account SID או Auth Token.",
       bmOwner: "התראה לבעלים",
       bmReminder: "תזכורת תור",
       bmEnabled: "פעיל",
