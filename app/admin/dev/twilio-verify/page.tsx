@@ -9,6 +9,7 @@ type StatusPayload = {
   enabled: boolean;
   configured: boolean;
   missing: string[];
+  runtime?: "production" | "preview" | "development" | "local";
 };
 
 type ActionPayload = {
@@ -90,14 +91,25 @@ export default function AdminTwilioVerifyOtpTestPage() {
 
       {blocked ? (
         <section className="admin-card">
-          <p>This OTP test is not available in Production.</p>
+          <p>
+            This OTP test is disabled in this environment
+            {status?.runtime ? ` (${status.runtime})` : ""}. It is never
+            available on Vercel Production.
+          </p>
         </section>
+      ) : null}
+
+      {status?.enabled ? (
+        <p className="admin-muted">Environment: {status.runtime || "unknown"}</p>
       ) : null}
 
       {status?.enabled && !status.configured ? (
         <section className="admin-card">
           <h2>Missing server environment variables</h2>
-          <p>Set these on the local server, then restart npm run dev:</p>
+          <p>
+            Add these to Vercel Preview (or <code>.env.local</code>), then
+            redeploy / restart:
+          </p>
           <ul>
             {missingVars.map((name) => (
               <li key={name}>

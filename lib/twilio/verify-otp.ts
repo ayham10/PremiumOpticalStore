@@ -27,10 +27,13 @@ const buckets: RateBuckets = {
   verifyPhone: new Map(),
 };
 
+export type TwilioVerifyRuntime = "production" | "preview" | "development" | "local";
+
 export type TwilioVerifyOtpStatus = {
   enabled: boolean;
   configured: boolean;
   missing: string[];
+  runtime: TwilioVerifyRuntime;
 };
 
 export type TwilioVerifyOtpResult = {
@@ -43,13 +46,31 @@ export type TwilioVerifyOtpResult = {
   error?: string;
 };
 
+function envRecordValue(env: NodeJS.ProcessEnv | undefined, name: string): string {
+  const value = env?.[name];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** Bracket access avoids Next.js build-time inlining of VERCEL_ENV. */
+export function readTwilioVerifyRuntime(
+  vercelEnv?: string,
+  env: NodeJS.ProcessEnv = process.env,
+): TwilioVerifyRuntime {
+  const raw = (vercelEnv ?? envRecordValue(env, "VERCEL_ENV")).toLowerCase();
+  if (raw === "production") return "production";
+  if (raw === "preview") return "preview";
+  if (raw === "development") return "development";
+  return "local";
+}
+
 export function isTwilioVerifyOtpTestAllowed(
-  vercelEnv: string | undefined = process.env.VERCEL_ENV,
-  allowFlag: string | undefined = process.env.ALLOW_TWILIO_VERIFY_OTP_TEST,
+  vercelEnv?: string,
+  _allowFlag?: string,
+  env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  if (vercelEnv === "production") return false;
-  if (allowFlag === "1") return true;
-  return !vercelEnv || vercelEnv === "development";
+  const runtime = readTwilioVerifyRuntime(vercelEnv, env);
+  if (runtime === "production") return false;
+  return runtime === "preview" || runtime === "development" || runtime === "local";
 }
 
 export function listMissingTwilioVerifyOtpVars(
@@ -73,19 +94,21 @@ export function getTwilioVerifyServiceSid(
 }
 
 export function getTwilioVerifyOtpStatus(
-  vercelEnv: string | undefined = process.env.VERCEL_ENV,
-  allowFlag: string | undefined = process.env.ALLOW_TWILIO_VERIFY_OTP_TEST,
+  vercelEnv?: string,
+  allowFlag?: string,
   env: NodeJS.ProcessEnv = process.env,
 ): TwilioVerifyOtpStatus {
-  const enabled = isTwilioVerifyOtpTestAllowed(vercelEnv, allowFlag);
+  const runtime = readTwilioVerifyRuntime(vercelEnv, env);
+  const enabled = isTwilioVerifyOtpTestAllowed(vercelEnv, allowFlag, env);
   if (!enabled) {
-    return { enabled: false, configured: false, missing: [] };
+    return { enabled: false, configured: false, missing: [], runtime };
   }
   const missing = listMissingTwilioVerifyOtpVars(env);
   return {
     enabled: true,
     configured: missing.length === 0,
     missing,
+    runtime,
   };
 }
 

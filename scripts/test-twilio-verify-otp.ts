@@ -19,7 +19,7 @@ assert.equal(normalizeIsraeliPhone("123"), null);
 
 assert.equal(isTwilioVerifyOtpTestAllowed(undefined), true);
 assert.equal(isTwilioVerifyOtpTestAllowed("development"), true);
-assert.equal(isTwilioVerifyOtpTestAllowed("preview"), false);
+assert.equal(isTwilioVerifyOtpTestAllowed("preview"), true);
 assert.equal(isTwilioVerifyOtpTestAllowed("production"), false);
 assert.equal(isTwilioVerifyOtpTestAllowed("preview", "1"), true);
 assert.equal(isTwilioVerifyOtpTestAllowed("production", "1"), false);
@@ -42,6 +42,15 @@ const prodStatus = getTwilioVerifyOtpStatus("production", undefined, {
 });
 assert.equal(prodStatus.enabled, false);
 assert.equal(prodStatus.configured, false);
+assert.equal(prodStatus.runtime, "production");
+
+const previewStatus = getTwilioVerifyOtpStatus("preview", undefined, {
+  TWILIO_ACCOUNT_SID: "AC123",
+  TWILIO_AUTH_TOKEN: "secret",
+});
+assert.equal(previewStatus.enabled, true);
+assert.equal(previewStatus.configured, true);
+assert.equal(previewStatus.runtime, "preview");
 
 assert.equal(
   getTwilioVerifyServiceSid({}),

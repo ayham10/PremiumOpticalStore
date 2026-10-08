@@ -25,9 +25,10 @@ function blocked() {
  */
 export async function GET() {
   try {
-    if (!isTwilioVerifyOtpTestAllowed()) return blocked();
+    const status = getTwilioVerifyOtpStatus();
+    if (status.runtime === "production" || !status.enabled) return blocked();
     await requireSession("settings");
-    return NextResponse.json(getTwilioVerifyOtpStatus());
+    return NextResponse.json(status);
   } catch (error) {
     return handleRouteError(error);
   }
