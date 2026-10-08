@@ -16354,10 +16354,10 @@ body > .admin-save-notice,
 }
 
 .admin-lens-page {
-  --lens-sph-w: 74px;
-  --lens-cyl-w: 60px;
-  --lens-row-h: 34px;
-  --lens-head-h: 34px;
+  --lens-sph-w: 64px;
+  --lens-cyl-w: 50px;
+  --lens-row-h: 32px;
+  --lens-head-h: 32px;
   --lens-cols: 9;
   --lens-table-w: calc(var(--lens-sph-w) + (var(--lens-cyl-w) * var(--lens-cols)));
   --lens-bg: #07111a;
@@ -16374,12 +16374,12 @@ body > .admin-save-notice,
 }
 
 .admin-lens-matrices {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
   gap: 0.85rem;
   width: 100%;
+  min-width: 0;
   direction: ltr;
   unicode-bidi: isolate;
 }
@@ -16387,19 +16387,19 @@ body > .admin-save-notice,
 html.admin-dark .admin-shell .admin-card.admin-lens-card,
 .admin-lens-page .admin-card.admin-lens-card {
   display: block;
-  flex: 0 0 auto;
-  align-self: flex-start;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   height: fit-content;
   min-height: 0;
-  padding: 12px 12px 10px;
+  padding: 10px 8px 8px;
   border-radius: 14px;
   border: 1px solid rgba(212, 175, 106, 0.34);
   background: #08131d !important;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  box-sizing: border-box;
 }
 
 .admin-lens-legend,
@@ -16424,8 +16424,9 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
 .admin-lens-scroll {
   overflow-x: auto;
   overflow-y: hidden;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   direction: ltr;
   unicode-bidi: isolate;
   background: var(--lens-bg);
@@ -16470,9 +16471,9 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   height: var(--lens-head-h);
   background: var(--lens-head);
   color: #dce6ee;
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .admin-lens-matrix th:first-child,
@@ -16485,14 +16486,14 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   max-width: var(--lens-sph-w);
   background: var(--lens-sph);
   color: #f2f6f8;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
 }
 
 .admin-lens-matrix thead th:first-child {
   z-index: 3;
   background: var(--lens-corner);
-  font-size: 0.68rem;
+  font-size: 0.6rem;
 }
 
 .admin-lens-matrix tbody td {
@@ -16528,7 +16529,7 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   background-clip: padding-box;
   color: #d7dee6;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -16726,6 +16727,12 @@ html.admin-dark .admin-shell .admin-card.admin-lens-edit-modal,
 .admin-lens-edit-actions .btn {
   min-height: 40px;
   padding: 0 0.85rem;
+}
+
+@media (min-width: 768px) {
+  .admin-lens-matrices {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 767px) {
