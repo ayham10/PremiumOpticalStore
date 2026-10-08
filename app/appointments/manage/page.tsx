@@ -1,10 +1,33 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
+import { CalendarDays, Glasses } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Reveal from "@/components/Reveal";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { EXPIRED_MANAGE_LINK_MESSAGE } from "@/lib/booking-manage-constants";
+
+function ManageChrome({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
+  return (
+    <div className="oyon-manage-page">
+      <div className="oyon-manage-glow" aria-hidden />
+      <div className="oyon-manage-side oyon-manage-side-start" aria-hidden />
+      <div className="oyon-manage-side oyon-manage-side-end" aria-hidden />
+      <div className="oyon-manage-wrap">
+        <header className="oyon-manage-hero">
+          <CalendarDays size={22} strokeWidth={1.5} aria-hidden />
+          <h1>{t("manage.title")}</h1>
+          <p>{t("manage.lead")}</p>
+          <div className="oyon-manage-divider" aria-hidden>
+            <span />
+            <Glasses size={16} strokeWidth={1.6} />
+            <span />
+          </div>
+        </header>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function ManageIndex() {
   const router = useRouter();
@@ -20,22 +43,16 @@ function ManageIndex() {
 
   if (token) {
     return (
-      <div className="wrap pb-20 pt-28 text-[var(--slate)]">{t("manage.loading")}</div>
+      <ManageChrome>
+        <p className="oyon-manage-banner">{t("manage.loading")}</p>
+      </ManageChrome>
     );
   }
 
   return (
-    <div className="pb-20 pt-28">
-      <div className="wrap max-w-2xl">
-        <Reveal>
-          <span className="eyebrow">{t("manage.eyebrow")}</span>
-          <h1 className="section-title">{t("manage.title")}</h1>
-          <p className="section-lead mt-6 text-[var(--ink-soft)]">
-            {EXPIRED_MANAGE_LINK_MESSAGE}
-          </p>
-        </Reveal>
-      </div>
-    </div>
+    <ManageChrome>
+      <p className="oyon-manage-banner is-error">{t("manage.expired")}</p>
+    </ManageChrome>
   );
 }
 
@@ -43,7 +60,11 @@ export default function ManageAppointmentPage() {
   return (
     <Suspense
       fallback={
-        <div className="wrap pb-20 pt-28 text-[var(--slate)]">Loading…</div>
+        <div className="oyon-manage-page">
+          <div className="oyon-manage-wrap">
+            <p className="oyon-manage-banner">جارٍ التحميل…</p>
+          </div>
+        </div>
       }
     >
       <ManageIndex />

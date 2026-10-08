@@ -4,6 +4,8 @@ import { join } from "node:path";
 import {
   BOOKING_MANAGE_CTA_URL,
   EXPIRED_MANAGE_LINK_MESSAGE,
+  EXPIRED_MANAGE_LINK_MESSAGE_EN,
+  EXPIRED_MANAGE_LINK_MESSAGE_HE,
 } from "../lib/booking-manage-constants";
 import {
   bookingManageOriginFromRequest,
@@ -42,6 +44,7 @@ import {
   canCustomerMutateBooking,
   computeManageTokenExpiresAt,
   evaluateManageAccess,
+  manageLinkExpiresAtMs,
   findAppointmentByManageTokenHash,
   generateBookingManageToken,
   hashBookingManageToken,
@@ -141,18 +144,36 @@ assert.equal(findAppointmentByManageTokenHash(roster, "not-a-real-token-value-he
 assert.equal(findAppointmentByManageTokenHash(roster, ""), null);
 assert.equal(findAppointmentByManageTokenHash(roster, "short"), null);
 
-const validAccess = evaluateManageAccess(customerA, new Date("2026-10-15T08:00:00.000Z"));
+const validAccess = evaluateManageAccess(
+  customerA,
+  new Date("2026-10-15T07:29:59.000Z"),
+);
 assert.equal(validAccess.ok, true);
 
 const expiredAccess = evaluateManageAccess(
   customerA,
-  new Date("2026-10-16T08:00:01.000Z"),
+  new Date("2026-10-15T07:30:00.000Z"),
 );
 assert.equal(expiredAccess.ok, false);
 if (!expiredAccess.ok) {
   assert.equal(expiredAccess.reason, "expired");
   assert.equal(manageAccessMessage(expiredAccess.reason), EXPIRED_MANAGE_LINK_MESSAGE);
+  assert.equal(
+    manageAccessMessage(expiredAccess.reason, "he"),
+    EXPIRED_MANAGE_LINK_MESSAGE_HE,
+  );
+  assert.equal(
+    manageAccessMessage(expiredAccess.reason, "en"),
+    EXPIRED_MANAGE_LINK_MESSAGE_EN,
+  );
 }
+
+const afterStartAccess = evaluateManageAccess(
+  customerA,
+  new Date("2026-10-15T07:30:00.001Z"),
+);
+assert.equal(afterStartAccess.ok, false);
+if (!afterStartAccess.ok) assert.equal(afterStartAccess.reason, "expired");
 
 const cancelled = {
   ...customerA,
@@ -173,12 +194,71 @@ assert.equal(
 );
 
 const dstExpiry = computeManageTokenExpiresAt("2026-10-15", "10:30", 30);
-assert.equal(dstExpiry, "2026-10-16T08:00:00.000Z");
+assert.equal(dstExpiry, "2026-10-15T07:30:00.000Z");
 const winterExpiry = computeManageTokenExpiresAt("2026-11-15", "10:30", 30);
-assert.equal(winterExpiry, "2026-11-16T09:00:00.000Z");
+assert.equal(winterExpiry, "2026-11-15T08:30:00.000Z");
 const rescheduledExpiry = computeManageTokenExpiresAt("2026-10-20", "14:00", 30);
-assert.equal(rescheduledExpiry, "2026-10-21T11:30:00.000Z");
+assert.equal(rescheduledExpiry, "2026-10-20T11:00:00.000Z");
 assert.notEqual(dstExpiry, rescheduledExpiry);
+assert.equal(
+  computeManageTokenExpiresAt("2026-10-15", "10:30", 60),
+  dstExpiry,
+);
+
+const exampleExpiry = computeManageTokenExpiresAt("2026-10-14", "17:00", 30);
+assert.equal(exampleExpiry, "2026-10-14T14:00:00.000Z");
+const legacyStoredLater = appointment({
+  id: "eea_legacy_expiry",
+  firstName: "ليان",
+  lastName: "عباس",
+  appointmentDate: "2026-10-14",
+  appointmentTime: "17:00",
+  manageTokenHash: issuedA.manageTokenHash,
+  manageTokenExpiresAt: "2026-10-15T14:30:00.000Z",
+});
+assert.equal(
+  manageLinkExpiresAtMs(legacyStoredLater),
+  Date.parse("2026-10-14T14:00:00.000Z"),
+);
+assert.equal(
+  evaluateManageAccess(legacyStoredLater, new Date("2026-10-14T13:59:59.999Z")).ok,
+  true,
+);
+const legacyAtStart = evaluateManageAccess(
+  legacyStoredLater,
+  new Date("2026-10-14T14:00:00.000Z"),
+);
+assert.equal(legacyAtStart.ok, false);
+if (!legacyAtStart.ok) assert.equal(legacyAtStart.reason, "expired");
+assert.equal(
+  evaluateManageAccess(legacyStoredLater, new Date("2026-10-14T14:00:00.001Z")).ok,
+  false,
+);
+
+const storedEarlier = {
+  ...legacyStoredLater,
+  manageTokenExpiresAt: "2026-10-14T13:00:00.000Z",
+};
+assert.equal(
+  evaluateManageAccess(storedEarlier, new Date("2026-10-14T13:00:00.000Z")).ok,
+  false,
+);
+
+const rescheduledAppointment = {
+  ...legacyStoredLater,
+  appointmentDate: "2026-10-20",
+  appointmentTime: "14:00",
+  manageTokenExpiresAt: computeManageTokenExpiresAt("2026-10-20", "14:00", 30),
+};
+assert.equal(rescheduledAppointment.manageTokenExpiresAt, rescheduledExpiry);
+assert.equal(
+  evaluateManageAccess(rescheduledAppointment, new Date("2026-10-20T10:59:59.000Z")).ok,
+  true,
+);
+assert.equal(
+  evaluateManageAccess(rescheduledAppointment, new Date("2026-10-20T11:00:00.000Z")).ok,
+  false,
+);
 
 const view = publicManageAppointmentView(customerA, "فحص نظر");
 assert.equal(view.customerName, "محمد علي");
@@ -323,6 +403,51 @@ assert.doesNotMatch(manageApi, /\botp\b/i);
 assert.match(manageApi, /rateLimit/);
 assert.match(manageApi, /x-booking-token/);
 assert.doesNotMatch(manageApi, /searchParams\.get\("token"\)/);
+assert.match(manageClient, /\/api\/booking\/manage/);
+assert.match(manageClient, /X-Booking-Token/);
+assert.match(manageClient, /\/api\/eye-exam\/available-dates/);
+assert.match(manageClient, /\/api\/eye-exam\/available-times/);
+assert.match(manageClient, /oyon-manage-page/);
+assert.match(manageClient, /manage\.statusConfirmed/);
+assert.match(manageClient, /Asia\/Jerusalem/);
+assert.doesNotMatch(manageClient, /window\.confirm/);
+assert.doesNotMatch(manageClient, /dispatchBookingMessages/);
+assert.doesNotMatch(manageClient, /sendSms/);
+assert.match(managePage, /oyon-manage-page/);
+assert.match(managePage, /manage\.expired/);
+assert.doesNotMatch(
+  readFileSync(join(process.cwd(), "lib/booking-manage-token.ts"), "utf8"),
+  /MANAGE_TOKEN_TTL_AFTER_END_MS/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/booking-manage-token.ts"), "utf8"),
+  /manageLinkExpiresAtMs/,
+);
+
+const arManage = readFileSync(
+  join(process.cwd(), "lib/i18n/dictionaries/ar.ts"),
+  "utf8",
+);
+assert.match(arManage, /موعد مؤكد/);
+assert.match(arManage, /إدارة حجزك/);
+assert.match(arManage, /تأكيد التغيير/);
+assert.match(arManage, /إلغاء الحجز/);
+assert.match(arManage, /إعادة جدولة الموعد/);
+assert.match(arManage, /بعد حلول وقت الموعد/);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/en.ts"), "utf8"),
+  /Once the appointment start time is reached/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/he.ts"), "utf8"),
+  /תוקף קישור ניהול התור פג/,
+);
+
+const manageCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+assert.match(manageCss, /\.oyon-manage-page/);
+assert.match(manageCss, /minmax\(0,\s*0\.42fr\)\s+minmax\(0,\s*0\.58fr\)/);
+assert.match(manageCss, /\.oyon-manage-cancel/);
+assert.match(manageCss, /\.oyon-manage-confirm/);
 
 const messaging = readFileSync(
   join(process.cwd(), "lib/booking-messaging.ts"),
@@ -604,6 +729,10 @@ const futureBooking = appointment({
   appointmentTime: "10:30",
   status: "confirmed",
 });
+assert.equal(
+  evaluateManageAccess(futureBooking, new Date("2026-10-08T12:00:00.000Z")).ok,
+  false,
+);
 const firstIssue = planAdminManageLinkGeneration(futureBooking);
 assert.equal(firstIssue.ok, true);
 if (!firstIssue.ok) throw new Error("expected first admin link issue");

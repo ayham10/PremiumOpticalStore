@@ -56,8 +56,15 @@ export default function Navbar() {
     pathname === "/shop" ||
     pathname === "/promotions";
   const isBook = pathname === "/book";
+  const isManage = pathname?.startsWith("/appointments/manage") ?? false;
   const isSolidDark =
-    isProduct || isEyeExam || isCatalogue || isBook || isAbout || isHome;
+    isProduct ||
+    isEyeExam ||
+    isCatalogue ||
+    isBook ||
+    isAbout ||
+    isHome ||
+    isManage;
   const isDarkPage = isHome || isSolidDark;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);

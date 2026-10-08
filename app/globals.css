@@ -17689,3 +17689,613 @@ body > .admin-restore-overlay,
   }
 }
 
+/* ========== Customer appointment manage page (/appointments/manage) ========== */
+html:has(.oyon-manage-page),
+body:has(.oyon-manage-page) {
+  background: #05080d !important;
+}
+
+body:has(.oyon-manage-page) header {
+  color: #f5f5f5;
+}
+
+.oyon-manage-page {
+  --oyon-manage-gold: #d4af37;
+  --oyon-manage-gold-soft: #e6c85a;
+  --oyon-manage-ink: #f4efe2;
+  --oyon-manage-muted: #b7b09a;
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  overflow-x: hidden;
+  color: var(--oyon-manage-ink);
+  background: #05080d;
+  padding-top: calc(5.25rem + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+
+.oyon-manage-glow,
+.oyon-manage-side {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.oyon-manage-glow {
+  inset: 0;
+  background-color: #05080d;
+  background-image:
+    radial-gradient(ellipse 70% 48% at 50% 0%, rgba(212, 175, 55, 0.16), transparent 62%),
+    radial-gradient(ellipse 40% 36% at 8% 72%, rgba(212, 175, 55, 0.07), transparent 70%),
+    radial-gradient(ellipse 40% 36% at 92% 68%, rgba(212, 175, 55, 0.07), transparent 70%),
+    url("/admin-oyon-gold-background.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center bottom;
+  opacity: 0.42;
+}
+
+.oyon-manage-side {
+  top: 5.5rem;
+  bottom: 2rem;
+  width: min(18vw, 220px);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.22;
+  filter: saturate(0.7) brightness(0.55);
+}
+
+.oyon-manage-side-start {
+  inset-inline-start: 0;
+  background-image: url("/images/card-frames.jpg");
+  mask-image: linear-gradient(to left, transparent, #000 28%, #000 78%, transparent);
+}
+
+.oyon-manage-side-end {
+  inset-inline-end: 0;
+  background-image: url("/images/sunglasses-category.jpg");
+  mask-image: linear-gradient(to right, transparent, #000 28%, #000 78%, transparent);
+}
+
+html[dir="rtl"] .oyon-manage-side-start {
+  mask-image: linear-gradient(to right, transparent, #000 28%, #000 78%, transparent);
+}
+
+html[dir="rtl"] .oyon-manage-side-end {
+  mask-image: linear-gradient(to left, transparent, #000 28%, #000 78%, transparent);
+}
+
+.oyon-manage-wrap {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100% - 1.5rem));
+  margin-inline: auto;
+}
+
+.oyon-manage-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  margin: 0 auto 1.15rem;
+  max-width: 36rem;
+}
+
+.oyon-manage-hero svg {
+  color: var(--oyon-manage-gold);
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.35));
+}
+
+.oyon-manage-hero h1 {
+  margin: 0;
+  font-family: "Noto Naskh Arabic", "Fraunces", ui-serif, Georgia, serif;
+  font-size: clamp(1.55rem, 3.2vw, 2.05rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: var(--oyon-manage-gold);
+  text-shadow: 0 0 22px rgba(212, 175, 55, 0.22);
+}
+
+.oyon-manage-hero p {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--oyon-manage-muted);
+}
+
+.oyon-manage-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: min(16rem, 70%);
+  margin-top: 0.2rem;
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-divider span {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.85),
+    transparent
+  );
+}
+
+.oyon-manage-banner {
+  margin: 0 auto 1rem;
+  max-width: 40rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(12, 17, 24, 0.88);
+  color: #efe6c9;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.oyon-manage-banner.is-error {
+  border-color: rgba(176, 72, 72, 0.55);
+  color: #f0c4c4;
+  background: rgba(42, 16, 18, 0.88);
+}
+
+.oyon-manage-banner.is-success {
+  border-color: rgba(70, 150, 108, 0.5);
+  color: #c8ead6;
+  background: rgba(14, 32, 24, 0.88);
+}
+
+.oyon-manage-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.05rem;
+  align-items: stretch;
+}
+
+@media (min-width: 960px) {
+  .oyon-manage-grid {
+    direction: ltr;
+    grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
+    gap: 1.2rem;
+  }
+
+  .oyon-manage-grid > * {
+    direction: inherit;
+  }
+
+  html[dir="rtl"] .oyon-manage-grid > * {
+    direction: rtl;
+  }
+}
+
+.oyon-manage-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  padding: 1.05rem 1.1rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background:
+    linear-gradient(180deg, rgba(212, 175, 55, 0.07), transparent 26%),
+    rgba(12, 17, 24, 0.94);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(212, 175, 55, 0.08);
+}
+
+.oyon-manage-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.oyon-manage-card-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-card-head h2 svg {
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-card-lead {
+  margin: 0.28rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--oyon-manage-muted);
+}
+
+.oyon-manage-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 1.7rem;
+  padding: 0.18rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(70, 150, 108, 0.55);
+  background: rgba(28, 72, 52, 0.72);
+  color: #9ee0b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.oyon-manage-badge.is-cancelled {
+  border-color: rgba(176, 72, 72, 0.55);
+  background: rgba(72, 24, 28, 0.72);
+  color: #f0b4b4;
+}
+
+.oyon-manage-badge.is-muted {
+  border-color: rgba(212, 175, 55, 0.28);
+  background: rgba(40, 34, 18, 0.7);
+  color: #e6d7a4;
+}
+
+.oyon-manage-table {
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: rgba(8, 12, 18, 0.78);
+}
+
+.oyon-manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.7rem;
+  padding: 0.62rem 0.85rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+}
+
+.oyon-manage-row:last-child {
+  border-bottom: 0;
+}
+
+.oyon-manage-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: #d9d0b4;
+  font-size: 0.84rem;
+}
+
+.oyon-manage-row-label svg {
+  flex-shrink: 0;
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-row-value {
+  min-width: 0;
+  color: #f7f3ea;
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-align: end;
+}
+
+.oyon-manage-card-foot {
+  margin-top: auto;
+  padding-top: 0.95rem;
+}
+
+.oyon-manage-card-foot > p,
+.oyon-manage-cancelled-copy {
+  margin: 0.45rem 0 0;
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--oyon-manage-muted);
+}
+
+.oyon-manage-cancel,
+.oyon-manage-confirm,
+.oyon-manage-modal-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+}
+
+.oyon-manage-cancel {
+  border: 1px solid #8a3038;
+  background: #3a1518;
+  color: #e07a7a;
+}
+
+.oyon-manage-cancel svg {
+  color: #e07a7a;
+}
+
+.oyon-manage-confirm {
+  border: 1px solid rgba(212, 175, 55, 0.7);
+  background: linear-gradient(180deg, #f0d78a 0%, #d4af37 48%, #c49a2c 100%);
+  color: #1a140c;
+  text-decoration: none;
+}
+
+.oyon-manage-cancel:hover,
+.oyon-manage-confirm:hover,
+.oyon-manage-modal-back:hover {
+  filter: brightness(1.06);
+}
+
+.oyon-manage-cancel:disabled,
+.oyon-manage-confirm:disabled,
+.oyon-manage-modal-back:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(0.18);
+}
+
+.oyon-manage-reschedule {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 720px) {
+  .oyon-manage-card-wide .oyon-manage-reschedule {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: 1.05rem;
+    align-items: start;
+  }
+}
+
+.oyon-manage-cal,
+.oyon-manage-times {
+  min-width: 0;
+}
+
+.oyon-manage-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.oyon-manage-cal-nav strong {
+  flex: 1;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f5f0e4;
+}
+
+.oyon-manage-cal-nav button {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: #15191f;
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-cal-nav button:hover {
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.oyon-manage-cal-week,
+.oyon-manage-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.22rem;
+}
+
+.oyon-manage-cal-week {
+  margin-bottom: 0.28rem;
+}
+
+.oyon-manage-cal-week span {
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 650;
+  color: rgba(230, 200, 90, 0.88);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+html[dir="rtl"] .oyon-manage-cal-week span {
+  font-size: 0.58rem;
+}
+
+.oyon-manage-cal-day,
+.oyon-manage-cal-empty {
+  aspect-ratio: 1;
+  max-height: 2.35rem;
+  border-radius: 9px;
+}
+
+.oyon-manage-cal-day {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #151a22;
+  color: #f5f5f5;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.oyon-manage-cal-day.is-available:hover {
+  border-color: rgba(212, 175, 55, 0.7);
+  background: rgba(212, 175, 55, 0.14);
+}
+
+.oyon-manage-cal-day.is-selected {
+  background: var(--oyon-manage-gold);
+  border-color: var(--oyon-manage-gold);
+  color: #1a140c;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.35);
+}
+
+.oyon-manage-cal-day.is-disabled,
+.oyon-manage-cal-empty {
+  opacity: 0.28;
+  background: #12161c;
+  color: #6b7280;
+}
+
+.oyon-manage-cal-day:disabled {
+  cursor: not-allowed;
+}
+
+.oyon-manage-cal-grid.is-loading .oyon-manage-cal-day {
+  opacity: 0.55;
+}
+
+.oyon-manage-times-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  margin: 0 0 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-times-title svg {
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-times-title span {
+  margin-inline-start: auto;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--oyon-manage-muted);
+}
+
+.oyon-manage-time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.oyon-manage-time {
+  min-height: 42px;
+  padding: 0.45rem 0.4rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #151a22;
+  color: #f4efe2;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.oyon-manage-time.is-selected {
+  border-color: var(--oyon-manage-gold);
+  background: var(--oyon-manage-gold);
+  color: #1a140c;
+}
+
+.oyon-manage-muted,
+.oyon-manage-locked {
+  margin: 0;
+  color: var(--oyon-manage-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.oyon-manage-locked {
+  padding: 0.4rem 0 0.2rem;
+}
+
+.oyon-manage-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(5, 8, 13, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.oyon-manage-modal {
+  width: min(26rem, 100%);
+  padding: 1.25rem 1.2rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background:
+    linear-gradient(180deg, rgba(212, 175, 55, 0.08), transparent 30%),
+    #0c1118;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.oyon-manage-modal h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--oyon-manage-gold);
+}
+
+.oyon-manage-modal p {
+  margin: 0.55rem 0 1rem;
+  color: var(--oyon-manage-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.oyon-manage-modal-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.oyon-manage-modal-back {
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: #151a22;
+  color: #efe6c9;
+}
+
+@media (max-width: 959px) {
+  .oyon-manage-side {
+    display: none;
+  }
+
+  .oyon-manage-wrap {
+    width: min(100% - 1.1rem, 40rem);
+  }
+
+  .oyon-manage-hero {
+    margin-bottom: 0.95rem;
+  }
+
+  .oyon-manage-card {
+    padding: 0.95rem 0.9rem 1.05rem;
+  }
+
+  .oyon-manage-cal-day,
+  .oyon-manage-cal-empty {
+    max-height: 2.55rem;
+  }
+
+  .oyon-manage-time {
+    min-height: 44px;
+  }
+}
+
