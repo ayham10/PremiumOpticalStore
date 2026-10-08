@@ -52,6 +52,7 @@ export async function sendTwilioWhatsAppTemplate(message: {
   to: string;
   templateName: string;
   contentVariables?: Record<string, string>;
+  contentSid?: string | null;
 }): Promise<TwilioWhatsAppSendResult> {
   const config = getTwilioConfig();
   const to = formatPhoneForWhatsAppTwilio(message.to);
@@ -77,7 +78,8 @@ export async function sendTwilioWhatsAppTemplate(message: {
     };
   }
 
-  const contentSid = resolveTwilioContentSid(templateName);
+  const contentSid =
+    message.contentSid?.trim() || resolveTwilioContentSid(templateName);
   if (!contentSid) {
     return {
       ok: false,

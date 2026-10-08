@@ -1,5 +1,7 @@
 import { serverEnv } from "@/lib/twilio/config";
 
+export { sanitizeTwilioContentSid } from "@/lib/twilio/content-sid-format";
+
 let cachedMap: Map<string, string> | null = null;
 
 function parseContentSidMap(raw: string): Map<string, string> {
@@ -38,6 +40,10 @@ export function getTwilioContentSidMap(): Map<string, string> {
   if (cachedMap) return cachedMap;
   cachedMap = parseContentSidMap(serverEnv("TWILIO_WHATSAPP_CONTENT_SIDS"));
   return cachedMap;
+}
+
+export function resetTwilioContentSidMapForTests(): void {
+  cachedMap = null;
 }
 
 export function resolveTwilioContentSid(templateName: string): string | null {

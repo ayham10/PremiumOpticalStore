@@ -29,7 +29,10 @@ import {
   ChevronRight,
   CircleDot,
   Clock3,
+  Copy,
   Eye,
+  ExternalLink,
+  Link2,
   Phone,
   SquarePen,
   User,
@@ -44,6 +47,7 @@ import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import type {
+  AdminSession,
   ClinicAppointmentType,
   EyeExamAppointmentStatus,
 } from "@/lib/types";
@@ -83,6 +87,12 @@ type AppointmentRow = {
   language: string;
   createdAt: string;
   notes?: string;
+};
+
+type ManageLinkStatus = {
+  hasValidLink: boolean;
+  canGenerate: boolean;
+  reason?: "cancelled" | "expired";
 };
 
 const STATUSES: EyeExamAppointmentStatus[] = [
@@ -194,6 +204,13 @@ function AdminEyeExamPageInner() {
   });
   const [editCalOpen, setEditCalOpen] = useState(false);
   const [editCalMonth, setEditCalMonth] = useState(() => new Date());
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [manageLinkStatus, setManageLinkStatus] =
+    useState<ManageLinkStatus | null>(null);
+  const [manageUrl, setManageUrl] = useState("");
+  const [manageLinkBusy, setManageLinkBusy] = useState(false);
+  const [manageLinkError, setManageLinkError] = useState("");
+  const [manageCopied, setManageCopied] = useState(false);
 
   const selected = useMemo(
     () => days.find((d) => d.id === selectedId) || null,
@@ -257,6 +274,22 @@ function AdminEyeExamPageInner() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void apiFetch<{ user: AdminSession } | AdminSession>("/api/auth/me")
+      .then((data) => {
+        if (cancelled) return;
+        const user = "user" in data ? data.user : data;
+        setIsAdmin(user.role === "admin");
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdmin(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function createDay(payload: {
     date: string;
@@ -346,6 +379,13 @@ function AdminEyeExamPageInner() {
     }
   }
 
+  function resetManageLinkUi() {
+    setManageLinkStatus(null);
+    setManageUrl("");
+    setManageLinkError("");
+    setManageCopied(false);
+  }
+
   function openEdit(row: AppointmentRow) {
     setEditing(row);
     setEditForm({
@@ -359,6 +399,121 @@ function AdminEyeExamPageInner() {
     });
     setEditCalOpen(false);
     setEditCalMonth(parseIsoDate(row.appointmentDate) || new Date());
+    resetManageLinkUi();
+  }
+
+  useEffect(() => {
+    if (!isAdmin || !editing) return;
+    const id = editing.id;
+    let cancelled = false;
+    void apiFetch<ManageLinkStatus>(
+      `/api/admin/eye-exam/appointments/manage-link?id=${encodeURIComponent(id)}`,
+    )
+      .then((data) => {
+        if (cancelled) return;
+        setManageLinkStatus({
+          hasValidLink: Boolean(data.hasValidLink),
+          canGenerate: Boolean(data.canGenerate),
+          reason: data.reason,
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setManageLinkStatus(null);
+        setManageLinkError(
+          err instanceof Error
+            ? err.message
+            : t("admin.bookings.manageLinkError"),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, isAdmin, t]);
+
+  async function generateManageLink(confirmRotate = false) {
+    if (!editing || manageLinkBusy) return;
+    setManageLinkBusy(true);
+    setManageLinkError("");
+    setManageCopied(false);
+    try {
+      let rotate = confirmRotate;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const res = await fetch("/api/admin/eye-exam/appointments/manage-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({ id: editing.id, confirmRotate: rotate }),
+        });
+        const body = (await res.json()) as {
+          error?: string;
+          code?: string;
+          needsConfirm?: boolean;
+          manageUrl?: string;
+        };
+        if (res.status === 409 && body.needsConfirm && !rotate) {
+          if (!window.confirm(t("admin.bookings.manageLinkRotateConfirm"))) {
+            return;
+          }
+          rotate = true;
+          continue;
+        }
+        if (!res.ok || !body.manageUrl) {
+          if (body.code === "CANCELLED") {
+            setManageLinkError(t("admin.bookings.manageLinkCancelled"));
+            setManageLinkStatus((s) => ({
+              hasValidLink: s?.hasValidLink || false,
+              canGenerate: false,
+              reason: "cancelled",
+            }));
+          } else if (body.code === "EXPIRED") {
+            setManageLinkError(t("admin.bookings.manageLinkExpired"));
+            setManageLinkStatus((s) => ({
+              hasValidLink: s?.hasValidLink || false,
+              canGenerate: false,
+              reason: "expired",
+            }));
+          } else {
+            setManageLinkError(body.error || t("admin.bookings.manageLinkError"));
+          }
+          return;
+        }
+        setManageUrl(body.manageUrl);
+        setManageLinkStatus({ hasValidLink: true, canGenerate: true });
+        return;
+      }
+    } catch {
+      setManageLinkError(t("admin.bookings.manageLinkError"));
+    } finally {
+      setManageLinkBusy(false);
+    }
+  }
+
+  async function onGenerateManageLink() {
+    if (manageLinkStatus?.hasValidLink) {
+      if (!window.confirm(t("admin.bookings.manageLinkRotateConfirm"))) {
+        return;
+      }
+      await generateManageLink(true);
+      return;
+    }
+    await generateManageLink(false);
+  }
+
+  async function copyManageLink() {
+    if (!manageUrl) return;
+    try {
+      await navigator.clipboard.writeText(manageUrl);
+      setManageCopied(true);
+      window.setTimeout(() => setManageCopied(false), 2000);
+    } catch {
+      setManageLinkError(t("admin.bookings.manageLinkCopyError"));
+    }
+  }
+
+  function openManageLink() {
+    if (!manageUrl) return;
+    window.open(manageUrl, "_blank", "noopener,noreferrer");
   }
 
   function selectEditDate(iso: string) {
@@ -848,6 +1003,85 @@ function AdminEyeExamPageInner() {
                   </label>
                 </div>
               </section>
+
+              {isAdmin ? (
+                <section className="admin-edit-booking-card admin-edit-booking-manage">
+                  <h4 className="admin-edit-booking-card-title admin-edit-booking-manage-title">
+                    {t("admin.bookings.manageLinkTitle")}
+                  </h4>
+                  {manageLinkStatus && !manageLinkStatus.canGenerate ? (
+                    <p
+                      className="admin-edit-booking-manage-note"
+                      data-kind="error"
+                    >
+                      {manageLinkStatus.reason === "cancelled"
+                        ? t("admin.bookings.manageLinkCancelled")
+                        : t("admin.bookings.manageLinkExpired")}
+                    </p>
+                  ) : manageUrl ? (
+                    <>
+                      <div className="admin-edit-booking-manage-actions">
+                        <button
+                          type="button"
+                          className="admin-edit-booking-manage-copy"
+                          onClick={() => void copyManageLink()}
+                          disabled={manageLinkBusy}
+                        >
+                          <Copy
+                            size={14}
+                            strokeWidth={ICON_STROKE}
+                            aria-hidden
+                          />
+                          {manageCopied
+                            ? t("admin.bookings.manageLinkCopied")
+                            : t("admin.bookings.manageLinkCopy")}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-edit-booking-manage-open"
+                          onClick={openManageLink}
+                          disabled={manageLinkBusy}
+                        >
+                          <ExternalLink
+                            size={14}
+                            strokeWidth={ICON_STROKE}
+                            aria-hidden
+                          />
+                          {t("admin.bookings.manageLinkOpen")}
+                        </button>
+                      </div>
+                      <p className="admin-edit-booking-manage-hint">
+                        {t("admin.bookings.manageLinkOnceHint")}
+                      </p>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="admin-edit-booking-manage-generate"
+                      onClick={() => void onGenerateManageLink()}
+                      disabled={manageLinkBusy}
+                    >
+                      <Link2
+                        size={14}
+                        strokeWidth={ICON_STROKE}
+                        aria-hidden
+                      />
+                      {manageLinkBusy
+                        ? t("admin.bookings.manageLinkGenerating")
+                        : t("admin.bookings.manageLinkGenerate")}
+                    </button>
+                  )}
+                  {manageLinkError &&
+                  !(manageLinkStatus && !manageLinkStatus.canGenerate) ? (
+                    <p
+                      className="admin-edit-booking-manage-note"
+                      data-kind="error"
+                    >
+                      {manageLinkError}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
             </div>
 
             <div className="admin-edit-booking-actions">

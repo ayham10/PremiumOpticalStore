@@ -612,7 +612,9 @@ const he: Dictionary = {
   manage: {
     eyebrow: "תורים",
     title: "ניהול התור",
-    lead: "הזינו את קוד ההזמנה לצפייה, שינוי מועד או ביטול.",
+    lead: "צפייה בפרטי התור וניהולו דרך קישור WhatsApp מאובטח.",
+    service: "שירות",
+    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
     token: "קוד הזמנה",
     find: "איתור תור",
     loading: "טוען…",
@@ -883,6 +885,20 @@ const he: Dictionary = {
       noAvailableTimes: "אין שעות פנויות בתאריך זה.",
       conflictError:
         "השעה נתפסה זה עתה. לוח הזמנים רוענן — אנא בחרו שעה אחרת.",
+      manageLinkTitle: "קישור ניהול התור",
+      manageLinkGenerate: "יצירת קישור ניהול התור",
+      manageLinkCopy: "העתקת הקישור",
+      manageLinkOpen: "פתיחת הקישור",
+      manageLinkCopied: "הקישור הועתק",
+      manageLinkGenerating: "יוצר…",
+      manageLinkRotateConfirm:
+        "קיים קישור ניהול תקף לתור זה. יצירת קישור חדש תפסיק את פעולת הקישור הקודם. להמשיך?",
+      manageLinkOnceHint:
+        "העתיקו את הקישור עכשיו. הוא לא יוצג שוב לאחר סגירת החלון.",
+      manageLinkCancelled: "לא ניתן ליצור קישור לתור שבוטל.",
+      manageLinkExpired: "לא ניתן ליצור קישור לתור שפג תוקפו.",
+      manageLinkError: "לא ניתן ליצור את קישור הניהול.",
+      manageLinkCopyError: "לא ניתן להעתיק את הקישור.",
     },
     promotions: {
       kicker: "שיווק",
@@ -1201,6 +1217,14 @@ const he: Dictionary = {
       bmMetaTestSuccess: "החיבור ל-Meta WhatsApp Cloud API הצליח.",
       bmMetaTestError: "בדיקת חיבור Meta נכשלה.",
       bmCustomer: "אישור ללקוח",
+      bmManageTemplate: "תבנית ניהול תור",
+      bmManageTemplateName: "oyon_booking_manage_v2_ar",
+      bmManageTemplateHint:
+        "ממתין לאישור Meta. השאירו כבוי. לאחר האישור ייעשה שימוש ב-oyon_booking_manage_v2_ar לערבית וב-oyon_booking_manage_v2_he לעברית. הזמנות חיות ממשיכות בתבנית האישור הקיימת עד אז.",
+      bmManageTemplateEnable: "הפעלה לאחר אישור",
+      bmManageTemplateSid: "Twilio Content SID",
+      bmManageTemplateSidHint:
+        "הדביקו את ה-Content SID (HX…) לאחר אישור Meta. אל תשמרו כאן Account SID או Auth Token.",
       bmOwner: "התראה לבעלים",
       bmReminder: "תזכורת תור",
       bmEnabled: "פעיל",

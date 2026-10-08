@@ -14,6 +14,14 @@ import {
   parseTimeToMinutes,
   sanitizeName,
 } from "@/lib/eye-exam";
+import {
+  computeManageTokenExpiresAt,
+  omitManageTokenSecrets,
+} from "@/lib/booking-manage-token";
+import {
+  customerFacingAppointments,
+  isSilentManageTestAppointment,
+} from "@/lib/booking-silent-test";
 import type {
   ClinicAppointmentType,
   EyeExamAppointmentStatus,
@@ -37,8 +45,8 @@ export async function GET(request: Request) {
     const type = searchParams.get("type")?.trim();
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
 
-    const { data } = await getStore();
-    let items = [...data.eyeExamAppointments];
+    const { data } = await getStore({ bypassCache: true });
+    let items = customerFacingAppointments([...data.eyeExamAppointments]);
 
     if (status && STATUSES.has(status as EyeExamAppointmentStatus)) {
       items = items.filter((a) => a.status === status);
@@ -76,7 +84,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       appointments: items.map((a) => ({
-        ...a,
+        ...omitManageTokenSecrets(a),
         appointmentType: normalizeAppointmentType(a.appointmentType),
         dateLabel: formatEyeExamDateDisplay(a.appointmentDate),
         fullName: `${a.firstName} ${a.lastName}`.trim(),
@@ -114,6 +122,9 @@ export async function PATCH(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
 
       const current = store.eyeExamAppointments[index];
+      if (isSilentManageTestAppointment(current)) {
+        throw new Error("SILENT_TEST");
+      }
       const nextStatus =
         body.status && STATUSES.has(body.status) ? body.status : current.status;
 
@@ -178,6 +189,7 @@ export async function PATCH(request: Request) {
         }
       }
 
+      const slotMinutes = store.settings.appointmentSlotMinutes || 30;
       updated = {
         ...current,
         firstName,
@@ -188,6 +200,13 @@ export async function PATCH(request: Request) {
         appointmentTime: nextTime,
         appointmentType: nextType,
         status: nextStatus,
+        manageTokenExpiresAt: scheduleChanged
+          ? computeManageTokenExpiresAt(nextDate, nextTime, slotMinutes)
+          : current.manageTokenExpiresAt,
+        manageTokenRevokedAt:
+          nextStatus === "cancelled"
+            ? current.manageTokenRevokedAt || new Date().toISOString()
+            : current.manageTokenRevokedAt,
         updatedAt: new Date().toISOString(),
       };
       store.eyeExamAppointments[index] = updated;
@@ -205,7 +224,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       appointment: {
-        ...updated!,
+        ...omitManageTokenSecrets(updated!),
         appointmentType: normalizeAppointmentType(updated!.appointmentType),
         dateLabel: formatEyeExamDateDisplay(updated!.appointmentDate),
         fullName: `${updated!.firstName} ${updated!.lastName}`.trim(),
@@ -239,6 +258,12 @@ export async function PATCH(request: Request) {
       }
       if (error.message === "SLOT_TAKEN") {
         return jsonError("That time slot is already booked", 409);
+      }
+      if (error.message === "SILENT_TEST") {
+        return jsonError(
+          "Silent test appointments can only be changed from the management link or deleted from the admin test page.",
+          409,
+        );
       }
     }
     return handleRouteError(error);

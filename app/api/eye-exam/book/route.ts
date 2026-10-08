@@ -30,6 +30,8 @@ import {
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms/provider";
 import { dispatchBookingMessages } from "@/lib/booking-messaging";
+import { isBookingE2EIsolated, recordE2EManageToken } from "@/lib/booking-e2e";
+import { issueBookingManageToken } from "@/lib/booking-manage-token";
 import type { ClinicAppointmentType, EyeExamAppointment } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -111,6 +113,7 @@ export async function POST(request: Request) {
     }
 
     let savedAppointment: EyeExamAppointment | undefined;
+    let issuedManageToken: string | undefined;
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
@@ -160,6 +163,13 @@ export async function POST(request: Request) {
         }
 
         const now = new Date().toISOString();
+        const slotMinutes = store.settings.appointmentSlotMinutes || 30;
+        const issued = issueBookingManageToken(
+          appointmentDate,
+          appointmentTime,
+          slotMinutes,
+        );
+        issuedManageToken = issued.token;
         const created: EyeExamAppointment = {
           id: newId("eea"),
           firstName,
@@ -173,40 +183,15 @@ export async function POST(request: Request) {
           language,
           ...(notes ? { notes } : {}),
           smsStatus: "pending",
+          manageTokenHash: issued.manageTokenHash,
+          manageTokenExpiresAt: issued.manageTokenExpiresAt,
+          manageTokenRevokedAt: null,
           createdAt: now,
           updatedAt: now,
         };
 
         store.eyeExamAppointments.unshift(created);
         savedAppointment = created;
-
-        const dateDisplay = formatEyeExamDateDisplay(appointmentDate);
-        const smsBody = eyeExamSmsBody(
-          language,
-          dateDisplay,
-          appointmentTime,
-          appointmentType,
-        );
-        const smsResult = await sendSms({
-          to: phone,
-          body: smsBody,
-          type: "appointment_confirmation",
-          appointmentId: created.id,
-        });
-
-        created.smsStatus = smsResult.status;
-        if (!smsResult.ok) {
-          created.smsError = smsResult.error || "SMS failed";
-        }
-        store.eyeExamAppointments[0] = created;
-
-        pushSmsLog(store, {
-          to: phone,
-          body: smsBody,
-          type: "appointment_confirmation",
-          result: smsResult,
-          appointmentId: created.id,
-        });
 
         pushActivity(store, {
           actor: fromAdmin ? "admin" : email,
@@ -230,9 +215,69 @@ export async function POST(request: Request) {
     }
 
     const saved = savedAppointment;
+    if (issuedManageToken) {
+      recordE2EManageToken(saved.id, issuedManageToken);
+    }
+    if (isBookingE2EIsolated()) {
+      return NextResponse.json(
+        {
+          appointment: {
+            id: saved.id,
+            firstName: saved.firstName,
+            lastName: saved.lastName,
+            appointmentDate: saved.appointmentDate,
+            appointmentTime: saved.appointmentTime,
+            appointmentType: saved.appointmentType,
+            dateLabel: formatEyeExamDateDisplay(saved.appointmentDate),
+            status: saved.status,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    const dateDisplay = formatEyeExamDateDisplay(saved.appointmentDate);
+    const smsBody = eyeExamSmsBody(
+      saved.language,
+      dateDisplay,
+      saved.appointmentTime,
+      saved.appointmentType,
+    );
+    const smsResult = await sendSms({
+      to: saved.phone,
+      body: smsBody,
+      type: "appointment_confirmation",
+      appointmentId: saved.id,
+    });
+    saved.smsStatus = smsResult.status;
+    if (!smsResult.ok) {
+      saved.smsError = smsResult.error || "SMS failed";
+    }
+
+    await updateStore((store) => {
+      const current = store.eyeExamAppointments.find((item) => item.id === saved.id);
+      if (!current) return store;
+      current.smsStatus = saved.smsStatus;
+      if (saved.smsError) current.smsError = saved.smsError;
+      current.updatedAt = new Date().toISOString();
+      pushSmsLog(store, {
+        to: saved.phone,
+        body: smsBody,
+        type: "appointment_confirmation",
+        result: smsResult,
+        appointmentId: saved.id,
+      });
+      return store;
+    }).catch((error) => {
+      console.error("[booking] failed to persist SMS status", {
+        appointmentId: saved.id,
+        error: error instanceof Error ? error.message : "sms persist failed",
+      });
+    });
 
     after(async () => {
-      await dispatchBookingMessages(saved);
+      await dispatchBookingMessages(saved, {
+        manageToken: issuedManageToken,
+      });
     });
 
     return NextResponse.json(

@@ -6,6 +6,11 @@ import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { normalizeLensInventory } from "@/lib/lens-inventory";
 import { publicServicePages } from "@/lib/service-pages";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
+import {
+  getIsolatedStore,
+  isBookingE2EIsolated,
+  setIsolatedStore,
+} from "@/lib/booking-e2e";
 import { createSeedData } from "@/lib/seed";
 import type { AppData } from "@/lib/types";
 
@@ -58,13 +63,48 @@ async function writeFilesystem(data: AppData): Promise<void> {
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
 }
 
-async function readSupabase(): Promise<AppData | null> {
+export class StoreWriteConflictError extends Error {
+  constructor() {
+    super("STORE_CONFLICT");
+    this.name = "StoreWriteConflictError";
+  }
+}
+
+export function parseStoreVersion(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return Number.parseInt(value.trim(), 10);
+  }
+  return null;
+}
+
+export function supabaseConditionalPatchPath(
+  table: string,
+  rowId: string,
+  version: number | null,
+): string {
+  const id = `id=eq.${encodeURIComponent(rowId)}`;
+  const cas =
+    version == null
+      ? "payload->>version=is.null"
+      : `payload->>version=eq.${version}`;
+  return `${table}?${id}&${cas}`;
+}
+
+type RemoteStoreRow = {
+  payload: AppData;
+  rawVersion: number | null;
+};
+
+async function readSupabase(): Promise<RemoteStoreRow | null> {
   const config = supabaseConfig();
   if (!config) return null;
 
   const url = `${config.url}/rest/v1/${SUPABASE_TABLE}?id=eq.${encodeURIComponent(
     SUPABASE_ROW_ID
-  )}&select=payload`;
+  )}&select=payload,updated_at`;
 
   const response = await fetch(url, {
     headers: supabaseHeaders(config),
@@ -75,14 +115,56 @@ async function readSupabase(): Promise<AppData | null> {
     throw new Error(`Supabase read failed (${response.status})`);
   }
 
-  const rows = (await response.json()) as Array<{ payload: AppData }>;
+  const rows = (await response.json()) as Array<{
+    payload: AppData;
+    updated_at?: string | null;
+  }>;
   if (!rows.length || !rows[0]?.payload) return null;
-  return rows[0].payload;
+  return {
+    payload: rows[0].payload,
+    rawVersion: parseStoreVersion(rows[0].payload.version),
+  };
 }
 
-async function writeSupabase(data: AppData): Promise<void> {
+async function writeSupabase(
+  data: AppData,
+  opts?: { ifVersion?: number | null },
+): Promise<void> {
   const config = supabaseConfig();
   if (!config) throw new Error("Supabase is not configured");
+
+  const body = JSON.stringify({
+    id: SUPABASE_ROW_ID,
+    payload: data,
+    updated_at: data.updatedAt,
+  });
+
+  if (opts && "ifVersion" in opts) {
+    const url = `${config.url}/rest/v1/${supabaseConditionalPatchPath(
+      SUPABASE_TABLE,
+      SUPABASE_ROW_ID,
+      opts.ifVersion ?? null,
+    )}`;
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        ...supabaseHeaders(config),
+        Prefer: "return=representation",
+      },
+      body,
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(
+        `Supabase write failed (${response.status})${detail ? `: ${detail}` : ""}`
+      );
+    }
+    const rows = (await response.json()) as unknown[];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new StoreWriteConflictError();
+    }
+    return;
+  }
 
   const url = `${config.url}/rest/v1/${SUPABASE_TABLE}`;
   const response = await fetch(url, {
@@ -91,11 +173,7 @@ async function writeSupabase(data: AppData): Promise<void> {
       ...supabaseHeaders(config),
       Prefer: "resolution=merge-duplicates,return=minimal",
     },
-    body: JSON.stringify({
-      id: SUPABASE_ROW_ID,
-      payload: data,
-      updated_at: data.updatedAt,
-    }),
+    body,
   });
 
   if (!response.ok) {
@@ -149,6 +227,10 @@ function normalizeData(data: AppData): AppData {
       ? data.eyeExamAvailability
       : createSeedData().eyeExamAvailability,
     eyeExamAppointments,
+    previewManageTestAppointments: (data.previewManageTestAppointments || []).slice(
+      0,
+      5,
+    ),
     bookingServices,
     lensInventory: normalizeLensInventory(data.lensInventory),
     settings: {
@@ -166,16 +248,23 @@ function normalizeData(data: AppData): AppData {
   };
 }
 
-export async function getStore(): Promise<{ data: AppData; storage: StorageMode }> {
+export async function getStore(opts?: {
+  bypassCache?: boolean;
+}): Promise<{ data: AppData; storage: StorageMode }> {
+  if (isBookingE2EIsolated()) {
+    const isolated = getIsolatedStore();
+    if (isolated) return { data: isolated, storage: "filesystem" };
+  }
   const now = Date.now();
   if (
+    !opts?.bypassCache &&
     memoryStore &&
     now - memoryStore.at < STORE_CACHE_TTL_MS &&
     !storeInflight
   ) {
     return { data: memoryStore.data, storage: memoryStore.storage };
   }
-  if (storeInflight) return storeInflight;
+  if (!opts?.bypassCache && storeInflight) return storeInflight;
 
   storeInflight = (async () => {
     const result = await readStoreUncached();
@@ -197,6 +286,7 @@ export async function getStore(): Promise<{ data: AppData; storage: StorageMode 
 async function readStoreUncached(): Promise<{
   data: AppData;
   storage: StorageMode;
+  rawVersion?: number | null;
 }> {
   const config = supabaseConfig();
 
@@ -204,12 +294,16 @@ async function readStoreUncached(): Promise<{
     try {
       const remote = await readSupabase();
       if (remote) {
-        return { data: normalizeData(remote), storage: "supabase" };
+        return {
+          data: normalizeData(remote.payload),
+          storage: "supabase",
+          rawVersion: remote.rawVersion,
+        };
       }
       const seed = createSeedData();
       seed.promotions = [];
       await writeSupabase(seed);
-      return { data: seed, storage: "supabase" };
+      return { data: seed, storage: "supabase", rawVersion: seed.version };
     } catch (error) {
       console.error("Supabase store unavailable, falling back to filesystem", error);
     }
@@ -254,21 +348,30 @@ export async function replaceStorePayload(data: AppData): Promise<void> {
   memoryStore = { at: Date.now(), data: next, storage: "supabase" };
 }
 
-export async function saveStore(data: AppData): Promise<{ storage: StorageMode }> {
+export async function saveStore(
+  data: AppData,
+  opts?: { ifVersion?: number | null },
+): Promise<{ storage: StorageMode }> {
+  const normalized = normalizeData(data);
   const next: AppData = {
-    ...normalizeData(data),
+    ...normalized,
+    version:
+      opts && "ifVersion" in opts
+        ? (opts.ifVersion ?? 0) + 1
+        : normalized.version || 1,
     updatedAt: new Date().toISOString(),
   };
 
   const config = supabaseConfig();
   if (config) {
     try {
-      await writeSupabase(next);
+      await writeSupabase(next, opts);
       // Keep local mirror for resilience
       await writeFilesystem(next).catch(() => undefined);
       memoryStore = { at: Date.now(), data: next, storage: "supabase" };
       return { storage: "supabase" };
     } catch (error) {
+      if (error instanceof StoreWriteConflictError) throw error;
       console.error("Supabase write failed, using filesystem", error);
     }
   }
@@ -289,12 +392,36 @@ export async function saveStore(data: AppData): Promise<{ storage: StorageMode }
   }
 }
 
+const STORE_CONFLICT_RETRIES = 4;
+
 export async function updateStore(
-  mutator: (data: AppData) => AppData | Promise<AppData>
+  mutator: (data: AppData) => AppData | Promise<AppData>,
 ): Promise<{ data: AppData; storage: StorageMode }> {
-  // Bypass the read cache for mutations to avoid racing a stale in-flight read
-  const { data } = await readStoreUncached();
-  const next = await mutator(structuredClone(data));
-  const { storage } = await saveStore(next);
-  return { data: next, storage };
+  if (isBookingE2EIsolated()) {
+    const isolated = getIsolatedStore();
+    if (isolated) {
+      const next = await mutator(structuredClone(isolated));
+      setIsolatedStore(next);
+      return { data: next, storage: "filesystem" };
+    }
+  }
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= STORE_CONFLICT_RETRIES; attempt++) {
+    const { data, storage, rawVersion } = await readStoreUncached();
+    const next = await mutator(structuredClone(data));
+    try {
+      const saved = await saveStore(
+        next,
+        storage === "supabase" ? { ifVersion: rawVersion ?? null } : undefined,
+      );
+      return { data: next, storage: saved.storage };
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof StoreWriteConflictError)) throw error;
+      invalidateStoreCache();
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new StoreWriteConflictError();
 }

@@ -177,6 +177,15 @@ export interface EyeExamAppointment {
   notes?: string;
   smsStatus: "queued" | "sent" | "failed" | "simulated" | "pending";
   smsError?: string;
+  /** SHA-256 hex of the WhatsApp management token. Never store the raw token. */
+  manageTokenHash?: string;
+  manageTokenExpiresAt?: string;
+  manageTokenRevokedAt?: string | null;
+  /**
+   * Admin-only silent manage-flow fixture. Never send WhatsApp/SMS.
+   * Excluded from public availability and dashboard stats.
+   */
+  silentTest?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -358,6 +367,11 @@ export interface BookingMessagesSettings {
     enabled: boolean;
     templateName: string;
     body: string;
+    /** Pending Twilio CTA template. Off until Meta approval. */
+    manageTemplateName?: string;
+    manageTemplateEnabled?: boolean;
+    /** Twilio Content SID (HX…). Configured after Meta approval; never hardcode secrets. */
+    manageTemplateContentSid?: string;
   };
   ownerNotification: {
     enabled: boolean;
@@ -507,6 +521,11 @@ export interface AppData {
   availability: StaffAvailability[];
   eyeExamAvailability: EyeExamAvailability[];
   eyeExamAppointments: EyeExamAppointment[];
+  /**
+   * Legacy unused field. Preview fixtures live in a dedicated lumina_store
+   * row. Production silent tests are flagged rows inside `eyeExamAppointments`.
+   */
+  previewManageTestAppointments?: EyeExamAppointment[];
   bookingServices: BookingService[];
   lensInventory: LensInventoryCell[];
   settings: StoreSettings;

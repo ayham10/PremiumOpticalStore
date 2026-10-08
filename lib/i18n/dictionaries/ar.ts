@@ -612,7 +612,9 @@ const ar: Dictionary = {
   manage: {
     eyebrow: "المواعيد",
     title: "إدارة حجزك",
-    lead: "أدخل رمز الحجز للعرض أو إعادة الجدولة أو الإلغاء.",
+    lead: "عرض تفاصيل الموعد وإدارته من رابط واتساب الآمن.",
+    service: "الخدمة",
+    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
     token: "رمز الحجز",
     find: "البحث عن الحجز",
     loading: "جارٍ التحميل…",
@@ -883,6 +885,20 @@ const ar: Dictionary = {
       noAvailableTimes: "لا توجد أوقات متاحة في هذا التاريخ.",
       conflictError:
         "تم حجز هذا الوقت للتو. تم تحديث الجدول — يرجى اختيار وقت آخر.",
+      manageLinkTitle: "رابط إدارة الموعد",
+      manageLinkGenerate: "إنشاء رابط إدارة الموعد",
+      manageLinkCopy: "نسخ الرابط",
+      manageLinkOpen: "فتح الرابط",
+      manageLinkCopied: "تم نسخ الرابط",
+      manageLinkGenerating: "جارٍ الإنشاء…",
+      manageLinkRotateConfirm:
+        "يوجد رابط إدارة صالح لهذا الموعد. إنشاء رابط جديد سيوقف الرابط السابق ولن يعمل بعد ذلك. هل تريد المتابعة؟",
+      manageLinkOnceHint:
+        "انسخ الرابط الآن. لن يظهر مرة أخرى بعد إغلاق هذه النافذة.",
+      manageLinkCancelled: "لا يمكن إنشاء رابط لموعد ملغى.",
+      manageLinkExpired: "لا يمكن إنشاء رابط لموعد منتهٍ.",
+      manageLinkError: "تعذر إنشاء رابط الإدارة.",
+      manageLinkCopyError: "تعذر نسخ الرابط.",
     },
     promotions: {
       kicker: "التسويق",
@@ -1201,6 +1217,14 @@ const ar: Dictionary = {
       bmMetaTestSuccess: "تم الاتصال بـ Meta WhatsApp Cloud API.",
       bmMetaTestError: "فشل اختبار اتصال Meta.",
       bmCustomer: "تأكيد العميل",
+      bmManageTemplate: "قالب إدارة الموعد",
+      bmManageTemplateName: "oyon_booking_manage_v2_ar",
+      bmManageTemplateHint:
+        "بانتظار موافقة Meta. أبقِ هذا الخيار متوقفاً. بعد الموافقة تُستخدم oyon_booking_manage_v2_ar للعربية و oyon_booking_manage_v2_he للعبرية. الحجوزات الحالية تبقى على قالب التأكيد المعتمد حتى ذلك الحين.",
+      bmManageTemplateEnable: "تفعيل بعد الموافقة",
+      bmManageTemplateSid: "Twilio Content SID",
+      bmManageTemplateSidHint:
+        "الصق معرّف Content SID (HX…) بعد موافقة Meta. لا تضع هنا Account SID أو Auth Token.",
       bmOwner: "إشعار المالك",
       bmReminder: "تذكير الموعد",
       bmEnabled: "مفعّل",

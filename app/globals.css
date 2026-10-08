@@ -1733,6 +1733,30 @@ body.admin-home-active .admin-main {
   cursor: pointer;
 }
 
+.abk-row.is-cancelled td,
+.abk-card.is-cancelled {
+  opacity: 0.62;
+}
+
+.abk-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #2a2f36;
+  background: rgba(8, 12, 17, 0.86);
+  color: #cfd5dc;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.abk-status.is-cancelled {
+  border-color: rgba(224, 122, 122, 0.45);
+  color: #e07a7a;
+}
+
 .abk-row:hover td,
 .abk-row:focus-within td {
   border-color: rgba(212, 175, 55, 0.72);
@@ -2536,6 +2560,79 @@ body.admin-home-active .admin-main {
   font-size: 0.8rem;
   font-weight: 650;
   cursor: pointer;
+}
+
+.admin-edit-booking-manage {
+  min-width: 0;
+  overflow-x: hidden;
+  padding: 0.7rem 0.85rem 0.75rem;
+}
+
+.admin-edit-booking-manage-title {
+  margin: 0 0 0.55rem;
+}
+
+.admin-edit-booking-manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.admin-edit-booking-manage-generate,
+.admin-edit-booking-manage-copy,
+.admin-edit-booking-manage-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+  white-space: normal;
+  text-align: center;
+}
+
+.admin-edit-booking-manage-generate {
+  width: 100%;
+  border: 1px solid #d4af37;
+  background: transparent;
+  color: #d4af37;
+}
+
+.admin-edit-booking-manage-copy,
+.admin-edit-booking-manage-open {
+  flex: 1 1 8.5rem;
+  border: 1px solid #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+  color: #d4af37;
+}
+
+.admin-edit-booking-manage-generate:disabled,
+.admin-edit-booking-manage-copy:disabled,
+.admin-edit-booking-manage-open:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-edit-booking-manage-hint,
+.admin-edit-booking-manage-note {
+  margin: 0.45rem 0 0;
+  color: #8a929c;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-edit-booking-manage-note[data-kind="error"] {
+  color: #e07a7a;
 }
 
 @media (min-width: 640px) {

@@ -18,6 +18,12 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set("x-lumina-locale", locale);
 
+  if (request.nextUrl.pathname.startsWith("/appointments/manage")) {
+    response.headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    response.headers.set("Referrer-Policy", "no-referrer");
+  }
+
   if (!request.cookies.get(LOCALE_COOKIE)?.value) {
     response.cookies.set(LOCALE_COOKIE, locale, {
       path: "/",

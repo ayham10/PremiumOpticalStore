@@ -21,7 +21,10 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
-import type { ClinicAppointmentType } from "@/lib/types";
+import type {
+  ClinicAppointmentType,
+  EyeExamAppointmentStatus,
+} from "@/lib/types";
 
 const GOLD = "#D4AF37";
 
@@ -32,6 +35,7 @@ export type BookingRow = {
   appointmentDate: string;
   appointmentTime: string;
   appointmentType: ClinicAppointmentType;
+  status: EyeExamAppointmentStatus;
   notes?: string;
 };
 
@@ -119,6 +123,14 @@ function longDayAr(iso: string): string {
   });
 }
 
+function statusLabelAr(status: string): string {
+  if (status === "cancelled") return "ملغى";
+  if (status === "completed") return "مكتمل";
+  if (status === "no-show" || status === "no_show") return "لم يحضر";
+  if (status === "pending") return "قيد الانتظار";
+  return "مؤكد";
+}
+
 function toWhatsAppHref(phone: string): string | null {
   const trimmed = phone.trim();
   if (!trimmed) return null;
@@ -193,14 +205,19 @@ export default function BookingsPanel({
     input.click();
   }
 
+  const liveAppointments = useMemo(
+    () => appointments.filter((a) => a.status !== "cancelled"),
+    [appointments],
+  );
+
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = addDays(weekAnchor, i);
       const iso = isoLocal(d);
-      const count = appointments.filter((a) => a.appointmentDate === iso).length;
+      const count = liveAppointments.filter((a) => a.appointmentDate === iso).length;
       return { date: d, iso, count };
     });
-  }, [weekAnchor, appointments]);
+  }, [weekAnchor, liveAppointments]);
 
   const weekEnd = addDays(weekAnchor, 6);
 
@@ -212,7 +229,7 @@ export default function BookingsPanel({
     let todayCount = 0;
     let weekCount = 0;
     let monthCount = 0;
-    for (const row of appointments) {
+    for (const row of liveAppointments) {
       if (row.appointmentDate === today) todayCount += 1;
       if (
         row.appointmentDate >= weekStartIso &&
@@ -228,15 +245,15 @@ export default function BookingsPanel({
       monthCount,
       total: appointments.length,
     };
-  }, [appointments]);
+  }, [appointments.length, liveAppointments]);
 
   const visible = useMemo(() => {
     const today = isoLocal(new Date());
     let rows = [...appointments];
     if (viewMode === "weekly") {
-      rows = rows.filter((a) => a.appointmentDate === selectedDay);
+      rows = liveAppointments.filter((a) => a.appointmentDate === selectedDay);
     } else if (upcomingOnly) {
-      rows = rows.filter((a) => a.appointmentDate >= today);
+      rows = liveAppointments.filter((a) => a.appointmentDate >= today);
     } else if (dateFilter) {
       rows = rows.filter((a) => a.appointmentDate === dateFilter);
     }
@@ -246,7 +263,14 @@ export default function BookingsPanel({
       return a.appointmentTime.localeCompare(b.appointmentTime);
     });
     return rows;
-  }, [appointments, viewMode, selectedDay, dateFilter, upcomingOnly]);
+  }, [
+    appointments,
+    liveAppointments,
+    viewMode,
+    selectedDay,
+    dateFilter,
+    upcomingOnly,
+  ]);
 
   function shiftWeek(delta: number) {
     const next = addDays(weekAnchor, delta * 7);
@@ -524,6 +548,7 @@ export default function BookingsPanel({
                       <th>العميل</th>
                       <th>الهاتف</th>
                       <th>الخدمة</th>
+                      <th>الحالة</th>
                       <th>ملاحظات</th>
                       <th>إجراءات</th>
                     </tr>
@@ -531,10 +556,11 @@ export default function BookingsPanel({
                   <tbody>
                     {visible.map((row) => {
                       const waHref = toWhatsAppHref(row.phone);
+                      const cancelled = row.status === "cancelled";
                       return (
                         <tr
                           key={row.id}
-                          className="abk-row"
+                          className={`abk-row${cancelled ? " is-cancelled" : ""}`}
                           onClick={() => onOpenRow(row)}
                         >
                           <td>
@@ -575,6 +601,13 @@ export default function BookingsPanel({
                           <td className="abk-service">
                             {serviceLabel(row.appointmentType || "eye_exam")}
                           </td>
+                          <td>
+                            <span
+                              className={`abk-status${cancelled ? " is-cancelled" : ""}`}
+                            >
+                              {statusLabelAr(row.status)}
+                            </span>
+                          </td>
                           <td className="abk-notes">
                             {row.notes?.trim() ? row.notes : "—"}
                           </td>
@@ -601,12 +634,13 @@ export default function BookingsPanel({
               <ul className="abk-cards">
                 {visible.map((row) => {
                   const waHref = toWhatsAppHref(row.phone);
+                  const cancelled = row.status === "cancelled";
                   const ReasonIcon =
                     SERVICE_ICONS[row.appointmentType || "eye_exam"] || Eye;
                   return (
                     <li key={row.id}>
                       <article
-                        className="abk-card"
+                        className={`abk-card${cancelled ? " is-cancelled" : ""}`}
                         onClick={() => onOpenRow(row)}
                       >
                         <button
@@ -655,6 +689,11 @@ export default function BookingsPanel({
                           <ReasonIcon size={13} strokeWidth={1.5} />
                           <span>
                             {serviceLabel(row.appointmentType || "eye_exam")}
+                          </span>
+                          <span
+                            className={`abk-status${cancelled ? " is-cancelled" : ""}`}
+                          >
+                            {statusLabelAr(row.status)}
                           </span>
                         </p>
                       </article>

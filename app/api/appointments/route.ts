@@ -40,6 +40,38 @@ const SERVICE_KEYS: ServiceType[] = [
   "Lens Fitting",
 ];
 
+type PendingSms = {
+  to: string;
+  body: string;
+  type: SmsType;
+  appointmentId: string;
+};
+
+async function deliverAppointmentSms(pending: PendingSms | null) {
+  if (!pending) return;
+  const result = await sendSms({
+    to: pending.to,
+    body: pending.body,
+    type: pending.type,
+    appointmentId: pending.appointmentId,
+  });
+  await updateStore((store) => {
+    pushSmsLog(store, {
+      to: pending.to,
+      body: pending.body,
+      type: pending.type,
+      result,
+      appointmentId: pending.appointmentId,
+    });
+    return store;
+  }).catch((error) => {
+    console.error("[appointment] failed to persist SMS log", {
+      appointmentId: pending.appointmentId,
+      error: error instanceof Error ? error.message : "sms persist failed",
+    });
+  });
+}
+
 const STATUSES = new Set<AppointmentStatus>([
   "pending",
   "confirmed",
@@ -174,6 +206,7 @@ export async function POST(request: Request) {
         : "pending";
 
     let created: Appointment | null = null;
+    let pendingSms: PendingSms | null = null;
 
     const { data } = await updateStore(async (store) => {
       const staff = store.staff.find((s) => s.id === staffId && s.active);
@@ -258,29 +291,19 @@ export async function POST(request: Request) {
 
       store.appointments.unshift(created);
 
-      const smsBody = appointmentSmsBody("appointment_confirmation", {
-        storeName: store.settings.storeName,
-        customerName,
-        service,
-        date,
-        time: startTime,
-        staffName: staff.name,
-      });
-
-      const smsResult = await sendSms({
+      pendingSms = {
         to: customerPhone,
-        body: smsBody,
+        body: appointmentSmsBody("appointment_confirmation", {
+          storeName: store.settings.storeName,
+          customerName,
+          service,
+          date,
+          time: startTime,
+          staffName: staff.name,
+        }),
         type: "appointment_confirmation",
         appointmentId: created.id,
-      });
-
-      pushSmsLog(store, {
-        to: customerPhone,
-        body: smsBody,
-        type: "appointment_confirmation",
-        result: smsResult,
-        appointmentId: created.id,
-      });
+      };
 
       if (isAdmin && session) {
         pushActivity(store, {
@@ -302,6 +325,8 @@ export async function POST(request: Request) {
 
       return store;
     });
+
+    await deliverAppointmentSms(pendingSms);
 
     const staff = data.staff.find((s) => s.id === staffId);
     return NextResponse.json(
@@ -362,6 +387,7 @@ export async function PATCH(request: Request) {
 
     let updated: Appointment | null = null;
     let smsType: SmsType | null = null;
+    let pendingSms: PendingSms | null = null;
 
     await updateStore(async (store) => {
       const index = store.appointments.findIndex((a) =>
@@ -451,27 +477,19 @@ export async function PATCH(request: Request) {
 
       if (shouldSms && smsType && updated) {
         const staff = store.staff.find((s) => s.id === updated!.staffId);
-        const bodyText = appointmentSmsBody(smsType, {
-          storeName: store.settings.storeName,
-          customerName: updated.customerName,
-          service: updated.service,
-          date: updated.date,
-          time: updated.startTime,
-          staffName: staff?.name,
-        });
-        const result = await sendSms({
+        pendingSms = {
           to: updated.customerPhone,
-          body: bodyText,
+          body: appointmentSmsBody(smsType, {
+            storeName: store.settings.storeName,
+            customerName: updated.customerName,
+            service: updated.service,
+            date: updated.date,
+            time: updated.startTime,
+            staffName: staff?.name,
+          }),
           type: smsType,
           appointmentId: updated.id,
-        });
-        pushSmsLog(store, {
-          to: updated.customerPhone,
-          body: bodyText,
-          type: smsType,
-          result,
-          appointmentId: updated.id,
-        });
+        };
       }
 
       pushActivity(store, {
@@ -484,6 +502,8 @@ export async function PATCH(request: Request) {
 
       return store;
     });
+
+    await deliverAppointmentSms(pendingSms);
 
     const { data } = await getStore();
     const staff = data.staff.find((s) => s.id === updated!.staffId);
@@ -533,6 +553,7 @@ export async function DELETE(request: Request) {
     }
 
     let cancelled: Appointment | null = null;
+    let pendingSms: PendingSms | null = null;
 
     await updateStore(async (store) => {
       const index = store.appointments.findIndex((a) =>
@@ -553,27 +574,19 @@ export async function DELETE(request: Request) {
       store.appointments[index] = cancelled;
 
       const staff = store.staff.find((s) => s.id === cancelled!.staffId);
-      const bodyText = appointmentSmsBody("appointment_cancellation", {
-        storeName: store.settings.storeName,
-        customerName: cancelled.customerName,
-        service: cancelled.service,
-        date: cancelled.date,
-        time: cancelled.startTime,
-        staffName: staff?.name,
-      });
-      const result = await sendSms({
+      pendingSms = {
         to: cancelled.customerPhone,
-        body: bodyText,
+        body: appointmentSmsBody("appointment_cancellation", {
+          storeName: store.settings.storeName,
+          customerName: cancelled.customerName,
+          service: cancelled.service,
+          date: cancelled.date,
+          time: cancelled.startTime,
+          staffName: staff?.name,
+        }),
         type: "appointment_cancellation",
         appointmentId: cancelled.id,
-      });
-      pushSmsLog(store, {
-        to: cancelled.customerPhone,
-        body: bodyText,
-        type: "appointment_cancellation",
-        result,
-        appointmentId: cancelled.id,
-      });
+      };
 
       pushActivity(store, {
         actor: isAdmin && session ? session.email : cancelled.customerEmail,
@@ -585,6 +598,8 @@ export async function DELETE(request: Request) {
 
       return store;
     });
+
+    await deliverAppointmentSms(pendingSms);
 
     return NextResponse.json({ ok: true, appointment: cancelled });
   } catch (error) {

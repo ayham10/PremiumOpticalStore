@@ -18,10 +18,19 @@ import {
   getTwilioContentSidMap,
   resolveTwilioContentSid,
 } from "@/lib/twilio/content-sids";
+import { sanitizeTwilioContentSid } from "@/lib/twilio/content-sid-format";
 import {
   sendTwilioWhatsAppTemplate,
   type TwilioWhatsAppSendResult,
 } from "@/lib/twilio/whatsapp";
+import {
+  buildManageTemplateContentVariables,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
+} from "@/lib/booking-manage-token";
+import { isBookingE2EIsolated, recordE2EOutbound } from "@/lib/booking-e2e";
+import { shouldSkipBookingWhatsApp } from "@/lib/booking-manage-test";
+import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
 import {
   formatPhoneForWhatsAppWeb,
   isWhatsAppWebServiceConfigured,
@@ -30,10 +39,11 @@ import {
   type WhatsAppSendResult,
 } from "@/lib/whatsapp/provider";
 
-const CUSTOMER_CONFIRMATION_TEMPLATE =
+export const LIVE_CUSTOMER_CONFIRMATION_TEMPLATE =
   "oyon_booking_confirmation_hx716fcfd9ac41ae0e332e569b9b4fbc39";
-const OWNER_NOTIFICATION_TEMPLATE = "owner_notification";
-const APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder";
+export const OWNER_NOTIFICATION_TEMPLATE = "owner_notification";
+export const APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder";
+const CUSTOMER_CONFIRMATION_TEMPLATE = LIVE_CUSTOMER_CONFIRMATION_TEMPLATE;
 
 const REMINDER_GRACE_MS = 30 * 60 * 1000;
 
@@ -69,6 +79,52 @@ function buildCustomerConfirmationContentVariables(
     "1": customerName,
     "2": appointment.appointmentDate,
     "3": appointment.appointmentTime,
+  };
+}
+
+export function resolveManageTemplateName(
+  bookingMessages: BookingMessagesSettings,
+  language?: string | null,
+): string {
+  if (language === "he") return CUSTOMER_MANAGE_TEMPLATE_NAME_HE;
+  return (
+    bookingMessages.customerConfirmation.manageTemplateName?.trim() ||
+    CUSTOMER_MANAGE_TEMPLATE_NAME_AR
+  );
+}
+
+export function resolveManageTemplateContentSid(
+  bookingMessages: BookingMessagesSettings,
+  language?: string | null,
+): string | null {
+  const manageName = resolveManageTemplateName(bookingMessages, language);
+  const mapped = resolveTwilioContentSid(manageName);
+  if (mapped) return mapped;
+  if (language === "he") return null;
+  return sanitizeTwilioContentSid(
+    bookingMessages.customerConfirmation.manageTemplateContentSid,
+  );
+}
+
+export function resolveCustomerConfirmationTemplate(
+  bookingMessages: BookingMessagesSettings,
+  language?: string | null,
+): {
+  templateName: string;
+  useManageTemplate: boolean;
+  contentSid: string | null;
+} {
+  const manageName = resolveManageTemplateName(bookingMessages, language);
+  const enabled =
+    bookingMessages.customerConfirmation.manageTemplateEnabled === true;
+  const contentSid = resolveManageTemplateContentSid(bookingMessages, language);
+  if (enabled && contentSid) {
+    return { templateName: manageName, useManageTemplate: true, contentSid };
+  }
+  return {
+    templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
+    useManageTemplate: false,
+    contentSid: resolveTwilioContentSid(CUSTOMER_CONFIRMATION_TEMPLATE),
   };
 }
 
@@ -256,6 +312,7 @@ async function sendViaTwilio(
     to: string;
     templateName: string;
     contentVariables: Record<string, string>;
+    contentSid?: string | null;
     kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
     smsType: "appointment_confirmation" | "appointment_reminder" | "custom";
     note?: string;
@@ -265,6 +322,7 @@ async function sendViaTwilio(
     to: opts.to,
     templateName: opts.templateName,
     contentVariables: opts.contentVariables,
+    contentSid: opts.contentSid,
   });
 
   if (result.ok) {
@@ -299,12 +357,14 @@ async function sendCustomerConfirmationViaTwilio(
   opts: {
     templateName: string;
     contentVariables: Record<string, string>;
+    contentSid?: string | null;
   },
 ): Promise<void> {
   await sendViaTwilio(appointment, {
     to: appointment.phone,
     templateName: opts.templateName,
     contentVariables: opts.contentVariables,
+    contentSid: opts.contentSid,
     kind: "customer_confirmation",
     smsType: "appointment_confirmation",
   });
@@ -409,10 +469,38 @@ async function sendAppointmentReminder(
  * sendConfiguredTemplate for future reuse and are not deleted.
  * Never throws — messaging failures must not affect the booking.
  */
+export function shouldDispatchBookingMessages(
+  appointment: EyeExamAppointment,
+  vercelEnv: string | undefined = process.env.VERCEL_ENV,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  if (isSilentManageTestAppointment(appointment)) return false;
+  if (shouldSkipBookingWhatsApp(vercelEnv, nodeEnv)) return false;
+  return true;
+}
+
 export async function dispatchBookingMessages(
   appointment: EyeExamAppointment,
+  opts?: { manageToken?: string },
 ): Promise<void> {
   try {
+    if (isBookingE2EIsolated()) {
+      recordE2EOutbound("whatsapp", appointment.id);
+      return;
+    }
+    if (isSilentManageTestAppointment(appointment)) {
+      console.info("[WhatsApp] skipped — silent admin manage test", {
+        appointmentId: appointment.id,
+      });
+      return;
+    }
+    if (!shouldDispatchBookingMessages(appointment)) {
+      console.info("[WhatsApp] skipped — Preview/dev test environment", {
+        appointmentId: appointment.id,
+      });
+      return;
+    }
+
     invalidateStoreCache();
     const { data: store } = await getStore();
     const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
@@ -440,16 +528,34 @@ export async function dispatchBookingMessages(
       appointment,
       serviceLabel,
     );
-    const customerConfirmationVariables =
-      buildCustomerConfirmationContentVariables(appointment);
+    const confirmation = resolveCustomerConfirmationTemplate(
+      bookingMessages,
+      appointment.language,
+    );
+    const useManageTemplate =
+      confirmation.useManageTemplate && Boolean(opts?.manageToken);
+    const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();
+    const dateLabel = formatEyeExamDateDisplay(appointment.appointmentDate);
+    const customerConfirmationVariables = useManageTemplate
+      ? buildManageTemplateContentVariables({
+          customerName,
+          serviceLabel,
+          dateLabel,
+          time: appointment.appointmentTime,
+          token: opts!.manageToken!,
+        })
+      : buildCustomerConfirmationContentVariables(appointment);
     const useWhatsAppWeb = isWhatsAppWebServiceConfigured();
     const immediateSends: Promise<void>[] = [];
 
     if (bookingMessages.customerConfirmation.enabled) {
       immediateSends.push(
         sendCustomerConfirmationViaTwilio(appointment, {
-          templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
+          templateName: useManageTemplate
+            ? confirmation.templateName
+            : CUSTOMER_CONFIRMATION_TEMPLATE,
           contentVariables: customerConfirmationVariables,
+          contentSid: useManageTemplate ? confirmation.contentSid : undefined,
         }),
       );
     }
@@ -516,6 +622,10 @@ export async function processDueAppointmentReminders(): Promise<{
   checked: number;
   sent: number;
 }> {
+  if (shouldSkipBookingWhatsApp()) {
+    return { checked: 0, sent: 0 };
+  }
+
   invalidateStoreCache();
   const { data: store } = await getStore();
   const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
@@ -531,6 +641,7 @@ export async function processDueAppointmentReminders(): Promise<{
   const appointments = store.eyeExamAppointments || [];
   for (const appointment of appointments) {
     if (appointment.status !== "confirmed") continue;
+    if (isSilentManageTestAppointment(appointment)) continue;
     const didSend = await sendAppointmentReminder(
       appointment,
       store,

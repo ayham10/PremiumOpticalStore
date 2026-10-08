@@ -981,7 +981,9 @@ const en: Dictionary = {
   manage: {
     eyebrow: "Appointments",
     title: "Manage your booking",
-    lead: "Enter your booking code to view, reschedule, or cancel.",
+    lead: "View and manage your appointment from the secure WhatsApp link.",
+    service: "Service",
+    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
     token: "Booking code",
     find: "Find booking",
     loading: "Loading…",
@@ -1252,6 +1254,22 @@ const en: Dictionary = {
       noAvailableTimes: "No available times on this date.",
       conflictError:
         "That time was just taken. The schedule has been refreshed — please pick another slot.",
+      manageLinkTitle: "Appointment management link",
+      manageLinkGenerate: "Generate management link",
+      manageLinkCopy: "Copy link",
+      manageLinkOpen: "Open link",
+      manageLinkCopied: "Link copied",
+      manageLinkGenerating: "Generating…",
+      manageLinkRotateConfirm:
+        "A valid management link already exists for this appointment. Generating a new link will stop the previous one from working. Continue?",
+      manageLinkOnceHint:
+        "Copy the link now. It will not be shown again after this window is closed.",
+      manageLinkCancelled:
+        "A management link cannot be generated for a canceled appointment.",
+      manageLinkExpired:
+        "A management link cannot be generated for an expired appointment.",
+      manageLinkError: "Could not generate the management link.",
+      manageLinkCopyError: "Could not copy the link.",
     },
     promotions: {
       kicker: "Marketing",
@@ -1573,6 +1591,14 @@ const en: Dictionary = {
       bmMetaTestSuccess: "Meta WhatsApp Cloud API connected.",
       bmMetaTestError: "Meta connection test failed.",
       bmCustomer: "Customer confirmation",
+      bmManageTemplate: "Booking management template",
+      bmManageTemplateName: "oyon_booking_manage_v2_ar",
+      bmManageTemplateHint:
+        "Pending Meta approval. Keep this off. After approval, Arabic bookings use oyon_booking_manage_v2_ar and Hebrew bookings use oyon_booking_manage_v2_he. Live bookings keep the current confirmation template until then.",
+      bmManageTemplateEnable: "Activate after approval",
+      bmManageTemplateSid: "Twilio Content SID",
+      bmManageTemplateSidHint:
+        "Paste the HX Content SID after Meta approval. Do not store Account SID or Auth Token here.",
       bmOwner: "Owner notification",
       bmReminder: "Appointment reminder",
       bmEnabled: "Enabled",

@@ -1,4 +1,5 @@
 import type { BookingMessagesSettings } from "@/lib/types";
+import { sanitizeTwilioContentSid } from "@/lib/twilio/content-sid-format";
 
 export const BOOKING_MESSAGE_PLACEHOLDERS = [
   "{{name}}",
@@ -52,6 +53,9 @@ export const DEFAULT_BOOKING_MESSAGES: BookingMessagesSettings = {
     enabled: true,
     templateName: "oyon_booking_confirmation_hx716fcfd9ac41ae0e332e569b9b4fbc39",
     body: DEFAULT_CUSTOMER_CONFIRMATION_BODY,
+    manageTemplateName: "oyon_booking_manage_v2_ar",
+    manageTemplateEnabled: false,
+    manageTemplateContentSid: "",
   },
   ownerNotification: {
     enabled: false,
@@ -128,6 +132,13 @@ export function mergeBookingMessages(
         customerConfirmation.body,
         DEFAULT_CUSTOMER_CONFIRMATION_BODY,
       ),
+      manageTemplateName:
+        customerConfirmation.manageTemplateName?.trim() ||
+        DEFAULT_BOOKING_MESSAGES.customerConfirmation.manageTemplateName,
+      manageTemplateEnabled: customerConfirmation.manageTemplateEnabled === true,
+      manageTemplateContentSid:
+        sanitizeTwilioContentSid(customerConfirmation.manageTemplateContentSid) ||
+        "",
     },
     ownerNotification: {
       ...ownerNotification,

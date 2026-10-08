@@ -4,10 +4,12 @@ import { getStore } from "@/lib/db/store";
 import { handleRouteError } from "@/lib/api/helpers";
 import {
   formatEyeExamDateDisplay,
+  isScheduledClinicBooking,
   isValidIsoDate,
   normalizeAppointmentType,
   todayInJerusalem,
 } from "@/lib/eye-exam";
+import { customerFacingAppointments } from "@/lib/booking-silent-test";
 import type {
   DashboardRecentBooking,
   DashboardStats,
@@ -70,10 +72,12 @@ function toRecentBooking(a: EyeExamAppointment): DashboardRecentBooking {
 export async function GET() {
   try {
     await requireSession("dashboard");
-    const { data, storage } = await getStore();
+    const { data, storage } = await getStore({ bypassCache: true });
 
     // Exact same array Clinic Bookings appointments tab reads
-    const clinicAppointments = [...(data.eyeExamAppointments || [])];
+    const clinicAppointments = customerFacingAppointments(
+      data.eyeExamAppointments || [],
+    );
 
     const today = todayInJerusalem();
     const weekDates = jerusalemWeekDates(today);
@@ -85,8 +89,8 @@ export async function GET() {
       appointmentTime: (a.appointmentTime || "").slice(0, 5),
     }));
 
-    const activeAppointments = normalized.filter(
-      (a) => a.status !== "cancelled",
+    const activeAppointments = normalized.filter((a) =>
+      isScheduledClinicBooking(a.status),
     );
 
     const todayAppointments = activeAppointments.filter(
