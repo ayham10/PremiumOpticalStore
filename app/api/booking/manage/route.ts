@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
 import { pickLocalized } from "@/lib/booking-services";
-import { isBookingManagePreviewTestAllowed } from "@/lib/booking-manage-test";
+import {
+  isBookingManagePreviewTestAllowed,
+  previewTestServiceLabel,
+} from "@/lib/booking-manage-test";
+import {
+  readPreviewTestAppointments,
+  resolvePreviewTestStoreConfig,
+  withPreviewTestStoreLock,
+  writePreviewTestAppointments,
+} from "@/lib/booking-manage-test-store";
 import {
   canCustomerMutateBooking,
   computeManageTokenExpiresAt,
@@ -11,7 +20,7 @@ import {
   manageAccessMessage,
   publicManageAppointmentView,
 } from "@/lib/booking-manage-token";
-import type { AppData, EyeExamAppointment } from "@/lib/types";
+import type { EyeExamAppointment } from "@/lib/types";
 import {
   formatEyeExamDateDisplay,
   getOpenAvailabilityForDate,
@@ -19,7 +28,6 @@ import {
   isValidIsoDate,
   normalizeAppointmentType,
   parseTimeToMinutes,
-  resolveAvailabilityDay,
   withEyeExamLock,
 } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
@@ -36,23 +44,11 @@ function tokenFromRequest(request: Request, body?: { token?: string }): string {
   return (body?.token || "").trim();
 }
 
-function locateManageAppointment(
-  store: AppData,
-  token: string,
-): { appointment: EyeExamAppointment | null; previewTest: boolean } {
-  const live = findAppointmentByManageTokenHash(
-    store.eyeExamAppointments,
-    token,
-  );
-  if (live) return { appointment: live, previewTest: false };
-  if (!isBookingManagePreviewTestAllowed()) {
-    return { appointment: null, previewTest: false };
-  }
-  const preview = findAppointmentByManageTokenHash(
-    store.previewManageTestAppointments || [],
-    token,
-  );
-  return { appointment: preview, previewTest: Boolean(preview) };
+async function locatePreviewTestAppointment(token: string) {
+  if (!isBookingManagePreviewTestAllowed()) return null;
+  if (!resolvePreviewTestStoreConfig().ok) return null;
+  const tests = await readPreviewTestAppointments();
+  return findAppointmentByManageTokenHash(tests, token);
 }
 
 function fail(reason: "not_found" | "expired" | "revoked") {
@@ -82,9 +78,27 @@ export async function GET(request: Request) {
     }
 
     const token = tokenFromRequest(request);
+    const preview = await locatePreviewTestAppointment(token);
+    if (preview) {
+      const access = evaluateManageAccess(preview);
+      if (!access.ok) return noStore(fail(access.reason));
+      const serviceLabel = previewTestServiceLabel(
+        access.appointment.appointmentType,
+        access.appointment.language,
+      );
+      return noStore(
+        NextResponse.json({
+          appointment: {
+            ...publicManageAppointmentView(access.appointment, serviceLabel),
+            dateLabel: formatEyeExamDateDisplay(access.appointment.appointmentDate),
+          },
+        }),
+      );
+    }
+
     const { data } = await getStore();
-    const located = locateManageAppointment(data, token);
-    const access = evaluateManageAccess(located.appointment);
+    const live = findAppointmentByManageTokenHash(data.eyeExamAppointments, token);
+    const access = evaluateManageAccess(live);
     if (!access.ok) return noStore(fail(access.reason));
 
     const service = data.bookingServices?.find(
@@ -137,18 +151,84 @@ export async function PATCH(request: Request) {
     let publicView: ReturnType<typeof publicManageAppointmentView> | null = null;
     let dateLabel = "";
 
+    const previewExisting = await locatePreviewTestAppointment(token);
+    if (previewExisting) {
+      await withPreviewTestStoreLock(async () => {
+        const list = await readPreviewTestAppointments();
+        const found = findAppointmentByManageTokenHash(list, token);
+        const access = evaluateManageAccess(found);
+        if (!access.ok) throw new Error(access.reason.toUpperCase());
+        if (!canCustomerMutateBooking(access.appointment)) {
+          throw new Error("NOT_MUTABLE");
+        }
+        const index = list.findIndex((item) => item.id === access.appointment.id);
+        if (index < 0) throw new Error("NOT_FOUND");
+        const current = list[index];
+        const now = new Date().toISOString();
+
+        if (action === "cancel") {
+          const updated: EyeExamAppointment = {
+            ...current,
+            status: "cancelled",
+            manageTokenRevokedAt: now,
+            updatedAt: now,
+          };
+          list[index] = updated;
+          await writePreviewTestAppointments(list);
+          const serviceLabel = previewTestServiceLabel(
+            updated.appointmentType,
+            updated.language,
+          );
+          publicView = publicManageAppointmentView(updated, serviceLabel);
+          dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
+          return;
+        }
+
+        const nextDate = (body.appointmentDate || "").trim();
+        const nextTime = (body.appointmentTime || "").trim();
+        if (!isValidIsoDate(nextDate)) throw new Error("INVALID_DATE");
+        if (parseTimeToMinutes(nextTime) == null) throw new Error("INVALID_TIME");
+        const updated: EyeExamAppointment = {
+          ...current,
+          appointmentDate: nextDate,
+          appointmentTime: nextTime,
+          manageTokenExpiresAt: computeManageTokenExpiresAt(
+            nextDate,
+            nextTime,
+            30,
+          ),
+          updatedAt: now,
+        };
+        list[index] = updated;
+        await writePreviewTestAppointments(list);
+        const serviceLabel = previewTestServiceLabel(
+          updated.appointmentType,
+          updated.language,
+        );
+        publicView = publicManageAppointmentView(updated, serviceLabel);
+        dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
+      });
+
+      return noStore(
+        NextResponse.json({
+          appointment: { ...publicView!, dateLabel },
+        }),
+      );
+    }
+
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
-        const located = locateManageAppointment(store, token);
-        const access = evaluateManageAccess(located.appointment);
+        const found = findAppointmentByManageTokenHash(
+          store.eyeExamAppointments,
+          token,
+        );
+        const access = evaluateManageAccess(found);
         if (!access.ok) throw new Error(access.reason.toUpperCase());
         if (!canCustomerMutateBooking(access.appointment)) {
           throw new Error("NOT_MUTABLE");
         }
 
-        const list = located.previewTest
-          ? store.previewManageTestAppointments || []
-          : store.eyeExamAppointments;
+        const list = store.eyeExamAppointments;
         const index = list.findIndex(
           (item) => item.id === access.appointment.id,
         );
@@ -166,11 +246,7 @@ export async function PATCH(request: Request) {
             updatedAt: now,
           };
           list[index] = updated;
-          if (located.previewTest) {
-            store.previewManageTestAppointments = list;
-          } else {
-            store.eyeExamAppointments = list;
-          }
+          store.eyeExamAppointments = list;
           const service = store.bookingServices?.find(
             (item) => item.key === updated.appointmentType,
           );
@@ -179,15 +255,13 @@ export async function PATCH(request: Request) {
             : updated.appointmentType;
           publicView = publicManageAppointmentView(updated, serviceLabel);
           dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
-          if (!located.previewTest) {
-            pushActivity(store, {
-              actor: "customer",
-              action: "cancel",
-              entity: "eye_exam_appointment",
-              entityId: current.id,
-              detail: "customer cancelled via manage link",
-            });
-          }
+          pushActivity(store, {
+            actor: "customer",
+            action: "cancel",
+            entity: "eye_exam_appointment",
+            entityId: current.id,
+            detail: "customer cancelled via manage link",
+          });
           return store;
         }
 
@@ -197,20 +271,11 @@ export async function PATCH(request: Request) {
         if (parseTimeToMinutes(nextTime) == null) throw new Error("INVALID_TIME");
 
         const nextType = normalizeAppointmentType(current.appointmentType);
-        const existingDay = store.eyeExamAvailability.find(
-          (item) => item.date === nextDate,
+        const day = getOpenAvailabilityForDate(
+          store.eyeExamAvailability,
+          nextDate,
+          nextType,
         );
-        const resolved = located.previewTest
-          ? resolveAvailabilityDay(existingDay, store.settings, nextDate)
-          : existingDay;
-        const day =
-          resolved && resolved.isOpen
-            ? getOpenAvailabilityForDate([resolved], nextDate, nextType)
-            : getOpenAvailabilityForDate(
-                store.eyeExamAvailability,
-                nextDate,
-                nextType,
-              );
         if (!day) throw new Error("DATE_UNAVAILABLE");
         const slot = day.slots.find((item) => item.time === nextTime && item.isEnabled);
         if (!slot) throw new Error("TIME_UNAVAILABLE");
@@ -238,11 +303,7 @@ export async function PATCH(request: Request) {
           updatedAt: now,
         };
         list[index] = updated;
-        if (located.previewTest) {
-          store.previewManageTestAppointments = list;
-        } else {
-          store.eyeExamAppointments = list;
-        }
+        store.eyeExamAppointments = list;
         const service = store.bookingServices?.find(
           (item) => item.key === updated.appointmentType,
         );
@@ -251,15 +312,13 @@ export async function PATCH(request: Request) {
           : updated.appointmentType;
         publicView = publicManageAppointmentView(updated, serviceLabel);
         dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
-        if (!located.previewTest) {
-          pushActivity(store, {
-            actor: "customer",
-            action: "update",
-            entity: "eye_exam_appointment",
-            entityId: current.id,
-            detail: `customer reschedule ${nextDate} ${nextTime}`,
-          });
-        }
+        pushActivity(store, {
+          actor: "customer",
+          action: "update",
+          entity: "eye_exam_appointment",
+          entityId: current.id,
+          detail: `customer reschedule ${nextDate} ${nextTime}`,
+        });
         return store;
       });
     });

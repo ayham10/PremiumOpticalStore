@@ -1,10 +1,16 @@
 import { bookingManageUrlForOrigin } from "@/lib/booking-manage-token";
-import { isActiveBookingServiceKey } from "@/lib/booking-services";
+import {
+  createDefaultBookingServices,
+  isActiveBookingServiceKey,
+  pickLocalized,
+} from "@/lib/booking-services";
 import {
   listBookableTimes,
   resolvePublicAvailability,
 } from "@/lib/eye-exam";
+import { createSeedData } from "@/lib/seed";
 import type { AppData, EyeExamAppointment } from "@/lib/types";
+import type { Locale } from "@/lib/i18n/config";
 
 export const PREVIEW_TEST_MAX_APPOINTMENTS = 5;
 export const PREVIEW_TEST_PHONE = "+972500000001";
@@ -61,21 +67,26 @@ export function capPreviewManageTestAppointments(
   return items.slice(0, max);
 }
 
-export function pickPreviewTestSlot(store: AppData): {
+/** Seed schedule only — never reads live customer appointments. */
+export function pickPreviewTestSlot(
+  store: AppData = createSeedData(),
+): {
   date: string;
   time: string;
   appointmentType: string;
 } | null {
+  const services = store.bookingServices?.length
+    ? store.bookingServices
+    : createDefaultBookingServices();
   const appointmentType =
-    store.bookingServices?.find((item) =>
-      isActiveBookingServiceKey(item.key, store.bookingServices || []),
-    )?.key || "eye_exam";
+    services.find((item) => isActiveBookingServiceKey(item.key, services))
+      ?.key || "eye_exam";
   const days = resolvePublicAvailability(
     store.eyeExamAvailability,
     store.settings,
   );
   for (const day of days) {
-    const times = listBookableTimes(day, store.eyeExamAppointments, {
+    const times = listBookableTimes(day, [], {
       appointmentType,
     });
     if (times[0]) {
@@ -83,5 +94,16 @@ export function pickPreviewTestSlot(store: AppData): {
     }
   }
   return null;
+}
+
+export function previewTestServiceLabel(
+  appointmentType: string,
+  language: Locale = "ar",
+): string {
+  const services = createDefaultBookingServices();
+  const service = services.find((item) => item.key === appointmentType);
+  return service
+    ? pickLocalized(service.name, language, appointmentType)
+    : appointmentType;
 }
 

@@ -9,14 +9,20 @@ import {
   pickPreviewTestSlot,
   PREVIEW_TEST_EMAIL,
   PREVIEW_TEST_PHONE,
+  previewTestServiceLabel,
 } from "@/lib/booking-manage-test";
+import {
+  publicPreviewTestStoreStatus,
+  readPreviewTestAppointments,
+  resolvePreviewTestStoreConfig,
+  withPreviewTestStoreLock,
+  writePreviewTestAppointments,
+} from "@/lib/booking-manage-test-store";
 import {
   issueBookingManageToken,
   publicManageAppointmentView,
 } from "@/lib/booking-manage-token";
-import { pickLocalized } from "@/lib/booking-services";
-import { updateStore } from "@/lib/db/store";
-import { formatEyeExamDateDisplay, withEyeExamLock } from "@/lib/eye-exam";
+import { formatEyeExamDateDisplay } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import type { EyeExamAppointment } from "@/lib/types";
 
@@ -37,12 +43,18 @@ export async function GET() {
   try {
     await requireSession("appointments");
     const allowed = isBookingManagePreviewTestAllowed();
+    const storage = publicPreviewTestStoreStatus();
     return noStore(
       NextResponse.json({
-        ok: allowed,
+        ok: allowed && storage.storageReady,
         allowed,
         vercelEnv: process.env.VERCEL_ENV || null,
-        error: allowed ? undefined : UNAVAILABLE,
+        ...storage,
+        error: allowed
+          ? storage.storageReady
+            ? undefined
+            : storage.error
+          : UNAVAILABLE,
       }),
     );
   } catch (error) {
@@ -55,6 +67,13 @@ export async function POST(request: Request) {
     await requireSession("appointments");
     if (!isBookingManagePreviewTestAllowed()) {
       return noStore(jsonError(UNAVAILABLE, 403));
+    }
+
+    const storage = resolvePreviewTestStoreConfig();
+    if (!storage.ok) {
+      return noStore(
+        jsonError(storage.error, 503, { missing: storage.missing }),
+      );
     }
 
     const limited = rateLimit(
@@ -71,67 +90,52 @@ export async function POST(request: Request) {
     }
 
     const origin = bookingManageOriginFromRequest(request);
-    let manageUrl = "";
-    let publicView: ReturnType<typeof publicManageAppointmentView> | null = null;
-    let dateLabel = "";
-    let appointmentId = "";
+    const slot = pickPreviewTestSlot();
+    if (!slot) {
+      return noStore(
+        jsonError("No available clinic slot was found for a test booking.", 409),
+      );
+    }
 
-    await withEyeExamLock(async () => {
-      await updateStore((store) => {
-        const slot = pickPreviewTestSlot(store);
-        if (!slot) {
-          throw new Error("NO_SLOT");
-        }
+    const issued = issueBookingManageToken(slot.date, slot.time, 30);
+    const now = new Date().toISOString();
+    const created: EyeExamAppointment = {
+      id: newId("eea_test"),
+      firstName: "Preview",
+      lastName: "Test",
+      email: PREVIEW_TEST_EMAIL,
+      phone: PREVIEW_TEST_PHONE,
+      appointmentDate: slot.date,
+      appointmentTime: slot.time,
+      appointmentType: slot.appointmentType,
+      status: "confirmed",
+      language: "ar",
+      notes: "[PREVIEW-TEST] Isolated booking-manage fixture. Not a customer booking.",
+      smsStatus: "simulated",
+      manageTokenHash: issued.manageTokenHash,
+      manageTokenExpiresAt: issued.manageTokenExpiresAt,
+      manageTokenRevokedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-        const slotMinutes = store.settings.appointmentSlotMinutes || 30;
-        const issued = issueBookingManageToken(
-          slot.date,
-          slot.time,
-          slotMinutes,
-        );
-        const now = new Date().toISOString();
-        const created: EyeExamAppointment = {
-          id: newId("eea_test"),
-          firstName: "Preview",
-          lastName: "Test",
-          email: PREVIEW_TEST_EMAIL,
-          phone: PREVIEW_TEST_PHONE,
-          appointmentDate: slot.date,
-          appointmentTime: slot.time,
-          appointmentType: slot.appointmentType,
-          status: "confirmed",
-          language: "ar",
-          notes: "[PREVIEW-TEST] Isolated booking-manage fixture. Not a customer booking.",
-          smsStatus: "simulated",
-          manageTokenHash: issued.manageTokenHash,
-          manageTokenExpiresAt: issued.manageTokenExpiresAt,
-          manageTokenRevokedAt: null,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        store.previewManageTestAppointments = capPreviewManageTestAppointments([
-          created,
-          ...(store.previewManageTestAppointments || []),
-        ]);
-
-        const service = store.bookingServices?.find(
-          (item) => item.key === created.appointmentType,
-        );
-        const serviceLabel = service
-          ? pickLocalized(service.name, created.language)
-          : created.appointmentType;
-        publicView = publicManageAppointmentView(created, serviceLabel);
-        dateLabel = formatEyeExamDateDisplay(created.appointmentDate);
-        manageUrl = bookingManageUrlForOrigin(origin, issued.token);
-        appointmentId = created.id;
-        return store;
-      });
+    await withPreviewTestStoreLock(async () => {
+      const existing = await readPreviewTestAppointments();
+      await writePreviewTestAppointments(
+        capPreviewManageTestAppointments([created, ...existing]),
+      );
     });
 
+    const serviceLabel = previewTestServiceLabel(
+      created.appointmentType,
+      created.language,
+    );
+    const manageUrl = bookingManageUrlForOrigin(origin, issued.token);
+
     console.info("[booking-manage-test] created isolated fixture", {
-      appointmentId,
+      appointmentId: created.id,
       origin,
+      storeId: storage.config.storeId,
     });
 
     return noStore(
@@ -139,17 +143,12 @@ export async function POST(request: Request) {
         ok: true,
         manageUrl,
         appointment: {
-          ...publicView!,
-          dateLabel,
+          ...publicManageAppointmentView(created, serviceLabel),
+          dateLabel: formatEyeExamDateDisplay(created.appointmentDate),
         },
       }),
     );
   } catch (error) {
-    if (error instanceof Error && error.message === "NO_SLOT") {
-      return noStore(
-        jsonError("No available clinic slot was found for a test booking.", 409),
-      );
-    }
     return handleRouteError(error);
   }
 }

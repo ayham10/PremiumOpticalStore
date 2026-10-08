@@ -8,8 +8,14 @@ import {
 import {
   bookingManageOriginFromRequest,
   isBookingManagePreviewTestAllowed,
+  pickPreviewTestSlot,
   shouldSkipBookingWhatsApp,
 } from "../lib/booking-manage-test";
+import {
+  DEFAULT_BOOKING_MANAGE_TEST_STORE_ID,
+  parsePreviewTestPayload,
+  resolvePreviewTestStoreConfig,
+} from "../lib/booking-manage-test-store";
 import { bookingManageUrlForOrigin } from "../lib/booking-manage-token";
 import {
   bookingManageUrl,
@@ -298,9 +304,58 @@ const testApi = readFileSync(
   "utf8",
 );
 assert.doesNotMatch(testApi, /dispatchBookingMessages/);
-assert.doesNotMatch(testApi, /eyeExamAppointments\.unshift/);
-assert.match(testApi, /previewManageTestAppointments/);
+assert.doesNotMatch(testApi, /updateStore/);
+assert.doesNotMatch(testApi, /eyeExamAppointments/);
+assert.match(testApi, /writePreviewTestAppointments/);
 assert.match(testApi, /isBookingManagePreviewTestAllowed/);
+assert.doesNotMatch(testApi, /writeFilesystem|\/var\/task\/data/);
+
+const missingSecret = resolvePreviewTestStoreConfig({
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_STORE_ID: "default",
+});
+assert.equal(missingSecret.ok, false);
+if (!missingSecret.ok) {
+  assert.ok(
+    missingSecret.missing.some((item) => item.includes("SUPABASE_SECRET_KEY")),
+  );
+}
+
+const blockedDefaultId = resolvePreviewTestStoreConfig({
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_SECRET_KEY: "secret",
+  BOOKING_MANAGE_TEST_STORE_ID: "default",
+});
+assert.equal(blockedDefaultId.ok, false);
+
+const isolated = resolvePreviewTestStoreConfig({
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_SECRET_KEY: "secret",
+  SUPABASE_STORE_ID: "default",
+});
+assert.equal(isolated.ok, true);
+if (isolated.ok) {
+  assert.equal(isolated.config.storeId, DEFAULT_BOOKING_MANAGE_TEST_STORE_ID);
+  assert.notEqual(isolated.config.storeId, "default");
+}
+
+assert.throws(() =>
+  parsePreviewTestPayload({
+    products: [],
+    eyeExamAppointments: [{ id: "eea_live" }],
+  }),
+);
+
+const parsed = parsePreviewTestPayload({
+  kind: "oyon_booking_manage_preview_tests",
+  appointments: [customerA],
+});
+assert.equal(parsed[0]?.id, "eea_a");
+
+const slot = pickPreviewTestSlot();
+assert.ok(slot);
+assert.match(slot!.date, /^\d{4}-\d{2}-\d{2}$/);
+assert.match(slot!.time, /^\d{2}:\d{2}$/);
 
 assert.equal(
   defaults.customerConfirmation.manageTemplateEnabled,

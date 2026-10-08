@@ -18,6 +18,9 @@ type StatusResponse = {
   allowed?: boolean;
   error?: string;
   vercelEnv?: string | null;
+  storageReady?: boolean;
+  storeId?: string;
+  missing?: string[];
 };
 
 type CreateResponse = {
@@ -29,6 +32,8 @@ type CreateResponse = {
 
 export default function BookingManagePreviewTestPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [manageUrl, setManageUrl] = useState("");
@@ -42,8 +47,12 @@ export default function BookingManagePreviewTestPage() {
         "/api/internal/booking-manage-test",
       );
       setAllowed(Boolean(data.allowed));
+      setStorageReady(Boolean(data.storageReady));
+      setMissing(data.missing || []);
       if (!data.allowed) {
         setError(data.error || "This booking-manage test is not available in Production.");
+      } else if (!data.storageReady) {
+        setError(data.error || "Preview test storage is not configured.");
       }
     } catch (err) {
       setAllowed(false);
@@ -110,6 +119,25 @@ export default function BookingManagePreviewTestPage() {
             {error || "This booking-manage test is not available in Production."}
           </p>
         </section>
+      ) : allowed && !storageReady ? (
+        <section className="admin-bm-card mt-8" role="status">
+          <p className="admin-bm-hint" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <ShieldAlert size={18} aria-hidden />
+            {error}
+          </p>
+          {missing.length ? (
+            <ul className="admin-bm-hint mt-4" dir="ltr">
+              {missing.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="admin-bm-hint mt-4">
+            Set these on the Vercel Preview environment (not Production). Use store
+            row <code>preview_booking_manage_test</code>, never{" "}
+            <code>default</code>. Local filesystem storage is not used.
+          </p>
+        </section>
       ) : (
         <section className="admin-bm-card mt-8">
           <p className="admin-bm-hint">
@@ -121,7 +149,7 @@ export default function BookingManagePreviewTestPage() {
               type="button"
               className="btn btn-primary"
               onClick={() => void createTestBooking()}
-              disabled={busy || allowed !== true}
+              disabled={busy || allowed !== true || !storageReady}
             >
               {busy ? "Creating…" : "Create test appointment"}
             </button>
