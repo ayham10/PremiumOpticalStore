@@ -55,9 +55,12 @@ async function locatePreviewTestAppointment(token: string) {
   return findAppointmentByManageTokenHash(tests, token);
 }
 
-function fail(reason: "not_found" | "expired" | "revoked") {
+function fail(
+  reason: "not_found" | "expired" | "revoked",
+  language?: string | null,
+) {
   const status = reason === "not_found" ? 404 : 410;
-  return jsonError(manageAccessMessage(reason), status, { reason });
+  return jsonError(manageAccessMessage(reason, language), status, { reason });
 }
 
 function noStore(response: NextResponse) {

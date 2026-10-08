@@ -983,7 +983,7 @@ const en: Dictionary = {
     title: "Manage your booking",
     lead: "View and manage your appointment from the secure WhatsApp link.",
     service: "Service",
-    expired: "انتهت صلاحية رابط إدارة الموعد. للاستفسار، يرجى التواصل مع عيون أوبتيكا.",
+    expired: "This appointment management link has expired. Once the appointment start time is reached, the booking can no longer be viewed, cancelled, or rescheduled. Please contact OYON Optics if you need assistance.",
     token: "Booking code",
     find: "Find booking",
     loading: "Loading…",

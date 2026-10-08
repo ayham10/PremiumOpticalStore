@@ -7,7 +7,8 @@ import {
   CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
   CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
   EXPIRED_MANAGE_LINK_MESSAGE,
-  MANAGE_TOKEN_TTL_AFTER_END_MS,
+  EXPIRED_MANAGE_LINK_MESSAGE_EN,
+  EXPIRED_MANAGE_LINK_MESSAGE_HE,
 } from "@/lib/booking-manage-constants";
 
 export {
@@ -18,7 +19,8 @@ export {
   CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
   CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
   EXPIRED_MANAGE_LINK_MESSAGE,
-  MANAGE_TOKEN_TTL_AFTER_END_MS,
+  EXPIRED_MANAGE_LINK_MESSAGE_EN,
+  EXPIRED_MANAGE_LINK_MESSAGE_HE,
   REVOKED_MANAGE_LINK_MESSAGE,
 } from "@/lib/booking-manage-constants";
 
@@ -55,16 +57,33 @@ export function bookingManageUrlParam(token: string): string {
 export function computeManageTokenExpiresAt(
   appointmentDate: string,
   startTime: string,
-  slotMinutes = 30,
+  _slotMinutes = 30,
 ): string {
   const startUtc = jerusalemWallClockToUtc(appointmentDate, startTime);
   if (!startUtc) {
-    throw new Error("INVALID_APPOINTMENT_END");
+    throw new Error("INVALID_APPOINTMENT_START");
   }
-  const durationMs = Math.max(1, slotMinutes) * 60 * 1000;
-  return new Date(
-    startUtc.getTime() + durationMs + MANAGE_TOKEN_TTL_AFTER_END_MS,
-  ).toISOString();
+  return startUtc.toISOString();
+}
+
+/** Effective expiry is the appointment start, even if a stored value is later. */
+export function manageLinkExpiresAtMs(
+  appointment: Pick<
+    EyeExamAppointment,
+    "appointmentDate" | "appointmentTime" | "manageTokenExpiresAt"
+  >,
+): number | null {
+  const startUtc = jerusalemWallClockToUtc(
+    appointment.appointmentDate,
+    appointment.appointmentTime,
+  );
+  const startMs = startUtc ? startUtc.getTime() : Number.NaN;
+  const storedMs = appointment.manageTokenExpiresAt
+    ? Date.parse(appointment.manageTokenExpiresAt)
+    : Number.NaN;
+  const candidates = [startMs, storedMs].filter((value) => Number.isFinite(value));
+  if (candidates.length === 0) return null;
+  return Math.min(...candidates);
 }
 
 export function issueBookingManageToken(
@@ -122,18 +141,24 @@ export function evaluateManageAccess(
   | { ok: true; appointment: EyeExamAppointment }
   | { ok: false; reason: ManageAccessFailure } {
   if (!appointment) return { ok: false, reason: "not_found" };
+  if (typeof appointment.manageTokenHash !== "string" || !appointment.manageTokenHash) {
+    return { ok: false, reason: "not_found" };
+  }
   if (appointment.manageTokenRevokedAt) return { ok: false, reason: "revoked" };
-  const expires = appointment.manageTokenExpiresAt
-    ? Date.parse(appointment.manageTokenExpiresAt)
-    : NaN;
-  if (!Number.isFinite(expires) || expires <= now.getTime()) {
+  const expires = manageLinkExpiresAtMs(appointment);
+  if (expires == null || expires <= now.getTime()) {
     return { ok: false, reason: "expired" };
   }
   return { ok: true, appointment };
 }
 
-export function manageAccessMessage(reason: ManageAccessFailure): string {
+export function manageAccessMessage(
+  reason: ManageAccessFailure,
+  language?: string | null,
+): string {
   if (reason === "expired" || reason === "revoked") {
+    if (language === "he") return EXPIRED_MANAGE_LINK_MESSAGE_HE;
+    if (language === "en") return EXPIRED_MANAGE_LINK_MESSAGE_EN;
     return EXPIRED_MANAGE_LINK_MESSAGE;
   }
   return "Appointment not found";

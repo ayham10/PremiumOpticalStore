@@ -30,6 +30,7 @@ const {
 const {
   buildManageTemplateContentVariables,
   bookingManageUrlParam,
+  computeManageTokenExpiresAt,
   findAppointmentByManageTokenHash,
   hashBookingManageToken,
 } = await import("../lib/booking-manage-token");
@@ -376,6 +377,18 @@ assert.equal(
   ).length,
   1,
 );
+const rescheduledRow = afterReschedule.eyeExamAppointments.find(
+  (item) => item.id === first.appointment.id,
+);
+assert.ok(rescheduledRow);
+assert.equal(
+  rescheduledRow!.manageTokenExpiresAt,
+  computeManageTokenExpiresAt(
+    rescheduledRow!.appointmentDate,
+    rescheduledRow!.appointmentTime,
+    30,
+  ),
+);
 assert.equal(scheduledRows().length, 2);
 const timesAfterReschedule = await publicTimes(slot!.date, slot!.appointmentType);
 assert.equal(timesAfterReschedule.includes(slot!.time), true);
@@ -531,7 +544,9 @@ const rotatedRow = live!.eyeExamAppointments.find(
   (item) => item.id === second.appointment.id,
 );
 assert.ok(rotatedRow);
-rotatedRow!.manageTokenExpiresAt = "2000-01-01T00:00:00.000Z";
+rotatedRow!.appointmentDate = "2020-01-15";
+rotatedRow!.appointmentTime = "17:00";
+rotatedRow!.manageTokenExpiresAt = "2099-01-01T00:00:00.000Z";
 setIsolatedStore(live!);
 const expiredGet = await manageGet(
   jsonRequest("http://localhost/api/booking/manage", {
@@ -542,6 +557,18 @@ const expiredBody = await readJson(expiredGet);
 assert.equal(expiredGet.status, 410);
 assert.equal(expiredBody.reason, "expired");
 assert.equal(expiredBody.error, EXPIRED_MANAGE_LINK_MESSAGE);
+
+const expiredPatch = await managePatch(
+  jsonRequest("http://localhost/api/booking/manage", {
+    method: "PATCH",
+    headers: { "x-booking-token": adminLink.token },
+    body: JSON.stringify({ action: "cancel" }),
+  }),
+);
+const expiredPatchBody = await readJson(expiredPatch);
+assert.equal(expiredPatch.status, 410);
+assert.equal(expiredPatchBody.reason, "expired");
+assert.equal(expiredPatchBody.error, EXPIRED_MANAGE_LINK_MESSAGE);
 
 const variables = buildManageTemplateContentVariables({
   customerName: "Amina Saleh",

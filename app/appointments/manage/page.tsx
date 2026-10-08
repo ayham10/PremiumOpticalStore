@@ -4,7 +4,6 @@ import { Suspense, useEffect } from "react";
 import { CalendarDays, Glasses } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { EXPIRED_MANAGE_LINK_MESSAGE } from "@/lib/booking-manage-constants";
 
 function ManageChrome({ children }: { children: React.ReactNode }) {
   const { t } = useLocale();
@@ -52,7 +51,7 @@ function ManageIndex() {
 
   return (
     <ManageChrome>
-      <p className="oyon-manage-banner is-error">{EXPIRED_MANAGE_LINK_MESSAGE}</p>
+      <p className="oyon-manage-banner is-error">{t("manage.expired")}</p>
     </ManageChrome>
   );
 }

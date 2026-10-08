@@ -16,7 +16,11 @@ import {
 import { ar, enUS, he } from "date-fns/locale";
 import { format } from "date-fns";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { EXPIRED_MANAGE_LINK_MESSAGE } from "@/lib/booking-manage-constants";
+import {
+  EXPIRED_MANAGE_LINK_MESSAGE,
+  EXPIRED_MANAGE_LINK_MESSAGE_EN,
+  EXPIRED_MANAGE_LINK_MESSAGE_HE,
+} from "@/lib/booking-manage-constants";
 import { buildMonthGrid, formatClinicDateDisplay } from "@/lib/clinic-booking";
 
 type AppointmentView = {
@@ -52,7 +56,12 @@ function localizeManageError(
   message: string,
 ): string {
   const raw = message.trim();
-  if (!raw || raw === EXPIRED_MANAGE_LINK_MESSAGE) {
+  if (
+    !raw ||
+    raw === EXPIRED_MANAGE_LINK_MESSAGE ||
+    raw === EXPIRED_MANAGE_LINK_MESSAGE_HE ||
+    raw === EXPIRED_MANAGE_LINK_MESSAGE_EN
+  ) {
     return translate("manage.expired");
   }
   const table: Array<[RegExp, string]> = [
@@ -100,7 +109,7 @@ export default function ManageBookingClient({ token }: { token: string }) {
   const load = useCallback(async () => {
     if (!token) {
       setLoading(false);
-      setError(EXPIRED_MANAGE_LINK_MESSAGE);
+      setError(t("manage.expired"));
       return;
     }
     setLoading(true);
