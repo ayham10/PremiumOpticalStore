@@ -16358,7 +16358,7 @@ body > .admin-save-notice,
   --lens-cyl-w: 60px;
   --lens-row-h: 34px;
   --lens-head-h: 34px;
-  --lens-cols: 8;
+  --lens-cols: 9;
   --lens-table-w: calc(var(--lens-sph-w) + (var(--lens-cyl-w) * var(--lens-cols)));
   --lens-bg: #07111a;
   --lens-cell: #0d1a25;
