@@ -4,6 +4,8 @@ import type { EyeExamAppointment } from "@/lib/types";
 import {
   BOOKING_MANAGE_ORIGIN,
   BOOKING_MANAGE_PATH,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
   EXPIRED_MANAGE_LINK_MESSAGE,
   MANAGE_TOKEN_TTL_AFTER_END_MS,
 } from "@/lib/booking-manage-constants";
@@ -13,10 +15,20 @@ export {
   BOOKING_MANAGE_ORIGIN,
   BOOKING_MANAGE_PATH,
   CUSTOMER_MANAGE_TEMPLATE_NAME,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
   EXPIRED_MANAGE_LINK_MESSAGE,
   MANAGE_TOKEN_TTL_AFTER_END_MS,
   REVOKED_MANAGE_LINK_MESSAGE,
 } from "@/lib/booking-manage-constants";
+
+export function manageTemplateNameForLanguage(
+  language?: string | null,
+): string {
+  return language === "he"
+    ? CUSTOMER_MANAGE_TEMPLATE_NAME_HE
+    : CUSTOMER_MANAGE_TEMPLATE_NAME_AR;
+}
 
 export function hashBookingManageToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");

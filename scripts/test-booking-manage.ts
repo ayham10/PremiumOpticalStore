@@ -14,18 +14,21 @@ import {
   shouldSkipBookingWhatsApp,
 } from "../lib/booking-manage-test";
 import {
+  assertCustomerAppointmentsPreserved,
   customerFacingAppointments,
   isSilentManageTestAppointment,
+  removeSilentManageTestAppointment,
   SILENT_MANAGE_TEST_ID_PREFIX,
 } from "../lib/booking-silent-test";
+import { supabaseConditionalPatchPath } from "../lib/db/store";
 import {
   DEFAULT_BOOKING_MANAGE_TEST_STORE_ID,
   parsePreviewTestPayload,
   resolvePreviewTestStoreConfig,
 } from "../lib/booking-manage-test-store";
-import { bookingManageUrlForOrigin } from "../lib/booking-manage-token";
 import {
   bookingManageUrl,
+  bookingManageUrlForOrigin,
   bookingManageUrlParam,
   buildManageTemplateContentVariables,
   canCustomerMutateBooking,
@@ -36,6 +39,7 @@ import {
   hashBookingManageToken,
   issueBookingManageToken,
   manageAccessMessage,
+  manageTemplateNameForLanguage,
   omitManageTokenSecrets,
   publicManageAppointmentView,
 } from "../lib/booking-manage-token";
@@ -243,6 +247,41 @@ assert.equal(enabledPlan.contentSid, sampleHxSid());
 const liveIfMissingToken = enabledPlan.useManageTemplate && Boolean(undefined);
 assert.equal(liveIfMissingToken, false);
 
+assert.equal(manageTemplateNameForLanguage("he"), "oyon_booking_manage_v2_he");
+assert.equal(manageTemplateNameForLanguage("ar"), "oyon_booking_manage_v2_ar");
+assert.equal(
+  resolveCustomerConfirmationTemplate(defaults, "he").useManageTemplate,
+  false,
+);
+assert.equal(
+  resolveCustomerConfirmationTemplate(defaults, "he").templateName,
+  LIVE_CUSTOMER_CONFIRMATION_TEMPLATE,
+);
+
+const heSid = `HX${"c".repeat(32)}`;
+process.env.TWILIO_WHATSAPP_CONTENT_SIDS = `oyon_booking_manage_v2_ar:${sampleHxSid()},oyon_booking_manage_v2_he:${heSid}`;
+resetTwilioContentSidMapForTests();
+const enabledLang = mergeBookingMessages({
+  customerConfirmation: {
+    ...defaults.customerConfirmation,
+    manageTemplateEnabled: true,
+  },
+});
+const heEnabledPlan = resolveCustomerConfirmationTemplate(enabledLang, "he");
+assert.equal(heEnabledPlan.useManageTemplate, true);
+assert.equal(heEnabledPlan.templateName, "oyon_booking_manage_v2_he");
+assert.equal(heEnabledPlan.contentSid, heSid);
+assert.equal(
+  resolveCustomerConfirmationTemplate(enabledLang, "ar").templateName,
+  "oyon_booking_manage_v2_ar",
+);
+
+process.env.TWILIO_WHATSAPP_CONTENT_SIDS = `oyon_booking_manage_v2_ar:${sampleHxSid()}`;
+resetTwilioContentSidMapForTests();
+const heWithoutSid = resolveCustomerConfirmationTemplate(enabledWithSid, "he");
+assert.equal(heWithoutSid.useManageTemplate, false);
+assert.equal(heWithoutSid.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
+
 assert.equal(OWNER_NOTIFICATION_TEMPLATE, "owner_notification");
 assert.equal(APPOINTMENT_REMINDER_TEMPLATE, "appointment_reminder");
 assert.equal(
@@ -283,7 +322,11 @@ assert.match(messaging, /manageTemplateEnabled === true/);
 assert.match(messaging, /shouldSkipBookingWhatsApp/);
 assert.match(messaging, /isSilentManageTestAppointment/);
 assert.match(messaging, /shouldDispatchBookingMessages/);
-assert.doesNotMatch(messaging, /oyon_booking_manage_v2_he/);
+assert.match(messaging, /CUSTOMER_MANAGE_TEMPLATE_NAME_HE/);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/booking-manage-constants.ts"), "utf8"),
+  /oyon_booking_manage_v2_he/,
+);
 
 assert.equal(isBookingManagePreviewTestAllowed("production", "production"), false);
 assert.equal(isBookingManagePreviewTestAllowed("preview", "production"), true);
@@ -336,6 +379,30 @@ assert.equal(
   false,
 );
 
+const afterSilentCreate = [silentTest, liveCustomer];
+assertCustomerAppointmentsPreserved([liveCustomer], afterSilentCreate);
+assert.throws(() =>
+  assertCustomerAppointmentsPreserved(
+    [liveCustomer],
+    [{ ...liveCustomer, status: "cancelled" }],
+  ),
+);
+const afterSilentDelete = removeSilentManageTestAppointment(
+  afterSilentCreate,
+  silentTest.id,
+);
+assert.deepEqual(
+  afterSilentDelete.map((item) => item.id),
+  ["eea_live"],
+);
+assert.throws(() =>
+  removeSilentManageTestAppointment([liveCustomer], liveCustomer.id),
+);
+assert.equal(
+  supabaseConditionalPatchPath("lumina_store", "default", 7),
+  "lumina_store?id=eq.default&payload->>version=eq.7",
+);
+
 const previewOrigin = bookingManageOriginFromRequest(
   new Request("https://example.vercel.app/api/internal/booking-manage-test", {
     headers: {
@@ -376,8 +443,28 @@ assert.match(testApi, /writePreviewTestAppointments/);
 assert.match(testApi, /isBookingManagePreviewTestAllowed/);
 assert.match(testApi, /role !== "admin"/);
 assert.match(testApi, /isSilentManageTestAppointment/);
+assert.match(testApi, /assertCustomerAppointmentsPreserved/);
+assert.match(testApi, /removeSilentManageTestAppointment/);
 assert.doesNotMatch(testApi, /writeFilesystem|\/var\/task\/data/);
-assert.doesNotMatch(testApi, /oyon_booking_manage_v2_he/);
+
+const adminLayout = readFileSync(
+  join(process.cwd(), "app/admin/dev/booking-manage/layout.tsx"),
+  "utf8",
+);
+assert.match(adminLayout, /requireSession/);
+assert.match(adminLayout, /role !== "admin"/);
+
+const storeSrc = readFileSync(join(process.cwd(), "lib/db/store.ts"), "utf8");
+assert.match(storeSrc, /StoreWriteConflictError/);
+assert.match(storeSrc, /STORE_CONFLICT_RETRIES/);
+assert.match(storeSrc, /ifVersion/);
+
+const bookRoute = readFileSync(
+  join(process.cwd(), "app/api/eye-exam/book/route.ts"),
+  "utf8",
+);
+assert.match(bookRoute, /dispatchBookingMessages/);
+assert.match(bookRoute, /sendSms/);
 
 const adminTestPage = readFileSync(
   join(process.cwd(), "app/admin/dev/booking-manage/page.tsx"),

@@ -29,3 +29,50 @@ export function capSilentManageTestAppointments<
   const live = appointments.filter((item) => !isSilentManageTestAppointment(item));
   return [...silent.slice(0, max), ...live];
 }
+
+type FingerprintAppointment = {
+  silentTest?: boolean;
+  id?: string;
+  status?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  updatedAt?: string;
+  manageTokenHash?: string;
+};
+
+export function customerAppointmentFingerprint(
+  appointments: FingerprintAppointment[],
+): string {
+  return customerFacingAppointments(appointments)
+    .map((item) =>
+      [
+        item.id,
+        item.status,
+        item.appointmentDate,
+        item.appointmentTime,
+        item.updatedAt,
+        item.manageTokenHash || "",
+      ].join(":"),
+    )
+    .join("|");
+}
+
+export function assertCustomerAppointmentsPreserved(
+  before: FingerprintAppointment[],
+  after: FingerprintAppointment[],
+): void {
+  if (customerAppointmentFingerprint(before) !== customerAppointmentFingerprint(after)) {
+    throw new Error("CUSTOMER_BOOKING_MUTATION");
+  }
+}
+
+export function removeSilentManageTestAppointment<T extends FingerprintAppointment>(
+  appointments: T[],
+  id: string,
+): T[] {
+  const index = appointments.findIndex(
+    (item) => item.id === id && isSilentManageTestAppointment(item),
+  );
+  if (index < 0) throw new Error("NOT_FOUND");
+  return appointments.filter((_, i) => i !== index);
+}

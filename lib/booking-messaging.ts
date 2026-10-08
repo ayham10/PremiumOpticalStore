@@ -25,7 +25,8 @@ import {
 } from "@/lib/twilio/whatsapp";
 import {
   buildManageTemplateContentVariables,
-  CUSTOMER_MANAGE_TEMPLATE_NAME,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
+  CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
 } from "@/lib/booking-manage-token";
 import { shouldSkipBookingWhatsApp } from "@/lib/booking-manage-test";
 import { isSilentManageTestAppointment } from "@/lib/booking-silent-test";
@@ -80,33 +81,42 @@ function buildCustomerConfirmationContentVariables(
   };
 }
 
+export function resolveManageTemplateName(
+  bookingMessages: BookingMessagesSettings,
+  language?: string | null,
+): string {
+  if (language === "he") return CUSTOMER_MANAGE_TEMPLATE_NAME_HE;
+  return (
+    bookingMessages.customerConfirmation.manageTemplateName?.trim() ||
+    CUSTOMER_MANAGE_TEMPLATE_NAME_AR
+  );
+}
+
 export function resolveManageTemplateContentSid(
   bookingMessages: BookingMessagesSettings,
+  language?: string | null,
 ): string | null {
-  const manageName =
-    bookingMessages.customerConfirmation.manageTemplateName?.trim() ||
-    CUSTOMER_MANAGE_TEMPLATE_NAME;
-  return (
-    resolveTwilioContentSid(manageName) ||
-    sanitizeTwilioContentSid(
-      bookingMessages.customerConfirmation.manageTemplateContentSid,
-    )
+  const manageName = resolveManageTemplateName(bookingMessages, language);
+  const mapped = resolveTwilioContentSid(manageName);
+  if (mapped) return mapped;
+  if (language === "he") return null;
+  return sanitizeTwilioContentSid(
+    bookingMessages.customerConfirmation.manageTemplateContentSid,
   );
 }
 
 export function resolveCustomerConfirmationTemplate(
   bookingMessages: BookingMessagesSettings,
+  language?: string | null,
 ): {
   templateName: string;
   useManageTemplate: boolean;
   contentSid: string | null;
 } {
-  const manageName =
-    bookingMessages.customerConfirmation.manageTemplateName?.trim() ||
-    CUSTOMER_MANAGE_TEMPLATE_NAME;
+  const manageName = resolveManageTemplateName(bookingMessages, language);
   const enabled =
     bookingMessages.customerConfirmation.manageTemplateEnabled === true;
-  const contentSid = resolveManageTemplateContentSid(bookingMessages);
+  const contentSid = resolveManageTemplateContentSid(bookingMessages, language);
   if (enabled && contentSid) {
     return { templateName: manageName, useManageTemplate: true, contentSid };
   }
@@ -513,7 +523,10 @@ export async function dispatchBookingMessages(
       appointment,
       serviceLabel,
     );
-    const confirmation = resolveCustomerConfirmationTemplate(bookingMessages);
+    const confirmation = resolveCustomerConfirmationTemplate(
+      bookingMessages,
+      appointment.language,
+    );
     const useManageTemplate =
       confirmation.useManageTemplate && Boolean(opts?.manageToken);
     const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();

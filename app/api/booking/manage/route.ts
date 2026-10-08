@@ -20,6 +20,10 @@ import {
   manageAccessMessage,
   publicManageAppointmentView,
 } from "@/lib/booking-manage-token";
+import {
+  assertCustomerAppointmentsPreserved,
+  isSilentManageTestAppointment,
+} from "@/lib/booking-silent-test";
 import type { EyeExamAppointment } from "@/lib/types";
 import {
   formatEyeExamDateDisplay,
@@ -235,6 +239,7 @@ export async function PATCH(request: Request) {
         if (index < 0) throw new Error("NOT_FOUND");
 
         const current = list[index];
+        const before = [...list];
         const now = new Date().toISOString();
         const slotMinutes = store.settings.appointmentSlotMinutes || 30;
 
@@ -247,6 +252,9 @@ export async function PATCH(request: Request) {
           };
           list[index] = updated;
           store.eyeExamAppointments = list;
+          if (isSilentManageTestAppointment(current)) {
+            assertCustomerAppointmentsPreserved(before, list);
+          }
           const service = store.bookingServices?.find(
             (item) => item.key === updated.appointmentType,
           );
@@ -304,6 +312,9 @@ export async function PATCH(request: Request) {
         };
         list[index] = updated;
         store.eyeExamAppointments = list;
+        if (isSilentManageTestAppointment(current)) {
+          assertCustomerAppointmentsPreserved(before, list);
+        }
         const service = store.bookingServices?.find(
           (item) => item.key === updated.appointmentType,
         );
@@ -350,6 +361,9 @@ export async function PATCH(request: Request) {
       }
       if (error.message === "SLOT_TAKEN") {
         return noStore(jsonError("This time slot is no longer available", 409));
+      }
+      if (error.message === "CUSTOMER_BOOKING_MUTATION") {
+        return noStore(jsonError("Refusing to change customer bookings.", 409));
       }
     }
     return handleRouteError(error);

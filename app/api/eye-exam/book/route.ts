@@ -192,34 +192,6 @@ export async function POST(request: Request) {
         store.eyeExamAppointments.unshift(created);
         savedAppointment = created;
 
-        const dateDisplay = formatEyeExamDateDisplay(appointmentDate);
-        const smsBody = eyeExamSmsBody(
-          language,
-          dateDisplay,
-          appointmentTime,
-          appointmentType,
-        );
-        const smsResult = await sendSms({
-          to: phone,
-          body: smsBody,
-          type: "appointment_confirmation",
-          appointmentId: created.id,
-        });
-
-        created.smsStatus = smsResult.status;
-        if (!smsResult.ok) {
-          created.smsError = smsResult.error || "SMS failed";
-        }
-        store.eyeExamAppointments[0] = created;
-
-        pushSmsLog(store, {
-          to: phone,
-          body: smsBody,
-          type: "appointment_confirmation",
-          result: smsResult,
-          appointmentId: created.id,
-        });
-
         pushActivity(store, {
           actor: fromAdmin ? "admin" : email,
           action: fromAdmin ? "admin_manual_booking" : "public_booking",
@@ -242,6 +214,44 @@ export async function POST(request: Request) {
     }
 
     const saved = savedAppointment;
+    const dateDisplay = formatEyeExamDateDisplay(saved.appointmentDate);
+    const smsBody = eyeExamSmsBody(
+      saved.language,
+      dateDisplay,
+      saved.appointmentTime,
+      saved.appointmentType,
+    );
+    const smsResult = await sendSms({
+      to: saved.phone,
+      body: smsBody,
+      type: "appointment_confirmation",
+      appointmentId: saved.id,
+    });
+    saved.smsStatus = smsResult.status;
+    if (!smsResult.ok) {
+      saved.smsError = smsResult.error || "SMS failed";
+    }
+
+    await updateStore((store) => {
+      const current = store.eyeExamAppointments.find((item) => item.id === saved.id);
+      if (!current) return store;
+      current.smsStatus = saved.smsStatus;
+      if (saved.smsError) current.smsError = saved.smsError;
+      current.updatedAt = new Date().toISOString();
+      pushSmsLog(store, {
+        to: saved.phone,
+        body: smsBody,
+        type: "appointment_confirmation",
+        result: smsResult,
+        appointmentId: saved.id,
+      });
+      return store;
+    }).catch((error) => {
+      console.error("[booking] failed to persist SMS status", {
+        appointmentId: saved.id,
+        error: error instanceof Error ? error.message : "sms persist failed",
+      });
+    });
 
     after(async () => {
       await dispatchBookingMessages(saved, {

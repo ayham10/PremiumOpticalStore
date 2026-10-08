@@ -1206,7 +1206,7 @@ const ar: Dictionary = {
       bmManageTemplate: "قالب إدارة الموعد",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
       bmManageTemplateHint:
-        "بانتظار موافقة Meta. أبقِ هذا الخيار متوقفاً حتى يتم ربط Content SID في TWILIO_WHATSAPP_CONTENT_SIDS. الحجوزات الحالية تبقى على قالب التأكيد المعتمد.",
+        "بانتظار موافقة Meta. أبقِ هذا الخيار متوقفاً. بعد الموافقة تُستخدم oyon_booking_manage_v2_ar للعربية و oyon_booking_manage_v2_he للعبرية. الحجوزات الحالية تبقى على قالب التأكيد المعتمد حتى ذلك الحين.",
       bmManageTemplateEnable: "تفعيل بعد الموافقة",
       bmManageTemplateSid: "Twilio Content SID",
       bmManageTemplateSidHint:

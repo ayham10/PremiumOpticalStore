@@ -1206,7 +1206,7 @@ const he: Dictionary = {
       bmManageTemplate: "תבנית ניהול תור",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
       bmManageTemplateHint:
-        "ממתין לאישור Meta. השאירו כבוי עד מיפוי Content SID ב-TWILIO_WHATSAPP_CONTENT_SIDS. הזמנות חיות ממשיכות בתבנית האישור הקיימת.",
+        "ממתין לאישור Meta. השאירו כבוי. לאחר האישור ייעשה שימוש ב-oyon_booking_manage_v2_ar לערבית וב-oyon_booking_manage_v2_he לעברית. הזמנות חיות ממשיכות בתבנית האישור הקיימת עד אז.",
       bmManageTemplateEnable: "הפעלה לאחר אישור",
       bmManageTemplateSid: "Twilio Content SID",
       bmManageTemplateSidHint:

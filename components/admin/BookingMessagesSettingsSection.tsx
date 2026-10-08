@@ -887,7 +887,7 @@ export default function BookingMessagesSettingsSection({
         <WhatsAppMessagePreview
           templateName={
             value.customerConfirmation.manageTemplateName ||
-            t("admin.settings.bmManageTemplateName")
+            "oyon_booking_manage_v2_ar / oyon_booking_manage_v2_he"
           }
           text={`{{1}} ${t("common.name")}
 {{2}} ${t("manage.service")}

@@ -1578,7 +1578,7 @@ const en: Dictionary = {
       bmManageTemplate: "Booking management template",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
       bmManageTemplateHint:
-        "Pending Meta approval. Keep this off until the Twilio Content SID is mapped in TWILIO_WHATSAPP_CONTENT_SIDS. Live bookings keep using the current confirmation template.",
+        "Pending Meta approval. Keep this off. After approval, Arabic bookings use oyon_booking_manage_v2_ar and Hebrew bookings use oyon_booking_manage_v2_he. Live bookings keep the current confirmation template until then.",
       bmManageTemplateEnable: "Activate after approval",
       bmManageTemplateSid: "Twilio Content SID",
       bmManageTemplateSidHint:

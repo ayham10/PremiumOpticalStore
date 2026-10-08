@@ -30,10 +30,12 @@ import {
   SILENT_MANAGE_TEST_MAX_APPOINTMENTS,
   SILENT_MANAGE_TEST_NOTES,
   SILENT_MANAGE_TEST_PHONE,
+  assertCustomerAppointmentsPreserved,
   isSilentManageTestAppointment,
+  removeSilentManageTestAppointment,
 } from "@/lib/booking-silent-test";
 import { getStore, updateStore } from "@/lib/db/store";
-import { formatEyeExamDateDisplay, withEyeExamLock } from "@/lib/eye-exam";
+import { withEyeExamLock } from "@/lib/eye-exam";
 import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 import type { EyeExamAppointment } from "@/lib/types";
 
@@ -217,9 +219,8 @@ export async function POST(request: Request) {
 
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
-        const existingSilent = (store.eyeExamAppointments || []).filter(
-          isSilentManageTestAppointment,
-        );
+        const before = store.eyeExamAppointments || [];
+        const existingSilent = before.filter(isSilentManageTestAppointment);
         if (existingSilent.length >= SILENT_MANAGE_TEST_MAX_APPOINTMENTS) {
           throw new Error("TOO_MANY_SILENT_TESTS");
         }
@@ -255,7 +256,8 @@ export async function POST(request: Request) {
           updatedAt: now,
         };
 
-        store.eyeExamAppointments = [next, ...store.eyeExamAppointments];
+        store.eyeExamAppointments = [next, ...before];
+        assertCustomerAppointmentsPreserved(before, store.eyeExamAppointments);
         created = next;
         manageUrl = bookingManageUrlForOrigin(origin, issued.token);
         return store;
@@ -297,6 +299,9 @@ export async function POST(request: Request) {
         jsonError("No available clinic slot was found for a test booking.", 409),
       );
     }
+    if (error instanceof Error && error.message === "CUSTOMER_BOOKING_MUTATION") {
+      return noStore(jsonError("Refusing to change customer bookings.", 409));
+    }
     return handleRouteError(error);
   }
 }
@@ -328,11 +333,9 @@ export async function DELETE(request: Request) {
     let removed = false;
     await withEyeExamLock(async () => {
       await updateStore(async (store) => {
-        const index = store.eyeExamAppointments.findIndex(
-          (item) => item.id === id && isSilentManageTestAppointment(item),
-        );
-        if (index < 0) throw new Error("NOT_FOUND");
-        store.eyeExamAppointments.splice(index, 1);
+        const before = store.eyeExamAppointments || [];
+        store.eyeExamAppointments = removeSilentManageTestAppointment(before, id);
+        assertCustomerAppointmentsPreserved(before, store.eyeExamAppointments);
         removed = true;
         return store;
       });
@@ -344,6 +347,9 @@ export async function DELETE(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_FOUND") {
       return noStore(jsonError("Test appointment not found", 404));
+    }
+    if (error instanceof Error && error.message === "CUSTOMER_BOOKING_MUTATION") {
+      return noStore(jsonError("Refusing to change customer bookings.", 409));
     }
     return handleRouteError(error);
   }
