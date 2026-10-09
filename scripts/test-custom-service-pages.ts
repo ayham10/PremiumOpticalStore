@@ -1,21 +1,31 @@
 import assert from "node:assert/strict";
 import {
+  attachProductIds,
   bookingHrefForPage,
+  detachProductId,
   emptyCustomPageCopy,
   homepageCustomCards,
   isCustomPageLocaleComplete,
   MAX_CUSTOM_PAGES,
+  MAX_PAGE_PRODUCTS,
   normalizeCustomPages,
   persistCustomPages,
   publicCustomPages,
   RESERVED_SERVICE_SLUGS,
   resolveCtaHref,
+  resolveCustomPageProducts,
   resolvePublishedCustomPage,
   sanitizeExternalUrl,
   sanitizeInternalPath,
+  uniqueProductIds,
   CustomPageConflictError,
   CustomPageError,
 } from "../lib/custom-service-pages";
+import {
+  fileFingerprint,
+  galleryWithoutDuplicate,
+  validateImageFile,
+} from "../lib/media-upload";
 import {
   localePatchPayload,
   persistServicePages,
@@ -71,6 +81,7 @@ assert.equal(created[0]?.status, "draft");
 assert.equal(created[0]?.template, "eye-exam");
 assert.equal(created[0]?.showHeroButton, true);
 assert.equal(created[0]?.ctaKind, "book");
+assert.deepEqual(created[0]?.productIds, []);
 assert.deepEqual(
   created[0]?.sections.map((section) => section.type),
   ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"],
@@ -524,6 +535,76 @@ assert.throws(
     }),
   (error: unknown) =>
     error instanceof CustomPageError && error.code === "CUSTOM_PAGE_LIMIT",
+);
+
+const withProducts = persistCustomPages(internalOk, {
+  customPageOp: {
+    op: "update",
+    id: live.id,
+    expectedRevision: internalOk[0]!.revision,
+    productIds: ["prod_a", "prod_a", " prod_b ", "", "prod_c"],
+    sections: [
+      ...internalOk[0]!.sections,
+      { id: "sec_products", type: "products" },
+    ],
+  },
+});
+assert.deepEqual(withProducts[0]?.productIds, ["prod_a", "prod_b", "prod_c"]);
+assert.ok(withProducts[0]?.sections.some((section) => section.type === "products"));
+
+const mixedIds = attachProductIds(withProducts[0]?.productIds, ["prod_b", "prod_d"]);
+assert.deepEqual(mixedIds, ["prod_a", "prod_b", "prod_c", "prod_d"]);
+assert.deepEqual(detachProductId(mixedIds, "prod_b"), ["prod_a", "prod_c", "prod_d"]);
+assert.deepEqual(uniqueProductIds(mixedIds), mixedIds);
+
+const overflowIds = uniqueProductIds(
+  Array.from({ length: MAX_PAGE_PRODUCTS + 5 }, (_, index) => `prod_${index}`),
+);
+assert.equal(overflowIds.length, MAX_PAGE_PRODUCTS);
+
+const catalog = [
+  { id: "prod_a", status: "active" as const },
+  { id: "prod_b", status: "draft" as const },
+  { id: "prod_c", status: "out_of_stock" as const },
+  { id: "prod_d", status: "archived" as const },
+];
+assert.deepEqual(
+  resolveCustomPageProducts(catalog, ["prod_a", "missing", "prod_b", "prod_c", "prod_d"]).map(
+    (item) => item.id,
+  ),
+  ["prod_a", "prod_c"],
+);
+assert.deepEqual(
+  resolveCustomPageProducts(catalog, ["prod_a", "prod_b"], { includeDrafts: true }).map(
+    (item) => item.id,
+  ),
+  ["prod_a", "prod_b"],
+);
+
+const removedFromPage = persistCustomPages(withProducts, {
+  customPageOp: {
+    op: "update",
+    id: live.id,
+    expectedRevision: withProducts[0]!.revision,
+    productIds: ["prod_a"],
+  },
+});
+assert.deepEqual(removedFromPage[0]?.productIds, ["prod_a"]);
+
+assert.equal(validateImageFile({ name: "a.jpg", size: 12, type: "image/jpeg" }), null);
+assert.equal(validateImageFile({ name: "a.gif", size: 12, type: "image/gif" }), "type");
+assert.equal(validateImageFile({ name: "a.png", size: 0, type: "image/png" }), "empty");
+assert.equal(
+  fileFingerprint({ name: "a.jpg", size: 12, lastModified: 1, type: "image/jpeg" }),
+  "a.jpg:12:1:image/jpeg",
+);
+assert.deepEqual(
+  galleryWithoutDuplicate(
+    [{ url: "https://cdn.example/a.jpg" }],
+    { url: "https://cdn.example/a.jpg" },
+    6,
+  ),
+  [{ url: "https://cdn.example/a.jpg" }],
 );
 
 console.log("custom service pages tests passed");

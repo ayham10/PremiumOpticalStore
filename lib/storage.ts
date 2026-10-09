@@ -108,11 +108,14 @@ export function extensionFromMime(mime: string): string {
   return MIME_EXT[mime.toLowerCase()] || "bin";
 }
 
-export function generateFilename(slug: string, mime: string): string {
+export function generateFilename(slug: string, mime: string, digest?: string): string {
   const safe =
     slug.replace(/[^a-z0-9-]/gi, "-").replace(/-+/g, "-").slice(0, 48) ||
     "media";
-  return `${safe}-${Date.now()}.${extensionFromMime(mime)}`;
+  const tag = (digest || Date.now().toString())
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 20) || Date.now().toString();
+  return `${safe}-${tag}.${extensionFromMime(mime)}`;
 }
 
 export function isBase64Image(value: string): boolean {

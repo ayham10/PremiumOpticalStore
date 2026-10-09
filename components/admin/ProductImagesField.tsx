@@ -1,83 +1,69 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Camera, Loader2, Star, Trash2 } from "lucide-react";
+import { Camera, ImagePlus, Loader2, Star, Trash2, Upload } from "lucide-react";
+import AdminMediaPicker from "@/components/admin/AdminMediaPicker";
+import { uploadImageFromPc } from "@/lib/admin-media-upload";
+import { MEDIA_IMAGE_ACCEPT } from "@/lib/media-upload";
 
-const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_GALLERY = 5;
-const ACCEPT = "image/jpeg,image/png,image/webp";
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+type Translate = (path: string, vars?: Record<string, string | number>) => string;
 
 type Props = {
   images: string[];
   onChange: (images: string[]) => void;
+  allowLibrary?: boolean;
+  t?: Translate;
 };
 
-async function uploadFile(file: File, onProgress: (pct: number) => void): Promise<string> {
-  if (!ALLOWED.has(file.type)) {
-    throw new Error("استخدم JPG أو PNG أو WebP فقط");
-  }
-  if (file.size > MAX_BYTES) {
-    throw new Error("يجب أن تكون الصورة أصغر من 10 ميغابايت");
-  }
-
-  const body = new FormData();
-  body.append("file", file);
-  body.append("folder", "products");
-  body.append("alt", file.name.replace(/\.[^.]+$/, ""));
-
-  const url = await new Promise<string>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/storage/upload");
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      try {
-        const data = JSON.parse(xhr.responseText) as { url?: string; error?: string };
-        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
-          resolve(data.url);
-        } else {
-          reject(new Error(data.error || "فشل الرفع"));
-        }
-      } catch {
-        reject(new Error("فشل الرفع"));
-      }
-    };
-    xhr.onerror = () => reject(new Error("فشل الرفع"));
-    xhr.send(body);
-  });
-
-  return url;
-}
-
-export default function ProductImagesField({ images, onChange }: Props) {
+export default function ProductImagesField({
+  images,
+  onChange,
+  allowLibrary,
+  t,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const canAddMore = images.length < 1 + MAX_GALLERY;
+  const typeError = t
+    ? t("admin.servicePages.uploadErrorType")
+    : "استخدم JPG أو PNG أو WebP فقط";
+  const sizeError = t
+    ? t("admin.servicePages.uploadErrorSize")
+    : "يجب أن تكون الصورة أصغر من 10 ميغابايت";
+  const failError = t ? t("admin.servicePages.uploadError") : "فشل الرفع";
+  const maxError = t
+    ? t("admin.servicePages.productImageLimit")
+    : "الحد الأقصى صورة رئيسية + 5 صور للمعرض";
 
   const addUrls = useCallback(
     (urls: string[]) => {
-      onChange([...images, ...urls].slice(0, 1 + MAX_GALLERY));
+      const next = [...images];
+      for (const url of urls) {
+        if (!url || next.includes(url)) continue;
+        next.push(url);
+        if (next.length >= 1 + MAX_GALLERY) break;
+      }
+      onChange(next);
     },
     [images, onChange],
   );
 
   async function handleFiles(fileList: FileList | File[] | null) {
     if (!fileList?.length) return;
-    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+    const files = Array.from(fileList);
     if (!files.length) {
-      setError("أسقط ملفات صور فقط (JPG, PNG, WebP)");
+      setError(typeError);
       return;
     }
     if (!canAddMore) {
-      setError("الحد الأقصى صورة رئيسية + 5 صور للمعرض");
+      setError(maxError);
       return;
     }
 
@@ -90,16 +76,22 @@ export default function ProductImagesField({ images, onChange }: Props) {
 
     try {
       for (let i = 0; i < batch.length; i++) {
-        const url = await uploadFile(batch[i], (pct) => {
-          const overall = Math.round(((i + pct / 100) / batch.length) * 100);
-          setProgress(overall);
+        const result = await uploadImageFromPc(batch[i]!, {
+          folder: "products",
+          onProgress: (pct) => {
+            const overall = Math.round(((i + pct / 100) / batch.length) * 100);
+            setProgress(overall);
+          },
         });
-        uploaded.push(url);
+        uploaded.push(result.url);
       }
       addUrls(uploaded);
       setProgress(100);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "فشل الرفع");
+      const code = err instanceof Error ? err.message : "UPLOAD_FAILED";
+      if (code === "UPLOAD_TYPE") setError(typeError);
+      else if (code === "UPLOAD_SIZE") setError(sizeError);
+      else setError(failError);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -137,7 +129,7 @@ export default function ProductImagesField({ images, onChange }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPT}
+        accept={MEDIA_IMAGE_ACCEPT}
         multiple
         className="hidden"
         onChange={(e) => void handleFiles(e.target.files)}
@@ -145,7 +137,38 @@ export default function ProductImagesField({ images, onChange }: Props) {
 
       {error ? <p className="admin-pe-error">{error}</p> : null}
 
-      {canAddMore ? (
+      {allowLibrary && canAddMore ? (
+        <div className="csp-inline-actions" style={{ marginBottom: 10 }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={uploading}
+            onClick={() => setPickerOpen(true)}
+          >
+            <ImagePlus size={16} />
+            {t
+              ? t("admin.servicePages.chooseExistingPhoto")
+              : "اختيار صورة موجودة"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+            {uploading
+              ? t
+                ? t("admin.servicePages.uploading", { n: progress })
+                : `جارٍ الرفع… ${progress}%`
+              : t
+                ? t("admin.servicePages.uploadNewPhoto")
+                : "رفع صورة جديدة"}
+          </button>
+        </div>
+      ) : null}
+
+      {canAddMore && !allowLibrary ? (
         <button
           type="button"
           disabled={uploading}
@@ -166,6 +189,33 @@ export default function ProductImagesField({ images, onChange }: Props) {
             حتى 5MB · PNG / JPG · نسبة 1:1 مفضّلة
           </span>
         </button>
+      ) : null}
+
+      {allowLibrary && uploading ? (
+        <div className="csp-upload-track" aria-hidden>
+          <span className="csp-upload-bar" style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+
+      {allowLibrary ? (
+        <AdminMediaPicker
+          open={pickerOpen}
+          title={
+            t
+              ? t("admin.servicePages.chooseExistingPhoto")
+              : "اختيار صورة موجودة"
+          }
+          accept="image"
+          emptyLabel={
+            t ? t("admin.servicePages.mediaEmpty") : "لا توجد وسائط بعد"
+          }
+          stacked
+          onClose={() => setPickerOpen(false)}
+          onPick={(media) => {
+            if (media.kind === "image" && media.url) addUrls([media.url]);
+            setPickerOpen(false);
+          }}
+        />
       ) : null}
 
       {images.length > 0 ? (

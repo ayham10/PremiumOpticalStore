@@ -5,33 +5,42 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  ImagePlus,
+  Package,
   Plus,
   Save,
   Trash2,
 } from "lucide-react";
-import AdminMediaPicker from "@/components/admin/AdminMediaPicker";
+import AdminMediaField from "@/components/admin/AdminMediaField";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminProductCreateModal from "@/components/admin/AdminProductCreateModal";
+import AdminProductPicker from "@/components/admin/AdminProductPicker";
 import CustomServicePageView from "@/components/services/CustomServicePageView";
+import type { CustomPageProductCard } from "@/components/services/CustomPageProductsCarousel";
 import { ApiError, apiFetch } from "@/lib/admin-api";
+import { formatPrice } from "@/lib/format";
 import { isRtl, type Locale } from "@/lib/i18n/config";
 import {
   CUSTOM_SECTION_TYPES,
+  attachProductIds,
   copyForCustomPageEditor,
   createCustomSection,
   customPageLocaleIssues,
+  detachProductId,
   emptyCustomPageCopy,
   type CustomPageLocaleIssue,
   MAX_CUSTOM_SECTIONS,
+  MAX_GALLERY_ITEMS,
+  MAX_PAGE_PRODUCTS,
   pageHasVisibleButton,
   parseCtaKind,
   PUBLIC_INTERNAL_PATHS,
+  resolveCustomPageProducts,
   sanitizeExternalUrl,
   sanitizeInternalPath,
-  MAX_GALLERY_ITEMS,
   normalizeCustomSlug,
   RESERVED_SERVICE_SLUGS,
 } from "@/lib/custom-service-pages";
+import { galleryWithoutDuplicate } from "@/lib/media-upload";
 import {
   CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
   EYE_EXAM_DEFAULT_FEATURE_ICONS,
@@ -49,6 +58,7 @@ import type {
   CustomPageTemplate,
   CustomSectionType,
   CustomServicePage,
+  Product,
   ServicePagesLocale,
   StoreSettings,
 } from "@/lib/types";
@@ -88,6 +98,7 @@ const SECTION_I18N: Record<CustomSectionType, string> = {
   valuesStrip: "admin.servicePages.sectionValues",
   bookingCta: "admin.servicePages.sectionBooking",
   gallery: "admin.servicePages.sectionGallery",
+  products: "admin.servicePages.sectionProducts",
 };
 
 function customPageErrorMessage(error: unknown, t: Translate): string {
@@ -282,6 +293,10 @@ export default function CustomPageBuilder({
     page.heroMedia,
   );
   const [gallery, setGallery] = useState<CustomPageMediaRef[]>(page.gallery || []);
+  const [productIds, setProductIds] = useState<string[]>(page.productIds || []);
+  const [catalog, setCatalog] = useState<CustomPageProductCard[]>([]);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [productCreateOpen, setProductCreateOpen] = useState(false);
   const [copies, setCopies] = useState<Record<ServicePagesLocale, CustomPageCopy>>({
     ar: copyForCustomPageEditor(page, "ar"),
     he: copyForCustomPageEditor(page, "he"),
@@ -294,9 +309,6 @@ export default function CustomPageBuilder({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
-  const [mediaTarget, setMediaTarget] = useState<
-    "hero" | "home" | "gallery" | null
-  >(null);
   const skipRevisionReset = useRef(false);
 
   function hydrateFrom(next: CustomServicePage) {
@@ -314,6 +326,7 @@ export default function CustomPageBuilder({
     setSections(next.sections);
     setHeroMedia(next.heroMedia);
     setGallery(next.gallery || []);
+    setProductIds(next.productIds || []);
     setCopies({
       ar: copyForCustomPageEditor(next, "ar"),
       he: copyForCustomPageEditor(next, "he"),
@@ -336,6 +349,26 @@ export default function CustomPageBuilder({
       hydrateFrom(page);
     }
   }, [page.revision, page.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<unknown>("/api/products?all=1")
+      .then((data) => {
+        if (cancelled) return;
+        const list = Array.isArray(data)
+          ? data
+          : data && typeof data === "object" && Array.isArray((data as { products?: unknown }).products)
+            ? (data as { products: Product[] }).products
+            : [];
+        setCatalog(list as CustomPageProductCard[]);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalog([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -388,6 +421,34 @@ export default function CustomPageBuilder({
     );
   }
 
+  function ensureProductsSection(nextSections = sections) {
+    if (nextSections.some((section) => section.type === "products")) {
+      return nextSections;
+    }
+    if (nextSections.length >= MAX_CUSTOM_SECTIONS) return nextSections;
+    const withProducts = [...nextSections, createCustomSection("products")];
+    setSections(withProducts);
+    return withProducts;
+  }
+
+  function attachProducts(products: Product[]) {
+    const nextIds = attachProductIds(
+      productIds,
+      products.map((product) => product.id),
+    );
+    setProductIds(nextIds);
+    setCatalog((prev) => {
+      const seen = new Set(prev.map((item) => item.id));
+      const extra = products.filter((product) => !seen.has(product.id));
+      return extra.length ? [...extra, ...prev] : prev;
+    });
+    ensureProductsSection();
+  }
+
+  function removeProductFromPage(id: string) {
+    setProductIds((prev) => detachProductId(prev, id));
+  }
+
   function applySaved(saved: CustomServicePage) {
     skipRevisionReset.current = true;
     setName(saved.name);
@@ -404,6 +465,7 @@ export default function CustomPageBuilder({
     setSections(saved.sections);
     setHeroMedia(saved.heroMedia);
     setGallery(saved.gallery || []);
+    setProductIds(saved.productIds || []);
     setCopies((prev) => ({
       ...prev,
       [editLocale]: copyForCustomPageEditor(saved, editLocale),
@@ -433,6 +495,7 @@ export default function CustomPageBuilder({
         sections,
         heroMedia: heroMedia || null,
         gallery,
+        productIds,
         locale: editLocale,
         copy,
       };
@@ -495,6 +558,7 @@ export default function CustomPageBuilder({
     sections,
     heroMedia,
     gallery,
+    productIds,
     locales: {
       [editLocale]: {
         ...copy,
@@ -617,26 +681,22 @@ export default function CustomPageBuilder({
       {sections.some((section) => section.type === "heroMedia") ? (
         <section className="admin-card admin-service-card">
           <h2>{t("admin.servicePages.heroMedia")}</h2>
-          <MediaPreview media={heroMedia} />
-          <div className="csp-inline-actions">
+          <AdminMediaField
+            value={heroMedia}
+            onChange={setHeroMedia}
+            t={t}
+            folder="hero"
+            accept="any"
+          />
+          {heroMedia ? (
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => setMediaTarget("hero")}
+              onClick={() => setHeroMedia(undefined)}
             >
-              <ImagePlus size={16} />
-              {t("admin.servicePages.pickMedia")}
+              {t("admin.servicePages.clearMedia")}
             </button>
-            {heroMedia ? (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setHeroMedia(undefined)}
-              >
-                {t("admin.servicePages.clearMedia")}
-              </button>
-            ) : null}
-          </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -905,7 +965,12 @@ export default function CustomPageBuilder({
           <div className="csp-gallery-admin">
             {gallery.map((item, index) => (
               <div key={`${item.url}-${index}`} className="csp-gallery-admin-item">
-                <MediaPreview media={item} />
+                {item.kind === "video" ? (
+                  <video className="csp-media-preview" src={item.url} muted playsInline />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="csp-media-preview" src={item.url} alt="" />
+                )}
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -919,17 +984,77 @@ export default function CustomPageBuilder({
             ))}
           </div>
           {gallery.length < MAX_GALLERY_ITEMS ? (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setMediaTarget("gallery")}
-            >
-              <ImagePlus size={16} />
-              {t("admin.servicePages.pickMedia")}
-            </button>
+            <AdminMediaField
+              t={t}
+              folder="gallery"
+              accept="any"
+              onChange={(media) =>
+                setGallery((prev) =>
+                  galleryWithoutDuplicate(prev, media, MAX_GALLERY_ITEMS),
+                )
+              }
+            />
           ) : null}
         </section>
       ) : null}
+
+      <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.sectionProducts")}</h2>
+          <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
+          <div className="csp-inline-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setProductPickerOpen(true)}
+              disabled={productIds.length >= MAX_PAGE_PRODUCTS}
+            >
+              <Package size={16} />
+              {t("admin.servicePages.chooseExistingProduct")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setProductCreateOpen(true)}
+              disabled={productIds.length >= MAX_PAGE_PRODUCTS}
+            >
+              <Plus size={16} />
+              {t("admin.servicePages.addNewProduct")}
+            </button>
+          </div>
+          {productIds.length >= MAX_PAGE_PRODUCTS ? (
+            <p className="admin-muted">{t("admin.servicePages.productLimit")}</p>
+          ) : null}
+          <div className="csp-attached-products">
+            {resolveCustomPageProducts(catalog, productIds, { includeDrafts: true }).map(
+              (product) => (
+                <div key={product.id} className="csp-attached-product">
+                  <span className="csp-product-pick-thumb">
+                    {product.images?.[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={product.images[0]} alt="" />
+                    ) : (
+                      <Package size={16} />
+                    )}
+                  </span>
+                  <span className="csp-product-pick-copy">
+                    <strong>{product.name}</strong>
+                    <small>
+                      {product.category} · {formatPrice(product.sellingPrice)}
+                    </small>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => removeProductFromPage(product.id)}
+                  >
+                    {t("admin.servicePages.removeFromPage")}
+                  </button>
+                </div>
+              ),
+            )}
+          </div>
+          <p className="admin-muted">{t("admin.servicePages.removeFromPageHint")}</p>
+        </section>
 
       <section className="admin-card admin-service-card">
         <h2>{t("admin.servicePages.homeCard")}</h2>
@@ -961,26 +1086,24 @@ export default function CustomPageBuilder({
           dir={editorDir}
           lang={editLocale}
         />
-        <MediaPreview media={homeImage ? { kind: "image", url: homeImage } : undefined} />
-        <div className="csp-inline-actions">
+        <AdminMediaField
+          value={homeImage ? { kind: "image", url: homeImage } : undefined}
+          onChange={(media) => {
+            if (media.kind === "image" && media.url) setHomeImage(media.url);
+          }}
+          t={t}
+          folder="hero"
+          accept="image"
+        />
+        {homeImage ? (
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => setMediaTarget("home")}
+            onClick={() => setHomeImage("")}
           >
-            <ImagePlus size={16} />
-            {t("admin.servicePages.pickMedia")}
+            {t("admin.servicePages.clearMedia")}
           </button>
-          {homeImage ? (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setHomeImage("")}
-            >
-              {t("admin.servicePages.clearMedia")}
-            </button>
-          ) : null}
-        </div>
+        ) : null}
       </section>
 
       <section className="admin-card admin-service-card">
@@ -1012,6 +1135,9 @@ export default function CustomPageBuilder({
             page={previewPage}
             copy={previewPage.locales[editLocale]!}
             dir={editorDir}
+            products={resolveCustomPageProducts(catalog, productIds, {
+              includeDrafts: true,
+            })}
           />
         </div>
       </section>
@@ -1057,34 +1183,21 @@ export default function CustomPageBuilder({
         </button>
       </div>
 
-      <AdminMediaPicker
-        open={mediaTarget !== null}
-        title={t("admin.servicePages.pickMedia")}
-        accept={mediaTarget === "home" ? "image" : "any"}
-        emptyLabel={t("admin.servicePages.mediaEmpty")}
-        onClose={() => setMediaTarget(null)}
-        onPick={(media) => {
-          if (mediaTarget === "hero") setHeroMedia(media);
-          if (mediaTarget === "home" && media.kind === "image") setHomeImage(media.url);
-          if (mediaTarget === "gallery") {
-            setGallery((prev) =>
-              prev.length >= MAX_GALLERY_ITEMS ? prev : [...prev, media],
-            );
-          }
-        }}
+      <AdminProductPicker
+        open={productPickerOpen}
+        t={t}
+        selectedIds={productIds}
+        remaining={MAX_PAGE_PRODUCTS - productIds.length}
+        onClose={() => setProductPickerOpen(false)}
+        onPick={attachProducts}
+      />
+      <AdminProductCreateModal
+        open={productCreateOpen}
+        t={t}
+        onClose={() => setProductCreateOpen(false)}
+        onCreated={(product) => attachProducts([product])}
       />
     </div>
-  );
-}
-
-function MediaPreview({ media }: { media?: CustomPageMediaRef }) {
-  if (!media?.url) return null;
-  if (media.kind === "video") {
-    return <video className="csp-media-preview" src={media.url} muted controls playsInline />;
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img className="csp-media-preview" src={media.url} alt="" />
   );
 }
 

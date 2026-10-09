@@ -14,6 +14,7 @@ import type {
   CustomPageTemplate,
   CustomSectionType,
   CustomServicePage,
+  Product,
   ServicePageFeature,
   ServicePagesLocale,
   ServicePagesSettings,
@@ -31,6 +32,7 @@ export { CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES };
 export const MAX_CUSTOM_PAGES = 30;
 export const MAX_CUSTOM_SECTIONS = 12;
 export const MAX_GALLERY_ITEMS = 6;
+export const MAX_PAGE_PRODUCTS = 16;
 export const CUSTOM_FEATURE_COUNT = 4;
 export const CUSTOM_BENEFIT_COUNT = 5;
 
@@ -407,6 +409,63 @@ function sparseGallery(saved: unknown): CustomPageMediaRef[] {
     .slice(0, MAX_GALLERY_ITEMS);
 }
 
+export function uniqueProductIds(
+  saved: unknown,
+  max = MAX_PAGE_PRODUCTS,
+): string[] {
+  const list = Array.isArray(saved) ? saved : [];
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    const id = cleanText(item);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+    if (ids.length >= max) break;
+  }
+  return ids;
+}
+
+export function attachProductIds(
+  current: unknown,
+  incoming: unknown,
+): string[] {
+  return uniqueProductIds([
+    ...uniqueProductIds(current),
+    ...(Array.isArray(incoming) ? incoming : [incoming]),
+  ]);
+}
+
+export function detachProductId(current: unknown, id: string): string[] {
+  const remove = cleanText(id);
+  return uniqueProductIds(current).filter((item) => item !== remove);
+}
+
+export function resolveCustomPageProducts<T extends Pick<Product, "id" | "status">>(
+  catalog: T[] | undefined,
+  ids: unknown,
+  options?: { includeDrafts?: boolean },
+): T[] {
+  const wanted = uniqueProductIds(ids);
+  if (!wanted.length || !catalog?.length) return [];
+  const byId = new Map(catalog.map((product) => [product.id, product]));
+  const includeDrafts = Boolean(options?.includeDrafts);
+  const resolved: T[] = [];
+  for (const id of wanted) {
+    const product = byId.get(id);
+    if (!product) continue;
+    if (
+      !includeDrafts &&
+      product.status !== "active" &&
+      product.status !== "out_of_stock"
+    ) {
+      continue;
+    }
+    resolved.push(product);
+  }
+  return resolved;
+}
+
 function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPageSection[] {
   const list = Array.isArray(saved) ? saved : [];
   const next: CustomPageSection[] = [];
@@ -481,6 +540,7 @@ export function normalizeCustomServicePage(saved: unknown): CustomServicePage | 
     sections,
     heroMedia: sparseMedia(raw.heroMedia),
     gallery: sparseGallery(raw.gallery),
+    productIds: uniqueProductIds(raw.productIds),
     locales: sparseLocales(raw.locales, sections, showHeroButton),
     createdAt: cleanText(raw.createdAt) || new Date().toISOString(),
     updatedAt: cleanText(raw.updatedAt) || new Date().toISOString(),
@@ -663,6 +723,8 @@ function applyUpdate(
           ? sparseMedia(op.heroMedia)
           : page.heroMedia,
     gallery: op.gallery ? sparseGallery(op.gallery) : page.gallery,
+    productIds:
+      op.productIds != null ? uniqueProductIds(op.productIds) : page.productIds || [],
     locales: { ...page.locales },
     updatedAt: new Date().toISOString(),
     revision: page.revision + 1,
@@ -742,6 +804,7 @@ export function persistCustomPages(
       bookingType: null,
       sections: defaultCustomSections(template),
       gallery: [],
+      productIds: [],
       locales: {},
       createdAt: now,
       updatedAt: now,

@@ -11,6 +11,7 @@ export default function AdminModal({
   children,
   wide,
   compact,
+  stacked,
   className,
   icon,
 }: {
@@ -20,6 +21,7 @@ export default function AdminModal({
   children: React.ReactNode;
   wide?: boolean;
   compact?: boolean;
+  stacked?: boolean;
   className?: string;
   icon?: ReactNode;
 }) {
@@ -38,8 +40,8 @@ export default function AdminModal({
     <div
       className={
         compact
-          ? "fixed inset-0 z-[100] flex items-center justify-center p-3"
-          : "fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
+          ? `${stacked ? "z-[140]" : "z-[100]"} fixed inset-0 flex items-center justify-center p-3`
+          : `${stacked ? "z-[140]" : "z-[100]"} fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4`
       }
       style={{ background: "rgba(11, 15, 20, 0.72)" }}
       onClick={onClose}
