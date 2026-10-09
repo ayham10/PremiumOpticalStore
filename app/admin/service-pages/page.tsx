@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Contact, Eye, Home, RotateCcw, Save } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Contact, Eye, Home, MapPin, RotateCcw, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
+import { isRtl, localeLabels, type Locale } from "@/lib/i18n/config";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
+import { defaultServicePagesForLocale } from "@/lib/service-pages-defaults";
 import {
   CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
   EYE_EXAM_DEFAULT_FEATURE_ICONS,
@@ -16,32 +18,65 @@ import {
   type ServiceFeatureIconId,
 } from "@/lib/service-page-icons";
 import {
-  cloneServicePages,
+  SERVICE_CONTENT_LOCALES,
+  cloneLocaleBundle,
   hasHomepageSettings,
-  mergeServicePages,
+  hydrateServicePagesForEditor,
+  localePatchPayload,
 } from "@/lib/service-pages";
 import type {
   ContactLensesServicePage,
   EyeExamServicePage,
+  FooterServiceContent,
   HomepageHeroContent,
+  ServicePagesLocale,
+  ServicePagesLocaleBundle,
   ServicePagesSettings,
   StoreSettings,
 } from "@/lib/types";
 
-type Tab = "homepage" | "eyeExam" | "contactLenses";
+type Tab = "homepage" | "eyeExam" | "contactLenses" | "footer";
 
 export default function AdminServicePagesPage() {
-  const { t } = useLocale();
+  const { t, rtl } = useLocale();
   const { notifySaved } = useAdminSuccessNotice();
   const [tab, setTab] = useState<Tab>("homepage");
-  const [pages, setPages] = useState<ServicePagesSettings>(
-    cloneServicePages(),
+  const [editLocale, setEditLocale] = useState<ServicePagesLocale>("ar");
+  const editLocaleRef = useRef(editLocale);
+  editLocaleRef.current = editLocale;
+  const [document, setDocument] = useState<ServicePagesSettings | undefined>();
+  const [drafts, setDrafts] = useState<
+    Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>>
+  >({});
+  const [pages, setPages] = useState<ServicePagesLocaleBundle>(
+    defaultServicePagesForLocale("ar"),
   );
   const [homepagePersisted, setHomepagePersisted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const applyLocale = useCallback(
+    (
+      incoming: unknown,
+      locale: ServicePagesLocale,
+      nextDrafts?: Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>>,
+    ) => {
+      const draft = nextDrafts?.[locale];
+      setPages(
+        draft
+          ? cloneLocaleBundle(draft)
+          : hydrateServicePagesForEditor(
+              incoming,
+              locale,
+              defaultServicePagesForLocale(locale),
+            ),
+      );
+      setHomepagePersisted(hasHomepageSettings(incoming, locale));
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,22 +86,38 @@ export default function AdminServicePagesPage() {
         "/api/settings?admin=1",
       );
       const incoming = data.settings?.servicePages;
-      setHomepagePersisted(hasHomepageSettings(incoming));
-      setPages(mergeServicePages(incoming));
+      const locale = editLocaleRef.current;
+      setDocument(incoming);
+      setDrafts({});
+      applyLocale(incoming, locale, {});
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("admin.servicePages.loadError"),
       );
+      setDocument(undefined);
+      setDrafts({});
       setHomepagePersisted(false);
-      setPages(cloneServicePages());
+      setPages(defaultServicePagesForLocale(editLocaleRef.current));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [applyLocale, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  function switchEditLocale(next: ServicePagesLocale) {
+    if (next === editLocale) return;
+    const nextDrafts = {
+      ...drafts,
+      [editLocale]: cloneLocaleBundle(pages),
+    };
+    setDrafts(nextDrafts);
+    setEditLocale(next);
+    applyLocale(document, next, nextDrafts);
+    setMessage("");
+  }
 
   function updateEyeExam<K extends keyof EyeExamServicePage>(
     key: K,
@@ -96,16 +147,30 @@ export default function AdminServicePagesPage() {
       ...prev,
       homepage: {
         hero: {
-          ...(prev.homepage?.hero ?? cloneServicePages().homepage!.hero),
+          ...(prev.homepage?.hero ??
+            defaultServicePagesForLocale(editLocale).homepage!.hero),
           [key]: value,
         },
       },
     }));
   }
 
+  function updateFooter<K extends keyof FooterServiceContent>(
+    key: K,
+    value: FooterServiceContent[K],
+  ) {
+    setPages((prev) => ({
+      ...prev,
+      footer: {
+        ...(prev.footer ?? defaultServicePagesForLocale(editLocale).footer!),
+        [key]: value,
+      },
+    }));
+  }
+
   function restoreCurrent() {
     if (!confirm(t("admin.servicePages.restoreConfirm"))) return;
-    const original = cloneServicePages();
+    const original = defaultServicePagesForLocale(editLocale);
     setPages((prev) => ({
       ...prev,
       [tab]: original[tab],
@@ -118,11 +183,10 @@ export default function AdminServicePagesPage() {
     setMessage("");
     setError("");
     try {
-      const merged = mergeServicePages(pages);
       const includeHomepage = homepagePersisted || tab === "homepage";
-      const servicePages = includeHomepage
-        ? merged
-        : { eyeExam: merged.eyeExam, contactLenses: merged.contactLenses };
+      const servicePages = localePatchPayload(editLocale, pages, {
+        includeHomepage,
+      });
       const saved = await apiFetch<{ settings: StoreSettings }>(
         "/api/settings",
         {
@@ -131,10 +195,14 @@ export default function AdminServicePagesPage() {
         },
       );
       const next = saved.settings?.servicePages;
-      setHomepagePersisted(
-        includeHomepage || hasHomepageSettings(next),
-      );
-      setPages(mergeServicePages(next ?? merged));
+      setDocument(next);
+      const nextDrafts = {
+        ...drafts,
+        [editLocale]: cloneLocaleBundle(pages),
+      };
+      delete nextDrafts[editLocale];
+      setDrafts(nextDrafts);
+      applyLocale(next ?? document, editLocale, nextDrafts);
       invalidatePublicCache("settings:");
       window.dispatchEvent(new Event("oyon:branding-saved"));
       notifySaved();
@@ -147,18 +215,44 @@ export default function AdminServicePagesPage() {
     }
   }
 
-  const home = pages.homepage ?? cloneServicePages().homepage!;
+  const home = pages.homepage ?? defaultServicePagesForLocale(editLocale).homepage!;
   const eye = pages.eyeExam;
   const lenses = pages.contactLenses;
+  const footer = pages.footer ?? defaultServicePagesForLocale(editLocale).footer!;
+  const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
 
   return (
-    <div className="admin-service-pages space-y-5">
+    <div
+      className="admin-service-pages space-y-5"
+      dir={rtl ? "rtl" : "ltr"}
+    >
       <AdminPageHeader
         icon={Eye}
         kicker={t("admin.servicePages.kicker")}
         title={t("admin.servicePages.title")}
         description={t("admin.servicePages.description")}
       />
+
+      <div
+        className="admin-service-langs"
+        role="tablist"
+        aria-label={t("admin.servicePages.languages")}
+      >
+        {SERVICE_CONTENT_LOCALES.map((locale) => (
+          <button
+            key={locale}
+            type="button"
+            role="tab"
+            aria-selected={editLocale === locale}
+            className={editLocale === locale ? "is-active" : ""}
+            onClick={() => switchEditLocale(locale)}
+            dir={isRtl(locale) ? "rtl" : "ltr"}
+            lang={locale}
+          >
+            {localeLabels[locale]}
+          </button>
+        ))}
+      </div>
 
       <div className="admin-service-tabs" role="tablist">
         <button
@@ -191,6 +285,16 @@ export default function AdminServicePagesPage() {
           <Contact size={16} strokeWidth={1.6} />
           {t("admin.servicePages.tabContactLenses")}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "footer"}
+          className={tab === "footer" ? "is-active" : ""}
+          onClick={() => setTab("footer")}
+        >
+          <MapPin size={16} strokeWidth={1.6} />
+          {t("admin.servicePages.tabFooter")}
+        </button>
       </div>
 
       {message ? (
@@ -207,13 +311,18 @@ export default function AdminServicePagesPage() {
       {loading ? (
         <p className="admin-muted">{t("admin.servicePages.loading")}</p>
       ) : tab === "homepage" ? (
-        <div className="admin-service-editor space-y-4">
+        <div className="admin-service-editor space-y-4" dir={editorDir}>
           <section className="admin-card admin-service-card">
             <h2>{t("admin.servicePages.hero")}</h2>
             <Field
               label={t("admin.servicePages.mainTitle")}
               value={home.hero.title}
               onChange={(value) => updateHomepageHero("title", value)}
+            />
+            <Field
+              label={t("admin.servicePages.subtitle")}
+              value={home.hero.subtitle || ""}
+              onChange={(value) => updateHomepageHero("subtitle", value)}
             />
           </section>
 
@@ -249,7 +358,7 @@ export default function AdminServicePagesPage() {
           </section>
         </div>
       ) : tab === "eyeExam" ? (
-        <div className="admin-service-editor space-y-4">
+        <div className="admin-service-editor space-y-4" dir={editorDir}>
           <section className="admin-card admin-service-card">
             <h2>{t("admin.servicePages.hero")}</h2>
             <Field
@@ -334,8 +443,8 @@ export default function AdminServicePagesPage() {
             ))}
           </section>
         </div>
-      ) : (
-        <div className="admin-service-editor space-y-4">
+      ) : tab === "contactLenses" ? (
+        <div className="admin-service-editor space-y-4" dir={editorDir}>
           <section className="admin-card admin-service-card">
             <h2>{t("admin.servicePages.hero")}</h2>
             <Field
@@ -408,6 +517,33 @@ export default function AdminServicePagesPage() {
               value={lenses.warningText}
               onChange={(value) => updateLenses("warningText", value)}
               multiline
+            />
+          </section>
+        </div>
+      ) : (
+        <div className="admin-service-editor space-y-4" dir={editorDir}>
+          <section className="admin-card admin-service-card">
+            <h2>{t("admin.servicePages.tabFooter")}</h2>
+            <Field
+              label={t("admin.servicePages.tagline")}
+              value={footer.tagline}
+              onChange={(value) => updateFooter("tagline", value)}
+              multiline
+            />
+            <Field
+              label={t("admin.servicePages.hoursLabel")}
+              value={footer.hoursLabel}
+              onChange={(value) => updateFooter("hoursLabel", value)}
+            />
+            <Field
+              label={t("admin.servicePages.locationLabel")}
+              value={footer.locationLabel}
+              onChange={(value) => updateFooter("locationLabel", value)}
+            />
+            <Field
+              label={t("admin.servicePages.address")}
+              value={footer.address}
+              onChange={(value) => updateFooter("address", value)}
             />
           </section>
         </div>

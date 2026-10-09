@@ -471,6 +471,8 @@ export interface ContactLensesServicePage {
 
 export interface HomepageHeroContent {
   title: string;
+  /** Optional dedicated subtitle. Empty means the public page joins serviceLabels. */
+  subtitle?: string;
   serviceLabels: string[];
   bookingButtonText: string;
   shopButtonText: string;
@@ -480,10 +482,29 @@ export interface HomepageServicePage {
   hero: HomepageHeroContent;
 }
 
-export interface ServicePagesSettings {
+export interface FooterServiceContent {
+  tagline: string;
+  hoursLabel: string;
+  locationLabel: string;
+  address: string;
+}
+
+export type ServicePagesLocale = "ar" | "he" | "en";
+
+/** One language's editable Homepage / Eye Exam / Contact Lenses / Footer copy. */
+export interface ServicePagesLocaleBundle {
   eyeExam: EyeExamServicePage;
   contactLenses: ContactLensesServicePage;
   homepage?: HomepageServicePage;
+  footer?: FooterServiceContent;
+}
+
+/**
+ * Site copy. Legacy root fields are Arabic (backward compatible).
+ * Per-language edits live in `locales` and are saved independently.
+ */
+export interface ServicePagesSettings extends ServicePagesLocaleBundle {
+  locales?: Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>>;
 }
 
 export interface AdminSession {

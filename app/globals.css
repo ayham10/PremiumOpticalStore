@@ -16097,7 +16097,6 @@ select.admin-pe-input {
   max-width: var(--admin-content-max, 1200px);
   min-width: 0;
   overflow-x: hidden;
-  direction: rtl;
 }
 
 .admin-service-pages.space-y-5 > :not([hidden]) ~ :not([hidden]) {
@@ -16138,6 +16137,38 @@ select.admin-pe-input {
   color: #8d949d;
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+.admin-service-langs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.18rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 106, 0.28);
+  background: rgba(8, 12, 17, 0.62);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+.admin-service-langs button {
+  min-height: 2rem;
+  padding: 0.28rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #c5ccd4;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.admin-service-langs button.is-active {
+  background: rgba(212, 175, 106, 0.16);
+  color: #d4af6a;
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.28);
 }
 
 .admin-service-tabs {
@@ -16437,6 +16468,15 @@ body > .admin-save-notice,
 
   .admin-service-tabs {
     gap: 0.4rem;
+  }
+
+  .admin-service-langs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-service-langs button {
+    flex: 1 1 auto;
   }
 
   .admin-service-tabs button,

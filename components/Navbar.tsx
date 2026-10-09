@@ -22,6 +22,8 @@ import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { pickServiceText } from "@/lib/service-pages";
+import { useLocalizedServicePages } from "@/lib/use-service-pages";
 import {
   cachedJsonFetch,
   productsCacheKey,
@@ -41,8 +43,9 @@ const MOBILE_LINKS = [
 ] as const;
 
 export default function Navbar() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { branding, settings } = useBranding();
+  const footerCopy = useLocalizedServicePages()?.footer;
   const pathname = usePathname();
   const router = useRouter();
   const isHome = pathname === "/";
@@ -77,7 +80,9 @@ export default function Navbar() {
     (day) => t(`days.${day}`),
     t("contact.closed"),
   );
-  const city = settings?.city || t("footer.city");
+  const cityFallback =
+    locale === "ar" ? settings?.city || t("footer.city") : t("footer.city");
+  const city = pickServiceText(footerCopy?.address, cityFallback);
   const instagram = settings?.social?.instagram || "https://instagram.com";
   const whatsappRaw =
     settings?.whatsapp || settings?.phone || "972521234567";

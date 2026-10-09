@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import OyonLogo from "@/components/branding/OyonLogo";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { pickServiceText } from "@/lib/service-pages";
-import { useServicePages } from "@/lib/use-service-pages";
+import { useLocalizedServicePages } from "@/lib/use-service-pages";
 import type { StoreSettings } from "@/lib/types";
 
 function HeroSubtitle({ text }: { text: string }) {
@@ -30,7 +30,7 @@ function HeroSubtitle({ text }: { text: string }) {
 
 export default function WelcomeSection() {
   const { t, locale } = useLocale();
-  const hero = useServicePages()?.homepage?.hero;
+  const hero = useLocalizedServicePages()?.homepage?.hero;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [content, setContent] = useState<StoreSettings["content"]>();
   const [videoReady, setVideoReady] = useState(false);
@@ -114,13 +114,12 @@ export default function WelcomeSection() {
   const heroTitle = pickServiceText(hero?.title, fallbackTitle);
   const fallbackLine = t("home.welcomeLine");
   const fallbackLabels = fallbackLine.split(/\s*•\s*/).filter(Boolean);
-  const welcomeLine = hero
-    ? fallbackLabels
-        .map((label, index) =>
-          pickServiceText(hero.serviceLabels?.[index], label),
-        )
-        .join(" • ")
-    : fallbackLine;
+  const labeledLine = fallbackLabels
+    .map((label, index) =>
+      pickServiceText(hero?.serviceLabels?.[index], label),
+    )
+    .join(" • ");
+  const welcomeLine = pickServiceText(hero?.subtitle, labeledLine || fallbackLine);
   const bookLabel = pickServiceText(
     hero?.bookingButtonText,
     t("home.bookAppointment"),
