@@ -1,0 +1,1170 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  ImagePlus,
+  Plus,
+  Save,
+  Trash2,
+} from "lucide-react";
+import AdminMediaPicker from "@/components/admin/AdminMediaPicker";
+import AdminModal from "@/components/admin/AdminModal";
+import CustomServicePageView from "@/components/services/CustomServicePageView";
+import { ApiError, apiFetch } from "@/lib/admin-api";
+import { isRtl, type Locale } from "@/lib/i18n/config";
+import {
+  CUSTOM_SECTION_TYPES,
+  copyForCustomPageEditor,
+  createCustomSection,
+  customPageLocaleIssues,
+  emptyCustomPageCopy,
+  type CustomPageLocaleIssue,
+  MAX_CUSTOM_SECTIONS,
+  pageHasVisibleButton,
+  parseCtaKind,
+  PUBLIC_INTERNAL_PATHS,
+  sanitizeExternalUrl,
+  sanitizeInternalPath,
+  MAX_GALLERY_ITEMS,
+  normalizeCustomSlug,
+  RESERVED_SERVICE_SLUGS,
+} from "@/lib/custom-service-pages";
+import {
+  CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
+  EYE_EXAM_DEFAULT_FEATURE_ICONS,
+  SERVICE_FEATURE_ICON_IDS,
+  SERVICE_FEATURE_ICONS,
+  pickServiceFeatureIcon,
+  type ServiceFeatureIconId,
+} from "@/lib/service-page-icons";
+import type {
+  CustomPageCopy,
+  CustomPageCtaKind,
+  CustomPageMediaRef,
+  CustomPageOp,
+  CustomPageSection,
+  CustomPageTemplate,
+  CustomSectionType,
+  CustomServicePage,
+  ServicePagesLocale,
+  StoreSettings,
+} from "@/lib/types";
+
+type Translate = (path: string, vars?: Record<string, string | number>) => string;
+
+const INTERNAL_PATH_I18N: Record<string, string> = {
+  "/": "admin.servicePages.internalHome",
+  "/book": "admin.servicePages.internalBook",
+  "/shop": "admin.servicePages.internalShop",
+  "/frames": "admin.servicePages.internalFrames",
+  "/sunglasses": "admin.servicePages.internalSunglasses",
+  "/contact-lenses": "admin.servicePages.internalContactLenses",
+  "/eye-exams": "admin.servicePages.internalEyeExams",
+  "/about": "admin.servicePages.internalAbout",
+  "/gallery": "admin.servicePages.internalGallery",
+  "/promotions": "admin.servicePages.internalPromotions",
+  "/contact": "admin.servicePages.internalContact",
+  "/privacy": "admin.servicePages.internalPrivacy",
+};
+
+const ISSUE_I18N: Record<CustomPageLocaleIssue, string> = {
+  title: "admin.servicePages.issueTitle",
+  description: "admin.servicePages.issueDescription",
+  bookingButtonText: "admin.servicePages.issueBooking",
+  features: "admin.servicePages.issueFeatures",
+  benefits: "admin.servicePages.issueBenefits",
+  warningText: "admin.servicePages.issueWarning",
+  values: "admin.servicePages.issueValues",
+};
+
+const SECTION_I18N: Record<CustomSectionType, string> = {
+  heroMedia: "admin.servicePages.sectionHero",
+  featureGrid: "admin.servicePages.sectionFeatures",
+  benefitsList: "admin.servicePages.sectionBenefits",
+  notice: "admin.servicePages.sectionNotice",
+  valuesStrip: "admin.servicePages.sectionValues",
+  bookingCta: "admin.servicePages.sectionBooking",
+  gallery: "admin.servicePages.sectionGallery",
+};
+
+function customPageErrorMessage(error: unknown, t: Translate): string {
+  const message = error instanceof Error ? error.message : "";
+  if (error instanceof ApiError && error.status === 409) {
+    return t("admin.servicePages.conflict");
+  }
+  if (message === "CUSTOM_PAGE_SLUG_TAKEN") return t("admin.servicePages.slugTaken");
+  if (message === "CUSTOM_PAGE_RESERVED") return t("admin.servicePages.slugReserved");
+  if (message === "CUSTOM_PAGE_INVALID_SLUG") return t("admin.servicePages.slugInvalid");
+  if (message === "CUSTOM_PAGE_PUBLISH_INCOMPLETE") {
+    return t("admin.servicePages.publishIncomplete");
+  }
+  if (message === "CUSTOM_PAGE_INVALID_CTA") {
+    return t("admin.servicePages.ctaInvalid");
+  }
+  if (message === "CUSTOM_PAGE_LIMIT") return t("admin.servicePages.pageLimit");
+  return message || t("admin.servicePages.saveError");
+}
+
+export function CreateCustomPageModal({
+  open,
+  t,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  t: Translate;
+  onClose: () => void;
+  onCreated: (page: CustomServicePage, document: StoreSettings["servicePages"]) => void;
+}) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [template, setTemplate] = useState<CustomPageTemplate>("eye-exam");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setName("");
+    setSlug("");
+    setSlugTouched(false);
+    setTemplate("eye-exam");
+    setSaving(false);
+    setError("");
+  }, [open]);
+
+  function updateName(value: string) {
+    setName(value);
+    if (!slugTouched) setSlug(normalizeCustomSlug(value));
+  }
+
+  async function create() {
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await apiFetch<{ settings: StoreSettings }>("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({
+          settings: {
+            servicePages: {
+              customPageOp: {
+                op: "create",
+                name: name.trim(),
+                slug,
+                template,
+              } satisfies CustomPageOp,
+            },
+          },
+        }),
+      });
+      const pages = saved.settings?.servicePages?.customPages || [];
+      const created =
+        pages.find((item) => item.slug === normalizeCustomSlug(slug)) ||
+        pages[pages.length - 1];
+      if (!created) throw new Error(t("admin.servicePages.saveError"));
+      onCreated(created, saved.settings?.servicePages);
+      onClose();
+    } catch (err) {
+      setError(customPageErrorMessage(err, t));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const normalized = normalizeCustomSlug(slug);
+  const canCreate =
+    name.trim().length > 1 &&
+    normalized.length >= 2 &&
+    !RESERVED_SERVICE_SLUGS.has(normalized);
+
+  return (
+    <AdminModal
+      open={open}
+      title={t("admin.servicePages.addPage")}
+      onClose={onClose}
+      icon={<Plus size={18} />}
+    >
+      {error ? (
+        <p className="mb-3 rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
+      <label className="admin-service-field">
+        <span className="label">{t("admin.servicePages.pageName")}</span>
+        <input
+          className="input"
+          value={name}
+          onChange={(event) => updateName(event.target.value)}
+        />
+      </label>
+      <label className="admin-service-field">
+        <span className="label">{t("admin.servicePages.pageSlug")}</span>
+        <span className="csp-slug-prefix">/services/</span>
+        <input
+          className="input"
+          value={slug}
+          onChange={(event) => {
+            setSlugTouched(true);
+            setSlug(event.target.value);
+          }}
+        />
+      </label>
+      <fieldset className="admin-service-field">
+        <legend className="label">{t("admin.servicePages.template")}</legend>
+        <div className="csp-template-row">
+          <label className={template === "eye-exam" ? "is-active" : ""}>
+            <input
+              type="radio"
+              name="csp-template"
+              checked={template === "eye-exam"}
+              onChange={() => setTemplate("eye-exam")}
+            />
+            {t("admin.servicePages.templateEyeExam")}
+          </label>
+          <label className={template === "contact-lenses" ? "is-active" : ""}>
+            <input
+              type="radio"
+              name="csp-template"
+              checked={template === "contact-lenses"}
+              onChange={() => setTemplate("contact-lenses")}
+            />
+            {t("admin.servicePages.templateContactLenses")}
+          </label>
+        </div>
+      </fieldset>
+      <div className="admin-service-actions" style={{ marginTop: 16 }}>
+        <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
+          {t("admin.servicePages.cancel")}
+        </button>
+        <button
+          type="button"
+          className="btn btn-accent"
+          onClick={() => void create()}
+          disabled={saving || !canCreate}
+        >
+          {saving ? t("admin.servicePages.saving") : t("admin.servicePages.createPage")}
+        </button>
+      </div>
+    </AdminModal>
+  );
+}
+
+export default function CustomPageBuilder({
+  page,
+  editLocale,
+  t,
+  onDocument,
+  onDeleted,
+}: {
+  page: CustomServicePage;
+  editLocale: ServicePagesLocale;
+  t: Translate;
+  onDocument: (settings: StoreSettings["servicePages"]) => void;
+  onDeleted: () => void;
+}) {
+  const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
+  const [name, setName] = useState(page.name);
+  const [slug, setSlug] = useState(page.slug);
+  const [revision, setRevision] = useState(page.revision);
+  const [status, setStatus] = useState(page.status);
+  const [showOnHome, setShowOnHome] = useState(page.showOnHome);
+  const [homeSort, setHomeSort] = useState(page.homeSort);
+  const [homeImage, setHomeImage] = useState(page.homeImage || "");
+  const [showHeroButton, setShowHeroButton] = useState(page.showHeroButton);
+  const [ctaKind, setCtaKind] = useState<CustomPageCtaKind>(page.ctaKind || "book");
+  const [ctaHref, setCtaHref] = useState(page.ctaHref || "");
+  const [bookingType, setBookingType] = useState(page.bookingType || "");
+  const [sections, setSections] = useState(page.sections);
+  const [heroMedia, setHeroMedia] = useState<CustomPageMediaRef | undefined>(
+    page.heroMedia,
+  );
+  const [gallery, setGallery] = useState<CustomPageMediaRef[]>(page.gallery || []);
+  const [copies, setCopies] = useState<Record<ServicePagesLocale, CustomPageCopy>>({
+    ar: copyForCustomPageEditor(page, "ar"),
+    he: copyForCustomPageEditor(page, "he"),
+    en: copyForCustomPageEditor(page, "en"),
+  });
+  const [bookingOptions, setBookingOptions] = useState<Array<{ key: string; name: string }>>(
+    [],
+  );
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [mediaTarget, setMediaTarget] = useState<
+    "hero" | "home" | "gallery" | null
+  >(null);
+  const skipRevisionReset = useRef(false);
+
+  function hydrateFrom(next: CustomServicePage) {
+    setName(next.name);
+    setSlug(next.slug);
+    setRevision(next.revision);
+    setStatus(next.status);
+    setShowOnHome(next.showOnHome);
+    setHomeSort(next.homeSort);
+    setHomeImage(next.homeImage || "");
+    setShowHeroButton(next.showHeroButton);
+    setCtaKind(next.ctaKind || "book");
+    setCtaHref(next.ctaHref || "");
+    setBookingType(next.bookingType || "");
+    setSections(next.sections);
+    setHeroMedia(next.heroMedia);
+    setGallery(next.gallery || []);
+    setCopies({
+      ar: copyForCustomPageEditor(next, "ar"),
+      he: copyForCustomPageEditor(next, "he"),
+      en: copyForCustomPageEditor(next, "en"),
+    });
+  }
+
+  useEffect(() => {
+    hydrateFrom(page);
+    setMessage("");
+    setError("");
+  }, [page.id]);
+
+  useEffect(() => {
+    if (skipRevisionReset.current) {
+      skipRevisionReset.current = false;
+      return;
+    }
+    if (page.revision !== revision) {
+      hydrateFrom(page);
+    }
+  }, [page.revision, page.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<{ services: Array<{ key: string; name: string }> }>(
+      `/api/booking-services?locale=${editLocale}`,
+    )
+      .then((data) => {
+        if (!cancelled) setBookingOptions(data.services || []);
+      })
+      .catch(() => {
+        if (!cancelled) setBookingOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editLocale]);
+
+  const copy = copies[editLocale] || emptyCustomPageCopy();
+  const issues = customPageLocaleIssues(sections, copy, showHeroButton);
+  const buttonVisible = pageHasVisibleButton(sections, showHeroButton);
+  const localeComplete = issues.length === 0;
+  const savedComplete = Boolean(page.locales[editLocale]?.complete);
+
+  function updateCopy<K extends keyof CustomPageCopy>(key: K, value: CustomPageCopy[K]) {
+    setCopies((prev) => ({
+      ...prev,
+      [editLocale]: { ...prev[editLocale], [key]: value, complete: false },
+    }));
+  }
+
+  function moveSection(index: number, delta: number) {
+    const next = [...sections];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    const [row] = next.splice(index, 1);
+    next.splice(target, 0, row!);
+    setSections(next);
+  }
+
+  function removeSection(id: string) {
+    setSections((prev) => prev.filter((section) => section.id !== id));
+  }
+
+  function addSection(type: CustomSectionType) {
+    if (sections.some((section) => section.type === type)) return;
+    if (sections.length >= MAX_CUSTOM_SECTIONS) return;
+    const section = createCustomSection(type);
+    setSections((prev) =>
+      type === "heroMedia" ? [section, ...prev] : [...prev, section],
+    );
+  }
+
+  function applySaved(saved: CustomServicePage) {
+    skipRevisionReset.current = true;
+    setName(saved.name);
+    setSlug(saved.slug);
+    setRevision(saved.revision);
+    setStatus(saved.status);
+    setShowOnHome(saved.showOnHome);
+    setHomeSort(saved.homeSort);
+    setHomeImage(saved.homeImage || "");
+    setShowHeroButton(saved.showHeroButton);
+    setCtaKind(saved.ctaKind || "book");
+    setCtaHref(saved.ctaHref || "");
+    setBookingType(saved.bookingType || "");
+    setSections(saved.sections);
+    setHeroMedia(saved.heroMedia);
+    setGallery(saved.gallery || []);
+    setCopies((prev) => ({
+      ...prev,
+      [editLocale]: copyForCustomPageEditor(saved, editLocale),
+    }));
+  }
+
+  async function submit(statusOverride?: CustomServicePage["status"]) {
+    setSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      const op: Extract<CustomPageOp, { op: "update" }> = {
+        op: "update",
+        id: page.id,
+        expectedRevision: revision,
+        name,
+        slug,
+        status: statusOverride ?? status,
+        showOnHome,
+        homeSort,
+        homeImage: homeImage || null,
+        showHeroButton,
+        ctaKind,
+        bookingType: ctaKind === "booking" ? bookingType || null : null,
+        ctaHref:
+          ctaKind === "internal" || ctaKind === "external" ? ctaHref || null : null,
+        sections,
+        heroMedia: heroMedia || null,
+        gallery,
+        locale: editLocale,
+        copy,
+      };
+      const saved = await apiFetch<{ settings: StoreSettings }>("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({ settings: { servicePages: { customPageOp: op } } }),
+      });
+      const nextDoc = saved.settings?.servicePages;
+      const nextPage = nextDoc?.customPages?.find((item) => item.id === page.id);
+      if (nextPage) applySaved(nextPage);
+      onDocument(nextDoc);
+      setMessage(t("admin.servicePages.saved"));
+    } catch (err) {
+      setError(customPageErrorMessage(err, t));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removePage() {
+    if (!confirm(t("admin.servicePages.deleteConfirm"))) return;
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await apiFetch<{ settings: StoreSettings }>("/api/settings", {
+        method: "PUT",
+        body: JSON.stringify({
+          settings: {
+            servicePages: {
+              customPageOp: {
+                op: "delete",
+                id: page.id,
+                expectedRevision: revision,
+              } satisfies CustomPageOp,
+            },
+          },
+        }),
+      });
+      onDocument(saved.settings?.servicePages);
+      onDeleted();
+    } catch (err) {
+      setError(customPageErrorMessage(err, t));
+      setSaving(false);
+    }
+  }
+
+  const previewPage: CustomServicePage = {
+    ...page,
+    name,
+    slug,
+    status,
+    showOnHome,
+    homeSort,
+    homeImage: homeImage || undefined,
+    showHeroButton,
+    ctaKind,
+    bookingType: ctaKind === "booking" ? bookingType || null : null,
+    ctaHref:
+      ctaKind === "internal" || ctaKind === "external" ? ctaHref || undefined : undefined,
+    sections,
+    heroMedia,
+    gallery,
+    locales: {
+      [editLocale]: {
+        ...copy,
+        complete: localeComplete,
+      },
+    },
+  };
+
+  const missingTypes = CUSTOM_SECTION_TYPES.filter(
+    (type) => !sections.some((section) => section.type === type),
+  );
+
+  return (
+    <div className="admin-service-editor space-y-4" dir={editorDir}>
+      {message ? (
+        <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
+
+      <section className="admin-card admin-service-card">
+        <div className="csp-status-row">
+          <h2>{name || page.name}</h2>
+          <span className={status === "published" ? "csp-pill is-live" : "csp-pill"}>
+            {status === "published"
+              ? t("admin.servicePages.published")
+              : t("admin.servicePages.draft")}
+          </span>
+          <span className={localeComplete ? "csp-pill is-live" : "csp-pill is-warn"}>
+            {localeComplete
+              ? t("admin.servicePages.localeComplete")
+              : t("admin.servicePages.localeIncomplete")}
+          </span>
+        </div>
+        <p className="admin-muted">{t("admin.servicePages.localeHiddenHint")}</p>
+        <BuilderField
+          label={t("admin.servicePages.pageName")}
+          value={name}
+          onChange={setName}
+          dir="ltr"
+        />
+        <label className="admin-service-field">
+          <span className="label">{t("admin.servicePages.pageSlug")}</span>
+          <span className="csp-slug-prefix">/services/</span>
+          <input
+            className="input"
+            dir="ltr"
+            value={slug}
+            onChange={(event) => setSlug(event.target.value)}
+          />
+        </label>
+        {!localeComplete ? (
+          <ul className="csp-issues">
+            {issues.map((issue) => (
+              <li key={issue}>{t(ISSUE_I18N[issue])}</li>
+            ))}
+          </ul>
+        ) : null}
+        {savedComplete ? null : (
+          <p className="admin-muted">{t("admin.servicePages.unsavedLocale")}</p>
+        )}
+      </section>
+
+      <section className="admin-card admin-service-card">
+        <h2>{t("admin.servicePages.sections")}</h2>
+        <div className="csp-section-list">
+          {sections.map((section, index) => (
+            <div key={section.id} className="csp-section-row">
+              <span>{t(SECTION_I18N[section.type])}</span>
+              <span className="csp-section-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => moveSection(index, -1)}
+                  aria-label={t("admin.servicePages.moveUp")}
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => moveSection(index, 1)}
+                  aria-label={t("admin.servicePages.moveDown")}
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => removeSection(section.id)}
+                >
+                  {t("admin.servicePages.removeSection")}
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+        {missingTypes.length ? (
+          <div className="csp-add-sections">
+            {missingTypes.map((type) => (
+              <button
+                key={type}
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => addSection(type)}
+              >
+                <Plus size={14} />
+                {t(SECTION_I18N[type])}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      {sections.some((section) => section.type === "heroMedia") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.heroMedia")}</h2>
+          <MediaPreview media={heroMedia} />
+          <div className="csp-inline-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setMediaTarget("hero")}
+            >
+              <ImagePlus size={16} />
+              {t("admin.servicePages.pickMedia")}
+            </button>
+            {heroMedia ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setHeroMedia(undefined)}
+              >
+                {t("admin.servicePages.clearMedia")}
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="admin-card admin-service-card">
+        <h2>{t("admin.servicePages.hero")}</h2>
+        <BuilderField
+          label={t("admin.servicePages.eyebrow")}
+          value={copy.eyebrow}
+          onChange={(value) => updateCopy("eyebrow", value)}
+          dir={editorDir}
+          lang={editLocale}
+        />
+        <BuilderField
+          label={t("admin.servicePages.mainTitle")}
+          value={copy.title}
+          onChange={(value) => updateCopy("title", value)}
+          dir={editorDir}
+          lang={editLocale}
+        />
+        <BuilderField
+          label={t("admin.servicePages.body")}
+          value={copy.description}
+          onChange={(value) => updateCopy("description", value)}
+          dir={editorDir}
+          lang={editLocale}
+          multiline
+        />
+        <div className="admin-service-field">
+          <span className="label">{t("admin.servicePages.heroButton")}</span>
+          <div
+            className="admin-service-langs"
+            role="group"
+            aria-label={t("admin.servicePages.heroButton")}
+          >
+            <button
+              type="button"
+              className={showHeroButton ? "is-active" : ""}
+              onClick={() => setShowHeroButton(true)}
+            >
+              {t("admin.servicePages.showButton")}
+            </button>
+            <button
+              type="button"
+              className={!showHeroButton ? "is-active" : ""}
+              onClick={() => setShowHeroButton(false)}
+            >
+              {t("admin.servicePages.hideButton")}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {buttonVisible ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.pageButton")}</h2>
+          <p className="admin-muted">{t("admin.servicePages.pageButtonHint")}</p>
+          <BuilderField
+            label={t("admin.servicePages.bookingButton")}
+            value={copy.bookingButtonText}
+            onChange={(value) => updateCopy("bookingButtonText", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          <label className="admin-service-field">
+            <span className="label">{t("admin.servicePages.ctaKind")}</span>
+            <select
+              className="input"
+              value={ctaKind}
+              onChange={(event) =>
+                setCtaKind(parseCtaKind(event.target.value) || "book")
+              }
+            >
+              <option value="booking">{t("admin.servicePages.ctaKindBooking")}</option>
+              <option value="book">{t("admin.servicePages.ctaKindBook")}</option>
+              <option value="internal">{t("admin.servicePages.ctaKindInternal")}</option>
+              <option value="external">{t("admin.servicePages.ctaKindExternal")}</option>
+            </select>
+          </label>
+          {ctaKind === "booking" ? (
+            <label className="admin-service-field">
+              <span className="label">{t("admin.servicePages.bookingType")}</span>
+              <select
+                className="input"
+                value={bookingType}
+                onChange={(event) => setBookingType(event.target.value)}
+              >
+                <option value="">{t("admin.servicePages.bookingTypeNone")}</option>
+                {bookingOptions.map((service) => (
+                  <option key={service.key} value={service.key}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {ctaKind === "internal" ? (
+            <label className="admin-service-field">
+              <span className="label">{t("admin.servicePages.ctaInternal")}</span>
+              <select
+                className="input"
+                value={ctaHref}
+                onChange={(event) => setCtaHref(event.target.value)}
+              >
+                <option value="">{t("admin.servicePages.ctaInternalChoose")}</option>
+                {PUBLIC_INTERNAL_PATHS.map((path) => (
+                  <option key={path} value={path}>
+                    {t(INTERNAL_PATH_I18N[path] || path)} ({path})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {ctaKind === "external" ? (
+            <BuilderField
+              label={t("admin.servicePages.ctaExternal")}
+              value={ctaHref}
+              onChange={setCtaHref}
+              dir="ltr"
+            />
+          ) : null}
+          {ctaKind === "internal" && ctaHref && !sanitizeInternalPath(ctaHref) ? (
+            <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+          ) : null}
+          {ctaKind === "external" && ctaHref && !sanitizeExternalUrl(ctaHref) ? (
+            <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {sections.some((section) => section.type === "featureGrid") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.features")}</h2>
+          {copy.features.map((feature, index) => (
+            <div key={`csp-f-${index}`} className="admin-service-feature">
+              <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+              <BuilderIconPicker
+                label={t("admin.servicePages.featureIcon")}
+                value={feature.icon}
+                fallback={
+                  page.template === "contact-lenses"
+                    ? CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
+                    : EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"
+                }
+                onChange={(icon) => {
+                  const next = [...copy.features];
+                  next[index] = { ...next[index], icon };
+                  updateCopy("features", next);
+                }}
+              />
+              <BuilderField
+                label={t("admin.servicePages.featureTitle")}
+                value={feature.title}
+                onChange={(value) => {
+                  const next = [...copy.features];
+                  next[index] = { ...next[index], title: value };
+                  updateCopy("features", next);
+                }}
+                dir={editorDir}
+                lang={editLocale}
+              />
+              <BuilderField
+                label={t("admin.servicePages.featureDescription")}
+                value={feature.description}
+                onChange={(value) => {
+                  const next = [...copy.features];
+                  next[index] = { ...next[index], description: value };
+                  updateCopy("features", next);
+                }}
+                dir={editorDir}
+                lang={editLocale}
+                multiline
+              />
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {sections.some((section) => section.type === "benefitsList") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.benefits")}</h2>
+          <BuilderField
+            label={t("admin.servicePages.benefitsTitle")}
+            value={copy.benefitsTitle}
+            onChange={(value) => updateCopy("benefitsTitle", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          {copy.benefits.map((item, index) => (
+            <BuilderField
+              key={`csp-b-${index}`}
+              label={t("admin.servicePages.benefitN", { n: index + 1 })}
+              value={item}
+              onChange={(value) => {
+                const next = [...copy.benefits];
+                next[index] = value;
+                updateCopy("benefits", next);
+              }}
+              dir={editorDir}
+              lang={editLocale}
+              multiline
+            />
+          ))}
+        </section>
+      ) : null}
+
+      {sections.some((section) => section.type === "notice") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.warning")}</h2>
+          <BuilderField
+            label={t("admin.servicePages.warningTitle")}
+            value={copy.warningTitle}
+            onChange={(value) => updateCopy("warningTitle", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          <BuilderField
+            label={t("admin.servicePages.warningText")}
+            value={copy.warningText}
+            onChange={(value) => updateCopy("warningText", value)}
+            dir={editorDir}
+            lang={editLocale}
+            multiline
+          />
+        </section>
+      ) : null}
+
+      {sections.some((section) => section.type === "valuesStrip") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.sectionValues")}</h2>
+          <BuilderField
+            label={t("admin.servicePages.valuesTitle")}
+            value={copy.valuesTitle}
+            onChange={(value) => updateCopy("valuesTitle", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          <BuilderField
+            label={t("admin.servicePages.valuesText")}
+            value={copy.valuesText}
+            onChange={(value) => updateCopy("valuesText", value)}
+            dir={editorDir}
+            lang={editLocale}
+            multiline
+          />
+          <BuilderField
+            label={t("admin.servicePages.privacyText")}
+            value={copy.privacyText}
+            onChange={(value) => updateCopy("privacyText", value)}
+            dir={editorDir}
+            lang={editLocale}
+            multiline
+          />
+        </section>
+      ) : null}
+
+      {sections.some((section) => section.type === "bookingCta") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.sectionBooking")}</h2>
+          <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
+        </section>
+      ) : null}
+
+      {sections.some((section) => section.type === "gallery") ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.sectionGallery")}</h2>
+          <div className="csp-gallery-admin">
+            {gallery.map((item, index) => (
+              <div key={`${item.url}-${index}`} className="csp-gallery-admin-item">
+                <MediaPreview media={item} />
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    setGallery((prev) => prev.filter((_, i) => i !== index))
+                  }
+                >
+                  {t("admin.servicePages.clearMedia")}
+                </button>
+              </div>
+            ))}
+          </div>
+          {gallery.length < MAX_GALLERY_ITEMS ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setMediaTarget("gallery")}
+            >
+              <ImagePlus size={16} />
+              {t("admin.servicePages.pickMedia")}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="admin-card admin-service-card">
+        <h2>{t("admin.servicePages.homeCard")}</h2>
+        <label className="csp-check">
+          <input
+            type="checkbox"
+            checked={showOnHome}
+            onChange={(event) => setShowOnHome(event.target.checked)}
+          />
+          {t("admin.servicePages.showOnHome")}
+        </label>
+        <BuilderField
+          label={t("admin.servicePages.homeSort")}
+          value={String(homeSort)}
+          onChange={(value) => setHomeSort(Number(value) || 0)}
+          dir="ltr"
+        />
+        <BuilderField
+          label={t("admin.servicePages.homeTitle")}
+          value={copy.homeTitle}
+          onChange={(value) => updateCopy("homeTitle", value)}
+          dir={editorDir}
+          lang={editLocale}
+        />
+        <BuilderField
+          label={t("admin.servicePages.homeSubtitle")}
+          value={copy.homeSubtitle}
+          onChange={(value) => updateCopy("homeSubtitle", value)}
+          dir={editorDir}
+          lang={editLocale}
+        />
+        <MediaPreview media={homeImage ? { kind: "image", url: homeImage } : undefined} />
+        <div className="csp-inline-actions">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setMediaTarget("home")}
+          >
+            <ImagePlus size={16} />
+            {t("admin.servicePages.pickMedia")}
+          </button>
+          {homeImage ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setHomeImage("")}
+            >
+              {t("admin.servicePages.clearMedia")}
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="admin-card admin-service-card">
+        <div className="csp-status-row">
+          <h2>{t("admin.servicePages.preview")}</h2>
+          <div className="admin-service-langs">
+            <button
+              type="button"
+              className={previewMode === "desktop" ? "is-active" : ""}
+              onClick={() => setPreviewMode("desktop")}
+            >
+              {t("admin.servicePages.previewDesktop")}
+            </button>
+            <button
+              type="button"
+              className={previewMode === "mobile" ? "is-active" : ""}
+              onClick={() => setPreviewMode("mobile")}
+            >
+              {t("admin.servicePages.previewMobile")}
+            </button>
+          </div>
+        </div>
+        <div
+          className={
+            previewMode === "mobile" ? "csp-preview is-mobile" : "csp-preview"
+          }
+        >
+          <CustomServicePageView
+            page={previewPage}
+            copy={previewPage.locales[editLocale]!}
+            dir={editorDir}
+          />
+        </div>
+      </section>
+
+      <div className="admin-service-actions csp-builder-actions">
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => void removePage()}
+          disabled={saving}
+        >
+          <Trash2 size={16} />
+          {t("admin.servicePages.deletePage")}
+        </button>
+        {status === "published" ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => void submit("draft")}
+            disabled={saving}
+          >
+            {t("admin.servicePages.unpublish")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => void submit("published")}
+            disabled={saving}
+          >
+            <Eye size={16} />
+            {t("admin.servicePages.publish")}
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-accent"
+          onClick={() => void submit()}
+          disabled={saving}
+        >
+          <Save size={16} />
+          {saving ? t("admin.servicePages.saving") : t("admin.servicePages.save")}
+        </button>
+      </div>
+
+      <AdminMediaPicker
+        open={mediaTarget !== null}
+        title={t("admin.servicePages.pickMedia")}
+        accept={mediaTarget === "home" ? "image" : "any"}
+        emptyLabel={t("admin.servicePages.mediaEmpty")}
+        onClose={() => setMediaTarget(null)}
+        onPick={(media) => {
+          if (mediaTarget === "hero") setHeroMedia(media);
+          if (mediaTarget === "home" && media.kind === "image") setHomeImage(media.url);
+          if (mediaTarget === "gallery") {
+            setGallery((prev) =>
+              prev.length >= MAX_GALLERY_ITEMS ? prev : [...prev, media],
+            );
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function MediaPreview({ media }: { media?: CustomPageMediaRef }) {
+  if (!media?.url) return null;
+  if (media.kind === "video") {
+    return <video className="csp-media-preview" src={media.url} muted controls playsInline />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="csp-media-preview" src={media.url} alt="" />
+  );
+}
+
+function BuilderField({
+  label,
+  value,
+  onChange,
+  multiline,
+  dir,
+  lang,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  multiline?: boolean;
+  dir: "ltr" | "rtl";
+  lang?: string;
+}) {
+  const id = label.replace(/\s+/g, "-");
+  return (
+    <label className="admin-service-field" htmlFor={id}>
+      <span className="label">{label}</span>
+      {multiline ? (
+        <textarea
+          id={id}
+          className="textarea"
+          rows={3}
+          dir={dir}
+          lang={lang}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      ) : (
+        <input
+          id={id}
+          className="input"
+          dir={dir}
+          lang={lang}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </label>
+  );
+}
+
+function BuilderIconPicker({
+  label,
+  value,
+  fallback,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  fallback: ServiceFeatureIconId;
+  onChange: (icon: ServiceFeatureIconId) => void;
+}) {
+  const selected = pickServiceFeatureIcon(value, fallback);
+  return (
+    <div className="admin-service-icon-picker">
+      <span className="label">{label}</span>
+      <div className="admin-service-icon-grid" role="listbox" aria-label={label}>
+        {SERVICE_FEATURE_ICON_IDS.map((id) => {
+          const Icon = SERVICE_FEATURE_ICONS[id];
+          const isSelected = selected === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              className={isSelected ? "is-selected" : ""}
+              onClick={() => onChange(id)}
+              title={id}
+            >
+              <Icon size={18} strokeWidth={1.7} aria-hidden />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

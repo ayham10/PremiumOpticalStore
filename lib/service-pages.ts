@@ -5,6 +5,11 @@ import {
   type ServiceFeatureIconId,
 } from "@/lib/service-page-icons";
 import { isLocale, type Locale } from "@/lib/i18n/config";
+import {
+  normalizeCustomPages,
+  persistCustomPages,
+  publicCustomPages,
+} from "@/lib/custom-service-pages";
 import type {
   ContactLensesServicePage,
   EyeExamServicePage,
@@ -574,6 +579,8 @@ export function migrateServicePagesDocument(
   };
   if (root.homepage) next.homepage = root.homepage;
   if (root.footer) next.footer = root.footer;
+  const customPages = normalizeCustomPages(raw.customPages);
+  if (customPages.length) next.customPages = customPages;
   return next;
 }
 
@@ -681,6 +688,8 @@ export function persistServicePages(
   };
   if (root.homepage) next.homepage = root.homepage;
   if (root.footer) next.footer = root.footer;
+  const customPages = persistCustomPages(current.customPages, patchRaw);
+  if (customPages.length) next.customPages = customPages;
   return next;
 }
 
@@ -690,11 +699,12 @@ export function publicServicePages(
 ): ServicePagesSettings | undefined {
   if (!incoming || typeof incoming !== "object") return undefined;
   const migrated = migrateServicePagesDocument(incoming);
+  const customPages = normalizeCustomPages(migrated.customPages);
   if (!hasHomepageSettings(incoming)) {
     const { homepage: _homepage, ...rest } = migrated;
-    return rest;
+    return customPages.length ? { ...rest, customPages } : rest;
   }
-  return migrated;
+  return customPages.length ? { ...migrated, customPages } : migrated;
 }
 
 export function resolveServicePagesForLocale(

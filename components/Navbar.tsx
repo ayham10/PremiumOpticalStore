@@ -51,6 +51,7 @@ export default function Navbar() {
   const isHome = pathname === "/";
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
+  const isCustomService = pathname?.startsWith("/services/") ?? false;
   const isAbout = pathname === "/about";
   const isCatalogue =
     pathname === "/frames" ||
@@ -63,6 +64,7 @@ export default function Navbar() {
   const isSolidDark =
     isProduct ||
     isEyeExam ||
+    isCustomService ||
     isCatalogue ||
     isBook ||
     isAbout ||

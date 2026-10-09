@@ -8,9 +8,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Contact, Eye, Home, MapPin, RotateCcw, Save } from "lucide-react";
+import { Contact, Eye, Home, MapPin, Plus, RotateCcw, Save, Search } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
+import CustomPageBuilder, {
+  CreateCustomPageModal,
+} from "@/components/admin/CustomPageBuilder";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { isRtl, localeLabels, type Locale } from "@/lib/i18n/config";
@@ -33,6 +36,7 @@ import {
 } from "@/lib/service-pages";
 import type {
   ContactLensesServicePage,
+  CustomServicePage,
   EyeExamServicePage,
   FooterServiceContent,
   HomepageHeroContent,
@@ -68,6 +72,10 @@ export default function AdminServicePagesPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [customPageId, setCustomPageId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [pageQuery, setPageQuery] = useState("");
+  const [pageMenuOpen, setPageMenuOpen] = useState(false);
 
   const applyLocale = useCallback(
     (
@@ -232,6 +240,30 @@ export default function AdminServicePagesPage() {
   const lenses = pages.contactLenses;
   const footer = pages.footer ?? defaultServicePagesForLocale(editLocale).footer!;
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
+  const customPages = document?.customPages || [];
+  const selectedCustom = customPages.find((item) => item.id === customPageId);
+  const filteredCustom = customPages.filter((item) => {
+    const q = pageQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.name.toLowerCase().includes(q) ||
+      item.slug.toLowerCase().includes(q)
+    );
+  });
+
+  function selectBuiltIn(next: Tab) {
+    setCustomPageId(null);
+    setPageMenuOpen(false);
+    setTab(next);
+  }
+
+  function selectCustom(page: CustomServicePage) {
+    setCustomPageId(page.id);
+    setPageQuery(page.name);
+    setPageMenuOpen(false);
+    setMessage("");
+    setError("");
+  }
 
   return (
     <div
@@ -266,13 +298,59 @@ export default function AdminServicePagesPage() {
         ))}
       </div>
 
+      <div className="csp-toolbar">
+        <button
+          type="button"
+          className="btn btn-accent"
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus size={16} />
+          {t("admin.servicePages.addPage")}
+        </button>
+        <div className="csp-page-select">
+          <Search size={16} aria-hidden />
+          <input
+            className="input"
+            value={pageQuery}
+            placeholder={t("admin.servicePages.searchPages")}
+            onChange={(event) => {
+              setPageQuery(event.target.value);
+              setPageMenuOpen(true);
+            }}
+            onFocus={() => setPageMenuOpen(true)}
+            aria-label={t("admin.servicePages.searchPages")}
+          />
+          {pageMenuOpen ? (
+            <ul className="csp-page-menu" role="listbox">
+              {filteredCustom.length === 0 ? (
+                <li className="is-empty">{t("admin.servicePages.noPages")}</li>
+              ) : (
+                filteredCustom.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={item.id === customPageId}
+                      onClick={() => selectCustom(item)}
+                    >
+                      <span>{item.name}</span>
+                      <small>/services/{item.slug}</small>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+
       <div className="admin-service-tabs" role="tablist">
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "homepage"}
-          className={tab === "homepage" ? "is-active" : ""}
-          onClick={() => setTab("homepage")}
+          aria-selected={!selectedCustom && tab === "homepage"}
+          className={!selectedCustom && tab === "homepage" ? "is-active" : ""}
+          onClick={() => selectBuiltIn("homepage")}
         >
           <Home size={16} strokeWidth={1.6} />
           {t("admin.servicePages.tabHome")}
@@ -280,9 +358,9 @@ export default function AdminServicePagesPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "eyeExam"}
-          className={tab === "eyeExam" ? "is-active" : ""}
-          onClick={() => setTab("eyeExam")}
+          aria-selected={!selectedCustom && tab === "eyeExam"}
+          className={!selectedCustom && tab === "eyeExam" ? "is-active" : ""}
+          onClick={() => selectBuiltIn("eyeExam")}
         >
           <Eye size={16} strokeWidth={1.6} />
           {t("admin.servicePages.tabEyeExam")}
@@ -290,9 +368,9 @@ export default function AdminServicePagesPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "contactLenses"}
-          className={tab === "contactLenses" ? "is-active" : ""}
-          onClick={() => setTab("contactLenses")}
+          aria-selected={!selectedCustom && tab === "contactLenses"}
+          className={!selectedCustom && tab === "contactLenses" ? "is-active" : ""}
+          onClick={() => selectBuiltIn("contactLenses")}
         >
           <Contact size={16} strokeWidth={1.6} />
           {t("admin.servicePages.tabContactLenses")}
@@ -300,9 +378,9 @@ export default function AdminServicePagesPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "footer"}
-          className={tab === "footer" ? "is-active" : ""}
-          onClick={() => setTab("footer")}
+          aria-selected={!selectedCustom && tab === "footer"}
+          className={!selectedCustom && tab === "footer" ? "is-active" : ""}
+          onClick={() => selectBuiltIn("footer")}
         >
           <MapPin size={16} strokeWidth={1.6} />
           {t("admin.servicePages.tabFooter")}
@@ -322,6 +400,23 @@ export default function AdminServicePagesPage() {
 
       {loading ? (
         <p className="admin-muted">{t("admin.servicePages.loading")}</p>
+      ) : selectedCustom ? (
+        <CustomPageBuilder
+          key={selectedCustom.id}
+          page={selectedCustom}
+          editLocale={editLocale}
+          t={t}
+          onDocument={(next) => {
+            setDocument(next);
+            invalidatePublicCache("settings:");
+            notifySaved();
+          }}
+          onDeleted={() => {
+            setCustomPageId(null);
+            setPageQuery("");
+            notifySaved();
+          }}
+        />
       ) : (
       <ContentFieldLocaleContext.Provider
         value={{ dir: editorDir, lang: editLocale }}
@@ -567,6 +662,7 @@ export default function AdminServicePagesPage() {
       </ContentFieldLocaleContext.Provider>
       )}
 
+      {selectedCustom ? null : (
       <div className="admin-service-actions">
         <button
           type="button"
@@ -587,6 +683,19 @@ export default function AdminServicePagesPage() {
           {saving ? t("admin.servicePages.saving") : t("admin.servicePages.save")}
         </button>
       </div>
+      )}
+
+      <CreateCustomPageModal
+        open={createOpen}
+        t={t}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(page, next) => {
+          setDocument(next);
+          selectCustom(page);
+          invalidatePublicCache("settings:");
+          notifySaved();
+        }}
+      />
     </div>
   );
 }
