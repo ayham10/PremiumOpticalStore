@@ -5,10 +5,10 @@ import Link from "next/link";
 import { CalendarDays, ChevronDown, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import OyonLogo from "@/components/branding/OyonLogo";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { pickServiceText } from "@/lib/service-pages";
 import { useLocalizedServicePages } from "@/lib/use-service-pages";
-import type { StoreSettings } from "@/lib/types";
 
 function HeroSubtitle({ text }: { text: string }) {
   const parts = text.split(/\s*•\s*/).filter(Boolean);
@@ -30,23 +30,11 @@ function HeroSubtitle({ text }: { text: string }) {
 
 export default function WelcomeSection() {
   const { t, locale } = useLocale();
+  const { settings } = useBranding();
   const hero = useLocalizedServicePages()?.homepage?.hero;
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [content, setContent] = useState<StoreSettings["content"]>();
+  const content = settings?.content;
   const [videoReady, setVideoReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/settings")
-      .then((res) => res.json())
-      .then((data: { settings?: StoreSettings }) => {
-        if (!cancelled) setContent(data.settings?.content);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     const video = videoRef.current;

@@ -10,7 +10,11 @@ import type {
 
 export const CONTENT_PREVIEW_MESSAGE = "oyon-content-preview";
 export const CONTENT_PREVIEW_READY = "oyon-content-preview-ready";
+export const CONTENT_PREVIEW_VISIBILITY = "oyon-content-preview-visibility";
 export const CONTENT_PREVIEW_PATH = "/admin/service-pages/preview";
+/** Coalesce keystrokes so iframe documents are patched, not reloaded. */
+export const PREVIEW_UPDATE_MS = 220;
+const PREVIEW_WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export const CONTENT_PREVIEW_VIEWPORTS = {
   mobile: { width: 390, height: 844, label: "mobile" },
@@ -36,6 +40,38 @@ export type ContentPreviewMessage = {
   type: typeof CONTENT_PREVIEW_MESSAGE;
   payload: ContentPreviewPayload;
 };
+
+export type ContentPreviewVisibilityMessage = {
+  type: typeof CONTENT_PREVIEW_VISIBILITY;
+  visible: boolean;
+};
+
+export function previewFlushKey(
+  locale: string,
+  kind: string,
+  pageId?: string | null,
+): string {
+  return `${locale}:${kind}:${pageId || ""}`;
+}
+
+export function shouldFlushPreviewNow(
+  previousKey: string | null,
+  nextKey: string,
+): boolean {
+  return !previousKey || previousKey !== nextKey;
+}
+
+export function previewWriteMethodBlocked(method?: string | null): boolean {
+  return PREVIEW_WRITE_METHODS.has((method || "GET").toUpperCase());
+}
+
+export function isContentPreviewVisibilityMessage(
+  value: unknown,
+): value is ContentPreviewVisibilityMessage {
+  if (!value || typeof value !== "object") return false;
+  const raw = value as { type?: unknown; visible?: unknown };
+  return raw.type === CONTENT_PREVIEW_VISIBILITY && typeof raw.visible === "boolean";
+}
 
 export function isContentPreviewMessage(
   value: unknown,

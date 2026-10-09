@@ -52,6 +52,7 @@ export default function ContentEditorWorkspace({
             payload={payload}
             mobileLabel={t("admin.servicePages.previewMobile")}
             desktopLabel={t("admin.servicePages.previewDesktop")}
+            revealed={mobileTab === "preview"}
           />
         </aside>
         <div className="csp-visual-editor">{editor}</div>

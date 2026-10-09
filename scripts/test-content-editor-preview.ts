@@ -6,6 +6,11 @@ import {
   customPageEditorSnapshot,
   editorPanelDir,
   isContentPreviewMessage,
+  isContentPreviewVisibilityMessage,
+  PREVIEW_UPDATE_MS,
+  previewFlushKey,
+  previewWriteMethodBlocked,
+  shouldFlushPreviewNow,
   viewHrefForEditor,
 } from "../lib/content-editor-preview";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
@@ -106,5 +111,30 @@ const arDoc = buildEditorPreviewDocument(undefined, "ar", {
   },
 });
 assert.equal(arDoc.locales?.ar?.homepage?.hero.title, "عنوان تجريبي");
+
+assert.ok(PREVIEW_UPDATE_MS >= 150 && PREVIEW_UPDATE_MS <= 300);
+assert.equal(shouldFlushPreviewNow(null, "ar:homepage:"), true);
+assert.equal(
+  shouldFlushPreviewNow("ar:homepage:", previewFlushKey("ar", "homepage")),
+  false,
+);
+assert.equal(
+  shouldFlushPreviewNow("ar:homepage:", previewFlushKey("he", "homepage")),
+  true,
+);
+assert.equal(previewWriteMethodBlocked("GET"), false);
+assert.equal(previewWriteMethodBlocked("HEAD"), false);
+assert.equal(previewWriteMethodBlocked("PUT"), true);
+assert.equal(previewWriteMethodBlocked("POST"), true);
+assert.equal(previewWriteMethodBlocked("PATCH"), true);
+assert.equal(previewWriteMethodBlocked("DELETE"), true);
+assert.equal(
+  isContentPreviewVisibilityMessage({
+    type: "oyon-content-preview-visibility",
+    visible: false,
+  }),
+  true,
+);
+assert.equal(isContentPreviewVisibilityMessage({ type: "oyon-content-preview" }), false);
 
 console.log("content-editor-preview tests passed");

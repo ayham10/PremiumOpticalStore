@@ -14,6 +14,7 @@ import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
 import ContentEditorWorkspace from "@/components/admin/content-editor/ContentEditorWorkspace";
 import EditorSection from "@/components/admin/content-editor/EditorSection";
+import { useDebouncedPreviewPayload } from "@/components/admin/content-editor/useDebouncedPreviewPayload";
 import CustomPageBuilder, {
   CreateCustomPageModal,
 } from "@/components/admin/CustomPageBuilder";
@@ -33,10 +34,8 @@ import {
 } from "@/lib/service-page-icons";
 import { listCustomPagesForEditor } from "@/lib/custom-service-pages";
 import {
-  buildEditorPreviewDocument,
   snapshotForDirty,
   viewHrefForEditor,
-  type ContentPreviewPayload,
 } from "@/lib/content-editor-preview";
 import type { CustomPageProductCard } from "@/components/services/CustomPageProductsCarousel";
 import {
@@ -267,22 +266,17 @@ export default function AdminServicePagesPage() {
     defaultServicePagesForLocale(editLocale),
   );
   const builtInDirty = snapshotForDirty(pages) !== snapshotForDirty(savedBundle);
-  const previewDocument = buildEditorPreviewDocument(
-    document,
-    editLocale,
-    pages,
-    customDraft?.page ?? selectedCustom,
-  );
   const previewKind = selectedCustom
     ? "custom"
     : tab;
-  const previewPayload: ContentPreviewPayload = {
+  const previewPayload = useDebouncedPreviewPayload({
     locale: editLocale,
     kind: previewKind,
-    document: previewDocument,
+    saved: document,
+    bundle: pages,
     customPage: customDraft?.page ?? selectedCustom,
     products: customDraft?.products,
-  };
+  });
 
   function selectBuiltIn(next: Tab) {
     setCustomPageId(null);

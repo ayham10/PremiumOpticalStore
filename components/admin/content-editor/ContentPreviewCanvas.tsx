@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import ContactLensesPage from "@/components/contact-lenses/ContactLensesPage";
 import EyeExamPage from "@/components/eye-exam/EyeExamPage";
 import Footer from "@/components/Footer";
@@ -68,7 +68,7 @@ function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
   );
 }
 
-export default function ContentPreviewCanvas({
+function ContentPreviewCanvas({
   payload,
 }: {
   payload: ContentPreviewPayload;
@@ -87,9 +87,14 @@ export default function ContentPreviewCanvas({
     <LocaleProvider locale={locale} dict={dict}>
       <ServicePagesPreviewProvider value={payload.document}>
         <div className="csp-preview-canvas">
-          <PreviewBody payload={payload} />
+          <PreviewBody
+            key={`${payload.kind}:${payload.locale}`}
+            payload={payload}
+          />
         </div>
       </ServicePagesPreviewProvider>
     </LocaleProvider>
   );
 }
+
+export default memo(ContentPreviewCanvas);

@@ -50,10 +50,7 @@ export function useServicePages(): ServicePagesSettings | undefined {
   );
 
   useEffect(() => {
-    if (preview) {
-      setPages(preview);
-      return;
-    }
+    if (preview) return;
     setPages(settings?.servicePages);
   }, [preview, settings?.servicePages]);
 
