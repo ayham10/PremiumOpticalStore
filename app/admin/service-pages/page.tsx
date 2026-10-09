@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Contact, Eye, Home, MapPin, RotateCcw, Save } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
@@ -36,6 +43,11 @@ import type {
 } from "@/lib/types";
 
 type Tab = "homepage" | "eyeExam" | "contactLenses" | "footer";
+
+const ContentFieldLocaleContext = createContext<{
+  dir: "ltr" | "rtl";
+  lang: ServicePagesLocale;
+}>({ dir: "rtl", lang: "ar" });
 
 export default function AdminServicePagesPage() {
   const { t, rtl } = useLocale();
@@ -310,7 +322,11 @@ export default function AdminServicePagesPage() {
 
       {loading ? (
         <p className="admin-muted">{t("admin.servicePages.loading")}</p>
-      ) : tab === "homepage" ? (
+      ) : (
+      <ContentFieldLocaleContext.Provider
+        value={{ dir: editorDir, lang: editLocale }}
+      >
+      {tab === "homepage" ? (
         <div className="admin-service-editor space-y-4" dir={editorDir}>
           <section className="admin-card admin-service-card">
             <h2>{t("admin.servicePages.hero")}</h2>
@@ -548,6 +564,8 @@ export default function AdminServicePagesPage() {
           </section>
         </div>
       )}
+      </ContentFieldLocaleContext.Provider>
+      )}
 
       <div className="admin-service-actions">
         <button
@@ -626,6 +644,7 @@ function Field({
   onChange: (value: string) => void;
   multiline?: boolean;
 }) {
+  const { dir, lang } = useContext(ContentFieldLocaleContext);
   const id = label.replace(/\s+/g, "-");
   return (
     <label className="admin-service-field" htmlFor={id}>
@@ -635,6 +654,8 @@ function Field({
           id={id}
           className="textarea"
           rows={3}
+          dir={dir}
+          lang={lang}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -642,6 +663,8 @@ function Field({
         <input
           id={id}
           className="input"
+          dir={dir}
+          lang={lang}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
