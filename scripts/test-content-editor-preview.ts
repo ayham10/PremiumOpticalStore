@@ -15,6 +15,7 @@ import {
 } from "../lib/content-editor-preview";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
 import { persistCustomPages } from "../lib/custom-service-pages";
+import { EDITOR_SECTION_ICONS } from "../components/admin/content-editor/EditorSection";
 import type { CustomServicePage } from "../lib/types";
 
 const ar = defaultServicePagesForLocale("ar");
@@ -136,5 +137,26 @@ assert.equal(
   true,
 );
 assert.equal(isContentPreviewVisibilityMessage({ type: "oyon-content-preview" }), false);
+
+assert.deepEqual(Object.keys(EDITOR_SECTION_ICONS).sort(), [
+  "buttons",
+  "gallery",
+  "hero",
+  "links",
+  "page",
+  "products",
+  "sections",
+  "settings",
+  "text",
+]);
+assert.equal(EDITOR_SECTION_ICONS.text.displayName, "Type");
+assert.equal(EDITOR_SECTION_ICONS.hero.displayName, "Image");
+assert.equal(EDITOR_SECTION_ICONS.buttons.displayName, "MousePointerClick");
+assert.equal(EDITOR_SECTION_ICONS.products.displayName, "Package");
+assert.equal(EDITOR_SECTION_ICONS.gallery.displayName, "Images");
+assert.equal(EDITOR_SECTION_ICONS.settings.displayName, "Settings");
+assert.equal(EDITOR_SECTION_ICONS.page.displayName, "FileText");
+assert.equal(EDITOR_SECTION_ICONS.links.displayName, "Link");
+assert.equal(EDITOR_SECTION_ICONS.sections.displayName, "Layers");
 
 console.log("content-editor-preview tests passed");

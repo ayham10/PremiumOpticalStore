@@ -481,7 +481,7 @@ export default function AdminServicePagesPage() {
                   />
                   {tab === "homepage" ? (
                     <>
-                      <EditorSection title={t("admin.servicePages.groupText")}>
+                      <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
                         <Field
                           label={t("admin.servicePages.mainTitle")}
                           value={home.hero.title}
@@ -506,7 +506,7 @@ export default function AdminServicePagesPage() {
                           />
                         ))}
                       </EditorSection>
-                      <EditorSection title={t("admin.servicePages.groupButtons")}>
+                      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={home.hero.bookingButtonText}
@@ -523,7 +523,7 @@ export default function AdminServicePagesPage() {
                     </>
                   ) : tab === "eyeExam" ? (
                     <>
-                      <EditorSection title={t("admin.servicePages.groupHeroMedia")}>
+                      <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
                         <Field
                           label={t("admin.servicePages.eyebrow")}
                           value={eye.eyebrow}
@@ -541,14 +541,14 @@ export default function AdminServicePagesPage() {
                           multiline
                         />
                       </EditorSection>
-                      <EditorSection title={t("admin.servicePages.groupButtons")}>
+                      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={eye.bookingButtonText}
                           onChange={(value) => updateEyeExam("bookingButtonText", value)}
                         />
                       </EditorSection>
-                      <EditorSection title={t("admin.servicePages.groupText")} defaultOpen={false}>
+                      <EditorSection icon="text" title={t("admin.servicePages.groupText")} defaultOpen={false}>
                         <h2>{t("admin.servicePages.features")}</h2>
                         {eye.features.map((feature, index) => (
                           <div key={`ee-f-${index}`} className="admin-service-feature">
@@ -606,7 +606,7 @@ export default function AdminServicePagesPage() {
                     </>
                   ) : tab === "contactLenses" ? (
                     <>
-                      <EditorSection title={t("admin.servicePages.groupHeroMedia")}>
+                      <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
                         <Field
                           label={t("admin.servicePages.eyebrow")}
                           value={lenses.eyebrow}
@@ -624,14 +624,14 @@ export default function AdminServicePagesPage() {
                           multiline
                         />
                       </EditorSection>
-                      <EditorSection title={t("admin.servicePages.groupButtons")}>
+                      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={lenses.bookingButtonText}
                           onChange={(value) => updateLenses("bookingButtonText", value)}
                         />
                       </EditorSection>
-                      <EditorSection title={t("admin.servicePages.groupText")} defaultOpen={false}>
+                      <EditorSection icon="text" title={t("admin.servicePages.groupText")} defaultOpen={false}>
                         <h2>{t("admin.servicePages.features")}</h2>
                         {lenses.features.map((feature, index) => (
                           <div key={`cl-f-${index}`} className="admin-service-feature">
@@ -679,7 +679,7 @@ export default function AdminServicePagesPage() {
                       </EditorSection>
                     </>
                   ) : (
-                    <EditorSection title={t("admin.servicePages.groupText")}>
+                    <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
                       <Field
                         label={t("admin.servicePages.tagline")}
                         value={footer.tagline}

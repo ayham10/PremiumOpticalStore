@@ -16258,9 +16258,24 @@ select.admin-pe-input {
   text-align: start;
 }
 
+.csp-fold-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .csp-fold-toggle svg {
   flex: 0 0 auto;
   color: #d4af6a;
+}
+
+.csp-fold-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.csp-fold-chevron {
   transition: transform 0.18s ease;
 }
 

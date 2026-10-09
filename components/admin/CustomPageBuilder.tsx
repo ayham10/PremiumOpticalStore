@@ -695,7 +695,7 @@ export default function CustomPageBuilder({
         </p>
       ) : null}
 
-      <EditorSection title={t("admin.servicePages.groupPageDetails")}>
+      <EditorSection icon="page" title={t("admin.servicePages.groupPageDetails")}>
         <p className="admin-muted">{t("admin.servicePages.localeHiddenHint")}</p>
         <BuilderField
           label={t("admin.servicePages.pageName")}
@@ -726,7 +726,7 @@ export default function CustomPageBuilder({
         )}
       </EditorSection>
 
-      <EditorSection title={t("admin.servicePages.groupSections")} defaultOpen={false}>
+      <EditorSection icon="sections" title={t("admin.servicePages.groupSections")} defaultOpen={false}>
         <div className="csp-section-list">
           {sections.map((section, index) => (
             <div key={section.id} className="csp-section-row">
@@ -777,7 +777,7 @@ export default function CustomPageBuilder({
       </EditorSection>
 
       {sections.some((section) => section.type === "heroMedia") ? (
-        <EditorSection title={t("admin.servicePages.groupHeroMedia")}>
+        <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
           <AdminMediaField
             value={heroMedia}
             onChange={setHeroMedia}
@@ -797,7 +797,7 @@ export default function CustomPageBuilder({
         </EditorSection>
       ) : null}
 
-      <EditorSection title={t("admin.servicePages.groupText")}>
+      <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
         <BuilderField
           label={t("admin.servicePages.eyebrow")}
           value={copy.eyebrow}
@@ -944,7 +944,7 @@ export default function CustomPageBuilder({
         ) : null}
       </EditorSection>
 
-      <EditorSection title={t("admin.servicePages.groupButtons")}>
+      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
         <div className="admin-service-field">
           <span className="label">{t("admin.servicePages.heroButton")}</span>
           <div
@@ -1053,7 +1053,7 @@ export default function CustomPageBuilder({
       </EditorSection>
 
       {sections.some((section) => section.type === "gallery") ? (
-        <EditorSection title={t("admin.servicePages.groupGallery")} defaultOpen={false}>
+        <EditorSection icon="gallery" title={t("admin.servicePages.groupGallery")} defaultOpen={false}>
           <div className="csp-gallery-admin">
             {gallery.map((item, index) => (
               <div key={`${item.url}-${index}`} className="csp-gallery-admin-item">
@@ -1090,7 +1090,7 @@ export default function CustomPageBuilder({
         </EditorSection>
       ) : null}
 
-      <EditorSection title={t("admin.servicePages.groupProducts")}>
+      <EditorSection icon="products" title={t("admin.servicePages.groupProducts")}>
         <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
         <div className="csp-inline-actions">
           <button
@@ -1145,7 +1145,7 @@ export default function CustomPageBuilder({
         <p className="admin-muted">{t("admin.servicePages.removeFromPageHint")}</p>
       </EditorSection>
 
-      <EditorSection title={t("admin.servicePages.groupSettings")} defaultOpen={false}>
+      <EditorSection icon="settings" title={t("admin.servicePages.groupSettings")} defaultOpen={false}>
         <label className="csp-check">
           <input
             type="checkbox"
