@@ -30,16 +30,23 @@ function HeroMedia({
   media,
   title,
   variant,
+  placeholder,
 }: {
   media?: CustomPageMediaRef;
   title: string;
   variant: "eye-exam" | "contact-lenses";
+  placeholder?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const className =
     variant === "contact-lenses" ? "cl-hero-media" : "eye-exam-hero-media";
   if (!media?.url || failed) {
-    return <div className={className} aria-hidden />;
+    return (
+      <div
+        className={placeholder ? `${className} csp-preview-ph-media` : className}
+        aria-hidden
+      />
+    );
   }
   if (media.kind === "video") {
     return (
@@ -132,6 +139,15 @@ function PageCta({
   );
 }
 
+function sectionClass(
+  sectionId: string,
+  activeSectionId?: string | null,
+  extra?: string,
+): string {
+  const active = activeSectionId === sectionId ? "is-preview-active" : "";
+  return [extra, active].filter(Boolean).join(" ");
+}
+
 function BodySection({
   section,
   page,
@@ -140,6 +156,7 @@ function BodySection({
   products,
   currencySymbol,
   dir,
+  activeSectionId,
 }: {
   section: CustomPageSection;
   page: CustomServicePage;
@@ -148,6 +165,7 @@ function BodySection({
   products: CustomPageProductCard[];
   currencySymbol?: string;
   dir?: "ltr" | "rtl";
+  activeSectionId?: string | null;
 }) {
   if (section.type === "featureGrid") {
     const features = copy.features.filter(
@@ -155,7 +173,10 @@ function BodySection({
     );
     if (!features.length) return null;
     return isCl ? (
-      <section className="cl-features">
+      <section
+        className={sectionClass(section.id, activeSectionId, "cl-features")}
+        data-csp-section={section.id}
+      >
         <div className="cl-features-grid">
           {features.map((feature, index) => {
             const Icon = resolveServiceFeatureIcon(
@@ -177,7 +198,10 @@ function BodySection({
         </div>
       </section>
     ) : (
-      <section className="eye-exam-features">
+      <section
+        className={sectionClass(section.id, activeSectionId, "eye-exam-features")}
+        data-csp-section={section.id}
+      >
         <div className="eye-exam-features-grid">
           {features.map((feature, index) => {
             const Icon = resolveServiceFeatureIcon(
@@ -205,7 +229,10 @@ function BodySection({
     const items = copy.benefits.filter(Boolean);
     if (!items.length) return null;
     return (
-      <section className="eye-exam-benefits">
+      <section
+        className={sectionClass(section.id, activeSectionId, "eye-exam-benefits")}
+        data-csp-section={section.id}
+      >
         <h2 className="eye-exam-benefits-title">
           <span>{copy.benefitsTitle}</span>
           <span className="eye-exam-benefits-rule" aria-hidden />
@@ -226,7 +253,11 @@ function BodySection({
 
   if (section.type === "notice" && copy.warningText) {
     return (
-      <aside className="cl-safety" role="note">
+      <aside
+        className={sectionClass(section.id, activeSectionId, "cl-safety")}
+        data-csp-section={section.id}
+        role="note"
+      >
         <p>
           {copy.warningTitle ? <strong>{copy.warningTitle} </strong> : null}
           {copy.warningText}
@@ -237,7 +268,10 @@ function BodySection({
 
   if (section.type === "valuesStrip") {
     return (
-      <>
+      <div
+        className={sectionClass(section.id, activeSectionId)}
+        data-csp-section={section.id}
+      >
         <section className="eye-exam-accuracy">
           <span className="eye-exam-accuracy-orb" aria-hidden>
             <Target size={16} strokeWidth={1.7} />
@@ -251,19 +285,29 @@ function BodySection({
             <span>{copy.privacyText}</span>
           </p>
         ) : null}
-      </>
+      </div>
     );
   }
 
   if (section.type === "bookingCta") {
-    return <PageCta page={page} copy={copy} isCl={isCl} />;
+    return (
+      <div
+        className={sectionClass(section.id, activeSectionId)}
+        data-csp-section={section.id}
+      >
+        <PageCta page={page} copy={copy} isCl={isCl} />
+      </div>
+    );
   }
 
   if (section.type === "gallery") {
     const items = (page.gallery || []).filter((item) => item.url);
     if (!items.length) return null;
     return (
-      <div className="csp-gallery">
+      <div
+        className={sectionClass(section.id, activeSectionId, "csp-gallery")}
+        data-csp-section={section.id}
+      >
         {items.map((item, index) => (
           <GalleryItem key={`${item.url}-${index}`} item={item} />
         ))}
@@ -273,11 +317,16 @@ function BodySection({
 
   if (section.type === "products") {
     return (
-      <CustomPageProductsCarousel
-        products={products}
-        currencySymbol={currencySymbol}
-        dir={dir}
-      />
+      <div
+        className={sectionClass(section.id, activeSectionId)}
+        data-csp-section={section.id}
+      >
+        <CustomPageProductsCarousel
+          products={products}
+          currencySymbol={currencySymbol}
+          dir={dir}
+        />
+      </div>
     );
   }
 
@@ -290,12 +339,16 @@ export default function CustomServicePageView({
   dir,
   products = [],
   currencySymbol,
+  activeSectionId,
+  previewPlaceholders,
 }: {
   page: CustomServicePage;
   copy: CustomPageCopy;
   dir?: "ltr" | "rtl";
   products?: CustomPageProductCard[];
   currencySymbol?: string;
+  activeSectionId?: string | null;
+  previewPlaceholders?: boolean;
 }) {
   const { rtl } = useLocale();
   const isCl = page.template === "contact-lenses";
@@ -311,11 +364,16 @@ export default function CustomServicePageView({
     >
       {hero ? (
         isCl ? (
-          <section className="cl-hero" aria-label={copy.title}>
+          <section
+            className={sectionClass(hero.id, activeSectionId, "cl-hero")}
+            data-csp-section={hero.id}
+            aria-label={copy.title}
+          >
             <HeroMedia
               media={page.heroMedia}
               title={copy.title}
               variant="contact-lenses"
+              placeholder={previewPlaceholders}
             />
             <span className="cl-hero-veil" aria-hidden />
             <div className="cl-hero-copy">
@@ -328,8 +386,17 @@ export default function CustomServicePageView({
             </div>
           </section>
         ) : (
-          <section className="eye-exam-hero" aria-label={copy.title}>
-            <HeroMedia media={page.heroMedia} title={copy.title} variant="eye-exam" />
+          <section
+            className={sectionClass(hero.id, activeSectionId, "eye-exam-hero")}
+            data-csp-section={hero.id}
+            aria-label={copy.title}
+          >
+            <HeroMedia
+              media={page.heroMedia}
+              title={copy.title}
+              variant="eye-exam"
+              placeholder={previewPlaceholders}
+            />
             <div className="eye-exam-hero-copy">
               {copy.eyebrow ? (
                 <p className="eye-exam-eyebrow">{copy.eyebrow}</p>
@@ -346,7 +413,10 @@ export default function CustomServicePageView({
 
       <div className={isCl ? "cl-inner" : "eye-exam-inner"}>
         {!hero ? (
-          <header className="csp-inline-hero">
+          <header
+            className={sectionClass("page-copy", activeSectionId, "csp-inline-hero")}
+            data-csp-section="page-copy"
+          >
             {copy.eyebrow ? (
               <p className={isCl ? "cl-eyebrow" : "eye-exam-eyebrow"}>{copy.eyebrow}</p>
             ) : null}
@@ -369,6 +439,7 @@ export default function CustomServicePageView({
             products={products}
             currencySymbol={currencySymbol}
             dir={pageDir}
+            activeSectionId={activeSectionId}
           />
         ))}
         {products.length && !visible.some((section) => section.type === "products") ? (

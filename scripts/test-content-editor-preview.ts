@@ -11,6 +11,7 @@ import {
   shouldStartPreviewDrag,
   customPageEditorSnapshot,
   editorPanelDir,
+  isContentPreviewFocusMessage,
   isContentPreviewMessage,
   isContentPreviewVisibilityMessage,
   PREVIEW_UPDATE_MS,
@@ -19,8 +20,17 @@ import {
   shouldFlushPreviewNow,
   viewHrefForEditor,
 } from "../lib/content-editor-preview";
+import {
+  clampWizardStep,
+  wizardCanGoBack,
+  wizardCanGoNext,
+} from "../lib/content-editor-wizard";
+import {
+  previewPlaceholderProducts,
+  withPreviewPlaceholders,
+} from "../lib/preview-placeholders";
+import { emptyCustomPageCopy, persistCustomPages } from "../lib/custom-service-pages";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
-import { persistCustomPages } from "../lib/custom-service-pages";
 import { EDITOR_SECTION_ICONS } from "../components/admin/content-editor/EditorSection";
 import { coverCropRect, mediaUrlForViewport } from "../lib/responsive-image";
 import type { CustomServicePage } from "../lib/types";
@@ -121,15 +131,58 @@ const arDoc = buildEditorPreviewDocument(undefined, "ar", {
 assert.equal(arDoc.locales?.ar?.homepage?.hero.title, "عنوان تجريبي");
 
 assert.ok(PREVIEW_UPDATE_MS >= 150 && PREVIEW_UPDATE_MS <= 300);
-assert.equal(shouldFlushPreviewNow(null, "ar:homepage:"), true);
+assert.equal(shouldFlushPreviewNow(null, "ar:homepage::"), true);
 assert.equal(
-  shouldFlushPreviewNow("ar:homepage:", previewFlushKey("ar", "homepage")),
+  shouldFlushPreviewNow("ar:homepage::", previewFlushKey("ar", "homepage")),
   false,
 );
 assert.equal(
-  shouldFlushPreviewNow("ar:homepage:", previewFlushKey("he", "homepage")),
+  shouldFlushPreviewNow("ar:homepage::", previewFlushKey("he", "homepage")),
   true,
 );
+assert.equal(
+  shouldFlushPreviewNow(
+    previewFlushKey("ar", "custom", "p1", "hero-1"),
+    previewFlushKey("ar", "custom", "p1", "hero-1"),
+  ),
+  false,
+);
+assert.equal(
+  shouldFlushPreviewNow(
+    previewFlushKey("ar", "custom", "p1", "hero-1"),
+    previewFlushKey("ar", "custom", "p1", "features-2"),
+  ),
+  true,
+);
+assert.equal(
+  isContentPreviewFocusMessage({
+    type: "oyon-content-preview-focus",
+    sectionId: "hero-1",
+  }),
+  true,
+);
+assert.equal(isContentPreviewFocusMessage({ type: "oyon-content-preview" }), false);
+assert.equal(clampWizardStep(0), 1);
+assert.equal(clampWizardStep(3), 3);
+assert.equal(clampWizardStep(9), 4);
+assert.equal(wizardCanGoBack(1), false);
+assert.equal(wizardCanGoNext(4), false);
+assert.equal(wizardCanGoNext(2), true);
+
+const blankCopy = emptyCustomPageCopy();
+const previewCopy = withPreviewPlaceholders(blankCopy, "ar");
+assert.equal(blankCopy.title, "");
+assert.ok(previewCopy.title.length > 0);
+assert.ok(previewCopy.features[0]?.title);
+assert.ok(previewCopy.benefits[0]);
+const realCopy = withPreviewPlaceholders(
+  { ...blankCopy, title: "فحص أطفال" },
+  "ar",
+);
+assert.equal(realCopy.title, "فحص أطفال");
+const fakeProducts = previewPlaceholderProducts("en");
+assert.equal(fakeProducts.length, 3);
+assert.ok(fakeProducts[0]?.id.startsWith("preview-placeholder-"));
 assert.equal(previewWriteMethodBlocked("GET"), false);
 assert.equal(previewWriteMethodBlocked("HEAD"), false);
 assert.equal(previewWriteMethodBlocked("PUT"), true);

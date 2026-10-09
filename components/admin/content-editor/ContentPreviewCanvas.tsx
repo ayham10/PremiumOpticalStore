@@ -8,15 +8,29 @@ import NavigationHub from "@/components/home/NavigationHub";
 import WelcomeSection from "@/components/home/WelcomeSection";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import CustomServicePageView from "@/components/services/CustomServicePageView";
-import { copyForCustomPageEditor } from "@/lib/custom-service-pages";
+import {
+  copyForCustomPageEditor,
+  visibleCustomSections,
+} from "@/lib/custom-service-pages";
 import { editorPanelDir, type ContentPreviewPayload } from "@/lib/content-editor-preview";
 import { isRtl, type Locale } from "@/lib/i18n/config";
 import ar from "@/lib/i18n/dictionaries/ar";
 import en from "@/lib/i18n/dictionaries/en";
 import he from "@/lib/i18n/dictionaries/he";
+import {
+  previewPlaceholderProducts,
+  withPreviewPlaceholders,
+} from "@/lib/preview-placeholders";
 import { ServicePagesPreviewProvider } from "@/lib/use-service-pages";
 
 const DICTS = { ar, he, en } as const;
+
+function escapeSectionId(value: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
 
 function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
   const dir = editorPanelDir(payload.locale);
@@ -49,7 +63,7 @@ function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
   }
   if (payload.kind === "footer") {
     return (
-      <div className="csp-preview-footer-wrap">
+      <div className="csp-preview-footer-wrap" data-csp-section="footer-content">
         <Footer />
       </div>
     );
@@ -57,13 +71,27 @@ function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
 
   const page = payload.customPage;
   if (!page) return null;
-  const copy = copyForCustomPageEditor(page, payload.locale);
+  const savedCopy = copyForCustomPageEditor(page, payload.locale);
+  const copy = payload.previewPlaceholders
+    ? withPreviewPlaceholders(savedCopy, payload.locale)
+    : savedCopy;
+  const wantsProducts = visibleCustomSections(page.sections).some(
+    (section) => section.type === "products",
+  );
+  const products =
+    payload.products && payload.products.length
+      ? payload.products
+      : payload.previewPlaceholders && wantsProducts
+        ? previewPlaceholderProducts(payload.locale)
+        : [];
   return (
     <CustomServicePageView
       page={page}
       copy={copy}
       dir={dir}
-      products={payload.products || []}
+      products={products}
+      activeSectionId={payload.activeSectionId}
+      previewPlaceholders={payload.previewPlaceholders}
     />
   );
 }
@@ -82,6 +110,20 @@ function ContentPreviewCanvas({
     document.documentElement.lang = locale;
     document.documentElement.dir = isRtl(locale) ? "rtl" : "ltr";
   }, [locale]);
+
+  useEffect(() => {
+    const id = payload.activeSectionId;
+    document
+      .querySelectorAll("[data-csp-section].is-preview-active")
+      .forEach((node) => node.classList.remove("is-preview-active"));
+    if (!id) return;
+    const el = document.querySelector(
+      `[data-csp-section="${escapeSectionId(id)}"]`,
+    );
+    if (!(el instanceof HTMLElement)) return;
+    el.classList.add("is-preview-active");
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [payload.activeSectionId, payload.kind, payload.customPage?.id]);
 
   return (
     <LocaleProvider locale={locale} dict={dict}>

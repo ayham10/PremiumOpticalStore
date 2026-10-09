@@ -23,6 +23,7 @@ type PreviewSource = {
   bundle: ServicePagesLocaleBundle;
   customPage?: CustomServicePage | null;
   products?: ContentPreviewPayload["products"];
+  activeSectionId?: string | null;
 };
 
 function buildPayload(source: PreviewSource): ContentPreviewPayload {
@@ -37,6 +38,8 @@ function buildPayload(source: PreviewSource): ContentPreviewPayload {
     ),
     customPage: source.customPage,
     products: source.products,
+    activeSectionId: source.activeSectionId || null,
+    previewPlaceholders: true,
   };
 }
 
@@ -47,6 +50,7 @@ export function useDebouncedPreviewPayload(
     source.locale,
     source.kind,
     source.customPage?.id,
+    source.activeSectionId,
   );
   const latest = useRef(source);
   latest.current = source;

@@ -19,6 +19,11 @@ import {
 import ResponsiveHeroImageField from "@/components/admin/ResponsiveHeroImageField";
 import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
 import EditorSection from "@/components/admin/content-editor/EditorSection";
+import NewPageWizardBar from "@/components/admin/content-editor/NewPageWizardBar";
+import {
+  clampWizardStep,
+  type NewPageWizardStep,
+} from "@/lib/content-editor-wizard";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminProductCreateModal from "@/components/admin/AdminProductCreateModal";
 import AdminProductPicker from "@/components/admin/AdminProductPicker";
@@ -301,6 +306,9 @@ export default function CustomPageBuilder({
   onDocument,
   onDeleted,
   onDraftChange,
+  wizardMode = false,
+  activeSectionId = null,
+  onActiveSectionChange,
 }: {
   page: CustomServicePage;
   editLocale: ServicePagesLocale;
@@ -312,6 +320,9 @@ export default function CustomPageBuilder({
     products: CustomPageProductCard[];
     dirty: boolean;
   }) => void;
+  wizardMode?: boolean;
+  activeSectionId?: string | null;
+  onActiveSectionChange?: (id: string) => void;
 }) {
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
   const [name, setName] = useState(page.name);
@@ -348,7 +359,28 @@ export default function CustomPageBuilder({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [wizardStep, setWizardStep] = useState<NewPageWizardStep>(1);
   const skipRevisionReset = useRef(false);
+
+  useEffect(() => {
+    setWizardStep(1);
+  }, [page.id]);
+
+  function activateSection(id: string) {
+    onActiveSectionChange?.(id);
+  }
+
+  function showStep(step: NewPageWizardStep) {
+    return !wizardMode || wizardStep === step;
+  }
+
+  function foldProps(sectionId: string) {
+    return {
+      sectionId,
+      active: activeSectionId === sectionId,
+      onActivate: activateSection,
+    };
+  }
 
   function hydrateFrom(next: CustomServicePage) {
     setName(next.name);
@@ -470,6 +502,7 @@ export default function CustomPageBuilder({
     setSections((prev) =>
       type === "heroMedia" ? [section, ...prev] : [...prev, section],
     );
+    activateSection(section.id);
   }
 
   function ensureProductsSection(nextSections = sections) {
@@ -733,6 +766,14 @@ export default function CustomPageBuilder({
           </>
         }
       />
+      {wizardMode ? (
+        <NewPageWizardBar
+          step={wizardStep}
+          t={t}
+          dir={editorDir}
+          onStepChange={(next) => setWizardStep(clampWizardStep(next))}
+        />
+      ) : null}
       {message ? (
         <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
           {message}
@@ -744,7 +785,13 @@ export default function CustomPageBuilder({
         </p>
       ) : null}
 
-      <EditorSection icon="page" title={t("admin.servicePages.groupPageDetails")}>
+      {showStep(1) ? (
+      <EditorSection
+        icon="page"
+        title={t("admin.servicePages.groupPageDetails")}
+        defaultOpen={wizardMode}
+        {...foldProps("page-details")}
+      >
         <p className="admin-muted">{t("admin.servicePages.localeHiddenHint")}</p>
         <BuilderField
           label={t("admin.servicePages.pageName")}
@@ -774,8 +821,15 @@ export default function CustomPageBuilder({
           <p className="admin-muted">{t("admin.servicePages.unsavedLocale")}</p>
         )}
       </EditorSection>
+      ) : null}
 
-      <EditorSection icon="sections" title={t("admin.servicePages.groupSections")}>
+      {showStep(2) ? (
+      <EditorSection
+        icon="sections"
+        title={t("admin.servicePages.groupSections")}
+        defaultOpen={wizardMode}
+        {...foldProps("page-sections")}
+      >
         <p className="admin-muted">{t("admin.servicePages.addSectionHint")}</p>
         <div className="csp-section-list">
           {sections.map((section, index) => {
@@ -783,9 +837,14 @@ export default function CustomPageBuilder({
             return (
               <div
                 key={section.id}
-                className={
-                  section.hidden ? "csp-section-row is-hidden" : "csp-section-row"
-                }
+                className={[
+                  "csp-section-row",
+                  section.hidden ? "is-hidden" : "",
+                  activeSectionId === section.id ? "is-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => activateSection(section.id)}
               >
                 <span className="csp-section-label">
                   <Icon size={16} strokeWidth={1.75} aria-hidden />
@@ -856,176 +915,338 @@ export default function CustomPageBuilder({
           </div>
         ) : null}
       </EditorSection>
-
-      {sections.some((section) => section.type === "heroMedia" && !section.hidden) ? (
-        <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
-          <ResponsiveHeroImageField
-            value={heroMedia}
-            onChange={setHeroMedia}
-            t={t}
-            folder="hero"
-            acceptVideo
-          />
-          {heroMedia ? (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setHeroMedia(undefined)}
-            >
-              {t("admin.servicePages.clearMedia")}
-            </button>
-          ) : null}
-        </EditorSection>
       ) : null}
 
-      <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
-        <BuilderField
-          label={t("admin.servicePages.eyebrow")}
-          value={copy.eyebrow}
-          onChange={(value) => updateCopy("eyebrow", value)}
-          dir={editorDir}
-          lang={editLocale}
-        />
-        <BuilderField
-          label={t("admin.servicePages.mainTitle")}
-          value={copy.title}
-          onChange={(value) => updateCopy("title", value)}
-          dir={editorDir}
-          lang={editLocale}
-        />
-        <BuilderField
-          label={t("admin.servicePages.body")}
-          value={copy.description}
-          onChange={(value) => updateCopy("description", value)}
-          dir={editorDir}
-          lang={editLocale}
-          multiline
-        />
-        {sections.some((section) => section.type === "featureGrid" && !section.hidden) ? (
-          <>
-            <h2>{t("admin.servicePages.features")}</h2>
-            {copy.features.map((feature, index) => (
-              <div key={`csp-f-${index}`} className="admin-service-feature">
-                <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
-                <BuilderIconPicker
-                  label={t("admin.servicePages.featureIcon")}
-                  value={feature.icon}
-                  fallback={
-                    page.template === "contact-lenses"
-                      ? CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
-                      : EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"
-                  }
-                  onChange={(icon) => {
-                    const next = [...copy.features];
-                    next[index] = { ...next[index], icon };
-                    updateCopy("features", next);
-                  }}
-                />
+      {showStep(3) ? (
+      <>
+      {wizardMode &&
+      !sections.some((section) => section.type !== "gallery") ? (
+        <p className="admin-muted">{t("admin.servicePages.wizardNoSections")}</p>
+      ) : null}
+      {sections.map((section) => {
+        if (section.type === "gallery") return null;
+        const title = `${t(SECTION_I18N[section.type])}${
+          section.hidden ? ` — ${t("admin.servicePages.hiddenSection")}` : ""
+        }`;
+        if (section.type === "heroMedia") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="hero"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              <ResponsiveHeroImageField
+                value={heroMedia}
+                onChange={setHeroMedia}
+                t={t}
+                folder="hero"
+                acceptVideo
+              />
+              {heroMedia ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setHeroMedia(undefined)}
+                >
+                  {t("admin.servicePages.clearMedia")}
+                </button>
+              ) : null}
+              <BuilderField
+                label={t("admin.servicePages.eyebrow")}
+                value={copy.eyebrow}
+                onChange={(value) => updateCopy("eyebrow", value)}
+                dir={editorDir}
+                lang={editLocale}
+              />
+              <BuilderField
+                label={t("admin.servicePages.mainTitle")}
+                value={copy.title}
+                onChange={(value) => updateCopy("title", value)}
+                dir={editorDir}
+                lang={editLocale}
+              />
+              <BuilderField
+                label={t("admin.servicePages.body")}
+                value={copy.description}
+                onChange={(value) => updateCopy("description", value)}
+                dir={editorDir}
+                lang={editLocale}
+                multiline
+              />
+            </EditorSection>
+          );
+        }
+        if (section.type === "featureGrid") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="text"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              {copy.features.map((feature, index) => (
+                <div key={`csp-f-${index}`} className="admin-service-feature">
+                  <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+                  <BuilderIconPicker
+                    label={t("admin.servicePages.featureIcon")}
+                    value={feature.icon}
+                    fallback={
+                      page.template === "contact-lenses"
+                        ? CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
+                        : EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"
+                    }
+                    onChange={(icon) => {
+                      const next = [...copy.features];
+                      next[index] = { ...next[index], icon };
+                      updateCopy("features", next);
+                    }}
+                  />
+                  <BuilderField
+                    label={t("admin.servicePages.featureTitle")}
+                    value={feature.title}
+                    onChange={(value) => {
+                      const next = [...copy.features];
+                      next[index] = { ...next[index], title: value };
+                      updateCopy("features", next);
+                    }}
+                    dir={editorDir}
+                    lang={editLocale}
+                  />
+                  <BuilderField
+                    label={t("admin.servicePages.featureDescription")}
+                    value={feature.description}
+                    onChange={(value) => {
+                      const next = [...copy.features];
+                      next[index] = { ...next[index], description: value };
+                      updateCopy("features", next);
+                    }}
+                    dir={editorDir}
+                    lang={editLocale}
+                    multiline
+                  />
+                </div>
+              ))}
+            </EditorSection>
+          );
+        }
+        if (section.type === "benefitsList") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="text"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              <BuilderField
+                label={t("admin.servicePages.benefitsTitle")}
+                value={copy.benefitsTitle}
+                onChange={(value) => updateCopy("benefitsTitle", value)}
+                dir={editorDir}
+                lang={editLocale}
+              />
+              {copy.benefits.map((item, index) => (
                 <BuilderField
-                  label={t("admin.servicePages.featureTitle")}
-                  value={feature.title}
+                  key={`csp-b-${index}`}
+                  label={t("admin.servicePages.benefitN", { n: index + 1 })}
+                  value={item}
                   onChange={(value) => {
-                    const next = [...copy.features];
-                    next[index] = { ...next[index], title: value };
-                    updateCopy("features", next);
-                  }}
-                  dir={editorDir}
-                  lang={editLocale}
-                />
-                <BuilderField
-                  label={t("admin.servicePages.featureDescription")}
-                  value={feature.description}
-                  onChange={(value) => {
-                    const next = [...copy.features];
-                    next[index] = { ...next[index], description: value };
-                    updateCopy("features", next);
+                    const next = [...copy.benefits];
+                    next[index] = value;
+                    updateCopy("benefits", next);
                   }}
                   dir={editorDir}
                   lang={editLocale}
                   multiline
                 />
-              </div>
-            ))}
-          </>
-        ) : null}
-        {sections.some((section) => section.type === "benefitsList" && !section.hidden) ? (
-          <>
-            <h2>{t("admin.servicePages.benefits")}</h2>
-            <BuilderField
-              label={t("admin.servicePages.benefitsTitle")}
-              value={copy.benefitsTitle}
-              onChange={(value) => updateCopy("benefitsTitle", value)}
-              dir={editorDir}
-              lang={editLocale}
-            />
-            {copy.benefits.map((item, index) => (
+              ))}
+            </EditorSection>
+          );
+        }
+        if (section.type === "notice") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="text"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
               <BuilderField
-                key={`csp-b-${index}`}
-                label={t("admin.servicePages.benefitN", { n: index + 1 })}
-                value={item}
-                onChange={(value) => {
-                  const next = [...copy.benefits];
-                  next[index] = value;
-                  updateCopy("benefits", next);
-                }}
+                label={t("admin.servicePages.warningTitle")}
+                value={copy.warningTitle}
+                onChange={(value) => updateCopy("warningTitle", value)}
+                dir={editorDir}
+                lang={editLocale}
+              />
+              <BuilderField
+                label={t("admin.servicePages.warningText")}
+                value={copy.warningText}
+                onChange={(value) => updateCopy("warningText", value)}
                 dir={editorDir}
                 lang={editLocale}
                 multiline
               />
-            ))}
-          </>
-        ) : null}
-        {sections.some((section) => section.type === "notice" && !section.hidden) ? (
-          <>
-            <h2>{t("admin.servicePages.warning")}</h2>
-            <BuilderField
-              label={t("admin.servicePages.warningTitle")}
-              value={copy.warningTitle}
-              onChange={(value) => updateCopy("warningTitle", value)}
-              dir={editorDir}
-              lang={editLocale}
-            />
-            <BuilderField
-              label={t("admin.servicePages.warningText")}
-              value={copy.warningText}
-              onChange={(value) => updateCopy("warningText", value)}
-              dir={editorDir}
-              lang={editLocale}
-              multiline
-            />
-          </>
-        ) : null}
-        {sections.some((section) => section.type === "valuesStrip" && !section.hidden) ? (
-          <>
-            <h2>{t("admin.servicePages.sectionValues")}</h2>
-            <BuilderField
-              label={t("admin.servicePages.valuesTitle")}
-              value={copy.valuesTitle}
-              onChange={(value) => updateCopy("valuesTitle", value)}
-              dir={editorDir}
-              lang={editLocale}
-            />
-            <BuilderField
-              label={t("admin.servicePages.valuesText")}
-              value={copy.valuesText}
-              onChange={(value) => updateCopy("valuesText", value)}
-              dir={editorDir}
-              lang={editLocale}
-              multiline
-            />
-            <BuilderField
-              label={t("admin.servicePages.privacyText")}
-              value={copy.privacyText}
-              onChange={(value) => updateCopy("privacyText", value)}
-              dir={editorDir}
-              lang={editLocale}
-              multiline
-            />
-          </>
-        ) : null}
-      </EditorSection>
+            </EditorSection>
+          );
+        }
+        if (section.type === "valuesStrip") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="text"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              <BuilderField
+                label={t("admin.servicePages.valuesTitle")}
+                value={copy.valuesTitle}
+                onChange={(value) => updateCopy("valuesTitle", value)}
+                dir={editorDir}
+                lang={editLocale}
+              />
+              <BuilderField
+                label={t("admin.servicePages.valuesText")}
+                value={copy.valuesText}
+                onChange={(value) => updateCopy("valuesText", value)}
+                dir={editorDir}
+                lang={editLocale}
+                multiline
+              />
+              <BuilderField
+                label={t("admin.servicePages.privacyText")}
+                value={copy.privacyText}
+                onChange={(value) => updateCopy("privacyText", value)}
+                dir={editorDir}
+                lang={editLocale}
+                multiline
+              />
+            </EditorSection>
+          );
+        }
+        if (section.type === "bookingCta") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="buttons"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
+            </EditorSection>
+          );
+        }
+        if (section.type === "products") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="products"
+              title={title}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
+              <div className="csp-inline-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setProductPickerOpen(true)}
+                  disabled={productIds.length >= MAX_PAGE_PRODUCTS}
+                >
+                  <Package size={16} />
+                  {t("admin.servicePages.chooseExistingProduct")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setProductCreateOpen(true)}
+                  disabled={productIds.length >= MAX_PAGE_PRODUCTS}
+                >
+                  <Plus size={16} />
+                  {t("admin.servicePages.addNewProduct")}
+                </button>
+              </div>
+              {productIds.length >= MAX_PAGE_PRODUCTS ? (
+                <p className="admin-muted">{t("admin.servicePages.productLimit")}</p>
+              ) : null}
+              <div className="csp-attached-products">
+                {attachedProducts.map((product) => (
+                  <div key={product.id} className="csp-attached-product">
+                    <span className="csp-product-pick-thumb">
+                      {product.images?.[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={product.images[0]} alt="" />
+                      ) : (
+                        <Package size={16} />
+                      )}
+                    </span>
+                    <span className="csp-product-pick-copy">
+                      <strong>{product.name}</strong>
+                      <small>
+                        {product.category} · {formatPrice(product.sellingPrice)}
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => removeProductFromPage(product.id)}
+                    >
+                      {t("admin.servicePages.removeFromPage")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="admin-muted">{t("admin.servicePages.removeFromPageHint")}</p>
+            </EditorSection>
+          );
+        }
+        return null;
+      })}
+      {!sections.some((section) => section.type === "heroMedia") ? (
+        <EditorSection
+          icon="text"
+          title={t("admin.servicePages.groupText")}
+          defaultOpen={wizardMode}
+          {...foldProps("page-copy")}
+        >
+          <BuilderField
+            label={t("admin.servicePages.eyebrow")}
+            value={copy.eyebrow}
+            onChange={(value) => updateCopy("eyebrow", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          <BuilderField
+            label={t("admin.servicePages.mainTitle")}
+            value={copy.title}
+            onChange={(value) => updateCopy("title", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          <BuilderField
+            label={t("admin.servicePages.body")}
+            value={copy.description}
+            onChange={(value) => updateCopy("description", value)}
+            dir={editorDir}
+            lang={editLocale}
+            multiline
+          />
+        </EditorSection>
+      ) : null}
 
-      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
+      <EditorSection
+        icon="buttons"
+        title={t("admin.servicePages.groupButtons")}
+        {...foldProps(
+          sections.find((section) => section.type === "bookingCta")?.id ||
+            "page-buttons",
+        )}
+      >
         <div className="admin-service-field">
           <span className="label">{t("admin.servicePages.heroButton")}</span>
           <div
@@ -1132,65 +1353,38 @@ export default function CustomPageBuilder({
           </>
         ) : null}
       </EditorSection>
-
-      {sections.some((section) => section.type === "products" && !section.hidden) ? (
-      <EditorSection icon="products" title={t("admin.servicePages.groupProducts")}>
-        <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
-        <div className="csp-inline-actions">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => setProductPickerOpen(true)}
-            disabled={productIds.length >= MAX_PAGE_PRODUCTS}
-          >
-            <Package size={16} />
-            {t("admin.servicePages.chooseExistingProduct")}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => setProductCreateOpen(true)}
-            disabled={productIds.length >= MAX_PAGE_PRODUCTS}
-          >
-            <Plus size={16} />
-            {t("admin.servicePages.addNewProduct")}
-          </button>
-        </div>
-        {productIds.length >= MAX_PAGE_PRODUCTS ? (
-          <p className="admin-muted">{t("admin.servicePages.productLimit")}</p>
-        ) : null}
-        <div className="csp-attached-products">
-          {attachedProducts.map((product) => (
-            <div key={product.id} className="csp-attached-product">
-              <span className="csp-product-pick-thumb">
-                {product.images?.[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.images[0]} alt="" />
-                ) : (
-                  <Package size={16} />
-                )}
-              </span>
-              <span className="csp-product-pick-copy">
-                <strong>{product.name}</strong>
-                <small>
-                  {product.category} · {formatPrice(product.sellingPrice)}
-                </small>
-              </span>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => removeProductFromPage(product.id)}
-              >
-                {t("admin.servicePages.removeFromPage")}
-              </button>
-            </div>
-          ))}
-        </div>
-        <p className="admin-muted">{t("admin.servicePages.removeFromPageHint")}</p>
-      </EditorSection>
+      </>
       ) : null}
 
-      <EditorSection icon="settings" title={t("admin.servicePages.groupSettings")}>
+      {showStep(4) ? (
+      <>
+      {wizardMode ? (
+        <EditorSection
+          icon="page"
+          title={t("admin.servicePages.wizardStep4")}
+          defaultOpen
+          {...foldProps("page-review")}
+        >
+          {!localeComplete ? (
+            <>
+              <p className="admin-muted">{t("admin.servicePages.wizardReviewMissing")}</p>
+              <ul className="csp-issues">
+                {issues.map((issue) => (
+                  <li key={issue}>{t(ISSUE_I18N[issue])}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="admin-muted">{t("admin.servicePages.wizardReviewReady")}</p>
+          )}
+          <p className="admin-muted">{t("admin.servicePages.localeHiddenHint")}</p>
+        </EditorSection>
+      ) : null}
+      <EditorSection
+        icon="settings"
+        title={t("admin.servicePages.groupSettings")}
+        {...foldProps("page-settings")}
+      >
         <label className="csp-check">
           <input
             type="checkbox"
@@ -1242,6 +1436,8 @@ export default function CustomPageBuilder({
           </button>
         ) : null}
       </EditorSection>
+      </>
+      ) : null}
 
       <AdminProductPicker
         open={productPickerOpen}

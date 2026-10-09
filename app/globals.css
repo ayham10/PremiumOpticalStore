@@ -16111,6 +16111,111 @@ select.admin-pe-input {
   }
 }
 
+/*
+  Sticky failed because overflow-x:hidden on html/body/.admin-shell/.admin-main
+  and .admin-service-pages computes overflow-y to auto. That makes those
+  ancestors the sticky containing block — as tall as the editor — so both
+  simulators scroll away with the page. Lock the visual editor to the
+  viewport and scroll only the RIGHT column.
+*/
+@media (min-width: 900px) {
+  html:has(.admin-service-pages--visual),
+  body:has(.admin-service-pages--visual) {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .admin-shell:has(.admin-service-pages--visual) {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .admin-main:has(.admin-service-pages--visual) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0.55rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+  }
+
+  .admin-main:has(.admin-service-pages--visual) > .admin-desktop-topbar {
+    grid-row: 1;
+  }
+
+  .admin-main:has(.admin-service-pages--visual) > .admin-service-pages--visual {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .admin-service-pages--visual.space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.7rem;
+  }
+
+  .admin-service-pages--visual .admin-page-header,
+  .admin-service-pages--visual .admin-service-langs,
+  .admin-service-pages--visual .csp-toolbar,
+  .admin-service-pages--visual .admin-service-tabs {
+    flex: 0 0 auto;
+  }
+
+  .csp-visual-workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .csp-visual-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    align-items: stretch;
+  }
+
+  .csp-visual-previews {
+    position: relative;
+    top: auto;
+    z-index: 2;
+    align-self: stretch;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .csp-visual-editor {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-inline-end: 0.1rem;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 860px) {
+  .admin-service-pages--visual .admin-page-desc {
+    display: none;
+  }
+
+  .admin-service-pages--visual .admin-page-title {
+    font-size: 1.28rem;
+  }
+
+  .admin-service-pages--visual.space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.48rem;
+  }
+}
+
 .csp-mobile-stage-tabs {
   display: none;
 }
@@ -16124,12 +16229,8 @@ select.admin-pe-input {
 }
 
 .csp-visual-previews {
-  position: sticky;
-  top: 4.4rem;
   z-index: 2;
-  align-self: start;
-  height: calc(100dvh - 5.1rem);
-  max-height: calc(100dvh - 5.1rem);
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -16448,6 +16549,107 @@ html.csp-preview-doc body::-webkit-scrollbar {
   margin-top: 0.75rem;
 }
 
+.csp-fold.is-active {
+  border-color: rgba(212, 175, 106, 0.55);
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.28);
+}
+
+.csp-section-row.is-active {
+  border-color: rgba(212, 175, 106, 0.5);
+  background: rgba(212, 175, 106, 0.08);
+}
+
+.csp-wizard {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 106, 0.22);
+  background: rgba(8, 12, 16, 0.72);
+}
+
+.csp-wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.csp-wizard-steps button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(212, 175, 106, 0.16);
+  border-radius: 10px;
+  background: transparent;
+  color: #9aa1aa;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: start;
+  cursor: pointer;
+}
+
+.csp-wizard-steps button i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 106, 0.28);
+  color: #d4af6a;
+  font-style: normal;
+  font-size: 0.68rem;
+}
+
+.csp-wizard-steps button.is-done,
+.csp-wizard-steps button.is-current {
+  color: #f3e6c0;
+  border-color: rgba(212, 175, 106, 0.42);
+  background: rgba(212, 175, 106, 0.1);
+}
+
+.csp-wizard-hint {
+  margin: 0;
+  color: #8d949d;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.csp-wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.csp-preview-canvas [data-csp-section].is-preview-active {
+  outline: 2px solid rgba(212, 175, 106, 0.72);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(212, 175, 106, 0.12);
+}
+
+.csp-preview-ph-media {
+  background:
+    linear-gradient(180deg, rgba(12, 16, 22, 0.15), rgba(8, 10, 14, 0.55)),
+    radial-gradient(80% 60% at 50% 38%, rgba(212, 175, 106, 0.2), transparent 60%),
+    #141a22;
+}
+
+.csp-preview-ph-media::after {
+  content: "";
+  position: absolute;
+  inset: 22% 18%;
+  border: 1px dashed rgba(212, 175, 106, 0.32);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
 .csp-section-label {
   display: inline-flex;
   align-items: center;
@@ -16638,9 +16840,6 @@ html.csp-preview-doc body::-webkit-scrollbar {
   .csp-visual-previews {
     position: relative;
     top: auto;
-  }
-
-  .csp-visual-previews {
     height: calc(100dvh - 8.2rem);
     max-height: calc(100dvh - 8.2rem);
   }
@@ -17325,6 +17524,7 @@ body > .admin-save-notice,
   border-radius: 12px;
   border: 1px solid rgba(212, 175, 106, 0.16);
   background: rgba(8, 12, 17, 0.35);
+  cursor: pointer;
 }
 
 .csp-section-actions {

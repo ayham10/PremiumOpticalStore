@@ -11,6 +11,7 @@ import type {
 export const CONTENT_PREVIEW_MESSAGE = "oyon-content-preview";
 export const CONTENT_PREVIEW_READY = "oyon-content-preview-ready";
 export const CONTENT_PREVIEW_VISIBILITY = "oyon-content-preview-visibility";
+export const CONTENT_PREVIEW_FOCUS = "oyon-content-preview-focus";
 export const CONTENT_PREVIEW_PATH = "/admin/service-pages/preview";
 /** Coalesce keystrokes so iframe documents are patched, not reloaded. */
 export const PREVIEW_UPDATE_MS = 220;
@@ -78,6 +79,10 @@ export type ContentPreviewPayload = {
   document?: ServicePagesSettings;
   customPage?: CustomServicePage | null;
   products?: Array<Pick<Product, "id" | "name" | "category" | "sellingPrice" | "status" | "slug" | "images">>;
+  /** Stable editor ↔ preview section id. Preview-only; never persisted. */
+  activeSectionId?: string | null;
+  /** Admin preview iframe only — fill empty sections with realistic sample layout. */
+  previewPlaceholders?: boolean;
 };
 
 export type ContentPreviewMessage = {
@@ -90,12 +95,18 @@ export type ContentPreviewVisibilityMessage = {
   visible: boolean;
 };
 
+export type ContentPreviewFocusMessage = {
+  type: typeof CONTENT_PREVIEW_FOCUS;
+  sectionId: string | null;
+};
+
 export function previewFlushKey(
   locale: string,
   kind: string,
   pageId?: string | null,
+  activeSectionId?: string | null,
 ): string {
-  return `${locale}:${kind}:${pageId || ""}`;
+  return `${locale}:${kind}:${pageId || ""}:${activeSectionId || ""}`;
 }
 
 export function shouldFlushPreviewNow(
@@ -115,6 +126,17 @@ export function isContentPreviewVisibilityMessage(
   if (!value || typeof value !== "object") return false;
   const raw = value as { type?: unknown; visible?: unknown };
   return raw.type === CONTENT_PREVIEW_VISIBILITY && typeof raw.visible === "boolean";
+}
+
+export function isContentPreviewFocusMessage(
+  value: unknown,
+): value is ContentPreviewFocusMessage {
+  if (!value || typeof value !== "object") return false;
+  const raw = value as { type?: unknown; sectionId?: unknown };
+  return (
+    raw.type === CONTENT_PREVIEW_FOCUS &&
+    (raw.sectionId === null || typeof raw.sectionId === "string")
+  );
 }
 
 export function isContentPreviewMessage(

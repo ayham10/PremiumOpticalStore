@@ -145,7 +145,7 @@ export default function ContactLensesPage() {
 
   return (
     <div className="frames-page cl-page" dir={rtl ? "rtl" : "ltr"}>
-      <section className="cl-hero" aria-label={title}>
+      <section className="cl-hero" aria-label={title} data-csp-section="contactLenses-hero">
         <div className="cl-hero-media">
           {reduceMotion ? (
             <Image
@@ -179,7 +179,7 @@ export default function ContactLensesPage() {
           <p className="cl-description">
             {pickServiceText(saved?.description, t("contactLenses.description"))}
           </p>
-          <div className="cl-hero-actions">
+          <div className="cl-hero-actions" data-csp-section="contactLenses-buttons">
             <Link
               href="/book?type=contact_lens_fitting"
               className="btn btn-copper cl-book-btn"
@@ -195,7 +195,11 @@ export default function ContactLensesPage() {
       </section>
 
       <div className="cl-inner">
-        <section className="cl-features" aria-label={t("contactLenses.info.aria")}>
+        <section
+          className="cl-features"
+          aria-label={t("contactLenses.info.aria")}
+          data-csp-section="contactLenses-features"
+        >
           <div className="cl-features-grid">
             {FEATURES.map(({ key }, index) => {
               const Icon = resolveServiceFeatureIcon(
@@ -221,7 +225,7 @@ export default function ContactLensesPage() {
           </div>
         </section>
 
-        <aside className="cl-safety" role="note">
+        <aside className="cl-safety" role="note" data-csp-section="contactLenses-notice">
           <AlertTriangle className="cl-safety-icon" size={18} strokeWidth={1.7} aria-hidden />
           <p>
             {pickServiceText(saved?.warningText, t("contactLenses.safety"))}

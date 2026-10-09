@@ -1926,6 +1926,24 @@ const en: Dictionary = {
       issueBenefits: "Add a benefits title and at least two bullets.",
       issueWarning: "Add warning text.",
       issueValues: "Add values title and text.",
+      wizardStep1: "Page information",
+      wizardStep2: "Choose sections",
+      wizardStep3: "Edit content",
+      wizardStep4: "Preview and publish",
+      wizardStep1Hint:
+        "Enter the page name and URL, and review the current language. Draft copy and sections stay intact as you move between steps.",
+      wizardStep2Hint:
+        "Choose the sections you want. Nothing is added automatically, and selected sections appear immediately in both previews.",
+      wizardStep3Hint:
+        "Edit each section in page order. The active section is outlined in gold here and in both simulators.",
+      wizardStep4Hint:
+        "Review missing fields and language completeness before publishing. Incomplete or sample content is not published.",
+      wizardNext: "Next",
+      wizardBack: "Back",
+      wizardProgress: "Step {n} of {total}",
+      wizardNoSections: "No sections selected yet. Go back to add sections.",
+      wizardReviewMissing: "Missing fields in this language",
+      wizardReviewReady: "This language is ready to save.",
     },
     lensInventory: {
       kicker: "Inventory",
