@@ -509,6 +509,15 @@ export const CUSTOM_SECTION_TYPES = [
   "gallery",
 ] as const;
 
+export const CUSTOM_CTA_KINDS = [
+  "booking",
+  "book",
+  "internal",
+  "external",
+] as const;
+
+export type CustomPageCtaKind = (typeof CUSTOM_CTA_KINDS)[number];
+
 export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
 
 export type CustomPageTemplate = "eye-exam" | "contact-lenses";
@@ -554,7 +563,13 @@ export interface CustomServicePage {
   showOnHome: boolean;
   homeSort: number;
   homeImage?: string;
+  /** When true, the gold CTA is rendered inside the hero with no extra empty gap when off. */
+  showHeroButton: boolean;
+  /** How the page button navigates. Shared across languages. */
+  ctaKind: CustomPageCtaKind;
   bookingType?: string | null;
+  /** Internal path or external https URL, depending on `ctaKind`. */
+  ctaHref?: string;
   sections: CustomPageSection[];
   heroMedia?: CustomPageMediaRef;
   gallery?: CustomPageMediaRef[];
@@ -581,7 +596,10 @@ export type CustomPageOp =
       showOnHome?: boolean;
       homeSort?: number;
       homeImage?: string | null;
+      showHeroButton?: boolean;
+      ctaKind?: CustomPageCtaKind;
       bookingType?: string | null;
+      ctaHref?: string | null;
       sections?: CustomPageSection[];
       heroMedia?: CustomPageMediaRef | null;
       gallery?: CustomPageMediaRef[];

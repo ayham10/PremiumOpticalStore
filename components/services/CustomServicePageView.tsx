@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check, Lock, Target } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { bookingHrefForPage } from "@/lib/custom-service-pages";
+import {
+  isExternalCta,
+  resolveCtaHref,
+} from "@/lib/custom-service-pages";
 import {
   CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
   EYE_EXAM_DEFAULT_FEATURE_ICONS,
@@ -96,6 +99,42 @@ function GalleryItem({ item }: { item: CustomPageMediaRef }) {
   );
 }
 
+function PageCta({
+  page,
+  copy,
+  isCl,
+}: {
+  page: CustomServicePage;
+  copy: CustomPageCopy;
+  isCl: boolean;
+}) {
+  const href = resolveCtaHref(page);
+  const label = copy.bookingButtonText.trim();
+  if (!href || !label) return null;
+  const className = `btn btn-copper ${isCl ? "cl-book-btn" : "eye-exam-btn"}`;
+  if (isExternalCta(page)) {
+    return (
+      <div className={isCl ? "cl-hero-actions" : "eye-exam-actions"}>
+        <a
+          href={href}
+          className={className}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {label}
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div className={isCl ? "cl-hero-actions" : "eye-exam-actions"}>
+      <Link href={href} className={className}>
+        {label}
+      </Link>
+    </div>
+  );
+}
+
 function BodySection({
   section,
   page,
@@ -107,8 +146,6 @@ function BodySection({
   copy: CustomPageCopy;
   isCl: boolean;
 }) {
-  const bookHref = bookingHrefForPage(page);
-
   if (section.type === "featureGrid") {
     const features = copy.features.filter(
       (feature) => feature.title || feature.description,
@@ -216,16 +253,7 @@ function BodySection({
   }
 
   if (section.type === "bookingCta") {
-    return (
-      <div className={isCl ? "cl-hero-actions" : "eye-exam-actions"}>
-        <Link
-          href={bookHref}
-          className={`btn btn-copper ${isCl ? "cl-book-btn" : "eye-exam-btn"}`}
-        >
-          {copy.bookingButtonText}
-        </Link>
-      </div>
-    );
+    return <PageCta page={page} copy={copy} isCl={isCl} />;
   }
 
   if (section.type === "gallery") {
@@ -276,6 +304,9 @@ export default function CustomServicePageView({
               {copy.eyebrow ? <p className="cl-eyebrow">{copy.eyebrow}</p> : null}
               <h1 className="cl-title">{copy.title}</h1>
               <p className="cl-description">{copy.description}</p>
+              {page.showHeroButton ? (
+                <PageCta page={page} copy={copy} isCl />
+              ) : null}
             </div>
           </section>
         ) : (
@@ -287,6 +318,9 @@ export default function CustomServicePageView({
               ) : null}
               <h1 className="eye-exam-title">{copy.title}</h1>
               <p className="eye-exam-description">{copy.description}</p>
+              {page.showHeroButton ? (
+                <PageCta page={page} copy={copy} isCl={false} />
+              ) : null}
             </div>
           </section>
         )
@@ -302,6 +336,9 @@ export default function CustomServicePageView({
             <p className={isCl ? "cl-description" : "eye-exam-description"}>
               {copy.description}
             </p>
+            {page.showHeroButton ? (
+              <PageCta page={page} copy={copy} isCl={isCl} />
+            ) : null}
           </header>
         ) : null}
         {body.map((section) => (

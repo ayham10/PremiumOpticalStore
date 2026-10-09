@@ -23,6 +23,11 @@ import {
   emptyCustomPageCopy,
   type CustomPageLocaleIssue,
   MAX_CUSTOM_SECTIONS,
+  pageHasVisibleButton,
+  parseCtaKind,
+  PUBLIC_INTERNAL_PATHS,
+  sanitizeExternalUrl,
+  sanitizeInternalPath,
   MAX_GALLERY_ITEMS,
   normalizeCustomSlug,
   RESERVED_SERVICE_SLUGS,
@@ -37,6 +42,7 @@ import {
 } from "@/lib/service-page-icons";
 import type {
   CustomPageCopy,
+  CustomPageCtaKind,
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
@@ -48,6 +54,21 @@ import type {
 } from "@/lib/types";
 
 type Translate = (path: string, vars?: Record<string, string | number>) => string;
+
+const INTERNAL_PATH_I18N: Record<string, string> = {
+  "/": "admin.servicePages.internalHome",
+  "/book": "admin.servicePages.internalBook",
+  "/shop": "admin.servicePages.internalShop",
+  "/frames": "admin.servicePages.internalFrames",
+  "/sunglasses": "admin.servicePages.internalSunglasses",
+  "/contact-lenses": "admin.servicePages.internalContactLenses",
+  "/eye-exams": "admin.servicePages.internalEyeExams",
+  "/about": "admin.servicePages.internalAbout",
+  "/gallery": "admin.servicePages.internalGallery",
+  "/promotions": "admin.servicePages.internalPromotions",
+  "/contact": "admin.servicePages.internalContact",
+  "/privacy": "admin.servicePages.internalPrivacy",
+};
 
 const ISSUE_I18N: Record<CustomPageLocaleIssue, string> = {
   title: "admin.servicePages.issueTitle",
@@ -79,6 +100,9 @@ function customPageErrorMessage(error: unknown, t: Translate): string {
   if (message === "CUSTOM_PAGE_INVALID_SLUG") return t("admin.servicePages.slugInvalid");
   if (message === "CUSTOM_PAGE_PUBLISH_INCOMPLETE") {
     return t("admin.servicePages.publishIncomplete");
+  }
+  if (message === "CUSTOM_PAGE_INVALID_CTA") {
+    return t("admin.servicePages.ctaInvalid");
   }
   if (message === "CUSTOM_PAGE_LIMIT") return t("admin.servicePages.pageLimit");
   return message || t("admin.servicePages.saveError");
@@ -249,6 +273,9 @@ export default function CustomPageBuilder({
   const [showOnHome, setShowOnHome] = useState(page.showOnHome);
   const [homeSort, setHomeSort] = useState(page.homeSort);
   const [homeImage, setHomeImage] = useState(page.homeImage || "");
+  const [showHeroButton, setShowHeroButton] = useState(page.showHeroButton);
+  const [ctaKind, setCtaKind] = useState<CustomPageCtaKind>(page.ctaKind || "book");
+  const [ctaHref, setCtaHref] = useState(page.ctaHref || "");
   const [bookingType, setBookingType] = useState(page.bookingType || "");
   const [sections, setSections] = useState(page.sections);
   const [heroMedia, setHeroMedia] = useState<CustomPageMediaRef | undefined>(
@@ -280,6 +307,9 @@ export default function CustomPageBuilder({
     setShowOnHome(next.showOnHome);
     setHomeSort(next.homeSort);
     setHomeImage(next.homeImage || "");
+    setShowHeroButton(next.showHeroButton);
+    setCtaKind(next.ctaKind || "book");
+    setCtaHref(next.ctaHref || "");
     setBookingType(next.bookingType || "");
     setSections(next.sections);
     setHeroMedia(next.heroMedia);
@@ -324,7 +354,8 @@ export default function CustomPageBuilder({
   }, [editLocale]);
 
   const copy = copies[editLocale] || emptyCustomPageCopy();
-  const issues = customPageLocaleIssues(sections, copy);
+  const issues = customPageLocaleIssues(sections, copy, showHeroButton);
+  const buttonVisible = pageHasVisibleButton(sections, showHeroButton);
   const localeComplete = issues.length === 0;
   const savedComplete = Boolean(page.locales[editLocale]?.complete);
 
@@ -366,6 +397,9 @@ export default function CustomPageBuilder({
     setShowOnHome(saved.showOnHome);
     setHomeSort(saved.homeSort);
     setHomeImage(saved.homeImage || "");
+    setShowHeroButton(saved.showHeroButton);
+    setCtaKind(saved.ctaKind || "book");
+    setCtaHref(saved.ctaHref || "");
     setBookingType(saved.bookingType || "");
     setSections(saved.sections);
     setHeroMedia(saved.heroMedia);
@@ -391,7 +425,11 @@ export default function CustomPageBuilder({
         showOnHome,
         homeSort,
         homeImage: homeImage || null,
-        bookingType: bookingType || null,
+        showHeroButton,
+        ctaKind,
+        bookingType: ctaKind === "booking" ? bookingType || null : null,
+        ctaHref:
+          ctaKind === "internal" || ctaKind === "external" ? ctaHref || null : null,
         sections,
         heroMedia: heroMedia || null,
         gallery,
@@ -449,7 +487,11 @@ export default function CustomPageBuilder({
     showOnHome,
     homeSort,
     homeImage: homeImage || undefined,
-    bookingType: bookingType || null,
+    showHeroButton,
+    ctaKind,
+    bookingType: ctaKind === "booking" ? bookingType || null : null,
+    ctaHref:
+      ctaKind === "internal" || ctaKind === "external" ? ctaHref || undefined : undefined,
     sections,
     heroMedia,
     gallery,
@@ -622,7 +664,107 @@ export default function CustomPageBuilder({
           lang={editLocale}
           multiline
         />
+        <div className="admin-service-field">
+          <span className="label">{t("admin.servicePages.heroButton")}</span>
+          <div
+            className="admin-service-langs"
+            role="group"
+            aria-label={t("admin.servicePages.heroButton")}
+          >
+            <button
+              type="button"
+              className={showHeroButton ? "is-active" : ""}
+              onClick={() => setShowHeroButton(true)}
+            >
+              {t("admin.servicePages.showButton")}
+            </button>
+            <button
+              type="button"
+              className={!showHeroButton ? "is-active" : ""}
+              onClick={() => setShowHeroButton(false)}
+            >
+              {t("admin.servicePages.hideButton")}
+            </button>
+          </div>
+        </div>
       </section>
+
+      {buttonVisible ? (
+        <section className="admin-card admin-service-card">
+          <h2>{t("admin.servicePages.pageButton")}</h2>
+          <p className="admin-muted">{t("admin.servicePages.pageButtonHint")}</p>
+          <BuilderField
+            label={t("admin.servicePages.bookingButton")}
+            value={copy.bookingButtonText}
+            onChange={(value) => updateCopy("bookingButtonText", value)}
+            dir={editorDir}
+            lang={editLocale}
+          />
+          <label className="admin-service-field">
+            <span className="label">{t("admin.servicePages.ctaKind")}</span>
+            <select
+              className="input"
+              value={ctaKind}
+              onChange={(event) =>
+                setCtaKind(parseCtaKind(event.target.value) || "book")
+              }
+            >
+              <option value="booking">{t("admin.servicePages.ctaKindBooking")}</option>
+              <option value="book">{t("admin.servicePages.ctaKindBook")}</option>
+              <option value="internal">{t("admin.servicePages.ctaKindInternal")}</option>
+              <option value="external">{t("admin.servicePages.ctaKindExternal")}</option>
+            </select>
+          </label>
+          {ctaKind === "booking" ? (
+            <label className="admin-service-field">
+              <span className="label">{t("admin.servicePages.bookingType")}</span>
+              <select
+                className="input"
+                value={bookingType}
+                onChange={(event) => setBookingType(event.target.value)}
+              >
+                <option value="">{t("admin.servicePages.bookingTypeNone")}</option>
+                {bookingOptions.map((service) => (
+                  <option key={service.key} value={service.key}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {ctaKind === "internal" ? (
+            <label className="admin-service-field">
+              <span className="label">{t("admin.servicePages.ctaInternal")}</span>
+              <select
+                className="input"
+                value={ctaHref}
+                onChange={(event) => setCtaHref(event.target.value)}
+              >
+                <option value="">{t("admin.servicePages.ctaInternalChoose")}</option>
+                {PUBLIC_INTERNAL_PATHS.map((path) => (
+                  <option key={path} value={path}>
+                    {t(INTERNAL_PATH_I18N[path] || path)} ({path})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {ctaKind === "external" ? (
+            <BuilderField
+              label={t("admin.servicePages.ctaExternal")}
+              value={ctaHref}
+              onChange={setCtaHref}
+              dir="ltr"
+            />
+          ) : null}
+          {ctaKind === "internal" && ctaHref && !sanitizeInternalPath(ctaHref) ? (
+            <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+          ) : null}
+          {ctaKind === "external" && ctaHref && !sanitizeExternalUrl(ctaHref) ? (
+            <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+          ) : null}
+        </section>
+      ) : null}
 
       {sections.some((section) => section.type === "featureGrid") ? (
         <section className="admin-card admin-service-card">
@@ -753,28 +895,7 @@ export default function CustomPageBuilder({
       {sections.some((section) => section.type === "bookingCta") ? (
         <section className="admin-card admin-service-card">
           <h2>{t("admin.servicePages.sectionBooking")}</h2>
-          <BuilderField
-            label={t("admin.servicePages.bookingButton")}
-            value={copy.bookingButtonText}
-            onChange={(value) => updateCopy("bookingButtonText", value)}
-            dir={editorDir}
-            lang={editLocale}
-          />
-          <label className="admin-service-field">
-            <span className="label">{t("admin.servicePages.bookingType")}</span>
-            <select
-              className="input"
-              value={bookingType}
-              onChange={(event) => setBookingType(event.target.value)}
-            >
-              <option value="">{t("admin.servicePages.bookingTypeNone")}</option>
-              {bookingOptions.map((service) => (
-                <option key={service.key} value={service.key}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
         </section>
       ) : null}
 

@@ -7,6 +7,7 @@ import {
 } from "@/lib/service-page-icons";
 import type {
   CustomPageCopy,
+  CustomPageCtaKind,
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
@@ -17,7 +18,7 @@ import type {
   ServicePagesLocale,
   ServicePagesSettings,
 } from "@/lib/types";
-import { CUSTOM_SECTION_TYPES } from "@/lib/types";
+import { CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES } from "@/lib/types";
 
 function isServicePagesLocale(
   value: string | null | undefined,
@@ -25,7 +26,7 @@ function isServicePagesLocale(
   return value === "ar" || value === "he" || value === "en";
 }
 
-export { CUSTOM_SECTION_TYPES };
+export { CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES };
 
 export const MAX_CUSTOM_PAGES = 30;
 export const MAX_CUSTOM_SECTIONS = 12;
@@ -120,9 +121,139 @@ export function defaultCustomSections(
 ): CustomPageSection[] {
   const types: CustomSectionType[] =
     template === "contact-lenses"
-      ? ["heroMedia", "featureGrid", "notice", "bookingCta"]
-      : ["heroMedia", "featureGrid", "benefitsList", "valuesStrip", "bookingCta"];
+      ? ["heroMedia", "featureGrid", "notice"]
+      : ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"];
   return types.map((type) => createCustomSection(type));
+}
+
+export const PUBLIC_INTERNAL_PATHS = [
+  "/",
+  "/book",
+  "/shop",
+  "/frames",
+  "/sunglasses",
+  "/contact-lenses",
+  "/eye-exams",
+  "/about",
+  "/gallery",
+  "/promotions",
+  "/contact",
+  "/privacy",
+] as const;
+
+const PUBLIC_INTERNAL_PREFIXES = ["/services/", "/product/"] as const;
+const BLOCKED_INTERNAL_PREFIXES = [
+  "/admin",
+  "/api",
+  "/login",
+  "/appointments",
+] as const;
+
+export function parseCtaKind(value: unknown): CustomPageCtaKind | undefined {
+  return typeof value === "string" &&
+    (CUSTOM_CTA_KINDS as readonly string[]).includes(value)
+    ? (value as CustomPageCtaKind)
+    : undefined;
+}
+
+function isBlockedHostname(host: string): boolean {
+  const hostname = host.trim().toLowerCase().replace(/\.+$/, "");
+  if (!hostname || hostname === "localhost" || hostname.endsWith(".localhost")) {
+    return true;
+  }
+  if (hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") {
+    return true;
+  }
+  if (/^(10\.|192\.168\.|169\.254\.)/.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)) return true;
+  if (!hostname.includes(".")) return true;
+  return false;
+}
+
+export function sanitizeInternalPath(value: unknown): string | undefined {
+  const raw = cleanText(value);
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) {
+    return undefined;
+  }
+  if (raw.includes("://") || /[\u0000-\u001F]/.test(raw)) return undefined;
+  let decoded = raw;
+  try {
+    decoded = decodeURI(raw);
+  } catch {
+    return undefined;
+  }
+  if (decoded.startsWith("//") || decoded.includes("\\") || decoded.includes("://")) {
+    return undefined;
+  }
+  let url: URL;
+  try {
+    url = new URL(decoded, "https://oyon.invalid");
+  } catch {
+    return undefined;
+  }
+  if (url.protocol !== "https:" || url.username || url.password) return undefined;
+  if (url.hostname !== "oyon.invalid") return undefined;
+  const path = url.pathname;
+  if (!path.startsWith("/") || path.startsWith("//")) return undefined;
+  if (
+    BLOCKED_INTERNAL_PREFIXES.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    )
+  ) {
+    return undefined;
+  }
+  const allowed =
+    (PUBLIC_INTERNAL_PATHS as readonly string[]).includes(path) ||
+    PUBLIC_INTERNAL_PREFIXES.some((prefix) => path.startsWith(prefix));
+  if (!allowed) return undefined;
+  return `${path}${url.search}${url.hash}`;
+}
+
+export function sanitizeExternalUrl(value: unknown): string | undefined {
+  const raw = cleanText(value);
+  if (!raw || raw.length > 500) return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  if (url.protocol !== "https:") return undefined;
+  if (url.username || url.password) return undefined;
+  if (isBlockedHostname(url.hostname)) return undefined;
+  return url.toString();
+}
+
+export function pageHasVisibleButton(
+  sections: CustomPageSection[],
+  showHeroButton: boolean,
+): boolean {
+  return showHeroButton || hasSection(sections, "bookingCta");
+}
+
+export function resolveCtaHref(page: Pick<
+  CustomServicePage,
+  "ctaKind" | "bookingType" | "ctaHref"
+>): string | null {
+  const kind =
+    page.ctaKind || (page.bookingType ? "booking" : "book");
+  if (kind === "booking") {
+    const type = page.bookingType?.trim();
+    if (type && isBookingServiceKey(type)) {
+      return `/book?type=${encodeURIComponent(type)}`;
+    }
+    return "/book";
+  }
+  if (kind === "book") return "/book";
+  if (kind === "internal") return sanitizeInternalPath(page.ctaHref) || null;
+  if (kind === "external") return sanitizeExternalUrl(page.ctaHref) || null;
+  return "/book";
+}
+
+export function isExternalCta(
+  page: Pick<CustomServicePage, "ctaKind">,
+): boolean {
+  return page.ctaKind === "external";
 }
 
 export function emptyCustomPageCopy(): CustomPageCopy {
@@ -212,12 +343,16 @@ export type CustomPageLocaleIssue =
 export function customPageLocaleIssues(
   sections: CustomPageSection[],
   copy: CustomPageCopy | undefined,
+  showHeroButton = false,
 ): CustomPageLocaleIssue[] {
   if (!copy) return ["title", "description"];
   const issues: CustomPageLocaleIssue[] = [];
   if (!copy.title) issues.push("title");
   if (!copy.description) issues.push("description");
-  if (hasSection(sections, "bookingCta") && !copy.bookingButtonText) {
+  if (
+    pageHasVisibleButton(sections, showHeroButton) &&
+    !copy.bookingButtonText
+  ) {
     issues.push("bookingButtonText");
   }
   if (hasSection(sections, "featureGrid")) {
@@ -242,8 +377,9 @@ export function customPageLocaleIssues(
 export function isCustomPageLocaleComplete(
   sections: CustomPageSection[],
   copy: CustomPageCopy | undefined,
+  showHeroButton = false,
 ): boolean {
-  return customPageLocaleIssues(sections, copy).length === 0;
+  return customPageLocaleIssues(sections, copy, showHeroButton).length === 0;
 }
 
 export function copyForCustomPageEditor(
@@ -295,13 +431,14 @@ function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPag
 function sparseLocales(
   saved: unknown,
   sections: CustomPageSection[],
+  showHeroButton: boolean,
 ): CustomServicePage["locales"] {
   const raw = asRecord(saved);
   const locales: CustomServicePage["locales"] = {};
   for (const locale of ["ar", "he", "en"] as const) {
     if (!(locale in raw)) continue;
     const copy = sparseCustomPageCopy(raw[locale]);
-    copy.complete = isCustomPageLocaleComplete(sections, copy);
+    copy.complete = isCustomPageLocaleComplete(sections, copy, showHeroButton);
     locales[locale] = copy;
   }
   return locales;
@@ -316,6 +453,18 @@ export function normalizeCustomServicePage(saved: unknown): CustomServicePage | 
   if (!id || !slug) return null;
   const sections = sparseSections(raw.sections, template);
   const bookingRaw = cleanText(raw.bookingType);
+  const bookingType =
+    bookingRaw && isBookingServiceKey(bookingRaw) ? bookingRaw : null;
+  const showHeroButton = Boolean(raw.showHeroButton);
+  const parsedKind = parseCtaKind(raw.ctaKind);
+  const ctaKind: CustomPageCtaKind =
+    parsedKind || (bookingType ? "booking" : "book");
+  const ctaHref =
+    ctaKind === "external"
+      ? sanitizeExternalUrl(raw.ctaHref)
+      : ctaKind === "internal"
+        ? sanitizeInternalPath(raw.ctaHref)
+        : undefined;
   return {
     id,
     slug,
@@ -325,11 +474,14 @@ export function normalizeCustomServicePage(saved: unknown): CustomServicePage | 
     showOnHome: Boolean(raw.showOnHome),
     homeSort: Number.isFinite(Number(raw.homeSort)) ? Number(raw.homeSort) : 0,
     homeImage: cleanText(raw.homeImage) || undefined,
-    bookingType: bookingRaw && isBookingServiceKey(bookingRaw) ? bookingRaw : null,
+    showHeroButton,
+    ctaKind,
+    bookingType,
+    ctaHref,
     sections,
     heroMedia: sparseMedia(raw.heroMedia),
     gallery: sparseGallery(raw.gallery),
-    locales: sparseLocales(raw.locales, sections),
+    locales: sparseLocales(raw.locales, sections, showHeroButton),
     createdAt: cleanText(raw.createdAt) || new Date().toISOString(),
     updatedAt: cleanText(raw.updatedAt) || new Date().toISOString(),
     revision: Number.isFinite(Number(raw.revision)) ? Number(raw.revision) : 1,
@@ -418,9 +570,13 @@ export function homepageCustomCards(
 }
 
 export function bookingHrefForPage(page: CustomServicePage): string {
-  const type = page.bookingType?.trim();
-  if (type && isBookingServiceKey(type)) return `/book?type=${encodeURIComponent(type)}`;
-  return "/book";
+  return resolveCtaHref(page) || "/book";
+}
+
+function assertSafeCta(page: CustomServicePage): void {
+  if (!pageHasVisibleButton(page.sections, page.showHeroButton)) return;
+  if (resolveCtaHref(page)) return;
+  throw new CustomPageError("CUSTOM_PAGE_INVALID_CTA");
 }
 
 function requireRevision(page: CustomServicePage, expected: unknown): void {
@@ -446,11 +602,37 @@ function applyUpdate(
   const sections = op.sections
     ? sparseSections(op.sections, page.template)
     : page.sections;
+  const showHeroButton =
+    op.showHeroButton != null ? Boolean(op.showHeroButton) : page.showHeroButton;
+  const bookingType =
+    op.bookingType === null
+      ? null
+      : op.bookingType != null
+        ? cleanText(op.bookingType) && isBookingServiceKey(op.bookingType)
+          ? op.bookingType
+          : page.bookingType
+        : page.bookingType;
+  let ctaKind: CustomPageCtaKind = page.ctaKind || "book";
+  if (op.ctaKind != null) {
+    ctaKind = parseCtaKind(op.ctaKind) || ctaKind;
+  } else if (op.bookingType != null && bookingType) {
+    ctaKind = "booking";
+  } else if (op.bookingType === null && ctaKind === "booking") {
+    ctaKind = "book";
+  }
+  const ctaHrefRaw =
+    op.ctaHref === null ? undefined : op.ctaHref != null ? op.ctaHref : page.ctaHref;
+  const ctaHref =
+    ctaKind === "external"
+      ? sanitizeExternalUrl(ctaHrefRaw)
+      : ctaKind === "internal"
+        ? sanitizeInternalPath(ctaHrefRaw)
+        : undefined;
   if (op.status === "published") {
     const locales = { ...page.locales };
     if (op.locale && op.copy) {
       const copy = sparseCustomPageCopy(op.copy);
-      copy.complete = isCustomPageLocaleComplete(sections, copy);
+      copy.complete = isCustomPageLocaleComplete(sections, copy, showHeroButton);
       locales[op.locale] = copy;
     }
     const anyComplete = Object.values(locales).some((copy) => copy?.complete);
@@ -469,14 +651,10 @@ function applyUpdate(
         : op.homeImage != null
           ? cleanText(op.homeImage) || undefined
           : page.homeImage,
-    bookingType:
-      op.bookingType === null
-        ? null
-        : op.bookingType != null
-          ? cleanText(op.bookingType) && isBookingServiceKey(op.bookingType)
-            ? op.bookingType
-            : page.bookingType
-          : page.bookingType,
+    showHeroButton,
+    ctaKind,
+    bookingType,
+    ctaHref,
     sections,
     heroMedia:
       op.heroMedia === null
@@ -491,16 +669,24 @@ function applyUpdate(
   };
   if (op.locale && op.copy) {
     const copy = sparseCustomPageCopy(op.copy);
-    copy.complete = isCustomPageLocaleComplete(next.sections, copy);
+    copy.complete = isCustomPageLocaleComplete(
+      next.sections,
+      copy,
+      next.showHeroButton,
+    );
     next.locales = { ...next.locales, [op.locale]: copy };
-  } else if (op.sections) {
+  } else if (op.sections || op.showHeroButton != null) {
     const locales: CustomServicePage["locales"] = {};
     for (const locale of ["ar", "he", "en"] as const) {
       const copy = next.locales[locale];
       if (!copy) continue;
       locales[locale] = {
         ...copy,
-        complete: isCustomPageLocaleComplete(next.sections, copy),
+        complete: isCustomPageLocaleComplete(
+          next.sections,
+          copy,
+          next.showHeroButton,
+        ),
       };
     }
     next.locales = locales;
@@ -508,6 +694,16 @@ function applyUpdate(
   if (next.status === "published") {
     const anyComplete = Object.values(next.locales).some((copy) => copy?.complete);
     if (!anyComplete) throw new CustomPageError("CUSTOM_PAGE_PUBLISH_INCOMPLETE");
+  }
+  assertSafeCta(next);
+  if (
+    pageHasVisibleButton(next.sections, next.showHeroButton) &&
+    (ctaKind === "internal" || ctaKind === "external") &&
+    op.ctaHref != null &&
+    op.ctaHref !== "" &&
+    !next.ctaHref
+  ) {
+    throw new CustomPageError("CUSTOM_PAGE_INVALID_CTA");
   }
   return next;
 }
@@ -541,6 +737,8 @@ export function persistCustomPages(
       template,
       showOnHome: false,
       homeSort: current.length,
+      showHeroButton: true,
+      ctaKind: "book",
       bookingType: null,
       sections: defaultCustomSections(template),
       gallery: [],

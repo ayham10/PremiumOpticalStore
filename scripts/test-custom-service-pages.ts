@@ -9,7 +9,10 @@ import {
   persistCustomPages,
   publicCustomPages,
   RESERVED_SERVICE_SLUGS,
+  resolveCtaHref,
   resolvePublishedCustomPage,
+  sanitizeExternalUrl,
+  sanitizeInternalPath,
   CustomPageConflictError,
   CustomPageError,
 } from "../lib/custom-service-pages";
@@ -66,6 +69,12 @@ assert.equal(created.length, 1);
 assert.equal(created[0]?.slug, "kids-exam");
 assert.equal(created[0]?.status, "draft");
 assert.equal(created[0]?.template, "eye-exam");
+assert.equal(created[0]?.showHeroButton, true);
+assert.equal(created[0]?.ctaKind, "book");
+assert.deepEqual(
+  created[0]?.sections.map((section) => section.type),
+  ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"],
+);
 assert.equal(created[0]?.locales.ar, undefined);
 assert.equal(
   isCustomPageLocaleComplete(created[0]!.sections, placeholders),
@@ -220,6 +229,28 @@ assert.equal(publicCustomPages(unpublished).length, 0);
 assert.equal(resolvePublishedCustomPage(unpublished, "kids-exam", "ar"), undefined);
 assert.equal(homepageCustomCards(unpublished, "ar").length, 0);
 
+assert.equal(created[0]?.showHeroButton, true);
+assert.equal(
+  isCustomPageLocaleComplete(
+    created[0]!.sections,
+    { ...completeCopy(), bookingButtonText: "" },
+    true,
+  ),
+  false,
+);
+
+assert.equal(sanitizeInternalPath("/about"), "/about");
+assert.equal(sanitizeInternalPath("/admin"), undefined);
+assert.equal(sanitizeInternalPath("/api/settings"), undefined);
+assert.equal(sanitizeInternalPath("//evil.example"), undefined);
+assert.equal(sanitizeInternalPath("javascript:alert(1)"), undefined);
+assert.equal(sanitizeInternalPath("/services/../admin"), undefined);
+assert.equal(sanitizeExternalUrl("https://example.com/care"), "https://example.com/care");
+assert.equal(sanitizeExternalUrl("javascript:alert(1)"), undefined);
+assert.equal(sanitizeExternalUrl("http://example.com"), undefined);
+assert.equal(sanitizeExternalUrl("https://localhost/x"), undefined);
+assert.equal(sanitizeExternalUrl("https://127.0.0.1/x"), undefined);
+
 assert.equal(bookingHrefForPage(live), "/book");
 const withBooking = persistCustomPages(unpublished, {
   customPageOp: {
@@ -249,6 +280,79 @@ const clearedBooking = persistCustomPages(invalidBooking, {
 });
 assert.equal(clearedBooking[0]?.bookingType, null);
 
+const hiddenButton = persistCustomPages(clearedBooking, {
+  customPageOp: {
+    op: "update",
+    id: live.id,
+    expectedRevision: clearedBooking[0]!.revision,
+    showHeroButton: false,
+    sections: created[0]!.sections.filter((section) => section.type !== "bookingCta"),
+    locale: "ar",
+    copy: completeCopy({ bookingButtonText: "" }),
+  },
+});
+assert.equal(hiddenButton[0]?.showHeroButton, false);
+assert.equal(hiddenButton[0]?.locales.ar?.complete, true);
+assert.equal(hiddenButton[0]?.locales.ar?.bookingButtonText, "");
+
+const externalOk = persistCustomPages(hiddenButton, {
+  customPageOp: {
+    op: "update",
+    id: live.id,
+    expectedRevision: hiddenButton[0]!.revision,
+    showHeroButton: true,
+    ctaKind: "external",
+    ctaHref: "https://www.oyonoptics.com/care",
+    locale: "ar",
+    copy: completeCopy({ bookingButtonText: "المزيد" }),
+  },
+});
+assert.equal(externalOk[0]?.ctaKind, "external");
+assert.equal(resolveCtaHref(externalOk[0]!), "https://www.oyonoptics.com/care");
+
+assert.throws(
+  () =>
+    persistCustomPages(externalOk, {
+      customPageOp: {
+        op: "update",
+        id: live.id,
+        expectedRevision: externalOk[0]!.revision,
+        showHeroButton: true,
+        ctaKind: "external",
+        ctaHref: "javascript:alert(1)",
+      },
+    }),
+  (error: unknown) =>
+    error instanceof CustomPageError && error.code === "CUSTOM_PAGE_INVALID_CTA",
+);
+
+const internalOk = persistCustomPages(externalOk, {
+  customPageOp: {
+    op: "update",
+    id: live.id,
+    expectedRevision: externalOk[0]!.revision,
+    ctaKind: "internal",
+    ctaHref: "/about",
+  },
+});
+assert.equal(resolveCtaHref(internalOk[0]!), "/about");
+
+assert.throws(
+  () =>
+    persistCustomPages(internalOk, {
+      customPageOp: {
+        op: "update",
+        id: live.id,
+        expectedRevision: internalOk[0]!.revision,
+        showHeroButton: true,
+        ctaKind: "internal",
+        ctaHref: "/admin",
+      },
+    }),
+  (error: unknown) =>
+    error instanceof CustomPageError && error.code === "CUSTOM_PAGE_INVALID_CTA",
+);
+
 const lenses = persistCustomPages([], {
   customPageOp: {
     op: "create",
@@ -259,15 +363,35 @@ const lenses = persistCustomPages([], {
 });
 assert.deepEqual(
   lenses[0]?.sections.map((section) => section.type),
-  ["heroMedia", "featureGrid", "notice", "bookingCta"],
+  ["heroMedia", "featureGrid", "notice"],
 );
+assert.equal(lenses[0]?.showHeroButton, true);
 const lensesCopy = completeCopy();
-assert.equal(isCustomPageLocaleComplete(lenses[0]!.sections, lensesCopy), true);
+assert.equal(
+  isCustomPageLocaleComplete(lenses[0]!.sections, lensesCopy, true),
+  true,
+);
+assert.equal(
+  isCustomPageLocaleComplete(
+    lenses[0]!.sections,
+    { ...lensesCopy, bookingButtonText: "" },
+    true,
+  ),
+  false,
+);
+assert.equal(
+  isCustomPageLocaleComplete(
+    lenses[0]!.sections,
+    { ...lensesCopy, bookingButtonText: "" },
+    false,
+  ),
+  true,
+);
 assert.equal(
   isCustomPageLocaleComplete(lenses[0]!.sections, {
     ...lensesCopy,
     warningText: "",
-  }),
+  }, true),
   false,
 );
 
@@ -336,6 +460,8 @@ const publicDoc = publicServicePages({
       template: "eye-exam",
       showOnHome: true,
       homeSort: 9,
+      showHeroButton: false,
+      ctaKind: "book",
       sections: created[0]!.sections,
       locales: { ar: completeCopy({ title: "سري" }) },
       createdAt: "2026-01-01T00:00:00.000Z",
