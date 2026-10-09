@@ -8,9 +8,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Contact, Eye, Files, Home, MapPin, Plus, RotateCcw, Save, Search } from "lucide-react";
+import { Contact, Eye, Files, Home, MapPin, Plus, RotateCcw, Search } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
+import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
+import ContentEditorWorkspace from "@/components/admin/content-editor/ContentEditorWorkspace";
+import EditorSection from "@/components/admin/content-editor/EditorSection";
 import CustomPageBuilder, {
   CreateCustomPageModal,
 } from "@/components/admin/CustomPageBuilder";
@@ -29,6 +32,13 @@ import {
   type ServiceFeatureIconId,
 } from "@/lib/service-page-icons";
 import { listCustomPagesForEditor } from "@/lib/custom-service-pages";
+import {
+  buildEditorPreviewDocument,
+  snapshotForDirty,
+  viewHrefForEditor,
+  type ContentPreviewPayload,
+} from "@/lib/content-editor-preview";
+import type { CustomPageProductCard } from "@/components/services/CustomPageProductsCarousel";
 import {
   SERVICE_CONTENT_LOCALES,
   cloneLocaleBundle,
@@ -79,6 +89,11 @@ export default function AdminServicePagesPage() {
   const [pageQuery, setPageQuery] = useState("");
   const [myPagesOpen, setMyPagesOpen] = useState(true);
   const myPagesRef = useRef<HTMLDivElement | null>(null);
+  const [customDraft, setCustomDraft] = useState<{
+    page: CustomServicePage;
+    products: CustomPageProductCard[];
+    dirty: boolean;
+  } | null>(null);
 
   const applyLocale = useCallback(
     (
@@ -246,14 +261,38 @@ export default function AdminServicePagesPage() {
   const customPages = document?.customPages || [];
   const selectedCustom = customPages.find((item) => item.id === customPageId);
   const listedCustom = listCustomPagesForEditor(customPages, pageQuery);
+  const savedBundle = hydrateServicePagesForEditor(
+    document,
+    editLocale,
+    defaultServicePagesForLocale(editLocale),
+  );
+  const builtInDirty = snapshotForDirty(pages) !== snapshotForDirty(savedBundle);
+  const previewDocument = buildEditorPreviewDocument(
+    document,
+    editLocale,
+    pages,
+    customDraft?.page ?? selectedCustom,
+  );
+  const previewKind = selectedCustom
+    ? "custom"
+    : tab;
+  const previewPayload: ContentPreviewPayload = {
+    locale: editLocale,
+    kind: previewKind,
+    document: previewDocument,
+    customPage: customDraft?.page ?? selectedCustom,
+    products: customDraft?.products,
+  };
 
   function selectBuiltIn(next: Tab) {
     setCustomPageId(null);
+    setCustomDraft(null);
     setTab(next);
   }
 
   function selectCustom(page: CustomServicePage) {
     setCustomPageId(page.id);
+    setCustomDraft(null);
     setMessage("");
     setError("");
   }
@@ -267,7 +306,7 @@ export default function AdminServicePagesPage() {
 
   return (
     <div
-      className="admin-service-pages space-y-5"
+      className="admin-service-pages admin-service-pages--visual space-y-5"
       dir={rtl ? "rtl" : "ltr"}
     >
       <AdminPageHeader
@@ -399,289 +438,282 @@ export default function AdminServicePagesPage() {
 
       {loading ? (
         <p className="admin-muted">{t("admin.servicePages.loading")}</p>
-      ) : selectedCustom ? (
-        <CustomPageBuilder
-          key={selectedCustom.id}
-          page={selectedCustom}
-          editLocale={editLocale}
+      ) : (
+        <ContentEditorWorkspace
           t={t}
-          onDocument={(next) => {
-            setDocument(next);
-            invalidatePublicCache("settings:");
-            notifySaved();
-          }}
-          onDeleted={() => {
-            setCustomPageId(null);
-            setPageQuery("");
-            notifySaved();
-          }}
+          payload={previewPayload}
+          editor={
+            selectedCustom ? (
+              <CustomPageBuilder
+                key={selectedCustom.id}
+                page={selectedCustom}
+                editLocale={editLocale}
+                t={t}
+                onDraftChange={setCustomDraft}
+                onDocument={(next) => {
+                  setDocument(next);
+                  invalidatePublicCache("settings:");
+                  notifySaved();
+                }}
+                onDeleted={() => {
+                  setCustomPageId(null);
+                  setCustomDraft(null);
+                  setPageQuery("");
+                  notifySaved();
+                }}
+              />
+            ) : (
+              <ContentFieldLocaleContext.Provider
+                value={{ dir: editorDir, lang: editLocale }}
+              >
+                <div className="admin-service-editor space-y-4" dir={editorDir}>
+                  <ContentEditorToolbar
+                    t={t}
+                    saving={saving}
+                    dirty={builtInDirty}
+                    viewHref={viewHrefForEditor(tab)}
+                    onSave={() => void save()}
+                    extra={
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={restoreCurrent}
+                        disabled={loading || saving}
+                      >
+                        <RotateCcw size={15} />
+                        {t("admin.servicePages.restore")}
+                      </button>
+                    }
+                  />
+                  {tab === "homepage" ? (
+                    <>
+                      <EditorSection title={t("admin.servicePages.groupText")}>
+                        <Field
+                          label={t("admin.servicePages.mainTitle")}
+                          value={home.hero.title}
+                          onChange={(value) => updateHomepageHero("title", value)}
+                        />
+                        <Field
+                          label={t("admin.servicePages.subtitle")}
+                          value={home.hero.subtitle || ""}
+                          onChange={(value) => updateHomepageHero("subtitle", value)}
+                        />
+                        <h2>{t("admin.servicePages.serviceLabels")}</h2>
+                        {home.hero.serviceLabels.map((label, index) => (
+                          <Field
+                            key={`home-label-${index}`}
+                            label={t("admin.servicePages.serviceLabelN", { n: index + 1 })}
+                            value={label}
+                            onChange={(value) => {
+                              const next = [...home.hero.serviceLabels];
+                              next[index] = value;
+                              updateHomepageHero("serviceLabels", next);
+                            }}
+                          />
+                        ))}
+                      </EditorSection>
+                      <EditorSection title={t("admin.servicePages.groupButtons")}>
+                        <Field
+                          label={t("admin.servicePages.bookingButton")}
+                          value={home.hero.bookingButtonText}
+                          onChange={(value) =>
+                            updateHomepageHero("bookingButtonText", value)
+                          }
+                        />
+                        <Field
+                          label={t("admin.servicePages.shopButton")}
+                          value={home.hero.shopButtonText}
+                          onChange={(value) => updateHomepageHero("shopButtonText", value)}
+                        />
+                      </EditorSection>
+                    </>
+                  ) : tab === "eyeExam" ? (
+                    <>
+                      <EditorSection title={t("admin.servicePages.groupHeroMedia")}>
+                        <Field
+                          label={t("admin.servicePages.eyebrow")}
+                          value={eye.eyebrow}
+                          onChange={(value) => updateEyeExam("eyebrow", value)}
+                        />
+                        <Field
+                          label={t("admin.servicePages.mainTitle")}
+                          value={eye.title}
+                          onChange={(value) => updateEyeExam("title", value)}
+                        />
+                        <Field
+                          label={t("admin.servicePages.body")}
+                          value={eye.description}
+                          onChange={(value) => updateEyeExam("description", value)}
+                          multiline
+                        />
+                      </EditorSection>
+                      <EditorSection title={t("admin.servicePages.groupButtons")}>
+                        <Field
+                          label={t("admin.servicePages.bookingButton")}
+                          value={eye.bookingButtonText}
+                          onChange={(value) => updateEyeExam("bookingButtonText", value)}
+                        />
+                      </EditorSection>
+                      <EditorSection title={t("admin.servicePages.groupText")} defaultOpen={false}>
+                        <h2>{t("admin.servicePages.features")}</h2>
+                        {eye.features.map((feature, index) => (
+                          <div key={`ee-f-${index}`} className="admin-service-feature">
+                            <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+                            <FeatureIconPicker
+                              label={t("admin.servicePages.featureIcon")}
+                              value={feature.icon}
+                              fallback={EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"}
+                              onChange={(icon) => {
+                                const next = [...eye.features];
+                                next[index] = { ...next[index], icon };
+                                updateEyeExam("features", next);
+                              }}
+                            />
+                            <Field
+                              label={t("admin.servicePages.featureTitle")}
+                              value={feature.title}
+                              onChange={(value) => {
+                                const next = [...eye.features];
+                                next[index] = { ...next[index], title: value };
+                                updateEyeExam("features", next);
+                              }}
+                            />
+                            <Field
+                              label={t("admin.servicePages.featureDescription")}
+                              value={feature.description}
+                              onChange={(value) => {
+                                const next = [...eye.features];
+                                next[index] = { ...next[index], description: value };
+                                updateEyeExam("features", next);
+                              }}
+                            />
+                          </div>
+                        ))}
+                        <h2>{t("admin.servicePages.benefits")}</h2>
+                        <Field
+                          label={t("admin.servicePages.benefitsTitle")}
+                          value={eye.benefitsTitle}
+                          onChange={(value) => updateEyeExam("benefitsTitle", value)}
+                        />
+                        {eye.benefits.map((item, index) => (
+                          <Field
+                            key={`ee-b-${index}`}
+                            label={t("admin.servicePages.benefitN", { n: index + 1 })}
+                            value={item}
+                            onChange={(value) => {
+                              const next = [...eye.benefits];
+                              next[index] = value;
+                              updateEyeExam("benefits", next);
+                            }}
+                            multiline
+                          />
+                        ))}
+                      </EditorSection>
+                    </>
+                  ) : tab === "contactLenses" ? (
+                    <>
+                      <EditorSection title={t("admin.servicePages.groupHeroMedia")}>
+                        <Field
+                          label={t("admin.servicePages.eyebrow")}
+                          value={lenses.eyebrow}
+                          onChange={(value) => updateLenses("eyebrow", value)}
+                        />
+                        <Field
+                          label={t("admin.servicePages.mainTitle")}
+                          value={lenses.title}
+                          onChange={(value) => updateLenses("title", value)}
+                        />
+                        <Field
+                          label={t("admin.servicePages.body")}
+                          value={lenses.description}
+                          onChange={(value) => updateLenses("description", value)}
+                          multiline
+                        />
+                      </EditorSection>
+                      <EditorSection title={t("admin.servicePages.groupButtons")}>
+                        <Field
+                          label={t("admin.servicePages.bookingButton")}
+                          value={lenses.bookingButtonText}
+                          onChange={(value) => updateLenses("bookingButtonText", value)}
+                        />
+                      </EditorSection>
+                      <EditorSection title={t("admin.servicePages.groupText")} defaultOpen={false}>
+                        <h2>{t("admin.servicePages.features")}</h2>
+                        {lenses.features.map((feature, index) => (
+                          <div key={`cl-f-${index}`} className="admin-service-feature">
+                            <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+                            <FeatureIconPicker
+                              label={t("admin.servicePages.featureIcon")}
+                              value={feature.icon}
+                              fallback={
+                                CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
+                              }
+                              onChange={(icon) => {
+                                const next = [...lenses.features];
+                                next[index] = { ...next[index], icon };
+                                updateLenses("features", next);
+                              }}
+                            />
+                            <Field
+                              label={t("admin.servicePages.featureTitle")}
+                              value={feature.title}
+                              onChange={(value) => {
+                                const next = [...lenses.features];
+                                next[index] = { ...next[index], title: value };
+                                updateLenses("features", next);
+                              }}
+                            />
+                            <Field
+                              label={t("admin.servicePages.featureDescription")}
+                              value={feature.description}
+                              onChange={(value) => {
+                                const next = [...lenses.features];
+                                next[index] = { ...next[index], description: value };
+                                updateLenses("features", next);
+                              }}
+                              multiline
+                            />
+                          </div>
+                        ))}
+                        <h2>{t("admin.servicePages.warning")}</h2>
+                        <Field
+                          label={t("admin.servicePages.warningText")}
+                          value={lenses.warningText}
+                          onChange={(value) => updateLenses("warningText", value)}
+                          multiline
+                        />
+                      </EditorSection>
+                    </>
+                  ) : (
+                    <EditorSection title={t("admin.servicePages.groupText")}>
+                      <Field
+                        label={t("admin.servicePages.tagline")}
+                        value={footer.tagline}
+                        onChange={(value) => updateFooter("tagline", value)}
+                        multiline
+                      />
+                      <Field
+                        label={t("admin.servicePages.hoursLabel")}
+                        value={footer.hoursLabel}
+                        onChange={(value) => updateFooter("hoursLabel", value)}
+                      />
+                      <Field
+                        label={t("admin.servicePages.locationLabel")}
+                        value={footer.locationLabel}
+                        onChange={(value) => updateFooter("locationLabel", value)}
+                      />
+                      <Field
+                        label={t("admin.servicePages.address")}
+                        value={footer.address}
+                        onChange={(value) => updateFooter("address", value)}
+                      />
+                    </EditorSection>
+                  )}
+                </div>
+              </ContentFieldLocaleContext.Provider>
+            )
+          }
         />
-      ) : (
-      <ContentFieldLocaleContext.Provider
-        value={{ dir: editorDir, lang: editLocale }}
-      >
-      {tab === "homepage" ? (
-        <div className="admin-service-editor space-y-4" dir={editorDir}>
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.hero")}</h2>
-            <Field
-              label={t("admin.servicePages.mainTitle")}
-              value={home.hero.title}
-              onChange={(value) => updateHomepageHero("title", value)}
-            />
-            <Field
-              label={t("admin.servicePages.subtitle")}
-              value={home.hero.subtitle || ""}
-              onChange={(value) => updateHomepageHero("subtitle", value)}
-            />
-          </section>
-
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.serviceLabels")}</h2>
-            {home.hero.serviceLabels.map((label, index) => (
-              <Field
-                key={`home-label-${index}`}
-                label={t("admin.servicePages.serviceLabelN", { n: index + 1 })}
-                value={label}
-                onChange={(value) => {
-                  const next = [...home.hero.serviceLabels];
-                  next[index] = value;
-                  updateHomepageHero("serviceLabels", next);
-                }}
-              />
-            ))}
-          </section>
-
-          <section className="admin-card admin-service-card">
-            <Field
-              label={t("admin.servicePages.bookingButton")}
-              value={home.hero.bookingButtonText}
-              onChange={(value) =>
-                updateHomepageHero("bookingButtonText", value)
-              }
-            />
-            <Field
-              label={t("admin.servicePages.shopButton")}
-              value={home.hero.shopButtonText}
-              onChange={(value) => updateHomepageHero("shopButtonText", value)}
-            />
-          </section>
-        </div>
-      ) : tab === "eyeExam" ? (
-        <div className="admin-service-editor space-y-4" dir={editorDir}>
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.hero")}</h2>
-            <Field
-              label={t("admin.servicePages.eyebrow")}
-              value={eye.eyebrow}
-              onChange={(value) => updateEyeExam("eyebrow", value)}
-            />
-            <Field
-              label={t("admin.servicePages.mainTitle")}
-              value={eye.title}
-              onChange={(value) => updateEyeExam("title", value)}
-            />
-            <Field
-              label={t("admin.servicePages.body")}
-              value={eye.description}
-              onChange={(value) => updateEyeExam("description", value)}
-              multiline
-            />
-            <Field
-              label={t("admin.servicePages.bookingButton")}
-              value={eye.bookingButtonText}
-              onChange={(value) => updateEyeExam("bookingButtonText", value)}
-            />
-          </section>
-
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.features")}</h2>
-            {eye.features.map((feature, index) => (
-              <div key={`ee-f-${index}`} className="admin-service-feature">
-                <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
-                <FeatureIconPicker
-                  label={t("admin.servicePages.featureIcon")}
-                  value={feature.icon}
-                  fallback={EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"}
-                  onChange={(icon) => {
-                    const next = [...eye.features];
-                    next[index] = { ...next[index], icon };
-                    updateEyeExam("features", next);
-                  }}
-                />
-                <Field
-                  label={t("admin.servicePages.featureTitle")}
-                  value={feature.title}
-                  onChange={(value) => {
-                    const next = [...eye.features];
-                    next[index] = { ...next[index], title: value };
-                    updateEyeExam("features", next);
-                  }}
-                />
-                <Field
-                  label={t("admin.servicePages.featureDescription")}
-                  value={feature.description}
-                  onChange={(value) => {
-                    const next = [...eye.features];
-                    next[index] = { ...next[index], description: value };
-                    updateEyeExam("features", next);
-                  }}
-                />
-              </div>
-            ))}
-          </section>
-
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.benefits")}</h2>
-            <Field
-              label={t("admin.servicePages.benefitsTitle")}
-              value={eye.benefitsTitle}
-              onChange={(value) => updateEyeExam("benefitsTitle", value)}
-            />
-            {eye.benefits.map((item, index) => (
-              <Field
-                key={`ee-b-${index}`}
-                label={t("admin.servicePages.benefitN", { n: index + 1 })}
-                value={item}
-                onChange={(value) => {
-                  const next = [...eye.benefits];
-                  next[index] = value;
-                  updateEyeExam("benefits", next);
-                }}
-                multiline
-              />
-            ))}
-          </section>
-        </div>
-      ) : tab === "contactLenses" ? (
-        <div className="admin-service-editor space-y-4" dir={editorDir}>
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.hero")}</h2>
-            <Field
-              label={t("admin.servicePages.eyebrow")}
-              value={lenses.eyebrow}
-              onChange={(value) => updateLenses("eyebrow", value)}
-            />
-            <Field
-              label={t("admin.servicePages.mainTitle")}
-              value={lenses.title}
-              onChange={(value) => updateLenses("title", value)}
-            />
-            <Field
-              label={t("admin.servicePages.body")}
-              value={lenses.description}
-              onChange={(value) => updateLenses("description", value)}
-              multiline
-            />
-            <Field
-              label={t("admin.servicePages.bookingButton")}
-              value={lenses.bookingButtonText}
-              onChange={(value) => updateLenses("bookingButtonText", value)}
-            />
-          </section>
-
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.features")}</h2>
-            {lenses.features.map((feature, index) => (
-              <div key={`cl-f-${index}`} className="admin-service-feature">
-                <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
-                <FeatureIconPicker
-                  label={t("admin.servicePages.featureIcon")}
-                  value={feature.icon}
-                  fallback={
-                    CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
-                  }
-                  onChange={(icon) => {
-                    const next = [...lenses.features];
-                    next[index] = { ...next[index], icon };
-                    updateLenses("features", next);
-                  }}
-                />
-                <Field
-                  label={t("admin.servicePages.featureTitle")}
-                  value={feature.title}
-                  onChange={(value) => {
-                    const next = [...lenses.features];
-                    next[index] = { ...next[index], title: value };
-                    updateLenses("features", next);
-                  }}
-                />
-                <Field
-                  label={t("admin.servicePages.featureDescription")}
-                  value={feature.description}
-                  onChange={(value) => {
-                    const next = [...lenses.features];
-                    next[index] = { ...next[index], description: value };
-                    updateLenses("features", next);
-                  }}
-                  multiline
-                />
-              </div>
-            ))}
-          </section>
-
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.warning")}</h2>
-            <Field
-              label={t("admin.servicePages.warningText")}
-              value={lenses.warningText}
-              onChange={(value) => updateLenses("warningText", value)}
-              multiline
-            />
-          </section>
-        </div>
-      ) : (
-        <div className="admin-service-editor space-y-4" dir={editorDir}>
-          <section className="admin-card admin-service-card">
-            <h2>{t("admin.servicePages.tabFooter")}</h2>
-            <Field
-              label={t("admin.servicePages.tagline")}
-              value={footer.tagline}
-              onChange={(value) => updateFooter("tagline", value)}
-              multiline
-            />
-            <Field
-              label={t("admin.servicePages.hoursLabel")}
-              value={footer.hoursLabel}
-              onChange={(value) => updateFooter("hoursLabel", value)}
-            />
-            <Field
-              label={t("admin.servicePages.locationLabel")}
-              value={footer.locationLabel}
-              onChange={(value) => updateFooter("locationLabel", value)}
-            />
-            <Field
-              label={t("admin.servicePages.address")}
-              value={footer.address}
-              onChange={(value) => updateFooter("address", value)}
-            />
-          </section>
-        </div>
-      )}
-      </ContentFieldLocaleContext.Provider>
-      )}
-
-      {selectedCustom ? null : (
-      <div className="admin-service-actions">
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={restoreCurrent}
-          disabled={loading || saving}
-        >
-          <RotateCcw size={16} />
-          {t("admin.servicePages.restore")}
-        </button>
-        <button
-          type="button"
-          className="btn btn-accent"
-          onClick={() => void save()}
-          disabled={loading || saving}
-        >
-          <Save size={16} />
-          {saving ? t("admin.servicePages.saving") : t("admin.servicePages.save")}
-        </button>
-      </div>
       )}
 
       <CreateCustomPageModal

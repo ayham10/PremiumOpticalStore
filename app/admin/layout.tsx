@@ -18,20 +18,30 @@ export default function AdminLayout({
   const router = useRouter();
   const { t } = useLocale();
   const isLogin = pathname === "/admin/login";
+  const isContentPreview = pathname.startsWith("/admin/service-pages/preview");
   const [session, setSession] = useState<AdminSession | null>(null);
-  const [ready, setReady] = useState(isLogin);
+  const [ready, setReady] = useState(isLogin || isContentPreview);
 
   useEffect(() => {
+    if (isContentPreview) {
+      document.documentElement.classList.remove("admin-dark");
+      document.body.classList.remove("admin-dark");
+      return;
+    }
     document.documentElement.classList.add("admin-dark");
     document.body.classList.add("admin-dark");
     return () => {
       document.documentElement.classList.remove("admin-dark");
       document.body.classList.remove("admin-dark");
     };
-  }, []);
+  }, [isContentPreview]);
 
   useEffect(() => {
     if (isLogin) {
+      setReady(true);
+      return;
+    }
+    if (isContentPreview) {
       setReady(true);
       return;
     }
@@ -63,10 +73,14 @@ export default function AdminLayout({
     return () => {
       cancelled = true;
     };
-  }, [isLogin, pathname, router]);
+  }, [isLogin, isContentPreview, pathname, router]);
 
   if (isLogin) {
     return <div className="admin-auth">{children}</div>;
+  }
+
+  if (isContentPreview) {
+    return <div className="csp-preview-root">{children}</div>;
   }
 
   if (!ready || !session) {

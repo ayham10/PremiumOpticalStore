@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { homepageCustomCards } from "@/lib/custom-service-pages";
+import { useServicePages } from "@/lib/use-service-pages";
 import type { Locale } from "@/lib/i18n/config";
 import type { CustomServicePage, ServicePagesLocale } from "@/lib/types";
 
@@ -53,8 +54,9 @@ const TILES = [
 export default function NavigationHub() {
   const { t, locale } = useLocale();
   const { settings } = useBranding();
+  const servicePages = useServicePages();
   const extraCards = homepageCustomCards(
-    settings?.servicePages?.customPages,
+    servicePages?.customPages ?? settings?.servicePages?.customPages,
     locale,
   );
 
