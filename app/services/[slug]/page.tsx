@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import CustomServicePageView from "@/components/services/CustomServicePageView";
-import { customPagesFromSettings, resolvePublishedCustomPage } from "@/lib/custom-service-pages";
+import {
+  customPagesFromSettings,
+  resolveCustomPageProducts,
+  resolvePublishedCustomPage,
+} from "@/lib/custom-service-pages";
 import { getStore } from "@/lib/db/store";
 import { getLocale } from "@/lib/i18n/get-dictionary";
 
@@ -30,7 +34,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CustomServiceRoute({ params }: PageProps) {
   const { slug } = await params;
-  const resolved = await loadPublished(slug);
+  const locale = await getLocale();
+  const { data } = await getStore();
+  const pages = customPagesFromSettings(data.settings.servicePages);
+  const resolved = resolvePublishedCustomPage(pages, slug, locale);
   if (!resolved) notFound();
-  return <CustomServicePageView page={resolved.page} copy={resolved.copy} />;
+  const products = resolveCustomPageProducts(
+    data.products,
+    resolved.page.productIds,
+  );
+  return (
+    <CustomServicePageView
+      page={resolved.page}
+      copy={resolved.copy}
+      products={products}
+      currencySymbol={data.settings.currencySymbol}
+    />
+  );
 }

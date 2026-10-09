@@ -1,14 +1,16 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { newId, requireSession } from "@/lib/auth";
 import {
   generateFilename,
+  getPublicUrl,
   inferContentType,
   isAllowedUploadMime,
   supabaseServerConfig,
   uploadMedia,
 } from "@/lib/storage";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
-import { updateStore } from "@/lib/db/store";
+import { getStore, updateStore } from "@/lib/db/store";
 import type { MediaItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -53,15 +55,29 @@ export async function POST(request: Request) {
       file.name.replace(/\.[^.]+$/, "") ||
       "media";
 
-    const filename = generateFilename(slug, contentType);
     const folder = (
       typeof folderValue === "string" && folderValue.trim()
         ? folderValue.trim()
         : "general"
     ) as MediaItem["folder"];
+    const safeFolder = ["gallery", "hero", "products", "promotions", "general"].includes(
+      folder,
+    )
+      ? folder
+      : "general";
 
     const buffer = new Uint8Array(await file.arrayBuffer());
-    const path = `${folder}/${filename}`;
+    const digest = createHash("sha256").update(buffer).digest("hex");
+    const filename = generateFilename(slug, contentType, digest);
+    const path = `${safeFolder}/${filename}`;
+    const publicUrl = getPublicUrl(path);
+
+    const { data: existingStore } = await getStore();
+    const existing = existingStore.media.find((item) => item.url === publicUrl);
+    if (existing) {
+      return NextResponse.json({ url: existing.url, media: existing }, { status: 200 });
+    }
+
     const url = await uploadMedia(buffer, path, contentType);
 
     let media: MediaItem | null = null;
@@ -74,15 +90,16 @@ export async function POST(request: Request) {
         alt:
           (typeof altValue === "string" && altValue.trim()) ||
           slug.replace(/-/g, " "),
-        folder: ["gallery", "hero", "products", "promotions", "general"].includes(
-          folder
-        )
-          ? folder
-          : "general",
+        folder: safeFolder,
         createdAt: new Date().toISOString(),
       };
 
       await updateStore((store) => {
+        const dup = store.media.find((item) => item.url === url);
+        if (dup) {
+          media = dup;
+          return store;
+        }
         store.media.unshift(media!);
         pushActivity(store, {
           actor: session.email,

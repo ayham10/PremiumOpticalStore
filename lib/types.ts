@@ -507,6 +507,7 @@ export const CUSTOM_SECTION_TYPES = [
   "valuesStrip",
   "bookingCta",
   "gallery",
+  "products",
 ] as const;
 
 export const CUSTOM_CTA_KINDS = [
@@ -573,6 +574,8 @@ export interface CustomServicePage {
   sections: CustomPageSection[];
   heroMedia?: CustomPageMediaRef;
   gallery?: CustomPageMediaRef[];
+  /** Catalog product ids shown on this page. Removing an id does not delete the product. */
+  productIds?: string[];
   locales: Partial<Record<ServicePagesLocale, CustomPageCopy>>;
   createdAt: string;
   updatedAt: string;
@@ -603,6 +606,7 @@ export type CustomPageOp =
       sections?: CustomPageSection[];
       heroMedia?: CustomPageMediaRef | null;
       gallery?: CustomPageMediaRef[];
+      productIds?: string[];
       locale?: ServicePagesLocale;
       copy?: CustomPageCopy;
     }

@@ -22,6 +22,7 @@ export default function AdminMediaPicker({
   title,
   accept = "any",
   emptyLabel,
+  stacked,
   onClose,
   onPick,
 }: {
@@ -29,6 +30,7 @@ export default function AdminMediaPicker({
   title: string;
   accept?: Accept;
   emptyLabel: string;
+  stacked?: boolean;
   onClose: () => void;
   onPick: (media: CustomPageMediaRef) => void;
 }) {
@@ -62,7 +64,14 @@ export default function AdminMediaPicker({
   }, [items, accept]);
 
   return (
-    <AdminModal open={open} title={title} onClose={onClose} wide icon={<ImageIcon size={18} />}>
+    <AdminModal
+      open={open}
+      title={title}
+      onClose={onClose}
+      wide
+      stacked={stacked}
+      icon={<ImageIcon size={18} />}
+    >
       {error ? (
         <p className="mb-3 rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}

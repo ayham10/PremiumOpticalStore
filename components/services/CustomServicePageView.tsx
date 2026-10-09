@@ -14,6 +14,9 @@ import {
   EYE_EXAM_DEFAULT_FEATURE_ICONS,
   resolveServiceFeatureIcon,
 } from "@/lib/service-page-icons";
+import CustomPageProductsCarousel, {
+  type CustomPageProductCard,
+} from "@/components/services/CustomPageProductsCarousel";
 import type {
   CustomPageCopy,
   CustomPageMediaRef,
@@ -140,11 +143,17 @@ function BodySection({
   page,
   copy,
   isCl,
+  products,
+  currencySymbol,
+  dir,
 }: {
   section: CustomPageSection;
   page: CustomServicePage;
   copy: CustomPageCopy;
   isCl: boolean;
+  products: CustomPageProductCard[];
+  currencySymbol?: string;
+  dir?: "ltr" | "rtl";
 }) {
   if (section.type === "featureGrid") {
     const features = copy.features.filter(
@@ -268,6 +277,16 @@ function BodySection({
     );
   }
 
+  if (section.type === "products") {
+    return (
+      <CustomPageProductsCarousel
+        products={products}
+        currencySymbol={currencySymbol}
+        dir={dir}
+      />
+    );
+  }
+
   return null;
 }
 
@@ -275,10 +294,14 @@ export default function CustomServicePageView({
   page,
   copy,
   dir,
+  products = [],
+  currencySymbol,
 }: {
   page: CustomServicePage;
   copy: CustomPageCopy;
   dir?: "ltr" | "rtl";
+  products?: CustomPageProductCard[];
+  currencySymbol?: string;
 }) {
   const { rtl } = useLocale();
   const isCl = page.template === "contact-lenses";
@@ -348,8 +371,18 @@ export default function CustomServicePageView({
             page={page}
             copy={copy}
             isCl={isCl}
+            products={products}
+            currencySymbol={currencySymbol}
+            dir={pageDir}
           />
         ))}
+        {products.length && !page.sections.some((section) => section.type === "products") ? (
+          <CustomPageProductsCarousel
+            products={products}
+            currencySymbol={currencySymbol}
+            dir={pageDir}
+          />
+        ) : null}
       </div>
     </div>
   );
