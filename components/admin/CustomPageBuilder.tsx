@@ -7,18 +7,23 @@ import {
   Eye,
   Package,
   Plus,
-  Save,
   Trash2,
 } from "lucide-react";
 import AdminMediaField from "@/components/admin/AdminMediaField";
+import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
+import EditorSection from "@/components/admin/content-editor/EditorSection";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminProductCreateModal from "@/components/admin/AdminProductCreateModal";
 import AdminProductPicker from "@/components/admin/AdminProductPicker";
-import CustomServicePageView from "@/components/services/CustomServicePageView";
 import type { CustomPageProductCard } from "@/components/services/CustomPageProductsCarousel";
 import { ApiError, apiFetch } from "@/lib/admin-api";
 import { formatPrice } from "@/lib/format";
 import { isRtl, type Locale } from "@/lib/i18n/config";
+import {
+  customPageEditorSnapshot,
+  snapshotForDirty,
+  viewHrefForEditor,
+} from "@/lib/content-editor-preview";
 import {
   CUSTOM_SECTION_TYPES,
   attachProductIds,
@@ -269,12 +274,18 @@ export default function CustomPageBuilder({
   t,
   onDocument,
   onDeleted,
+  onDraftChange,
 }: {
   page: CustomServicePage;
   editLocale: ServicePagesLocale;
   t: Translate;
   onDocument: (settings: StoreSettings["servicePages"]) => void;
   onDeleted: () => void;
+  onDraftChange?: (draft: {
+    page: CustomServicePage;
+    products: CustomPageProductCard[];
+    dirty: boolean;
+  }) => void;
 }) {
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
   const [name, setName] = useState(page.name);
@@ -308,7 +319,6 @@ export default function CustomPageBuilder({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const skipRevisionReset = useRef(false);
 
   function hydrateFrom(next: CustomServicePage) {
@@ -567,12 +577,113 @@ export default function CustomPageBuilder({
     },
   };
 
+  const attachedProducts = resolveCustomPageProducts(catalog, productIds, {
+    includeDrafts: true,
+  });
+  const dirty =
+    customPageEditorSnapshot({
+      name,
+      slug,
+      status,
+      showOnHome,
+      homeSort,
+      homeImage,
+      showHeroButton,
+      ctaKind,
+      ctaHref,
+      bookingType,
+      sections,
+      heroMedia,
+      gallery,
+      productIds,
+      copy,
+    }) !==
+    customPageEditorSnapshot({
+      name: page.name,
+      slug: page.slug,
+      status: page.status,
+      showOnHome: page.showOnHome,
+      homeSort: page.homeSort,
+      homeImage: page.homeImage,
+      showHeroButton: page.showHeroButton,
+      ctaKind: page.ctaKind,
+      ctaHref: page.ctaHref,
+      bookingType: page.bookingType,
+      sections: page.sections,
+      heroMedia: page.heroMedia,
+      gallery: page.gallery,
+      productIds: page.productIds,
+      copy: copyForCustomPageEditor(page, editLocale),
+    });
+
+  const draftKey = snapshotForDirty({
+    page: previewPage,
+    products: attachedProducts.map((item) => ({
+      id: item.id,
+      name: item.name,
+      image: item.images?.[0] || "",
+      price: item.sellingPrice,
+    })),
+    dirty,
+  });
+  useEffect(() => {
+    onDraftChange?.({
+      page: previewPage,
+      products: attachedProducts,
+      dirty,
+    });
+    // draftKey captures the unsaved editor snapshot; avoid identity loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
   const missingTypes = CUSTOM_SECTION_TYPES.filter(
     (type) => !sections.some((section) => section.type === type),
   );
 
   return (
     <div className="admin-service-editor space-y-4" dir={editorDir}>
+      <ContentEditorToolbar
+        t={t}
+        saving={saving}
+        dirty={dirty}
+        status={status}
+        localeComplete={localeComplete}
+        viewHref={viewHrefForEditor("custom", slug)}
+        onSave={() => void submit()}
+        extra={
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void removePage()}
+              disabled={saving}
+            >
+              <Trash2 size={15} />
+              {t("admin.servicePages.deletePage")}
+            </button>
+            {status === "published" ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => void submit("draft")}
+                disabled={saving}
+              >
+                {t("admin.servicePages.unpublish")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => void submit("published")}
+                disabled={saving}
+              >
+                <Eye size={15} />
+                {t("admin.servicePages.publish")}
+              </button>
+            )}
+          </>
+        }
+      />
       {message ? (
         <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
           {message}
@@ -584,26 +695,14 @@ export default function CustomPageBuilder({
         </p>
       ) : null}
 
-      <section className="admin-card admin-service-card">
-        <div className="csp-status-row">
-          <h2>{name || page.name}</h2>
-          <span className={status === "published" ? "csp-pill is-live" : "csp-pill"}>
-            {status === "published"
-              ? t("admin.servicePages.published")
-              : t("admin.servicePages.draft")}
-          </span>
-          <span className={localeComplete ? "csp-pill is-live" : "csp-pill is-warn"}>
-            {localeComplete
-              ? t("admin.servicePages.localeComplete")
-              : t("admin.servicePages.localeIncomplete")}
-          </span>
-        </div>
+      <EditorSection icon="page" title={t("admin.servicePages.groupPageDetails")}>
         <p className="admin-muted">{t("admin.servicePages.localeHiddenHint")}</p>
         <BuilderField
           label={t("admin.servicePages.pageName")}
           value={name}
           onChange={setName}
-          dir="ltr"
+          dir={editorDir}
+          lang={editLocale}
         />
         <label className="admin-service-field">
           <span className="label">{t("admin.servicePages.pageSlug")}</span>
@@ -625,10 +724,9 @@ export default function CustomPageBuilder({
         {savedComplete ? null : (
           <p className="admin-muted">{t("admin.servicePages.unsavedLocale")}</p>
         )}
-      </section>
+      </EditorSection>
 
-      <section className="admin-card admin-service-card">
-        <h2>{t("admin.servicePages.sections")}</h2>
+      <EditorSection icon="sections" title={t("admin.servicePages.groupSections")} defaultOpen={false}>
         <div className="csp-section-list">
           {sections.map((section, index) => (
             <div key={section.id} className="csp-section-row">
@@ -676,11 +774,10 @@ export default function CustomPageBuilder({
             ))}
           </div>
         ) : null}
-      </section>
+      </EditorSection>
 
       {sections.some((section) => section.type === "heroMedia") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.heroMedia")}</h2>
+        <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
           <AdminMediaField
             value={heroMedia}
             onChange={setHeroMedia}
@@ -697,11 +794,10 @@ export default function CustomPageBuilder({
               {t("admin.servicePages.clearMedia")}
             </button>
           ) : null}
-        </section>
+        </EditorSection>
       ) : null}
 
-      <section className="admin-card admin-service-card">
-        <h2>{t("admin.servicePages.hero")}</h2>
+      <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
         <BuilderField
           label={t("admin.servicePages.eyebrow")}
           value={copy.eyebrow}
@@ -724,6 +820,131 @@ export default function CustomPageBuilder({
           lang={editLocale}
           multiline
         />
+        {sections.some((section) => section.type === "featureGrid") ? (
+          <>
+            <h2>{t("admin.servicePages.features")}</h2>
+            {copy.features.map((feature, index) => (
+              <div key={`csp-f-${index}`} className="admin-service-feature">
+                <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
+                <BuilderIconPicker
+                  label={t("admin.servicePages.featureIcon")}
+                  value={feature.icon}
+                  fallback={
+                    page.template === "contact-lenses"
+                      ? CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
+                      : EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"
+                  }
+                  onChange={(icon) => {
+                    const next = [...copy.features];
+                    next[index] = { ...next[index], icon };
+                    updateCopy("features", next);
+                  }}
+                />
+                <BuilderField
+                  label={t("admin.servicePages.featureTitle")}
+                  value={feature.title}
+                  onChange={(value) => {
+                    const next = [...copy.features];
+                    next[index] = { ...next[index], title: value };
+                    updateCopy("features", next);
+                  }}
+                  dir={editorDir}
+                  lang={editLocale}
+                />
+                <BuilderField
+                  label={t("admin.servicePages.featureDescription")}
+                  value={feature.description}
+                  onChange={(value) => {
+                    const next = [...copy.features];
+                    next[index] = { ...next[index], description: value };
+                    updateCopy("features", next);
+                  }}
+                  dir={editorDir}
+                  lang={editLocale}
+                  multiline
+                />
+              </div>
+            ))}
+          </>
+        ) : null}
+        {sections.some((section) => section.type === "benefitsList") ? (
+          <>
+            <h2>{t("admin.servicePages.benefits")}</h2>
+            <BuilderField
+              label={t("admin.servicePages.benefitsTitle")}
+              value={copy.benefitsTitle}
+              onChange={(value) => updateCopy("benefitsTitle", value)}
+              dir={editorDir}
+              lang={editLocale}
+            />
+            {copy.benefits.map((item, index) => (
+              <BuilderField
+                key={`csp-b-${index}`}
+                label={t("admin.servicePages.benefitN", { n: index + 1 })}
+                value={item}
+                onChange={(value) => {
+                  const next = [...copy.benefits];
+                  next[index] = value;
+                  updateCopy("benefits", next);
+                }}
+                dir={editorDir}
+                lang={editLocale}
+                multiline
+              />
+            ))}
+          </>
+        ) : null}
+        {sections.some((section) => section.type === "notice") ? (
+          <>
+            <h2>{t("admin.servicePages.warning")}</h2>
+            <BuilderField
+              label={t("admin.servicePages.warningTitle")}
+              value={copy.warningTitle}
+              onChange={(value) => updateCopy("warningTitle", value)}
+              dir={editorDir}
+              lang={editLocale}
+            />
+            <BuilderField
+              label={t("admin.servicePages.warningText")}
+              value={copy.warningText}
+              onChange={(value) => updateCopy("warningText", value)}
+              dir={editorDir}
+              lang={editLocale}
+              multiline
+            />
+          </>
+        ) : null}
+        {sections.some((section) => section.type === "valuesStrip") ? (
+          <>
+            <h2>{t("admin.servicePages.sectionValues")}</h2>
+            <BuilderField
+              label={t("admin.servicePages.valuesTitle")}
+              value={copy.valuesTitle}
+              onChange={(value) => updateCopy("valuesTitle", value)}
+              dir={editorDir}
+              lang={editLocale}
+            />
+            <BuilderField
+              label={t("admin.servicePages.valuesText")}
+              value={copy.valuesText}
+              onChange={(value) => updateCopy("valuesText", value)}
+              dir={editorDir}
+              lang={editLocale}
+              multiline
+            />
+            <BuilderField
+              label={t("admin.servicePages.privacyText")}
+              value={copy.privacyText}
+              onChange={(value) => updateCopy("privacyText", value)}
+              dir={editorDir}
+              lang={editLocale}
+              multiline
+            />
+          </>
+        ) : null}
+      </EditorSection>
+
+      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
         <div className="admin-service-field">
           <span className="label">{t("admin.servicePages.heroButton")}</span>
           <div
@@ -747,221 +968,92 @@ export default function CustomPageBuilder({
             </button>
           </div>
         </div>
-      </section>
-
-      {buttonVisible ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.pageButton")}</h2>
-          <p className="admin-muted">{t("admin.servicePages.pageButtonHint")}</p>
-          <BuilderField
-            label={t("admin.servicePages.bookingButton")}
-            value={copy.bookingButtonText}
-            onChange={(value) => updateCopy("bookingButtonText", value)}
-            dir={editorDir}
-            lang={editLocale}
-          />
-          <label className="admin-service-field">
-            <span className="label">{t("admin.servicePages.ctaKind")}</span>
-            <select
-              className="input"
-              value={ctaKind}
-              onChange={(event) =>
-                setCtaKind(parseCtaKind(event.target.value) || "book")
-              }
-            >
-              <option value="booking">{t("admin.servicePages.ctaKindBooking")}</option>
-              <option value="book">{t("admin.servicePages.ctaKindBook")}</option>
-              <option value="internal">{t("admin.servicePages.ctaKindInternal")}</option>
-              <option value="external">{t("admin.servicePages.ctaKindExternal")}</option>
-            </select>
-          </label>
-          {ctaKind === "booking" ? (
-            <label className="admin-service-field">
-              <span className="label">{t("admin.servicePages.bookingType")}</span>
-              <select
-                className="input"
-                value={bookingType}
-                onChange={(event) => setBookingType(event.target.value)}
-              >
-                <option value="">{t("admin.servicePages.bookingTypeNone")}</option>
-                {bookingOptions.map((service) => (
-                  <option key={service.key} value={service.key}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {ctaKind === "internal" ? (
-            <label className="admin-service-field">
-              <span className="label">{t("admin.servicePages.ctaInternal")}</span>
-              <select
-                className="input"
-                value={ctaHref}
-                onChange={(event) => setCtaHref(event.target.value)}
-              >
-                <option value="">{t("admin.servicePages.ctaInternalChoose")}</option>
-                {PUBLIC_INTERNAL_PATHS.map((path) => (
-                  <option key={path} value={path}>
-                    {t(INTERNAL_PATH_I18N[path] || path)} ({path})
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {ctaKind === "external" ? (
+        {buttonVisible ? (
+          <>
+            <h2>{t("admin.servicePages.pageButton")}</h2>
+            <p className="admin-muted">{t("admin.servicePages.pageButtonHint")}</p>
             <BuilderField
-              label={t("admin.servicePages.ctaExternal")}
-              value={ctaHref}
-              onChange={setCtaHref}
-              dir="ltr"
-            />
-          ) : null}
-          {ctaKind === "internal" && ctaHref && !sanitizeInternalPath(ctaHref) ? (
-            <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
-          ) : null}
-          {ctaKind === "external" && ctaHref && !sanitizeExternalUrl(ctaHref) ? (
-            <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {sections.some((section) => section.type === "featureGrid") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.features")}</h2>
-          {copy.features.map((feature, index) => (
-            <div key={`csp-f-${index}`} className="admin-service-feature">
-              <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
-              <BuilderIconPicker
-                label={t("admin.servicePages.featureIcon")}
-                value={feature.icon}
-                fallback={
-                  page.template === "contact-lenses"
-                    ? CONTACT_LENSES_DEFAULT_FEATURE_ICONS[index] ?? "shield-check"
-                    : EYE_EXAM_DEFAULT_FEATURE_ICONS[index] ?? "eye"
-                }
-                onChange={(icon) => {
-                  const next = [...copy.features];
-                  next[index] = { ...next[index], icon };
-                  updateCopy("features", next);
-                }}
-              />
-              <BuilderField
-                label={t("admin.servicePages.featureTitle")}
-                value={feature.title}
-                onChange={(value) => {
-                  const next = [...copy.features];
-                  next[index] = { ...next[index], title: value };
-                  updateCopy("features", next);
-                }}
-                dir={editorDir}
-                lang={editLocale}
-              />
-              <BuilderField
-                label={t("admin.servicePages.featureDescription")}
-                value={feature.description}
-                onChange={(value) => {
-                  const next = [...copy.features];
-                  next[index] = { ...next[index], description: value };
-                  updateCopy("features", next);
-                }}
-                dir={editorDir}
-                lang={editLocale}
-                multiline
-              />
-            </div>
-          ))}
-        </section>
-      ) : null}
-
-      {sections.some((section) => section.type === "benefitsList") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.benefits")}</h2>
-          <BuilderField
-            label={t("admin.servicePages.benefitsTitle")}
-            value={copy.benefitsTitle}
-            onChange={(value) => updateCopy("benefitsTitle", value)}
-            dir={editorDir}
-            lang={editLocale}
-          />
-          {copy.benefits.map((item, index) => (
-            <BuilderField
-              key={`csp-b-${index}`}
-              label={t("admin.servicePages.benefitN", { n: index + 1 })}
-              value={item}
-              onChange={(value) => {
-                const next = [...copy.benefits];
-                next[index] = value;
-                updateCopy("benefits", next);
-              }}
+              label={t("admin.servicePages.bookingButton")}
+              value={copy.bookingButtonText}
+              onChange={(value) => updateCopy("bookingButtonText", value)}
               dir={editorDir}
               lang={editLocale}
-              multiline
             />
-          ))}
-        </section>
-      ) : null}
-
-      {sections.some((section) => section.type === "notice") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.warning")}</h2>
-          <BuilderField
-            label={t("admin.servicePages.warningTitle")}
-            value={copy.warningTitle}
-            onChange={(value) => updateCopy("warningTitle", value)}
-            dir={editorDir}
-            lang={editLocale}
-          />
-          <BuilderField
-            label={t("admin.servicePages.warningText")}
-            value={copy.warningText}
-            onChange={(value) => updateCopy("warningText", value)}
-            dir={editorDir}
-            lang={editLocale}
-            multiline
-          />
-        </section>
-      ) : null}
-
-      {sections.some((section) => section.type === "valuesStrip") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.sectionValues")}</h2>
-          <BuilderField
-            label={t("admin.servicePages.valuesTitle")}
-            value={copy.valuesTitle}
-            onChange={(value) => updateCopy("valuesTitle", value)}
-            dir={editorDir}
-            lang={editLocale}
-          />
-          <BuilderField
-            label={t("admin.servicePages.valuesText")}
-            value={copy.valuesText}
-            onChange={(value) => updateCopy("valuesText", value)}
-            dir={editorDir}
-            lang={editLocale}
-            multiline
-          />
-          <BuilderField
-            label={t("admin.servicePages.privacyText")}
-            value={copy.privacyText}
-            onChange={(value) => updateCopy("privacyText", value)}
-            dir={editorDir}
-            lang={editLocale}
-            multiline
-          />
-        </section>
-      ) : null}
-
-      {sections.some((section) => section.type === "bookingCta") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.sectionBooking")}</h2>
-          <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
-        </section>
-      ) : null}
+            <label className="admin-service-field">
+              <span className="label">{t("admin.servicePages.ctaKind")}</span>
+              <select
+                className="input"
+                value={ctaKind}
+                onChange={(event) =>
+                  setCtaKind(parseCtaKind(event.target.value) || "book")
+                }
+              >
+                <option value="booking">{t("admin.servicePages.ctaKindBooking")}</option>
+                <option value="book">{t("admin.servicePages.ctaKindBook")}</option>
+                <option value="internal">{t("admin.servicePages.ctaKindInternal")}</option>
+                <option value="external">{t("admin.servicePages.ctaKindExternal")}</option>
+              </select>
+            </label>
+            {ctaKind === "booking" ? (
+              <label className="admin-service-field">
+                <span className="label">{t("admin.servicePages.bookingType")}</span>
+                <select
+                  className="input"
+                  value={bookingType}
+                  onChange={(event) => setBookingType(event.target.value)}
+                >
+                  <option value="">{t("admin.servicePages.bookingTypeNone")}</option>
+                  {bookingOptions.map((service) => (
+                    <option key={service.key} value={service.key}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {ctaKind === "internal" ? (
+              <label className="admin-service-field">
+                <span className="label">{t("admin.servicePages.ctaInternal")}</span>
+                <select
+                  className="input"
+                  value={ctaHref}
+                  onChange={(event) => setCtaHref(event.target.value)}
+                >
+                  <option value="">{t("admin.servicePages.ctaInternalChoose")}</option>
+                  {PUBLIC_INTERNAL_PATHS.map((path) => (
+                    <option key={path} value={path}>
+                      {t(INTERNAL_PATH_I18N[path] || path)} ({path})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {ctaKind === "external" ? (
+              <BuilderField
+                label={t("admin.servicePages.ctaExternal")}
+                value={ctaHref}
+                onChange={setCtaHref}
+                dir="ltr"
+              />
+            ) : null}
+            {ctaKind === "internal" && ctaHref && !sanitizeInternalPath(ctaHref) ? (
+              <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+            ) : null}
+            {ctaKind === "external" && ctaHref && !sanitizeExternalUrl(ctaHref) ? (
+              <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+            ) : null}
+          </>
+        ) : null}
+        {sections.some((section) => section.type === "bookingCta") ? (
+          <>
+            <h2>{t("admin.servicePages.sectionBooking")}</h2>
+            <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
+          </>
+        ) : null}
+      </EditorSection>
 
       {sections.some((section) => section.type === "gallery") ? (
-        <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.sectionGallery")}</h2>
+        <EditorSection icon="gallery" title={t("admin.servicePages.groupGallery")} defaultOpen={false}>
           <div className="csp-gallery-admin">
             {gallery.map((item, index) => (
               <div key={`${item.url}-${index}`} className="csp-gallery-admin-item">
@@ -995,69 +1087,65 @@ export default function CustomPageBuilder({
               }
             />
           ) : null}
-        </section>
+        </EditorSection>
       ) : null}
 
-      <section className="admin-card admin-service-card">
-          <h2>{t("admin.servicePages.sectionProducts")}</h2>
-          <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
-          <div className="csp-inline-actions">
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setProductPickerOpen(true)}
-              disabled={productIds.length >= MAX_PAGE_PRODUCTS}
-            >
-              <Package size={16} />
-              {t("admin.servicePages.chooseExistingProduct")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setProductCreateOpen(true)}
-              disabled={productIds.length >= MAX_PAGE_PRODUCTS}
-            >
-              <Plus size={16} />
-              {t("admin.servicePages.addNewProduct")}
-            </button>
-          </div>
-          {productIds.length >= MAX_PAGE_PRODUCTS ? (
-            <p className="admin-muted">{t("admin.servicePages.productLimit")}</p>
-          ) : null}
-          <div className="csp-attached-products">
-            {resolveCustomPageProducts(catalog, productIds, { includeDrafts: true }).map(
-              (product) => (
-                <div key={product.id} className="csp-attached-product">
-                  <span className="csp-product-pick-thumb">
-                    {product.images?.[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={product.images[0]} alt="" />
-                    ) : (
-                      <Package size={16} />
-                    )}
-                  </span>
-                  <span className="csp-product-pick-copy">
-                    <strong>{product.name}</strong>
-                    <small>
-                      {product.category} · {formatPrice(product.sellingPrice)}
-                    </small>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => removeProductFromPage(product.id)}
-                  >
-                    {t("admin.servicePages.removeFromPage")}
-                  </button>
-                </div>
-              ),
-            )}
-          </div>
-          <p className="admin-muted">{t("admin.servicePages.removeFromPageHint")}</p>
-        </section>
+      <EditorSection icon="products" title={t("admin.servicePages.groupProducts")}>
+        <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
+        <div className="csp-inline-actions">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setProductPickerOpen(true)}
+            disabled={productIds.length >= MAX_PAGE_PRODUCTS}
+          >
+            <Package size={16} />
+            {t("admin.servicePages.chooseExistingProduct")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setProductCreateOpen(true)}
+            disabled={productIds.length >= MAX_PAGE_PRODUCTS}
+          >
+            <Plus size={16} />
+            {t("admin.servicePages.addNewProduct")}
+          </button>
+        </div>
+        {productIds.length >= MAX_PAGE_PRODUCTS ? (
+          <p className="admin-muted">{t("admin.servicePages.productLimit")}</p>
+        ) : null}
+        <div className="csp-attached-products">
+          {attachedProducts.map((product) => (
+            <div key={product.id} className="csp-attached-product">
+              <span className="csp-product-pick-thumb">
+                {product.images?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={product.images[0]} alt="" />
+                ) : (
+                  <Package size={16} />
+                )}
+              </span>
+              <span className="csp-product-pick-copy">
+                <strong>{product.name}</strong>
+                <small>
+                  {product.category} · {formatPrice(product.sellingPrice)}
+                </small>
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => removeProductFromPage(product.id)}
+              >
+                {t("admin.servicePages.removeFromPage")}
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="admin-muted">{t("admin.servicePages.removeFromPageHint")}</p>
+      </EditorSection>
 
-      <section className="admin-card admin-service-card">
-        <h2>{t("admin.servicePages.homeCard")}</h2>
+      <EditorSection icon="settings" title={t("admin.servicePages.groupSettings")} defaultOpen={false}>
         <label className="csp-check">
           <input
             type="checkbox"
@@ -1104,84 +1192,7 @@ export default function CustomPageBuilder({
             {t("admin.servicePages.clearMedia")}
           </button>
         ) : null}
-      </section>
-
-      <section className="admin-card admin-service-card">
-        <div className="csp-status-row">
-          <h2>{t("admin.servicePages.preview")}</h2>
-          <div className="admin-service-langs">
-            <button
-              type="button"
-              className={previewMode === "desktop" ? "is-active" : ""}
-              onClick={() => setPreviewMode("desktop")}
-            >
-              {t("admin.servicePages.previewDesktop")}
-            </button>
-            <button
-              type="button"
-              className={previewMode === "mobile" ? "is-active" : ""}
-              onClick={() => setPreviewMode("mobile")}
-            >
-              {t("admin.servicePages.previewMobile")}
-            </button>
-          </div>
-        </div>
-        <div
-          className={
-            previewMode === "mobile" ? "csp-preview is-mobile" : "csp-preview"
-          }
-        >
-          <CustomServicePageView
-            page={previewPage}
-            copy={previewPage.locales[editLocale]!}
-            dir={editorDir}
-            products={resolveCustomPageProducts(catalog, productIds, {
-              includeDrafts: true,
-            })}
-          />
-        </div>
-      </section>
-
-      <div className="admin-service-actions csp-builder-actions">
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={() => void removePage()}
-          disabled={saving}
-        >
-          <Trash2 size={16} />
-          {t("admin.servicePages.deletePage")}
-        </button>
-        {status === "published" ? (
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => void submit("draft")}
-            disabled={saving}
-          >
-            {t("admin.servicePages.unpublish")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => void submit("published")}
-            disabled={saving}
-          >
-            <Eye size={16} />
-            {t("admin.servicePages.publish")}
-          </button>
-        )}
-        <button
-          type="button"
-          className="btn btn-accent"
-          onClick={() => void submit()}
-          disabled={saving}
-        >
-          <Save size={16} />
-          {saving ? t("admin.servicePages.saving") : t("admin.servicePages.save")}
-        </button>
-      </div>
+      </EditorSection>
 
       <AdminProductPicker
         open={productPickerOpen}
@@ -1200,6 +1211,7 @@ export default function CustomPageBuilder({
     </div>
   );
 }
+
 
 function BuilderField({
   label,

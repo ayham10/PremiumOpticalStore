@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { resolveServicePagesForLocale } from "@/lib/service-pages";
@@ -9,22 +17,45 @@ import type {
   ServicePagesSettings,
 } from "@/lib/types";
 
+const ServicePagesPreviewContext = createContext<
+  ServicePagesSettings | undefined
+>(undefined);
+
+/** Admin visual editor: inject unsaved copy into public page components. */
+export function ServicePagesPreviewProvider({
+  value,
+  children,
+}: {
+  value?: ServicePagesSettings;
+  children: ReactNode;
+}) {
+  return createElement(
+    ServicePagesPreviewContext.Provider,
+    { value },
+    children,
+  );
+}
+
 /**
  * Live service-page copy from public settings.
  * Starts from BrandingProvider, then refreshes with a no-store fetch
  * so a normal page reload shows Admin saves without a redeploy.
+ * Preview context, when set, never hits the live API.
  */
 export function useServicePages(): ServicePagesSettings | undefined {
+  const preview = useContext(ServicePagesPreviewContext);
   const { settings } = useBranding();
   const [pages, setPages] = useState<ServicePagesSettings | undefined>(
-    settings?.servicePages,
+    preview ?? settings?.servicePages,
   );
 
   useEffect(() => {
+    if (preview) return;
     setPages(settings?.servicePages);
-  }, [settings?.servicePages]);
+  }, [preview, settings?.servicePages]);
 
   useEffect(() => {
+    if (preview) return;
     let cancelled = false;
     fetch("/api/settings", { cache: "no-store" })
       .then((res) => res.json())
@@ -35,9 +66,9 @@ export function useServicePages(): ServicePagesSettings | undefined {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [preview]);
 
-  return pages;
+  return preview ?? pages;
 }
 
 /** Locale-resolved copy. Falls back to dictionaries when a language was never saved. */
