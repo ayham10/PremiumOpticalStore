@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import {
   buildEditorPreviewDocument,
+  CONTENT_PREVIEW_CHROME,
   CONTENT_PREVIEW_PATH,
   CONTENT_PREVIEW_VIEWPORTS,
+  fitPreviewScale,
+  normalizeWheelDelta,
+  PREVIEW_DRAG_THRESHOLD_PX,
+  screenDeltaToPreviewScroll,
+  shouldStartPreviewDrag,
   customPageEditorSnapshot,
   editorPanelDir,
   isContentPreviewMessage,
@@ -158,5 +164,19 @@ assert.equal(EDITOR_SECTION_ICONS.settings.displayName, "Settings");
 assert.equal(EDITOR_SECTION_ICONS.page.displayName, "FileText");
 assert.equal(EDITOR_SECTION_ICONS.links.displayName, "Link");
 assert.equal(EDITOR_SECTION_ICONS.sections.displayName, "Layers");
+
+assert.equal(CONTENT_PREVIEW_CHROME.mobile.width > 0, true);
+assert.equal(CONTENT_PREVIEW_CHROME.desktop.height > 36, true);
+const phoneScale = fitPreviewScale(400, 400, 390, 844, 24, 36);
+assert.ok(phoneScale <= (400 - 24) / 390);
+assert.ok(phoneScale <= (400 - 36) / 844);
+assert.ok(phoneScale < 400 / 390);
+assert.ok(fitPreviewScale(400, 400, 1280, 900, 20, 46) <= (400 - 20) / 1280);
+assert.equal(fitPreviewScale(2000, 2000, 390, 844, 24, 36), 1);
+assert.equal(screenDeltaToPreviewScroll(30, 0.3), 100);
+assert.equal(normalizeWheelDelta({ deltaY: 2, deltaMode: 1 }), 32);
+assert.equal(normalizeWheelDelta({ deltaY: 40, deltaMode: 0 }), 40);
+assert.equal(shouldStartPreviewDrag(PREVIEW_DRAG_THRESHOLD_PX - 1), false);
+assert.equal(shouldStartPreviewDrag(PREVIEW_DRAG_THRESHOLD_PX), true);
 
 console.log("content-editor-preview tests passed");

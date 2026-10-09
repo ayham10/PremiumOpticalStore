@@ -129,3 +129,15 @@ export function installPreviewMediaGuard(): () => void {
     document.querySelectorAll("video").forEach((video) => video.pause());
   };
 }
+
+export function installPreviewDocumentGuard(): () => void {
+  if (typeof document === "undefined") return () => undefined;
+  const html = document.documentElement;
+  const body = document.body;
+  html.classList.add("csp-preview-doc");
+  body.classList.add("csp-preview-doc");
+  return () => {
+    html.classList.remove("csp-preview-doc");
+    body.classList.remove("csp-preview-doc");
+  };
+}

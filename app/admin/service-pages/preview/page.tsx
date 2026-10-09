@@ -9,6 +9,7 @@ import {
   type ContentPreviewPayload,
 } from "@/lib/content-editor-preview";
 import {
+  installPreviewDocumentGuard,
   installPreviewFetchGuard,
   installPreviewMediaGuard,
 } from "@/lib/preview-runtime";
@@ -21,6 +22,7 @@ export default function ContentEditorPreviewPage() {
     document.body.classList.remove("admin-dark");
     const stopWrites = installPreviewFetchGuard();
     const stopMedia = installPreviewMediaGuard();
+    const stopDoc = installPreviewDocumentGuard();
     window.parent?.postMessage(
       { type: CONTENT_PREVIEW_READY },
       window.location.origin,
@@ -45,6 +47,7 @@ export default function ContentEditorPreviewPage() {
       window.removeEventListener("message", onMessage);
       stopMedia();
       stopWrites();
+      stopDoc();
     };
   }, []);
 

@@ -21,6 +21,50 @@ export const CONTENT_PREVIEW_VIEWPORTS = {
   desktop: { width: 1280, height: 900, label: "desktop" },
 } as const;
 
+/** Unscaled device chrome (px) subtracted before fitting the viewport. */
+export const CONTENT_PREVIEW_CHROME = {
+  mobile: { width: 24, height: 36 },
+  desktop: { width: 20, height: 46 },
+} as const;
+
+export const PREVIEW_DRAG_THRESHOLD_PX = 6;
+
+export function fitPreviewScale(
+  availableWidth: number,
+  availableHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  chromeWidth = 0,
+  chromeHeight = 0,
+): number {
+  const innerWidth = Math.max(1, availableWidth - chromeWidth);
+  const innerHeight = Math.max(1, availableHeight - chromeHeight);
+  return Math.max(
+    0.08,
+    Math.min(1, innerWidth / viewportWidth, innerHeight / viewportHeight),
+  );
+}
+
+export function normalizeWheelDelta(event: {
+  deltaY: number;
+  deltaMode?: number;
+}): number {
+  if (event.deltaMode === 1) return event.deltaY * 16;
+  if (event.deltaMode === 2) return event.deltaY * 900;
+  return event.deltaY;
+}
+
+export function screenDeltaToPreviewScroll(
+  screenDelta: number,
+  scale: number,
+): number {
+  return screenDelta / Math.max(scale, 0.08);
+}
+
+export function shouldStartPreviewDrag(distance: number): boolean {
+  return distance >= PREVIEW_DRAG_THRESHOLD_PX;
+}
+
 export type ContentPreviewKind =
   | "homepage"
   | "eyeExam"

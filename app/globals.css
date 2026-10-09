@@ -16121,6 +16121,7 @@ select.admin-pe-input {
   position: sticky;
   top: 4.7rem;
   z-index: 2;
+  overflow: hidden;
 }
 
 .csp-live-previews {
@@ -16129,9 +16130,11 @@ select.admin-pe-input {
   gap: 0.55rem;
   height: calc(100vh - 6.4rem);
   min-height: 28rem;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
-.csp-scaled-preview {
+.csp-device {
   --csp-preview-scale: 0.28;
   --csp-preview-width: 390px;
   --csp-preview-height: 844px;
@@ -16139,21 +16142,23 @@ select.admin-pe-input {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
   border-radius: 14px;
   border: 1px solid rgba(212, 175, 106, 0.22);
   background: #080c0f;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
-.csp-scaled-preview.is-mobile {
-  flex: 0 0 46%;
+.csp-device.is-mobile {
+  flex: 1.12 1 0;
 }
 
-.csp-scaled-preview.is-desktop {
-  flex: 1 1 54%;
+.csp-device.is-desktop {
+  flex: 0.88 1 0;
 }
 
-.csp-scaled-preview figcaption {
+.csp-device figcaption {
   flex: 0 0 auto;
   padding: 0.32rem 0.7rem;
   color: #d4af6a;
@@ -16164,25 +16169,172 @@ select.admin-pe-input {
   border-bottom: 1px solid rgba(212, 175, 106, 0.14);
 }
 
-.csp-scaled-preview-scroll {
+.csp-device-stage {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  background: #05070a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.55rem 0.6rem;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(212, 175, 106, 0.06), transparent 55%),
+    #05070a;
 }
 
-.csp-scaled-preview-sizer {
+.csp-phone {
+  position: relative;
+  box-sizing: content-box;
+  padding: 12px 10px 14px;
+  border-radius: 30px;
+  border: 1.5px solid rgba(212, 175, 106, 0.52);
+  background: linear-gradient(180deg, #1b2129 0%, #0b0e12 100%);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.csp-phone-notch {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 26%;
+  height: 7px;
+  border-radius: 999px;
+  background: #05070a;
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 106, 0.18);
+  transform: translateX(-50%);
+}
+
+.csp-phone-home {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  display: block;
+  width: 28%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(212, 175, 106, 0.38);
+  transform: translateX(-50%);
+}
+
+.csp-phone-screen,
+.csp-browser-screen {
+  position: relative;
   width: calc(var(--csp-preview-width) * var(--csp-preview-scale));
   height: calc(var(--csp-preview-height) * var(--csp-preview-scale));
+  overflow: hidden;
+  background: #080c0f;
 }
 
-.csp-scaled-preview-frame {
+.csp-phone-screen {
+  border-radius: 18px;
+}
+
+.csp-browser {
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 175, 106, 0.4);
+  background: #12171d;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+}
+
+.csp-browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 36px;
+  padding: 0 0.65rem;
+  border-bottom: 1px solid rgba(212, 175, 106, 0.16);
+  background: linear-gradient(180deg, #1c222b, #14191f);
+}
+
+.csp-browser-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.csp-browser-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #6f7680;
+}
+
+.csp-browser-dots i:nth-child(1) {
+  background: #c97b6a;
+}
+
+.csp-browser-dots i:nth-child(2) {
+  background: #d4af6a;
+}
+
+.csp-browser-dots i:nth-child(3) {
+  background: #6aa37a;
+}
+
+.csp-browser-url {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 22px;
+  padding: 0 0.65rem;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 106, 0.18);
+  border-radius: 999px;
+  background: #0b0e12;
+  color: #9aa3ad;
+  direction: ltr;
+  font-size: 0.62rem;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.csp-device-scaler {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.csp-device-frame {
+  display: block;
   width: var(--csp-preview-width);
   height: var(--csp-preview-height);
   border: 0;
+  background: #080c0f;
+  pointer-events: none;
   transform: scale(var(--csp-preview-scale));
   transform-origin: top left;
-  background: #080c0f;
+}
+
+.csp-device-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.csp-device-glass.is-dragging {
+  cursor: grabbing;
+}
+
+html.csp-preview-doc,
+html.csp-preview-doc body {
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+html.csp-preview-doc {
+  overflow-y: auto;
+}
+
+html.csp-preview-doc::-webkit-scrollbar,
+html.csp-preview-doc body::-webkit-scrollbar {
+  display: none;
 }
 
 .csp-editor-toolbar {
@@ -16290,6 +16442,7 @@ select.admin-pe-input {
 .csp-preview-root,
 .csp-preview-canvas {
   min-height: 100vh;
+  overflow-x: hidden;
   background: #080c0f;
   color: #f3f1ea;
 }

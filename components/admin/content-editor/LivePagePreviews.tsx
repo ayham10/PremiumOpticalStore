@@ -1,17 +1,40 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
 import {
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+} from "react";
+import {
+  CONTENT_PREVIEW_CHROME,
   CONTENT_PREVIEW_MESSAGE,
   CONTENT_PREVIEW_PATH,
   CONTENT_PREVIEW_READY,
   CONTENT_PREVIEW_VIEWPORTS,
   CONTENT_PREVIEW_VISIBILITY,
+  fitPreviewScale,
+  normalizeWheelDelta,
+  screenDeltaToPreviewScroll,
+  shouldStartPreviewDrag,
   snapshotForDirty,
+  viewHrefForEditor,
   type ContentPreviewPayload,
 } from "@/lib/content-editor-preview";
 
-function ScaledFrame({
+function scrollPreviewWindow(
+  frame: HTMLIFrameElement | null,
+  screenDelta: number,
+  scale: number,
+) {
+  const win = frame?.contentWindow;
+  if (!win || !screenDelta) return;
+  win.scrollBy(0, screenDeltaToPreviewScroll(screenDelta, scale));
+}
+
+function DeviceFrame({
   mode,
   label,
   payload,
@@ -24,12 +47,26 @@ function ScaledFrame({
   load: boolean;
   visible: boolean;
 }) {
-  const shellRef = useRef<HTMLDivElement | null>(null);
+  const shellRef = useRef<HTMLElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const payloadRef = useRef(payload);
   payloadRef.current = payload;
   const lastSent = useRef("");
+  const scaleRef = useRef(0.28);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    lastY: number;
+    moved: boolean;
+  } | null>(null);
+  const [scale, setScale] = useState(0.28);
+  const [dragging, setDragging] = useState(false);
   const viewport = CONTENT_PREVIEW_VIEWPORTS[mode];
+  const chrome = CONTENT_PREVIEW_CHROME[mode];
+  const href = viewHrefForEditor(payload.kind, payload.customPage?.slug);
+  scaleRef.current = scale;
 
   function post(
     target?: Window | null,
@@ -82,45 +119,163 @@ function ScaledFrame({
   }, [visible]);
 
   useEffect(() => {
-    const shell = shellRef.current;
-    if (!shell) return;
+    const stage = stageRef.current;
+    if (!stage) return;
 
     function applyScale() {
-      const width = shell?.clientWidth || viewport.width;
-      const scale = Math.min(1, width / viewport.width);
-      shell?.style.setProperty("--csp-preview-scale", String(scale));
-      shell?.style.setProperty("--csp-preview-width", `${viewport.width}px`);
-      shell?.style.setProperty("--csp-preview-height", `${viewport.height}px`);
+      const next = fitPreviewScale(
+        stage?.clientWidth || viewport.width,
+        stage?.clientHeight || viewport.height,
+        viewport.width,
+        viewport.height,
+        chrome.width,
+        chrome.height,
+      );
+      scaleRef.current = next;
+      setScale(next);
     }
 
     applyScale();
     const observer = new ResizeObserver(applyScale);
-    observer.observe(shell);
+    observer.observe(stage);
     return () => observer.disconnect();
-  }, [viewport.height, viewport.width]);
+  }, [chrome.height, chrome.width, viewport.height, viewport.width]);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    function onWheel(event: WheelEvent) {
+      event.preventDefault();
+      event.stopPropagation();
+      scrollPreviewWindow(
+        frameRef.current,
+        normalizeWheelDelta(event),
+        scaleRef.current,
+      );
+    }
+
+    shell.addEventListener("wheel", onWheel, { passive: false });
+    return () => shell.removeEventListener("wheel", onWheel);
+  }, []);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const previous = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.userSelect = previous;
+    };
+  }, [dragging]);
+
+  function onPointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastY: event.clientY,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const distance = Math.hypot(
+      event.clientX - drag.startX,
+      event.clientY - drag.startY,
+    );
+    if (!drag.moved && shouldStartPreviewDrag(distance)) {
+      drag.moved = true;
+      setDragging(true);
+    }
+    if (!drag.moved) return;
+    event.preventDefault();
+    const delta = drag.lastY - event.clientY;
+    drag.lastY = event.clientY;
+    scrollPreviewWindow(frameRef.current, delta, scaleRef.current);
+  }
+
+  function endDrag(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+    setDragging(false);
+  }
+
+  const frame = (
+    <>
+      <div className="csp-device-scaler">
+        {load ? (
+          <iframe
+            ref={frameRef}
+            className="csp-device-frame"
+            title={label}
+            src={CONTENT_PREVIEW_PATH}
+            onLoad={() => {
+              lastSent.current = "";
+              post();
+              postVisibility(visible);
+            }}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        ) : (
+          <div className="csp-device-frame" aria-hidden />
+        )}
+      </div>
+      <div
+        className={
+          dragging ? "csp-device-glass is-dragging" : "csp-device-glass"
+        }
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onContextMenu={(event) => event.preventDefault()}
+        aria-hidden
+      />
+    </>
+  );
 
   return (
-    <figure className={`csp-scaled-preview is-${mode}`} ref={shellRef}>
+    <figure
+      className={`csp-device is-${mode}`}
+      ref={shellRef}
+      style={
+        {
+          "--csp-preview-scale": String(scale),
+          "--csp-preview-width": `${viewport.width}px`,
+          "--csp-preview-height": `${viewport.height}px`,
+        } as CSSProperties
+      }
+    >
       <figcaption>{label}</figcaption>
-      <div className="csp-scaled-preview-scroll">
-        <div className="csp-scaled-preview-sizer">
-          {load ? (
-            <iframe
-              ref={frameRef}
-              className="csp-scaled-preview-frame"
-              title={label}
-              src={CONTENT_PREVIEW_PATH}
-              onLoad={() => {
-                lastSent.current = "";
-                post();
-                postVisibility(visible);
-              }}
-              sandbox="allow-scripts allow-same-origin"
-            />
-          ) : (
-            <div className="csp-scaled-preview-frame" aria-hidden />
-          )}
-        </div>
+      <div className="csp-device-stage" ref={stageRef}>
+        {mode === "mobile" ? (
+          <div className="csp-phone">
+            <i className="csp-phone-notch" aria-hidden />
+            <div className="csp-phone-screen">{frame}</div>
+            <i className="csp-phone-home" aria-hidden />
+          </div>
+        ) : (
+          <div className="csp-browser">
+            <div className="csp-browser-toolbar" aria-hidden>
+              <span className="csp-browser-dots">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="csp-browser-url">oyonoptics.com{href}</span>
+            </div>
+            <div className="csp-browser-screen">{frame}</div>
+          </div>
+        )}
       </div>
     </figure>
   );
@@ -157,14 +312,14 @@ function LivePagePreviews({
 
   return (
     <div className="csp-live-previews">
-      <ScaledFrame
+      <DeviceFrame
         mode="mobile"
         label={mobileLabel}
         payload={payload}
         load={load}
         visible={visible}
       />
-      <ScaledFrame
+      <DeviceFrame
         mode="desktop"
         label={desktopLabel}
         payload={payload}
