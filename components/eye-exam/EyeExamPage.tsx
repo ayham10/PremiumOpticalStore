@@ -13,7 +13,7 @@ import {
   pickServiceFeatures,
   pickServiceText,
 } from "@/lib/service-pages";
-import { useServicePages } from "@/lib/use-service-pages";
+import { useLocalizedServicePages } from "@/lib/use-service-pages";
 
 const FEATURES = [
   { key: "specialists" },
@@ -24,7 +24,7 @@ const FEATURES = [
 
 export default function EyeExamPage() {
   const { t, rtl, dict } = useLocale();
-  const saved = useServicePages()?.eyeExam;
+  const saved = useLocalizedServicePages()?.eyeExam;
   const title = pickServiceText(saved?.title, t("eyeExam.title"));
   const features = pickServiceFeatures(
     saved?.features,

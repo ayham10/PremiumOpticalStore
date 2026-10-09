@@ -18,7 +18,7 @@ import {
   pickServiceFeatures,
   pickServiceText,
 } from "@/lib/service-pages";
-import { useServicePages } from "@/lib/use-service-pages";
+import { useLocalizedServicePages } from "@/lib/use-service-pages";
 import {
   rememberCategoryDefaultImages,
   useCategoryDefaultImages,
@@ -92,7 +92,7 @@ const FEATURES = [
 
 export default function ContactLensesPage() {
   const { t, rtl } = useLocale();
-  const saved = useServicePages()?.contactLenses;
+  const saved = useLocalizedServicePages()?.contactLenses;
   const title = pickServiceText(saved?.title, t("contactLenses.title"));
   const features = pickServiceFeatures(
     saved?.features,

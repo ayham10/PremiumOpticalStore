@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBranding } from "@/components/branding/BrandingProvider";
-import type { ServicePagesSettings } from "@/lib/types";
+import { useLocale } from "@/components/i18n/LocaleProvider";
+import { resolveServicePagesForLocale } from "@/lib/service-pages";
+import type {
+  ServicePagesLocaleBundle,
+  ServicePagesSettings,
+} from "@/lib/types";
 
 /**
  * Live service-page copy from public settings.
@@ -33,4 +38,14 @@ export function useServicePages(): ServicePagesSettings | undefined {
   }, []);
 
   return pages;
+}
+
+/** Locale-resolved copy. Falls back to dictionaries when a language was never saved. */
+export function useLocalizedServicePages(): ServicePagesLocaleBundle | undefined {
+  const { locale } = useLocale();
+  const pages = useServicePages();
+  return useMemo(
+    () => resolveServicePagesForLocale(pages, locale),
+    [pages, locale],
+  );
 }

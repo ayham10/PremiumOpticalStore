@@ -5,6 +5,8 @@ import BrandMark from "@/components/branding/BrandMark";
 import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatLocalPhone, phoneTelHref } from "@/lib/format";
+import { pickServiceText } from "@/lib/service-pages";
+import { useLocalizedServicePages } from "@/lib/use-service-pages";
 import { buildPublicHoursLines } from "@/lib/working-hours";
 
 const MAPS_URL = "https://maps.app.goo.gl/wjbQSBYvR2fCidLq8";
@@ -12,10 +14,20 @@ const WAZE_URL =
   "https://waze.com/ul?ll=32.861202%2C35.363229&navigate=yes";
 
 export default function Footer() {
-  const { t } = useLocale();
+  const { t, locale, rtl } = useLocale();
   const { branding, settings } = useBranding();
+  const footerCopy = useLocalizedServicePages()?.footer;
   const phone = settings?.phone || "+972-52-123-4567";
-  const city = settings?.city || t("footer.city");
+  const cityFallback =
+    locale === "ar" ? settings?.city || t("footer.city") : t("footer.city");
+  const city = pickServiceText(footerCopy?.address, cityFallback);
+  const tagline = pickServiceText(footerCopy?.tagline, t("footer.tagline"));
+  const hoursLabel = pickServiceText(footerCopy?.hoursLabel, t("footer.hours"));
+  const locationLabel = pickServiceText(
+    footerCopy?.locationLabel,
+    t("footer.location"),
+  );
+  const hoursDir = rtl ? "rtl" : "ltr";
   const hourLines = buildPublicHoursLines(
     settings?.openingHours,
     (day) => t(`days.${day}`),
@@ -31,17 +43,17 @@ export default function Footer() {
       <div className="oyon-footer-inner wrap">
         <div className="oyon-footer-brand">
           <BrandMark branding={branding} href="/" size="lg" onDark />
-          <p className="oyon-footer-tagline">{t("footer.tagline")}</p>
+          <p className="oyon-footer-tagline">{tagline}</p>
         </div>
 
-        <div className="oyon-footer-info" dir="rtl">
+        <div className="oyon-footer-info" dir={hoursDir}>
           <div className="oyon-footer-hours-card">
             <p className="oyon-footer-heading">
               <Clock className="oyon-footer-icon" size={16} strokeWidth={1.75} aria-hidden />
-              <span>{t("footer.hours")}</span>
+              <span>{hoursLabel}</span>
             </p>
             {hourLines.length ? (
-              <div className="oyon-footer-hours" dir="rtl">
+              <div className="oyon-footer-hours" dir={hoursDir}>
                 {hourLines.map((line) => (
                   <span key={line.key} className="oyon-footer-hours-line">
                     <strong>{line.label}</strong>
@@ -89,7 +101,7 @@ export default function Footer() {
                 <span className="oyon-footer-icon-ring" aria-hidden>
                   <MapPin className="oyon-footer-icon" size={14} strokeWidth={1.75} />
                 </span>
-                <span className="oyon-footer-kicker">{t("footer.location")}</span>
+                <span className="oyon-footer-kicker">{locationLabel}</span>
               </div>
               <span className="oyon-footer-value">{city}</span>
             </div>
