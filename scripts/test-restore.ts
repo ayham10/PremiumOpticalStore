@@ -147,6 +147,22 @@ const backup = sampleApp({
         ...live.settings.servicePages!.eyeExam,
         title: "Old exam",
       },
+      customPages: [
+        {
+          id: "csp_old",
+          slug: "kids-exam",
+          name: "Kids exam",
+          status: "draft",
+          template: "eye-exam",
+          showOnHome: false,
+          homeSort: 0,
+          sections: [{ id: "sec_1", type: "heroMedia" }],
+          locales: {},
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          revision: 1,
+        },
+      ],
     },
   },
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -178,6 +194,14 @@ const restoredProducts = applyRestoreCategories(live, backup, ["products"]);
 assert.equal(restoredProducts.products[0].stockQuantity, 99);
 assert.equal(restoredProducts.eyeExamAppointments.length, 2);
 assert.ok(unselectedFieldsMatch(live, restoredProducts, ["products"]));
+
+const restoredSettings = applyRestoreCategories(live, backup, ["settings"]);
+assert.equal(restoredSettings.settings.storeName, "Backup");
+assert.equal(restoredSettings.settings.servicePages?.eyeExam.title, "Old exam");
+assert.equal(restoredSettings.settings.servicePages?.customPages?.[0]?.slug, "kids-exam");
+assert.equal(restoredSettings.products[0].stockQuantity, 4);
+assert.ok(unselectedFieldsMatch(live, restoredSettings, ["settings"]));
+assert.equal(restoredBookings.settings.servicePages?.customPages, undefined);
 
 assert.equal(restoreCategoryCount(live, "bookings"), 2);
 assert.equal(restoreCategoryCount(backup, "promotions"), 2);

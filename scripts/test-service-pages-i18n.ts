@@ -183,4 +183,30 @@ assert.equal(
 );
 assert.equal(heWithoutHomepage.homepage?.hero.title, "عِش الحياة بوضوح");
 
+const withCustomPage = persistServicePages(
+  {
+    ...legacyArabic,
+    customPages: [
+      {
+        id: "csp_keep",
+        slug: "kids-exam",
+        name: "Kids",
+        status: "draft",
+        template: "eye-exam",
+        showOnHome: false,
+        homeSort: 0,
+        sections: [{ id: "sec_1", type: "heroMedia" }],
+        locales: {},
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        revision: 1,
+      },
+    ],
+  },
+  localePatchPayload("he", heDefaults, { includeHomepage: true }),
+);
+assert.equal(withCustomPage.customPages?.[0]?.slug, "kids-exam");
+assert.equal(withCustomPage.customPages?.[0]?.status, "draft");
+assert.equal(withCustomPage.locales?.ar?.eyeExam.title, "فحص نظر شامل");
+
 console.log("service-pages i18n tests passed");

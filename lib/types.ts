@@ -499,12 +499,110 @@ export interface ServicePagesLocaleBundle {
   footer?: FooterServiceContent;
 }
 
+export const CUSTOM_SECTION_TYPES = [
+  "heroMedia",
+  "featureGrid",
+  "benefitsList",
+  "notice",
+  "valuesStrip",
+  "bookingCta",
+  "gallery",
+] as const;
+
+export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
+
+export type CustomPageTemplate = "eye-exam" | "contact-lenses";
+
+export type CustomPageStatus = "draft" | "published";
+
+export interface CustomPageSection {
+  id: string;
+  type: CustomSectionType;
+}
+
+export interface CustomPageMediaRef {
+  kind: "image" | "video";
+  url: string;
+  mediaId?: string;
+}
+
+/** Per-language copy. `complete` is computed on save; never trust the client flag. */
+export interface CustomPageCopy {
+  complete: boolean;
+  eyebrow: string;
+  title: string;
+  description: string;
+  bookingButtonText: string;
+  features: ServicePageFeature[];
+  benefitsTitle: string;
+  benefits: string[];
+  warningTitle: string;
+  warningText: string;
+  valuesTitle: string;
+  valuesText: string;
+  privacyText: string;
+  homeTitle: string;
+  homeSubtitle: string;
+}
+
+export interface CustomServicePage {
+  id: string;
+  slug: string;
+  name: string;
+  status: CustomPageStatus;
+  template: CustomPageTemplate;
+  showOnHome: boolean;
+  homeSort: number;
+  homeImage?: string;
+  bookingType?: string | null;
+  sections: CustomPageSection[];
+  heroMedia?: CustomPageMediaRef;
+  gallery?: CustomPageMediaRef[];
+  locales: Partial<Record<ServicePagesLocale, CustomPageCopy>>;
+  createdAt: string;
+  updatedAt: string;
+  revision: number;
+}
+
+export type CustomPageOp =
+  | {
+      op: "create";
+      name: string;
+      slug: string;
+      template: CustomPageTemplate;
+    }
+  | {
+      op: "update";
+      id: string;
+      expectedRevision: number;
+      name?: string;
+      slug?: string;
+      status?: CustomPageStatus;
+      showOnHome?: boolean;
+      homeSort?: number;
+      homeImage?: string | null;
+      bookingType?: string | null;
+      sections?: CustomPageSection[];
+      heroMedia?: CustomPageMediaRef | null;
+      gallery?: CustomPageMediaRef[];
+      locale?: ServicePagesLocale;
+      copy?: CustomPageCopy;
+    }
+  | {
+      op: "delete";
+      id: string;
+      expectedRevision: number;
+    };
+
 /**
  * Site copy. Legacy root fields are Arabic (backward compatible).
  * Per-language edits live in `locales` and are saved independently.
+ * Owner-created pages live in `customPages` (additive).
  */
 export interface ServicePagesSettings extends ServicePagesLocaleBundle {
   locales?: Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>>;
+  customPages?: CustomServicePage[];
+  customPageOp?: CustomPageOp;
 }
 
 export interface AdminSession {

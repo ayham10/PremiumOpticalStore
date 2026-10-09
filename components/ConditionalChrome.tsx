@@ -24,6 +24,7 @@ export default function ConditionalChrome({
     isFrames || isSunglasses || isContactLenses || isShop || isPromotions;
   const isProduct = pathname?.startsWith("/product/") ?? false;
   const isEyeExam = pathname === "/eye-exams";
+  const isCustomService = pathname?.startsWith("/services/") ?? false;
   const isBook = pathname === "/book";
 
   if (isAdmin) {
@@ -36,7 +37,7 @@ export default function ConditionalChrome({
       ? "frames-main"
       : isProduct
         ? "product-main"
-        : isEyeExam
+        : isEyeExam || isCustomService
           ? "eye-exam-main"
           : isAbout
             ? "about-main"

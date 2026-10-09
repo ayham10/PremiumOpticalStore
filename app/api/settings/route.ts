@@ -12,6 +12,11 @@ import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/bookin
 import { getTwilioWhatsAppPublicStatus } from "@/lib/twilio/config";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
 import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
+import {
+  CustomPageConflictError,
+  CustomPageError,
+  publicCustomPages,
+} from "@/lib/custom-service-pages";
 import { persistServicePages, publicServicePages } from "@/lib/service-pages";
 import type { StoreSettings } from "@/lib/types";
 
@@ -53,7 +58,16 @@ function toPublicSettings(settings: StoreSettings): PublicSettings {
     categoryDefaultImages: mergeCategoryDefaultImages(
       settings.categoryDefaultImages,
     ),
-    servicePages: publicServicePages(settings.servicePages),
+    servicePages: (() => {
+      const pages = publicServicePages(settings.servicePages);
+      if (!pages) return pages;
+      const customPages = publicCustomPages(settings.servicePages?.customPages);
+      if (!customPages.length) {
+        const { customPages: _dropped, ...rest } = pages;
+        return rest;
+      }
+      return { ...pages, customPages };
+    })(),
   };
 }
 
@@ -220,6 +234,21 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ settings });
   } catch (error) {
+    if (error instanceof CustomPageConflictError) {
+      return jsonError("This page was updated by someone else. Reload and try again.", 409, {
+        code: "CUSTOM_PAGE_CONFLICT",
+        pageId: error.pageId,
+      });
+    }
+    if (error instanceof CustomPageError) {
+      const status =
+        error.code === "CUSTOM_PAGE_NOT_FOUND"
+          ? 404
+          : error.code === "CUSTOM_PAGE_LIMIT"
+            ? 400
+            : 400;
+      return jsonError(error.code, status, { code: error.code });
+    }
     if (error instanceof Error && error.message.startsWith("HOURS_")) {
       return jsonError("Invalid working hours", 400);
     }
