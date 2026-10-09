@@ -22,6 +22,7 @@ import {
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
 import { persistCustomPages } from "../lib/custom-service-pages";
 import { EDITOR_SECTION_ICONS } from "../components/admin/content-editor/EditorSection";
+import { coverCropRect, mediaUrlForViewport } from "../lib/responsive-image";
 import type { CustomServicePage } from "../lib/types";
 
 const ar = defaultServicePagesForLocale("ar");
@@ -164,6 +165,29 @@ assert.equal(EDITOR_SECTION_ICONS.settings.displayName, "Settings");
 assert.equal(EDITOR_SECTION_ICONS.page.displayName, "FileText");
 assert.equal(EDITOR_SECTION_ICONS.links.displayName, "Link");
 assert.equal(EDITOR_SECTION_ICONS.sections.displayName, "Layers");
+assert.equal(EDITOR_SECTION_ICONS.hero.displayName, "Image");
+
+const crop = coverCropRect(1600, 900, 9, 16, { x: 0.5, y: 0.38, zoom: 1 });
+assert.ok(Math.abs(crop.sw / crop.sh - 9 / 16) < 0.02);
+assert.ok(crop.sh <= 900);
+assert.equal(
+  mediaUrlForViewport(
+    {
+      kind: "image",
+      url: "https://cdn.example/orig.jpg",
+      mobileUrl: "https://cdn.example/m.webp",
+    },
+    "mobile",
+  ),
+  "https://cdn.example/m.webp",
+);
+assert.equal(
+  mediaUrlForViewport(
+    { kind: "image", url: "https://cdn.example/orig.jpg" },
+    "desktop",
+  ),
+  "https://cdn.example/orig.jpg",
+);
 
 assert.equal(CONTENT_PREVIEW_CHROME.mobile.width > 0, true);
 assert.equal(CONTENT_PREVIEW_CHROME.desktop.height > 36, true);

@@ -32,7 +32,7 @@ export type EditorSectionIcon = keyof typeof EDITOR_SECTION_ICONS;
 export default function EditorSection({
   title,
   icon,
-  defaultOpen = true,
+  defaultOpen = false,
   children,
 }: {
   title: string;

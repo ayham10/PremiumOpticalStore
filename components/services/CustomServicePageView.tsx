@@ -17,6 +17,8 @@ import {
 import CustomPageProductsCarousel, {
   type CustomPageProductCard,
 } from "@/components/services/CustomPageProductsCarousel";
+import ResponsiveHeroImage from "@/components/media/ResponsiveHeroImage";
+import { visibleCustomSections } from "@/lib/custom-service-pages";
 import type {
   CustomPageCopy,
   CustomPageMediaRef,
@@ -59,15 +61,7 @@ function HeroMedia({
   }
   return (
     <div className={className}>
-      <Image
-        src={media.url}
-        alt={title}
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover"
-        onError={() => setFailed(true)}
-      />
+      <ResponsiveHeroImage media={media} alt={title} className="csp-hero-fill" />
     </div>
   );
 }
@@ -305,8 +299,9 @@ export default function CustomServicePageView({
 }) {
   const { rtl } = useLocale();
   const isCl = page.template === "contact-lenses";
-  const hero = page.sections.find((section) => section.type === "heroMedia");
-  const body = page.sections.filter((section) => section.type !== "heroMedia");
+  const visible = visibleCustomSections(page.sections);
+  const hero = visible.find((section) => section.type === "heroMedia");
+  const body = visible.filter((section) => section.type !== "heroMedia");
   const pageDir = dir ?? (rtl ? "rtl" : "ltr");
 
   return (
@@ -376,7 +371,7 @@ export default function CustomServicePageView({
             dir={pageDir}
           />
         ))}
-        {products.length && !page.sections.some((section) => section.type === "products") ? (
+        {products.length && !visible.some((section) => section.type === "products") ? (
           <CustomPageProductsCarousel
             products={products}
             currencySymbol={currencySymbol}

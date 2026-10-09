@@ -460,7 +460,7 @@ export default function AdminServicePagesPage() {
               <ContentFieldLocaleContext.Provider
                 value={{ dir: editorDir, lang: editLocale }}
               >
-                <div className="admin-service-editor space-y-4" dir={editorDir}>
+                <div className="admin-service-editor space-y-4" dir={editorDir} key={`${tab}-${editLocale}`}>
                   <ContentEditorToolbar
                     t={t}
                     saving={saving}

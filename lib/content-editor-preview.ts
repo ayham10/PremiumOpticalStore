@@ -184,6 +184,7 @@ export function customPageEditorSnapshot(page: {
   showOnHome: boolean;
   homeSort: number;
   homeImage?: string;
+  homeMedia?: CustomServicePage["homeMedia"];
   showHeroButton: boolean;
   ctaKind: CustomServicePage["ctaKind"];
   ctaHref?: string;
@@ -201,6 +202,7 @@ export function customPageEditorSnapshot(page: {
     showOnHome: page.showOnHome,
     homeSort: page.homeSort,
     homeImage: page.homeImage || "",
+    homeMedia: page.homeMedia || null,
     showHeroButton: page.showHeroButton,
     ctaKind: page.ctaKind,
     ctaHref: page.ctaHref || "",

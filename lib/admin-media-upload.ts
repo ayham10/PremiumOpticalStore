@@ -79,3 +79,51 @@ export async function uploadImageFromPc(
   rememberUpload(file, result);
   return result;
 }
+
+export async function uploadImageBlob(
+  blob: Blob,
+  options: {
+    folder: MediaItem["folder"];
+    alt?: string;
+    filename?: string;
+    register?: boolean;
+    onProgress?: (pct: number) => void;
+  },
+): Promise<UploadResult> {
+  const file = new File([blob], options.filename || "hero.webp", {
+    type: blob.type || "image/webp",
+  });
+  const body = new FormData();
+  body.append("file", file);
+  body.append("folder", options.folder);
+  body.append("alt", options.alt || "hero");
+  body.append("register", options.register === false ? "0" : "1");
+
+  return new Promise<UploadResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/storage/upload");
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText) as {
+          url?: string;
+          media?: MediaItem;
+          error?: string;
+        };
+        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+          resolve({ url: data.url, media: data.media });
+        } else {
+          reject(new Error(data.error || "UPLOAD_FAILED"));
+        }
+      } catch {
+        reject(new Error("UPLOAD_FAILED"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("UPLOAD_FAILED"));
+    xhr.send(body);
+  });
+}
