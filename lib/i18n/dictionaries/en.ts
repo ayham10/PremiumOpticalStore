@@ -1760,6 +1760,11 @@ const en: Dictionary = {
       restored:
         "Original content restored in the form. Click Save Changes to publish.",
       addPage: "Add new page",
+      myPages: "My Pages",
+      myPagesCount: "{n} pages",
+      hideMyPages: "Hide",
+      editPage: "Edit",
+      viewPage: "View page",
       searchPages: "Search created pages…",
       noPages: "No custom pages yet",
       pageName: "Page name",

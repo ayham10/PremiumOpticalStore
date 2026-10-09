@@ -562,6 +562,24 @@ export function normalizeCustomPages(saved: unknown): CustomServicePage[] {
   return pages;
 }
 
+/** Display order for Admin My Pages. Does not change stored page data. */
+export function listCustomPagesForEditor(
+  pages: CustomServicePage[] | undefined,
+  query = "",
+): CustomServicePage[] {
+  const list = [...(pages || [])].sort((a, b) => {
+    const byDate = (b.createdAt || "").localeCompare(a.createdAt || "");
+    if (byDate) return byDate;
+    return a.name.localeCompare(b.name);
+  });
+  const q = query.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(
+    (item) =>
+      item.name.toLowerCase().includes(q) || item.slug.toLowerCase().includes(q),
+  );
+}
+
 function publicLocales(
   page: CustomServicePage,
 ): CustomServicePage["locales"] {

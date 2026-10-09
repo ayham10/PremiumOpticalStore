@@ -6,6 +6,7 @@ import {
   emptyCustomPageCopy,
   homepageCustomCards,
   isCustomPageLocaleComplete,
+  listCustomPagesForEditor,
   MAX_CUSTOM_PAGES,
   MAX_PAGE_PRODUCTS,
   normalizeCustomPages,
@@ -606,5 +607,25 @@ assert.deepEqual(
   ),
   [{ url: "https://cdn.example/a.jpg" }],
 );
+
+const listed = listCustomPagesForEditor([
+  { ...created[0]!, id: "csp_old", name: "Old Care", slug: "old-care", createdAt: "2026-01-01T00:00:00.000Z" },
+  { ...created[0]!, id: "csp_new", name: "New Care", slug: "new-care", createdAt: "2026-10-01T00:00:00.000Z" },
+]);
+assert.deepEqual(listed.map((page) => page.id), ["csp_new", "csp_old"]);
+assert.deepEqual(
+  listCustomPagesForEditor(listed, "new").map((page) => page.slug),
+  ["new-care"],
+);
+const afterSecond = persistCustomPages(created, {
+  customPageOp: {
+    op: "create",
+    name: "Night Clinic",
+    slug: "night-clinic",
+    template: "contact-lenses",
+  },
+});
+assert.equal(afterSecond.length, 2);
+assert.ok(listCustomPagesForEditor(afterSecond).some((page) => page.slug === "night-clinic"));
 
 console.log("custom service pages tests passed");

@@ -1386,6 +1386,11 @@ const ar: Dictionary = {
       restored:
         "تم استعادة المحتوى الأصلي في النموذج. اضغط حفظ التغييرات للنشر.",
       addPage: "إضافة صفحة جديدة",
+      myPages: "صفحاتي",
+      myPagesCount: "{n} صفحات",
+      hideMyPages: "إخفاء",
+      editPage: "تعديل",
+      viewPage: "عرض الصفحة",
       searchPages: "بحث عن الصفحات المنشأة…",
       noPages: "لا توجد صفحات مخصصة بعد",
       pageName: "اسم الصفحة",

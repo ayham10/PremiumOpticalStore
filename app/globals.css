@@ -16524,6 +16524,128 @@ body > .admin-save-notice,
   min-height: 2.6rem;
 }
 
+.csp-toolbar > .btn-ghost.is-active {
+  border-color: rgba(212, 175, 106, 0.7);
+  color: #d4af6a;
+  background: rgba(212, 175, 106, 0.12);
+}
+
+.csp-my-pages {
+  padding: 0.85rem 0.9rem 0.7rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 106, 0.22);
+  background: rgba(8, 12, 17, 0.55);
+}
+
+.csp-my-pages-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.csp-my-pages-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.98rem;
+  color: #f3f1ea;
+}
+
+.csp-my-pages-head .admin-muted {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+}
+
+.csp-my-pages-head .btn {
+  min-height: 2.1rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+.csp-my-pages-empty {
+  margin: 0;
+  padding: 0.7rem 0.15rem 0.35rem;
+  color: #8b939c;
+  font-size: 0.84rem;
+}
+
+.csp-my-pages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.csp-my-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.45rem 0.7rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 106, 0.16);
+  background: #0b0d10;
+}
+
+.csp-my-page.is-selected {
+  border-color: rgba(212, 175, 106, 0.55);
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.2);
+}
+
+.csp-my-page-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.08rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.csp-my-page-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f3f1ea;
+}
+
+.csp-my-page-slug {
+  font-size: 0.72rem;
+  color: #8b939c;
+}
+
+.csp-my-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.csp-my-page-actions .btn {
+  min-height: 2rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .csp-my-page {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .csp-my-page-actions {
+    grid-column: 1 / -1;
+  }
+}
+
 .csp-page-select {
   position: relative;
   flex: 1 1 220px;

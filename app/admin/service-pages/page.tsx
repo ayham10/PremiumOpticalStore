@@ -8,12 +8,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { Contact, Eye, Home, MapPin, Plus, RotateCcw, Save, Search } from "lucide-react";
+import { Contact, Eye, Files, Home, MapPin, Plus, RotateCcw, Save, Search } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import CustomPageBuilder, {
   CreateCustomPageModal,
 } from "@/components/admin/CustomPageBuilder";
+import CustomPagesPanel from "@/components/admin/CustomPagesPanel";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { isRtl, localeLabels, type Locale } from "@/lib/i18n/config";
@@ -27,6 +28,7 @@ import {
   pickServiceFeatureIcon,
   type ServiceFeatureIconId,
 } from "@/lib/service-page-icons";
+import { listCustomPagesForEditor } from "@/lib/custom-service-pages";
 import {
   SERVICE_CONTENT_LOCALES,
   cloneLocaleBundle,
@@ -75,7 +77,8 @@ export default function AdminServicePagesPage() {
   const [customPageId, setCustomPageId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pageQuery, setPageQuery] = useState("");
-  const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const [myPagesOpen, setMyPagesOpen] = useState(true);
+  const myPagesRef = useRef<HTMLDivElement | null>(null);
 
   const applyLocale = useCallback(
     (
@@ -242,27 +245,24 @@ export default function AdminServicePagesPage() {
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
   const customPages = document?.customPages || [];
   const selectedCustom = customPages.find((item) => item.id === customPageId);
-  const filteredCustom = customPages.filter((item) => {
-    const q = pageQuery.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      item.name.toLowerCase().includes(q) ||
-      item.slug.toLowerCase().includes(q)
-    );
-  });
+  const listedCustom = listCustomPagesForEditor(customPages, pageQuery);
 
   function selectBuiltIn(next: Tab) {
     setCustomPageId(null);
-    setPageMenuOpen(false);
     setTab(next);
   }
 
   function selectCustom(page: CustomServicePage) {
     setCustomPageId(page.id);
-    setPageQuery(page.name);
-    setPageMenuOpen(false);
     setMessage("");
     setError("");
+  }
+
+  function showMyPages() {
+    setMyPagesOpen(true);
+    requestAnimationFrame(() => {
+      myPagesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   return (
@@ -307,6 +307,14 @@ export default function AdminServicePagesPage() {
           <Plus size={16} />
           {t("admin.servicePages.addPage")}
         </button>
+        <button
+          type="button"
+          className={myPagesOpen ? "btn btn-ghost is-active" : "btn btn-ghost"}
+          onClick={showMyPages}
+        >
+          <Files size={16} />
+          {t("admin.servicePages.myPages")}
+        </button>
         <div className="csp-page-select">
           <Search size={16} aria-hidden />
           <input
@@ -315,34 +323,25 @@ export default function AdminServicePagesPage() {
             placeholder={t("admin.servicePages.searchPages")}
             onChange={(event) => {
               setPageQuery(event.target.value);
-              setPageMenuOpen(true);
+              setMyPagesOpen(true);
             }}
-            onFocus={() => setPageMenuOpen(true)}
+            onFocus={() => setMyPagesOpen(true)}
             aria-label={t("admin.servicePages.searchPages")}
           />
-          {pageMenuOpen ? (
-            <ul className="csp-page-menu" role="listbox">
-              {filteredCustom.length === 0 ? (
-                <li className="is-empty">{t("admin.servicePages.noPages")}</li>
-              ) : (
-                filteredCustom.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={item.id === customPageId}
-                      onClick={() => selectCustom(item)}
-                    >
-                      <span>{item.name}</span>
-                      <small>/services/{item.slug}</small>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          ) : null}
         </div>
       </div>
+
+      {myPagesOpen ? (
+        <div ref={myPagesRef}>
+          <CustomPagesPanel
+            pages={listedCustom}
+            selectedId={customPageId}
+            t={t}
+            onEdit={selectCustom}
+            onCollapse={() => setMyPagesOpen(false)}
+          />
+        </div>
+      ) : null}
 
       <div className="admin-service-tabs" role="tablist">
         <button
@@ -691,6 +690,7 @@ export default function AdminServicePagesPage() {
         onClose={() => setCreateOpen(false)}
         onCreated={(page, next) => {
           setDocument(next);
+          setMyPagesOpen(true);
           selectCustom(page);
           invalidatePublicCache("settings:");
           notifySaved();
