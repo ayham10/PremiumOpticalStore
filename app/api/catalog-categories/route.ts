@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { getStore, updateStore } from "@/lib/db/store";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import {
+  applyCategoryAssignments,
   applyCategoryDelete,
   categoryLabel,
   countCategoryProducts,
@@ -76,7 +77,11 @@ export async function POST(request: Request) {
       if (customCount >= MAX_CUSTOM_CATEGORIES) {
         throw new Error("LIMIT");
       }
-      created = createCatalogCategory(names);
+      created = createCatalogCategory(
+        names,
+        new Date().toISOString(),
+        body.showInMainCatalog === true,
+      );
       store.catalogCategories = [...current, created];
       pushActivity(store, {
         actor: session.email,
@@ -104,6 +109,7 @@ export async function PUT(request: Request) {
       id?: string;
       names?: unknown;
       showInMainCatalog?: boolean;
+      assignedProductIds?: unknown;
     };
     const id = body.id?.trim();
     if (!id) return jsonError("Category id is required", 400);
@@ -130,6 +136,12 @@ export async function PUT(request: Request) {
       const next = [...current];
       next[index] = updated;
       store.catalogCategories = next;
+      if (Array.isArray(body.assignedProductIds)) {
+        const selectedIds = body.assignedProductIds.filter(
+          (item): item is string => typeof item === "string" && item.trim().length > 0,
+        );
+        store.products = applyCategoryAssignments(store.products, id, selectedIds);
+      }
       pushActivity(store, {
         actor: session.email,
         action: "update",

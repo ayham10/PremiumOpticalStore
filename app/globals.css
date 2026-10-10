@@ -13721,6 +13721,10 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-products-manage {
   height: 38px;
   box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid rgba(212, 175, 55, 0.65);
   background: transparent;
   color: #d4af37;
@@ -13875,6 +13879,118 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-cat-toggle.is-compact {
   font-size: 0.72rem;
   color: #d4af37;
+}
+
+.admin-cat-progress {
+  display: flex;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0 0 0.35rem;
+  padding: 0;
+}
+
+.admin-cat-progress li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: #8a929c;
+}
+
+.admin-cat-progress li span {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid #2a2f36;
+  font-weight: 700;
+}
+
+.admin-cat-progress li.is-active {
+  color: #d4af37;
+}
+
+.admin-cat-progress li.is-active span {
+  border-color: #d4af37;
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.admin-cat-progress li.is-done {
+  color: #f5f1e8;
+}
+
+.admin-cat-progress li.is-done span {
+  border-color: rgba(212, 175, 55, 0.65);
+  background: #d4af37;
+  color: #111;
+}
+
+.admin-cat-assign {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-cat-assign-actions,
+.admin-cat-assign-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.admin-cat-assign-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px);
+}
+
+.admin-cat-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #2a2f36;
+  background: #0b0d10;
+  border-radius: 10px;
+  padding: 0 0.65rem;
+  color: #8a929c;
+}
+
+.admin-cat-search input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: #f5f1e8;
+  outline: none;
+}
+
+.admin-cat-assign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.admin-cat-chip:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .admin-cat-assign-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cat-progress li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
 }
 
 .admin-products-add,
