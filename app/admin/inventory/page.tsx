@@ -37,6 +37,7 @@ import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import {
   categoryLabel,
+  countCategoryProducts,
   mergeCatalogCategories,
   productBelongsToCategory,
 } from "@/lib/catalog-categories";
@@ -260,8 +261,8 @@ export default function AdminInventoryPage() {
   const [listPage, setListPage] = useState(1);
   const PAGE_SIZE = 16;
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError("");
     try {
       const [pData, me] = await Promise.all([
@@ -270,12 +271,16 @@ export default function AdminInventoryPage() {
           () => null,
         ),
       ]);
-      setProducts(unwrapList<Product>(pData, ["products", "items", "data"]));
+      const nextProducts = unwrapList<Product>(pData, ["products", "items", "data"]);
+      setProducts(nextProducts);
       if (pData && typeof pData === "object" && "catalogCategories" in pData) {
         setCatalogCategories(
           mergeCatalogCategories(
             (pData as { catalogCategories?: unknown }).catalogCategories,
-          ),
+          ).map((item) => ({
+            ...item,
+            productCount: countCategoryProducts(nextProducts, item.id),
+          })),
         );
       }
       if (me) {
@@ -1175,7 +1180,7 @@ export default function AdminInventoryPage() {
         categories={catalogCategories}
         onClose={() => setManageOpen(false)}
         onChange={setCatalogCategories}
-        onProductsChange={() => void load()}
+        onProductsChange={() => load({ silent: true })}
       />
     </div>
   );

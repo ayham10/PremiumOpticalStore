@@ -2196,8 +2196,15 @@ const en: Dictionary = {
       removeProduct: "Remove from category",
       noProductsYet: "No products assigned yet. You can finish without adding any.",
       searchProducts: "Search products…",
-      allProductTypes: "All product types",
+      allProductTypes: "All product types and categories",
       noProductMatches: "No matching products",
+      productTypesGroup: "Product types",
+      extraCategoriesGroup: "Additional categories",
+      savedTitle: "Category saved successfully",
+      savedDetail: "Category settings and selected product assignments were saved.",
+      saveBusy: "A save is already in progress. Try again in a moment.",
+      nonePubliclyEligible:
+        "Assigned products are saved, but none are published for the main catalog yet.",
     },
     common: {
       add: "Add",

@@ -1821,8 +1821,15 @@ const ar: Dictionary = {
       removeProduct: "إزالة من الفئة",
       noProductsYet: "لا توجد منتجات مرتبطة بعد. يمكنك الإنهاء دون إضافة منتجات.",
       searchProducts: "ابحث في المنتجات…",
-      allProductTypes: "كل أنواع المنتجات",
+      allProductTypes: "كل أنواع المنتجات والفئات",
       noProductMatches: "لا توجد منتجات مطابقة",
+      productTypesGroup: "أنواع المنتجات",
+      extraCategoriesGroup: "فئات إضافية",
+      savedTitle: "تم حفظ الفئة بنجاح",
+      savedDetail: "تم حفظ إعدادات الفئة وربط المنتجات المحددة بنجاح.",
+      saveBusy: "الحفظ جارٍ بالفعل. حاول مرة أخرى بعد لحظات.",
+      nonePubliclyEligible:
+        "تم حفظ المنتجات المرتبطة، لكن لا يوجد منها منشور في الكتالوج الرئيسي بعد.",
     },
     common: {
       add: "إضافة",

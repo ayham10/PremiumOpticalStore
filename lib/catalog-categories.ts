@@ -204,6 +204,57 @@ export function countCategoryProducts(
   return products.filter((product) => productBelongsToCategory(product, categoryId)).length;
 }
 
+export function productMatchesCategoryFilter(
+  product: { category?: string; categoryIds?: string[] | null },
+  filterId: string,
+): boolean {
+  if (!filterId || filterId === "all") return true;
+  return productBelongsToCategory(product, filterId);
+}
+
+export function assignedProductIdsForCategory(
+  products: Array<{ id: string; category?: string; categoryIds?: string[] | null }>,
+  categoryId: string,
+): string[] {
+  return uniqueIds(
+    products
+      .filter((product) => productBelongsToCategory(product, categoryId))
+      .map((product) => product.id),
+  );
+}
+
+export function publicEligibleAssignedCount(
+  products: Array<Pick<Product, "status" | "category" | "categoryIds">>,
+  categoryId: string,
+): number {
+  return products.filter(
+    (product) =>
+      isPublishedProduct(product) && productBelongsToCategory(product, categoryId),
+  ).length;
+}
+
+export type CategorySelectorGroup = {
+  key: "types" | "extra";
+  items: Array<{ id: string; label: string }>;
+};
+
+export function categorySelectorGroups(
+  categories: Array<Pick<CatalogCategory, "id" | "names" | "system">>,
+  locale: Locale | string,
+): CategorySelectorGroup[] {
+  const types: CategorySelectorGroup["items"] = [];
+  const extras: CategorySelectorGroup["items"] = [];
+  for (const item of categories) {
+    const option = { id: item.id, label: categoryLabel(item, locale) };
+    if (isSystemCategoryId(item.id)) types.push(option);
+    else extras.push(option);
+  }
+  return [
+    { key: "types" as const, items: types },
+    { key: "extra" as const, items: extras },
+  ].filter((group) => group.items.length > 0);
+}
+
 function defaultSystemCategory(id: ProductCategory, now: string): CatalogCategory {
   return {
     id,

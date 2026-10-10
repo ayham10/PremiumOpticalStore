@@ -3,8 +3,11 @@ import { hasPermission } from "../lib/auth";
 import {
   applyCategoryAssignments,
   applyCategoryDelete,
+  assignedProductIdsForCategory,
   catalogCategorySaveMode,
   categoryLabel,
+  categorySelectorGroups,
+  countCategoryProducts,
   createCatalogCategory,
   filterProductsForRequest,
   isSystemCategoryId,
@@ -12,7 +15,9 @@ import {
   membershipIsProductType,
   productBelongsToCategory,
   productCatalogIds,
+  productMatchesCategoryFilter,
   productVisibleInMainCatalog,
+  publicEligibleAssignedCount,
   publicProductCategoryIds,
   sanitizeCategoryIds,
   sanitizeCategoryName,
@@ -404,5 +409,122 @@ assert.ok(
   readFileSync(join(dictDir, "ar.ts"), "utf8").includes("إدارة منتجات الفئة"),
 );
 assert.ok(readFileSync(join(dictDir, "ar.ts"), "utf8").includes("التالي"));
+assert.ok(
+  readFileSync(join(dictDir, "ar.ts"), "utf8").includes("تم حفظ الفئة بنجاح"),
+);
+assert.ok(
+  readFileSync(join(dictDir, "ar.ts"), "utf8").includes(
+    "تم حفظ إعدادات الفئة وربط المنتجات المحددة بنجاح.",
+  ),
+);
+for (const file of ["en.ts", "ar.ts", "he.ts"]) {
+  const source = readFileSync(join(dictDir, file), "utf8");
+  for (const key of ["savedTitle:", "savedDetail:", "saveBusy:", "productTypesGroup:"]) {
+    assert.ok(source.includes(key), `missing ${key} in ${file}`);
+  }
+}
+
+const testCategory = custom("cat_test_filter", true, {
+  ar: "test",
+  he: "test",
+  en: "test",
+});
+const hiddenManageable = custom("cat_hidden_manage", false, {
+  ar: "مخفية للإدارة",
+  he: "מוסתרת",
+  en: "Hidden Admin",
+});
+const selectorCats = mergeCatalogCategories([testCategory, hiddenManageable]);
+const selectorGroups = categorySelectorGroups(selectorCats, "ar");
+assert.ok(selectorGroups.some((group) => group.key === "types"));
+assert.ok(selectorGroups.some((group) => group.key === "extra"));
+const extraIds = selectorGroups
+  .find((group) => group.key === "extra")!
+  .items.map((item) => item.id);
+assert.ok(extraIds.includes("cat_test_filter"));
+assert.ok(extraIds.includes("cat_hidden_manage"));
+assert.equal(
+  selectorGroups.find((group) => group.key === "extra")!.items.find((item) => item.id === "cat_test_filter")?.label,
+  "test",
+);
+assert.ok(
+  selectorGroups
+    .find((group) => group.key === "types")!
+    .items.some((item) => item.id === "Frames"),
+);
+
+const assignedToTest = applyCategoryAssignments(
+  [frame, legacy, draft, publishedMulti],
+  "cat_test_filter",
+  ["p-frame", "p-legacy", "p-draft", "p-multi"],
+);
+assert.equal(productMatchesCategoryFilter(assignedToTest.find((item) => item.id === "p-frame")!, "cat_test_filter"), true);
+assert.equal(productMatchesCategoryFilter(assignedToTest.find((item) => item.id === "p-legacy")!, "Sunglasses"), true);
+assert.equal(productMatchesCategoryFilter(assignedToTest.find((item) => item.id === "p-legacy")!, "cat_test_filter"), true);
+assert.equal(
+  assignedToTest.filter((item) => item.id === "p-frame").length,
+  1,
+);
+const persistedIds = assignedProductIdsForCategory(assignedToTest, "cat_test_filter");
+assert.deepEqual(persistedIds.sort(), ["p-draft", "p-frame", "p-legacy", "p-multi"]);
+assert.equal(countCategoryProducts(assignedToTest, "cat_test_filter"), 4);
+assert.equal(publicEligibleAssignedCount(assignedToTest, "cat_test_filter"), 3);
+
+const reloadedAfterAssign = mergeCatalogCategories([
+  ...categories,
+  testCategory,
+  hiddenManageable,
+]);
+const reloadedProducts = applyCategoryAssignments(
+  assignedToTest,
+  "cat_test_filter",
+  persistedIds,
+);
+assert.equal(countCategoryProducts(reloadedProducts, "cat_test_filter"), 4);
+assert.equal(productBelongsToCategory(reloadedProducts.find((item) => item.id === "p-frame")!, "cat_luxury"), true);
+assert.equal(reloadedProducts.find((item) => item.id === "p-frame")?.category, "Frames");
+
+const publicTest = filterProductsForRequest({
+  products: reloadedProducts,
+  categories: reloadedAfterAssign,
+  requestedCategoryIds: ["cat_test_filter"],
+  admin: false,
+});
+assert.deepEqual(publicTest.map((item) => item.id).sort(), ["p-frame", "p-legacy", "p-multi"]);
+assert.ok(!publicTest.some((item) => item.id === "p-draft"));
+assert.equal(new Set(publicTest.map((item) => item.id)).size, publicTest.length);
+
+const publicDtoIds = publicProductCategoryIds(
+  reloadedProducts.find((item) => item.id === "p-frame")!,
+  reloadedAfterAssign,
+);
+assert.ok(publicDtoIds.includes("cat_test_filter"));
+assert.ok(publicDtoIds.includes("Frames"));
+
+const hiddenStillAssignable = filterProductsForRequest({
+  products: applyCategoryAssignments(reloadedProducts, "cat_hidden_manage", ["p-frame"]),
+  categories: reloadedAfterAssign,
+  requestedCategoryIds: ["cat_hidden_manage"],
+  admin: true,
+});
+assert.ok(hiddenStillAssignable.some((item) => item.id === "p-frame"));
+const hiddenPublic = filterProductsForRequest({
+  products: applyCategoryAssignments(reloadedProducts, "cat_hidden_manage", ["p-frame"]),
+  categories: reloadedAfterAssign,
+  requestedCategoryIds: ["cat_hidden_manage"],
+  admin: false,
+});
+assert.deepEqual(hiddenPublic, []);
+
+const typePageUnchanged = filterProductsForRequest({
+  products: [
+    product({ id: "sun", category: "Sunglasses", categoryIds: ["cat_test_filter"] }),
+    product({ id: "frame-extra", category: "Frames", categoryIds: ["Sunglasses"] }),
+  ],
+  categories: reloadedAfterAssign,
+  requestedCategoryIds: ["Sunglasses"],
+  admin: false,
+});
+assert.deepEqual(typePageUnchanged.map((item) => item.id), ["sun"]);
 
 console.log("catalog-categories tests passed");

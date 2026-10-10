@@ -1820,8 +1820,15 @@ const he: Dictionary = {
       removeProduct: "הסרה מהקטגוריה",
       noProductsYet: "אין מוצרים משויכים עדיין. אפשר לסיים בלי להוסיף מוצרים.",
       searchProducts: "חיפוש מוצרים…",
-      allProductTypes: "כל סוגי המוצרים",
+      allProductTypes: "כל סוגי המוצרים והקטגוריות",
       noProductMatches: "אין מוצרים תואמים",
+      productTypesGroup: "סוגי מוצרים",
+      extraCategoriesGroup: "קטגוריות נוספות",
+      savedTitle: "הקטגוריה נשמרה בהצלחה",
+      savedDetail: "הגדרות הקטגוריה ושיוך המוצרים שנבחרו נשמרו.",
+      saveBusy: "שמירה כבר מתבצעת. נסו שוב בעוד רגע.",
+      nonePubliclyEligible:
+        "המוצרים שויכו, אך אף אחד מהם עדיין לא מפורסם בקטלוג הראשי.",
     },
     common: {
       add: "הוספה",

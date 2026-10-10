@@ -5,12 +5,15 @@ import { FolderTree, Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminProductCreateModal from "@/components/admin/AdminProductCreateModal";
 import CategoryProductAssigner from "@/components/admin/CategoryProductAssigner";
+import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { apiFetch } from "@/lib/admin-api";
 import {
+  applyCategoryAssignments,
   catalogCategorySaveMode,
   categoryLabel,
   countCategoryProducts,
   productBelongsToCategory,
+  publicEligibleAssignedCount,
 } from "@/lib/catalog-categories";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
 import type { CatalogCategory, CatalogCategoryNames, Product } from "@/lib/types";
@@ -78,7 +81,7 @@ export default function CatalogCategoriesModal({
   categories: AdminCategory[];
   onClose: () => void;
   onChange: (categories: AdminCategory[]) => void;
-  onProductsChange?: () => void;
+  onProductsChange?: () => void | Promise<void>;
 }) {
   const [items, setItems] = useState<AdminCategory[]>(categories);
   const [localProducts, setLocalProducts] = useState<Product[]>(products);
@@ -92,6 +95,7 @@ export default function CatalogCategoriesModal({
   const [createOpen, setCreateOpen] = useState(false);
   const savingRef = useRef(false);
   const wizardRef = useRef<WizardState | null>(null);
+  const { notifySaved } = useAdminSuccessNotice();
   wizardRef.current = wizard;
 
   useEffect(() => {
@@ -131,21 +135,18 @@ export default function CatalogCategoriesModal({
     return label === key ? id : label;
   }
 
-  function withCounts(
-    list: CatalogCategory[],
-    nextProducts = localProducts,
-  ): AdminCategory[] {
-    return list.map((item) => ({
-      ...item,
-      productCount: countCategoryProducts(nextProducts, item.id),
-    }));
-  }
-
   async function refreshLists(nextProducts?: Product[]) {
     const data = await withTimeout(
       apiFetch<{ categories: AdminCategory[] }>("/api/catalog-categories?all=1"),
     );
-    const next = withCounts(data.categories || [], nextProducts || localProducts);
+    const source = nextProducts || localProducts;
+    const next = (data.categories || []).map((item) => ({
+      ...item,
+      productCount:
+        nextProducts
+          ? countCategoryProducts(nextProducts, item.id)
+          : item.productCount ?? countCategoryProducts(source, item.id),
+    }));
     setItems(next);
     onChange(next);
     invalidatePublicCache("products:");
@@ -165,20 +166,26 @@ export default function CatalogCategoriesModal({
     const payload = {
       names: draft.names,
       showInMainCatalog: draft.showInMainCatalog,
-      ...(draft.id && includeAssignments
-        ? { assignedProductIds: draft.selectedProductIds }
-        : {}),
+      ...(includeAssignments ? { assignedProductIds: draft.selectedProductIds } : {}),
     };
     if (catalogCategorySaveMode(draft.id) === "update" && draft.id) {
-      const updated = unwrapCategory(
-        await withTimeout(
-          apiFetch("/api/catalog-categories", {
-            method: "PUT",
-            body: JSON.stringify({ id: draft.id, ...payload }),
-          }),
-        ),
+      const response = await withTimeout(
+        apiFetch<{
+          category?: CatalogCategory;
+          assignedProductIds?: string[];
+        }>("/api/catalog-categories", {
+          method: "PUT",
+          body: JSON.stringify({ id: draft.id, ...payload }),
+        }),
       );
+      const updated = unwrapCategory(response);
       if (!updated) throw new Error(t("admin.catalog.saveError"));
+      if (includeAssignments && Array.isArray(response.assignedProductIds)) {
+        const expected = [...draft.selectedProductIds].sort();
+        const persisted = [...response.assignedProductIds].sort();
+        const missing = expected.some((id) => !persisted.includes(id));
+        if (missing) throw new Error(t("admin.catalog.saveError"));
+      }
       return { ...draft, id: updated.id, persisted: true };
     }
     const created = unwrapCategory(
@@ -209,13 +216,14 @@ export default function CatalogCategoriesModal({
     return { ...draft, id: created.id, persisted: true };
   }
 
-  async function runSave(task: () => Promise<void>) {
-    if (savingRef.current) return;
+  async function runSave(task: () => Promise<void>): Promise<boolean> {
+    if (savingRef.current) return false;
     savingRef.current = true;
     setSaving(true);
     setError("");
     try {
       await task();
+      return true;
     } catch (err) {
       const text =
         err instanceof Error && err.message === "TIMEOUT"
@@ -244,12 +252,15 @@ export default function CatalogCategoriesModal({
     }
     if (step === 2) {
       try {
-        await runSave(async () => {
-          const saved = await persistWizard(wizard, false);
+        const completed = await runSave(async () => {
+          const saved = await persistWizard(wizardRef.current || wizard, false);
           setWizard(saved);
           await refreshLists();
         });
-        setMessage(t("admin.catalog.saved"));
+        if (!completed) {
+          setError(t("admin.catalog.saveBusy"));
+          return;
+        }
         setStep(3);
       } catch {
         /* error already set */
@@ -258,17 +269,33 @@ export default function CatalogCategoriesModal({
   }
 
   async function finishWizard() {
-    if (!wizard) return;
+    const draft = wizardRef.current || wizard;
+    if (!draft) return;
     try {
-      await runSave(async () => {
-        const saved = await persistWizard(wizard, true);
+      const completed = await runSave(async () => {
+        const saved = await persistWizard(draft, true);
+        if (!saved.id) throw new Error(t("admin.catalog.saveError"));
+        const nextProducts = applyCategoryAssignments(
+          localProducts,
+          saved.id,
+          saved.selectedProductIds,
+        );
+        setLocalProducts(nextProducts);
         setWizard(saved);
-        await refreshLists();
-        onProductsChange?.();
+        await refreshLists(nextProducts);
+        await onProductsChange?.();
       });
+      if (!completed) {
+        setError(t("admin.catalog.saveBusy"));
+        return;
+      }
       setWizard(null);
       setStep(1);
-      setMessage(t("admin.catalog.saved"));
+      setMessage("");
+      notifySaved({
+        title: t("admin.catalog.savedTitle"),
+        detail: t("admin.catalog.savedDetail"),
+      });
     } catch {
       /* stay on wizard with error */
     }
@@ -512,15 +539,32 @@ export default function CatalogCategoriesModal({
           ) : null}
 
           {step === 3 && wizard.id ? (
-            <CategoryProductAssigner
-              products={localProducts}
-              categoryId={wizard.id}
-              selectedIds={wizard.selectedProductIds}
-              typeLabel={typeLabel}
-              t={t}
-              onChange={(ids) => setWizard({ ...wizard, selectedProductIds: ids })}
-              onAddNew={() => setCreateOpen(true)}
-            />
+            <>
+              <CategoryProductAssigner
+                products={localProducts}
+                categories={items}
+                locale={locale}
+                categoryId={wizard.id}
+                selectedIds={wizard.selectedProductIds}
+                typeLabel={typeLabel}
+                t={t}
+                onChange={(ids) =>
+                  setWizard((prev) =>
+                    prev ? { ...prev, selectedProductIds: ids } : prev,
+                  )
+                }
+                onAddNew={() => setCreateOpen(true)}
+              />
+              {wizard.selectedProductIds.length > 0 &&
+              publicEligibleAssignedCount(
+                localProducts.filter((product) =>
+                  wizard.selectedProductIds.includes(product.id),
+                ),
+                wizard.id,
+              ) === 0 ? (
+                <p className="admin-cat-hint">{t("admin.catalog.nonePubliclyEligible")}</p>
+              ) : null}
+            </>
           ) : null}
 
           <div className="admin-service-actions">

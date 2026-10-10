@@ -5,6 +5,7 @@ import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import {
   applyCategoryAssignments,
   applyCategoryDelete,
+  assignedProductIdsForCategory,
   categoryLabel,
   countCategoryProducts,
   createCatalogCategory,
@@ -115,6 +116,7 @@ export async function PUT(request: Request) {
     if (!id) return jsonError("Category id is required", 400);
 
     let updated: CatalogCategory | null = null;
+    let assignedProductIds: string[] = [];
     await updateStore((store) => {
       const current = mergeCatalogCategories(store.catalogCategories);
       const index = current.findIndex((item) => item.id === id);
@@ -142,6 +144,7 @@ export async function PUT(request: Request) {
         );
         store.products = applyCategoryAssignments(store.products, id, selectedIds);
       }
+      assignedProductIds = assignedProductIdsForCategory(store.products, id);
       pushActivity(store, {
         actor: session.email,
         action: "update",
@@ -152,7 +155,12 @@ export async function PUT(request: Request) {
       return store;
     });
 
-    return NextResponse.json({ category: updated });
+    if (!updated) return jsonError("Category not found", 404);
+    const savedCategory: CatalogCategory = updated;
+    return NextResponse.json({
+      category: { ...savedCategory, productCount: assignedProductIds.length },
+      assignedProductIds,
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_FOUND") {
       return jsonError("Category not found", 404);
