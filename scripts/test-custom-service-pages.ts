@@ -12,16 +12,19 @@ import {
   MAX_PAGE_PRODUCTS,
   normalizeCustomPages,
   normalizeCustomServicePage,
-  visibleCustomSections,
   persistCustomPages,
   publicCustomPages,
   RESERVED_SERVICE_SLUGS,
   resolveCtaHref,
   resolveCustomPageProducts,
   resolvePublishedCustomPage,
+  resolveSectionArticle,
+  sanitizeArticleBody,
+  sanitizeArticleHeading,
   sanitizeExternalUrl,
   sanitizeInternalPath,
   uniqueProductIds,
+  visibleCustomSections,
   CustomPageConflictError,
   CustomPageError,
 } from "../lib/custom-service-pages";
@@ -729,5 +732,115 @@ assert.equal(publicRenamed[0]?.sections[0]?.adminLabel, undefined);
 const resolved = resolvePublishedCustomPage(renamed, created[0]!.slug, "ar");
 assert.equal(resolved?.page.sections[0]?.adminLabel, undefined);
 assert.equal(resolved?.copy.title, completeCopy().title);
+
+assert.equal(sanitizeArticleHeading("  ماذا يشمل  \n فحص النظر  "), "ماذا يشمل فحص النظر");
+assert.equal(sanitizeArticleHeading("<b>فحص</b>"), "فحص");
+assert.equal(sanitizeArticleBody("سطر أول\n\nسطر ثانٍ<script>x</script>").includes("<"), false);
+assert.equal(sanitizeArticleBody("   \n  "), "");
+assert.equal(resolveSectionArticle({ id: "s", type: "featureGrid" }, "ar"), null);
+
+const articlePage = persistCustomPages(renamed, {
+  customPageOp: {
+    op: "update",
+    id: renamed[0]!.id,
+    expectedRevision: renamed[0]!.revision,
+    sections: [
+      {
+        id: "sec_features",
+        type: "featureGrid",
+        article: {
+          align: "center",
+          position: "before",
+          locales: {
+            ar: { heading: "ماذا يشمل فحص النظر لدينا", body: "وصف عربي" },
+            he: { heading: "כותרת", body: "" },
+            en: { heading: "", body: "  " },
+          },
+        },
+      },
+      {
+        id: "sec_products",
+        type: "products",
+        article: {
+          align: "left",
+          position: "after",
+          locales: {
+            ar: { heading: "", body: "نص المنتجات فقط" },
+          },
+        },
+      },
+    ],
+  },
+});
+const featuresSec = articlePage[0]?.sections.find((item) => item.id === "sec_features");
+const productsSec = articlePage[0]?.sections.find((item) => item.id === "sec_products");
+assert.equal(featuresSec?.article?.align, "center");
+assert.equal(featuresSec?.article?.position, "before");
+assert.equal(featuresSec?.article?.locales?.ar?.heading, "ماذا يشمل فحص النظر لدينا");
+assert.equal(featuresSec?.article?.locales?.he?.heading, "כותרת");
+assert.equal(featuresSec?.article?.locales?.en, undefined);
+assert.equal(resolveSectionArticle(featuresSec, "en"), null);
+assert.equal(resolveSectionArticle(featuresSec, "he")?.body, "");
+assert.equal(resolveSectionArticle(featuresSec, "he")?.heading, "כותרת");
+assert.equal(productsSec?.article?.align, "left");
+assert.equal(productsSec?.article?.position, "after");
+assert.equal(resolveSectionArticle(productsSec, "ar")?.heading, "");
+assert.equal(resolveSectionArticle(productsSec, "ar")?.body, "نص المنتجات فقط");
+
+const emptyArticle = persistCustomPages(articlePage, {
+  customPageOp: {
+    op: "update",
+    id: articlePage[0]!.id,
+    expectedRevision: articlePage[0]!.revision,
+    sections: [
+      {
+        id: "sec_features",
+        type: "featureGrid",
+        article: {
+          align: "right",
+          position: "after",
+          locales: { ar: { heading: "   ", body: "" } },
+        },
+      },
+    ],
+  },
+});
+assert.equal(emptyArticle[0]?.sections[0]?.article, undefined);
+
+const articleReordered = persistCustomPages(articlePage, {
+  customPageOp: {
+    op: "update",
+    id: articlePage[0]!.id,
+    expectedRevision: articlePage[0]!.revision,
+    sections: [productsSec!, featuresSec!],
+  },
+});
+assert.equal(articleReordered[0]?.sections[0]?.id, "sec_products");
+assert.equal(articleReordered[0]?.sections[0]?.article?.locales?.ar?.body, "نص المنتجات فقط");
+assert.equal(articleReordered[0]?.sections[1]?.article?.locales?.ar?.heading, "ماذا يشمل فحص النظر لدينا");
+
+const publicArticle = publicCustomPages(articlePage);
+assert.equal(publicArticle[0]?.sections.find((item) => item.id === "sec_features")?.article?.locales?.ar?.heading, "ماذا يشمل فحص النظر لدينا");
+assert.equal(publicArticle[0]?.sections.find((item) => item.id === "sec_features")?.adminLabel, undefined);
+
+const removed = persistCustomPages(articlePage, {
+  customPageOp: {
+    op: "update",
+    id: articlePage[0]!.id,
+    expectedRevision: articlePage[0]!.revision,
+    sections: [productsSec!],
+  },
+});
+assert.equal(removed[0]?.sections.some((item) => item.id === "sec_features"), false);
+assert.equal(removed[0]?.sections[0]?.article?.locales?.ar?.body, "نص المنتجات فقط");
+
+const legacyStill = normalizeCustomServicePage({
+  id: "csp_plain",
+  slug: "plain-page",
+  name: "Plain",
+  template: "eye-exam",
+  sections: [{ id: "sec_old", type: "featureGrid" }],
+});
+assert.equal(legacyStill?.sections[0]?.article, undefined);
 
 console.log("custom service pages tests passed");

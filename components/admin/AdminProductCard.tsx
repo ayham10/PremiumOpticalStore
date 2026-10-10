@@ -6,6 +6,7 @@ import type { Product } from "@/lib/types";
 
 type Props = {
   product: Product;
+  categoryLabels?: string[];
   canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -13,6 +14,7 @@ type Props = {
 
 export default function AdminProductCard({
   product,
+  categoryLabels,
   canDelete,
   onEdit,
   onDelete,
@@ -37,6 +39,12 @@ export default function AdminProductCard({
       <div className="admin-product-card-body">
         <div className="admin-product-card-heading">
           <h2 className="admin-product-card-name">{product.name}</h2>
+          {categoryLabels?.length ? (
+            <p className="admin-product-card-cats">
+              {categoryLabels.slice(0, 3).join(" · ")}
+              {categoryLabels.length > 3 ? " +" : ""}
+            </p>
+          ) : null}
           {isActive ? (
             <span className="admin-product-card-badge-inline">نشط</span>
           ) : null}
