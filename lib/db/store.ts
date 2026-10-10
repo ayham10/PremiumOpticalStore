@@ -4,7 +4,7 @@ import { mergeBranding } from "@/lib/branding";
 import { mergeBookingMessages } from "@/lib/booking-messages";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { normalizeLensInventory } from "@/lib/lens-inventory";
-import { publicServicePages } from "@/lib/service-pages";
+import { storeServicePages } from "@/lib/service-pages";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
 import {
   getIsolatedStore,
@@ -241,7 +241,7 @@ function normalizeData(data: AppData): AppData {
       categoryDefaultImages: mergeCategoryDefaultImages(
         data.settings?.categoryDefaultImages,
       ),
-      servicePages: publicServicePages(data.settings?.servicePages),
+      servicePages: storeServicePages(data.settings?.servicePages),
     },
     version: data.version || 1,
     updatedAt: data.updatedAt || new Date().toISOString(),

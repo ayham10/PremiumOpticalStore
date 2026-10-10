@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   DEFAULT_SERVICE_PAGES,
   hydrateServicePagesForEditor,
@@ -8,6 +10,7 @@ import {
   pickServiceText,
   publicServicePages,
   resolveServicePagesForLocale,
+  storeServicePages,
 } from "../lib/service-pages";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
 
@@ -274,6 +277,15 @@ assert.equal(publicMedia?.locales?.ar?.catalog?.title, "المتجر المحد�
 assert.equal(publicMedia?.locales?.ar?.sunglasses?.title, "شمسية محدثة");
 assert.equal(publicMedia?.locales?.ar?.frames?.title, "إطارات محدثة");
 assert.equal(publicMedia?.locales?.ar?.adminSectionNames, undefined);
+const storedMedia = storeServicePages(mediaSave);
+assert.equal(
+  storedMedia?.locales?.ar?.adminSectionNames?.["eyeExam-benefits"],
+  "مميزات الفحص — تنظيم",
+);
+assert.equal(storedMedia?.locales?.ar?.sunglasses?.title, "شمسية محدثة");
+const reloadedPublic = publicServicePages(storedMedia);
+assert.equal(reloadedPublic?.locales?.ar?.adminSectionNames, undefined);
+assert.equal(reloadedPublic?.locales?.ar?.sunglasses?.title, "شمسية محدثة");
 assert.equal(
   resolveServicePagesForLocale(publicMedia, "he")?.eyeExam.heroMedia?.url,
   "https://cdn.example/eye-exam.webp",
@@ -361,5 +373,9 @@ assert.notEqual(
   framesOnly.locales?.he?.sunglasses?.heroMedia?.url,
   framesOnly.locales?.he?.frames?.heroMedia?.url,
 );
+
+const storeSrc = readFileSync(join(process.cwd(), "lib/db/store.ts"), "utf8");
+assert.match(storeSrc, /storeServicePages\(/);
+assert.doesNotMatch(storeSrc, /publicServicePages\(/);
 
 console.log("service-pages i18n tests passed");

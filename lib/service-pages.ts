@@ -965,6 +965,17 @@ function stripAdminFromDocument(
   return next;
 }
 
+/**
+ * Store/admin hydrate: migrate legacy root copy but keep Admin-only labels.
+ * Public responses must still go through `publicServicePages`.
+ */
+export function storeServicePages(
+  incoming?: unknown,
+): ServicePagesSettings | undefined {
+  if (!incoming || typeof incoming !== "object") return undefined;
+  return migrateServicePagesDocument(incoming);
+}
+
 /** Public whitelist: service-page copy only. Does not invent unsaved Homepage/locales. */
 export function publicServicePages(
   incoming?: unknown,
