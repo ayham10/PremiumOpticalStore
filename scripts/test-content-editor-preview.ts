@@ -400,7 +400,8 @@ assert.match(editorPage, /PREVIEW_SECTION\.catalogHero/);
 assert.match(editorPage, /sectionAdminName/);
 assert.match(editorPage, /restoreDefaultMedia/);
 assert.match(editorPage, /onPointerDownCapture|onActivate=\{setActiveSectionId\}/);
-assert.match(editorPage, /acceptVideo=\{false\}/);
+assert.match(editorPage, /renderHeroMedia\(catalog\.heroMedia/);
+assert.match(editorPage, /updateCatalog\("heroMedia"/);
 assert.match(canvasSrc, /StoreCatalogHero/);
 assert.match(createModal, /sectionAdminName/);
 assert.equal(
