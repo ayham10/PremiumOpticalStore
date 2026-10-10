@@ -16,6 +16,7 @@ export default function AdminMediaField({
   folder = "general",
   accept = "image",
   stacked,
+  hidePreview,
 }: {
   value?: CustomPageMediaRef;
   onChange: (media: CustomPageMediaRef) => void;
@@ -23,6 +24,7 @@ export default function AdminMediaField({
   folder?: MediaItem["folder"];
   accept?: "image" | "video" | "any";
   stacked?: boolean;
+  hidePreview?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -60,7 +62,7 @@ export default function AdminMediaField({
 
   return (
     <div className="csp-media-field">
-      {value?.url ? (
+      {value?.url && !hidePreview ? (
         value.kind === "video" ? (
           <video className="csp-media-preview" src={value.url} muted controls playsInline />
         ) : (

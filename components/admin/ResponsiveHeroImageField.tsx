@@ -1,13 +1,17 @@
 "use client";
 
-import { useRef, useState, type PointerEvent } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { ImagePlus, Loader2, Upload } from "lucide-react";
 import AdminMediaField from "@/components/admin/AdminMediaField";
 import { uploadImageBlob, uploadImageFromPc } from "@/lib/admin-media-upload";
 import {
   clampImageFocal,
   DEFAULT_IMAGE_FOCAL,
+  freshHeroImage,
   objectPositionCss,
+  resetHeroFocals,
+  sliderPercentToZoom,
+  zoomToSliderPercent,
 } from "@/lib/responsive-image";
 import { buildHeroVariants } from "@/lib/responsive-image-client";
 import { MEDIA_IMAGE_ACCEPT } from "@/lib/media-upload";
@@ -17,18 +21,25 @@ type Translate = (path: string, vars?: Record<string, string | number>) => strin
 
 function FocalPreview({
   src,
-  aspect,
+  aspectWidth,
+  aspectHeight,
   focal,
   label,
+  fit,
+  t,
   onChange,
 }: {
   src: string;
-  aspect: string;
+  aspectWidth: number;
+  aspectHeight: number;
   focal: ImageFocalPoint;
   label: string;
+  fit: "cover" | "contain";
+  t: Translate;
   onChange: (focal: ImageFocalPoint) => void;
 }) {
   const dragging = useRef(false);
+  const zoomPercent = zoomToSliderPercent(focal.zoom);
 
   function pointFromEvent(event: PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -42,46 +53,99 @@ function FocalPreview({
   return (
     <div className="csp-hero-variant">
       <p>{label}</p>
-      <div
-        className="csp-hero-focal"
-        style={{ aspectRatio: aspect }}
-        onPointerDown={(event) => {
-          dragging.current = true;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          onChange(pointFromEvent(event));
-        }}
-        onPointerMove={(event) => {
-          if (!dragging.current) return;
-          onChange(pointFromEvent(event));
-        }}
-        onPointerUp={() => {
-          dragging.current = false;
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt=""
-          style={{
-            objectFit: "cover",
-            objectPosition: objectPositionCss(focal),
-            transform: `scale(${focal.zoom})`,
+      <div className="csp-hero-focal-wrap">
+        <div
+          className="csp-hero-focal"
+          style={
+            {
+              "--hero-aw": aspectWidth,
+              "--hero-ah": aspectHeight,
+            } as CSSProperties
+          }
+          onPointerDown={(event) => {
+            dragging.current = true;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            onChange(pointFromEvent(event));
           }}
-        />
+          onPointerMove={(event) => {
+            if (!dragging.current) return;
+            onChange(pointFromEvent(event));
+          }}
+          onPointerUp={() => {
+            dragging.current = false;
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            style={{
+              objectFit: fit,
+              objectPosition: objectPositionCss(focal),
+              transform: `scale(${focal.zoom})`,
+            }}
+          />
+        </div>
       </div>
-      <label className="admin-service-field">
-        <span className="label">{label} zoom</span>
+      <label className="csp-hero-zoom">
+        <span className="label">{t("admin.servicePages.heroZoom", { n: zoomPercent })}</span>
         <input
           type="range"
-          min={1}
-          max={2.2}
-          step={0.05}
-          value={focal.zoom}
+          min={0}
+          max={100}
+          step={1}
+          dir="ltr"
+          value={zoomPercent}
           onChange={(event) =>
-            onChange(clampImageFocal({ ...focal, zoom: Number(event.target.value) }))
+            onChange(
+              clampImageFocal({
+                ...focal,
+                zoom: sliderPercentToZoom(Number(event.target.value)),
+              }),
+            )
           }
         />
       </label>
+      <div className="csp-hero-pos">
+        <label>
+          <span className="label">{t("admin.servicePages.heroPositionX")}</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            dir="ltr"
+            value={Math.round(focal.x * 100)}
+            onChange={(event) =>
+              onChange(
+                clampImageFocal({
+                  ...focal,
+                  x: Number(event.target.value) / 100,
+                }),
+              )
+            }
+          />
+        </label>
+        <label>
+          <span className="label">{t("admin.servicePages.heroPositionY")}</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            dir="ltr"
+            value={Math.round(focal.y * 100)}
+            onChange={(event) =>
+              onChange(
+                clampImageFocal({
+                  ...focal,
+                  y: Number(event.target.value) / 100,
+                }),
+              )
+            }
+          />
+        </label>
+      </div>
     </div>
   );
 }
@@ -103,8 +167,21 @@ export default function ResponsiveHeroImageField({
   const mobileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const fit = value?.fit === "contain" ? "contain" : "cover";
 
-  async function optimize(next: CustomPageMediaRef) {
+  function selectImage(next?: CustomPageMediaRef) {
+    if (!next?.url) {
+      onChange(undefined);
+      return;
+    }
+    if (next.kind !== "image") {
+      onChange(next);
+      return;
+    }
+    onChange(freshHeroImage(next));
+  }
+
+  async function rebuild(next: CustomPageMediaRef) {
     if (next.kind !== "image" || !next.url) {
       onChange(next);
       return;
@@ -169,28 +246,33 @@ export default function ResponsiveHeroImageField({
     <div className="csp-hero-optimize">
       <AdminMediaField
         value={value}
-        onChange={(media) => void optimize(media)}
+        onChange={selectImage}
         t={t}
         folder={folder}
         accept={acceptVideo ? "any" : "image"}
+        hidePreview
       />
       {value?.kind === "image" && value.url ? (
         <>
           <div className="csp-hero-variants">
             <FocalPreview
-              src={value.desktopUrl || value.url}
-              aspect="16 / 9"
+              src={value.url}
+              aspectWidth={16}
+              aspectHeight={9}
               focal={clampImageFocal(value.desktopFocal)}
               label={t("admin.servicePages.heroDesktop")}
-              onChange={(desktopFocal) =>
-                onChange({ ...value, desktopFocal })
-              }
+              fit={fit}
+              t={t}
+              onChange={(desktopFocal) => onChange({ ...value, desktopFocal })}
             />
             <FocalPreview
-              src={value.mobileUrl || value.url}
-              aspect="9 / 16"
+              src={value.url}
+              aspectWidth={9}
+              aspectHeight={16}
               focal={clampImageFocal(value.mobileFocal)}
               label={t("admin.servicePages.heroMobile")}
+              fit={fit}
+              t={t}
               onChange={(mobileFocal) => onChange({ ...value, mobileFocal })}
             />
           </div>
@@ -230,6 +312,14 @@ export default function ResponsiveHeroImageField({
             <button
               type="button"
               className="btn btn-ghost"
+              onClick={() => onChange(resetHeroFocals(value))}
+              disabled={busy}
+            >
+              {t("admin.servicePages.heroAutoFit")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
               onClick={() => desktopInput.current?.click()}
               disabled={busy}
             >
@@ -249,7 +339,7 @@ export default function ResponsiveHeroImageField({
               type="button"
               className="btn btn-ghost"
               disabled={busy}
-              onClick={() => void optimize(value)}
+              onClick={() => void rebuild(value)}
             >
               {busy ? <Loader2 size={15} className="animate-spin" /> : null}
               {t("admin.servicePages.heroRebuild")}
