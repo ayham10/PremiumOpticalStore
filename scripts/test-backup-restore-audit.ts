@@ -33,7 +33,7 @@ assert.deepEqual([...RESTORE_CATEGORY_FIELDS.products], [
 ]);
 assert.deepEqual([...RESTORE_CATEGORY_FIELDS.lenses], ["lensInventory"]);
 assert.deepEqual([...RESTORE_CATEGORY_FIELDS.settings], ["settings"]);
-assert.ok(!RESTORABLE_SECTIONS.includes("catalogCategories" as never));
+assert.ok(RESTORABLE_SECTIONS.includes("catalogCategories"));
 assert.ok(RESTORABLE_SECTIONS.includes("settings"));
 assert.ok(RESTORABLE_SECTIONS.includes("products"));
 assert.ok(RESTORABLE_SECTIONS.includes("media"));

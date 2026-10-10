@@ -19697,7 +19697,9 @@ body > .admin-restore-overlay,
 }
 
 .admin-restore-card {
-  width: min(100%, 28rem);
+  width: min(100%, 34rem);
+  max-height: min(88vh, 40rem);
+  overflow: auto;
   padding: 1.25rem 1.15rem 1.1rem;
   border-radius: 16px;
   border: 1px solid rgba(201, 157, 61, 0.45);
@@ -19798,6 +19800,112 @@ body > .admin-restore-overlay,
 
 .admin-backups-restore-prod-only {
   margin-top: 0.65rem;
+}
+
+.admin-backups-restore-modes {
+  margin-bottom: 0.55rem;
+}
+
+.admin-backups-restore-note {
+  margin: 0.45rem 0 0;
+  color: #c8cdd4;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.admin-backups-rollback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 0.75rem;
+  border: 1px solid rgba(201, 157, 61, 0.7);
+  border-radius: 12px;
+  background: #0d1a25;
+  color: #e6c56a;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-backups-rollback:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.admin-backups-item-picker {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.admin-backups-item-search {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 0.7rem;
+  border: 1px solid rgba(201, 157, 61, 0.35);
+  border-radius: 10px;
+  background: #0d1a25;
+  color: #f4f6f8;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.admin-backups-item-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 11rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-backups-item-list button {
+  width: 100%;
+  min-height: 36px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(201, 157, 61, 0.28);
+  border-radius: 10px;
+  background: #08131d;
+  color: #e8eaed;
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.admin-backups-item-list button.is-active {
+  color: #e6c56a;
+  border-color: rgba(201, 157, 61, 0.85);
+  background: #0d1a25;
+}
+
+.admin-restore-changes {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-restore-changes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(201, 157, 61, 0.28);
+  border-radius: 10px;
+  background: #0d1a25;
+  font-size: 0.76rem;
+}
+
+.admin-restore-changes li.is-overwrite {
+  border-color: rgba(230, 197, 106, 0.85);
+  color: #e6c58a;
 }
 
 .admin-backups-soon {
