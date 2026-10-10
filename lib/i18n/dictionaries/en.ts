@@ -1627,7 +1627,7 @@ const en: Dictionary = {
       bmManageTemplate: "Booking management template",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
       bmManageTemplateHint:
-        "Pending Meta approval. Keep this off. After approval, Arabic bookings use oyon_booking_manage_v2_ar and Hebrew bookings use oyon_booking_manage_v2_he. Live bookings keep the current confirmation template until then.",
+        "Approved templates: oyon_booking_manage_v2_ar for Arabic and oyon_booking_manage_v2_he for Hebrew. Twilio Content SIDs are read from server environment variables. English bookings keep the current confirmation template.",
       bmManageTemplateEnable: "Activate after approval",
       bmManageTemplateSid: "Twilio Content SID",
       bmManageTemplateSidHint:
@@ -1635,6 +1635,8 @@ const en: Dictionary = {
       bmOwner: "Owner notification",
       bmReminder: "Appointment reminder",
       bmEnabled: "Enabled",
+      bmInactive: "Inactive",
+      bmDisconnected: "Disconnected",
       bmTemplate: "Template name",
       bmTemplateHint:
         "Twilio Content SIDs are configured on the server and are not edited here.",

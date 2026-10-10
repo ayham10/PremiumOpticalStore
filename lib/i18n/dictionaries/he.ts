@@ -1253,7 +1253,7 @@ const he: Dictionary = {
       bmManageTemplate: "תבנית ניהול תור",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
       bmManageTemplateHint:
-        "ממתין לאישור Meta. השאירו כבוי. לאחר האישור ייעשה שימוש ב-oyon_booking_manage_v2_ar לערבית וב-oyon_booking_manage_v2_he לעברית. הזמנות חיות ממשיכות בתבנית האישור הקיימת עד אז.",
+        "תבניות מאושרות: oyon_booking_manage_v2_ar לערבית ו-oyon_booking_manage_v2_he לעברית. מזהי Twilio נקראים ממשתני הסביבה בשרת. הזמנות באנגלית נשארות עם תבנית האישור הקיימת.",
       bmManageTemplateEnable: "הפעלה לאחר אישור",
       bmManageTemplateSid: "Twilio Content SID",
       bmManageTemplateSidHint:
@@ -1261,6 +1261,8 @@ const he: Dictionary = {
       bmOwner: "התראה לבעלים",
       bmReminder: "תזכורת תור",
       bmEnabled: "פעיל",
+      bmInactive: "לא פעיל",
+      bmDisconnected: "מנותק",
       bmTemplate: "שם תבנית",
       bmTemplateHint:
         "מזהי Twilio Content SID מוגדרים בשרת ואינם נערכים כאן.",

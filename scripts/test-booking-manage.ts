@@ -96,6 +96,10 @@ function sampleHxSid(): string {
 
 resetTwilioContentSidMapForTests();
 delete process.env.TWILIO_WHATSAPP_CONTENT_SIDS;
+delete process.env.TWILIO_TEMPLATE_BOOKING_HE;
+delete process.env.TWILIO_TEMPLATE_BOOKING_AR;
+delete process.env.TWILIO_TEMPLATE_OWNER_RESCHEDULED;
+delete process.env.TWILIO_TEMPLATE_OWNER_CANCELLED;
 
 const issuedA = issueBookingManageToken("2026-10-15", "10:30", 30);
 const issuedB = issueBookingManageToken("2026-10-15", "11:30", 30);
@@ -633,6 +637,8 @@ const managePatch = readFileSync(
 );
 assert.doesNotMatch(managePatch, /dispatchBookingMessages/);
 assert.doesNotMatch(managePatch, /sendSms/);
+assert.match(managePatch, /dispatchOwnerCancelNotification/);
+assert.match(managePatch, /dispatchOwnerRescheduleNotification/);
 
 const missingSecret = resolvePreviewTestStoreConfig({
   SUPABASE_URL: "https://example.supabase.co",

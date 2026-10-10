@@ -1253,7 +1253,7 @@ const ar: Dictionary = {
       bmManageTemplate: "قالب إدارة الموعد",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
       bmManageTemplateHint:
-        "بانتظار موافقة Meta. أبقِ هذا الخيار متوقفاً. بعد الموافقة تُستخدم oyon_booking_manage_v2_ar للعربية و oyon_booking_manage_v2_he للعبرية. الحجوزات الحالية تبقى على قالب التأكيد المعتمد حتى ذلك الحين.",
+        "القوالب المعتمدة: oyon_booking_manage_v2_ar للعربية و oyon_booking_manage_v2_he للعبرية. معرّفات Twilio تُقرأ من إعدادات الخادم. الحجوزات الإنجليزية تبقى على قالب التأكيد الحالي.",
       bmManageTemplateEnable: "تفعيل بعد الموافقة",
       bmManageTemplateSid: "Twilio Content SID",
       bmManageTemplateSidHint:
@@ -1261,6 +1261,8 @@ const ar: Dictionary = {
       bmOwner: "إشعار المالك",
       bmReminder: "تذكير الموعد",
       bmEnabled: "مفعّل",
+      bmInactive: "غير مفعّل",
+      bmDisconnected: "غير متصل",
       bmTemplate: "اسم القالب",
       bmTemplateHint:
         "معرفات Twilio Content SID تُضبط على الخادم ولا تُعدَّل من هنا.",

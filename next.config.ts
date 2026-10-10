@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/appointments/manage", headers: manageHeaders },
       { source: "/appointments/manage/:path*", headers: manageHeaders },
+      { source: "/booking/manage", headers: manageHeaders },
+      { source: "/booking/manage/:path*", headers: manageHeaders },
       { source: "/api/booking/manage", headers: manageHeaders },
     ];
   },

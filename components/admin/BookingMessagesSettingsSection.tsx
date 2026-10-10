@@ -1,16 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Bell,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  ChevronDown,
   Clock,
-  MessageCircle,
   Phone,
   Plug,
   RefreshCw,
   TriangleAlert,
   Unplug,
-  UserRound,
   Zap,
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
@@ -69,6 +73,66 @@ const TWILIO_APPOINTMENT_REMINDER_PREVIEW = `⏰ تذكير بموعدك في OY
 نتطلع لرؤيتك 💜`;
 
 const REMINDER_MINUTE_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
+
+type AccordionId = "provider" | "customer" | "manage" | "owner" | "reminder";
+
+function AccordionCard({
+  id,
+  title,
+  statusLabel,
+  statusTone = "idle",
+  open,
+  onToggle,
+  children,
+}: {
+  id: AccordionId;
+  title: string;
+  statusLabel: string;
+  statusTone?: "on" | "off" | "ready" | "idle";
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`admin-bm-card admin-bm-acc-card${open ? " is-open" : ""}`}
+    >
+      <h3 className="admin-bm-acc-heading">
+        <button
+          type="button"
+          id={`bm-${id}-header`}
+          className="admin-bm-acc-head"
+          aria-expanded={open}
+          aria-controls={`bm-${id}-panel`}
+          onClick={onToggle}
+        >
+          <span className="admin-bm-acc-title">{title}</span>
+          <span className="admin-bm-acc-meta">
+            <span className={`admin-bm-acc-status is-${statusTone}`}>
+              {statusLabel}
+            </span>
+            <ChevronDown
+              className="admin-bm-acc-chevron"
+              size={18}
+              strokeWidth={1.75}
+              aria-hidden
+            />
+          </span>
+        </button>
+      </h3>
+      <div
+        id={`bm-${id}-panel`}
+        role="region"
+        aria-labelledby={`bm-${id}-header`}
+        aria-hidden={!open}
+        inert={!open}
+        className="admin-bm-acc-body"
+      >
+        <div className="admin-bm-acc-body-inner">{children}</div>
+      </div>
+    </section>
+  );
+}
 
 function reminderSelectValue(minutesBefore: number): number {
   if (
@@ -255,6 +319,11 @@ export default function BookingMessagesSettingsSection({
   const [qrReceivedAt, setQrReceivedAt] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const pollQrRef = useRef(false);
+  const [openCard, setOpenCard] = useState<AccordionId | null>(null);
+
+  function toggleCard(id: AccordionId) {
+    setOpenCard((current) => (current === id ? null : id));
+  }
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -562,15 +631,21 @@ export default function BookingMessagesSettingsSection({
     ? t("admin.settings.bmOracleReady")
     : t("admin.settings.bmOracleBackupIdle");
 
+  const providerConnected = twilioHealth === "connected";
+  const providerStatusLabel = providerConnected
+    ? t("admin.settings.bmTwilioConnected")
+    : t("admin.settings.bmDisconnected");
+
   return (
     <div className="admin-bm">
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <Plug className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmProvider")}
-          </span>
-        </header>
+      <AccordionCard
+        id="provider"
+        title={t("admin.settings.bmProvider")}
+        statusLabel={providerStatusLabel}
+        statusTone={providerConnected ? "ready" : "idle"}
+        open={openCard === "provider"}
+        onToggle={() => toggleCard("provider")}
+      >
         <div className="admin-bm-field">
           <span className="admin-bm-field-label">{t("admin.settings.bmProviderName")}</span>
           <p className="admin-bm-provider-name">
@@ -606,7 +681,7 @@ export default function BookingMessagesSettingsSection({
           </div>
         ) : null}
         <p className="admin-bm-hint">{t("admin.settings.bmTwilioHint")}</p>
-      </section>
+      </AccordionCard>
 
       {SHOW_ORACLE_ADMIN_CONTROLS ? (
       <section className="admin-bm-card admin-bm-card-backup">
@@ -779,24 +854,29 @@ export default function BookingMessagesSettingsSection({
       </AdminModal>
       ) : null}
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <MessageCircle className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmCustomer")}
-          </span>
-          <ToggleRow
-            id="bm-customer-enabled"
-            label={t("admin.settings.bmEnabled")}
-            checked={value.customerConfirmation.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...value,
-                customerConfirmation: { ...value.customerConfirmation, enabled },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="customer"
+        title={t("admin.settings.bmCustomer")}
+        statusLabel={
+          value.customerConfirmation.enabled
+            ? t("admin.settings.bmEnabled")
+            : t("admin.settings.bmInactive")
+        }
+        statusTone={value.customerConfirmation.enabled ? "on" : "off"}
+        open={openCard === "customer"}
+        onToggle={() => toggleCard("customer")}
+      >
+        <ToggleRow
+          id="bm-customer-enabled"
+          label={t("admin.settings.bmEnabled")}
+          checked={value.customerConfirmation.enabled}
+          onChange={(enabled) =>
+            onChange({
+              ...value,
+              customerConfirmation: { ...value.customerConfirmation, enabled },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
           <>
@@ -834,29 +914,36 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.customerConfirmation.enabled}
           />
         )}
-      </section>
+      </AccordionCard>
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <MessageCircle className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmManageTemplate")}
-          </span>
-          <ToggleRow
-            id="bm-manage-template-enabled"
-            label={t("admin.settings.bmManageTemplateEnable")}
-            checked={value.customerConfirmation.manageTemplateEnabled === true}
-            onChange={(manageTemplateEnabled) =>
-              onChange({
-                ...value,
-                customerConfirmation: {
-                  ...value.customerConfirmation,
-                  manageTemplateEnabled,
-                },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="manage"
+        title={t("admin.settings.bmManageTemplate")}
+        statusLabel={
+          value.customerConfirmation.manageTemplateEnabled === true
+            ? t("admin.settings.bmEnabled")
+            : t("admin.settings.bmInactive")
+        }
+        statusTone={
+          value.customerConfirmation.manageTemplateEnabled === true ? "on" : "off"
+        }
+        open={openCard === "manage"}
+        onToggle={() => toggleCard("manage")}
+      >
+        <ToggleRow
+          id="bm-manage-template-enabled"
+          label={t("admin.settings.bmManageTemplateEnable")}
+          checked={value.customerConfirmation.manageTemplateEnabled === true}
+          onChange={(manageTemplateEnabled) =>
+            onChange({
+              ...value,
+              customerConfirmation: {
+                ...value.customerConfirmation,
+                manageTemplateEnabled,
+              },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmManageTemplateHint")}</p>
         <div className="admin-bm-field">
           <label className="admin-bm-field-label" htmlFor="bm-manage-content-sid">
@@ -893,29 +980,34 @@ export default function BookingMessagesSettingsSection({
 {{2}} ${t("manage.service")}
 {{3}} ${t("common.date")}
 {{4}} ${t("common.time")}
-{{5}} https://oyonoptics.com/appointments/manage/{{5}}`}
+{{5}} https://oyonoptics.com/booking/manage/{{5}}`}
           disabled={!value.customerConfirmation.manageTemplateEnabled}
         />
-      </section>
+      </AccordionCard>
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <UserRound className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmOwner")}
-          </span>
-          <ToggleRow
-            id="bm-owner-enabled"
-            label={t("admin.settings.bmEnabled")}
-            checked={value.ownerNotification.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...value,
-                ownerNotification: { ...value.ownerNotification, enabled },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="owner"
+        title={t("admin.settings.bmOwner")}
+        statusLabel={
+          value.ownerNotification.enabled
+            ? t("admin.settings.bmEnabled")
+            : t("admin.settings.bmInactive")
+        }
+        statusTone={value.ownerNotification.enabled ? "on" : "off"}
+        open={openCard === "owner"}
+        onToggle={() => toggleCard("owner")}
+      >
+        <ToggleRow
+          id="bm-owner-enabled"
+          label={t("admin.settings.bmEnabled")}
+          checked={value.ownerNotification.enabled}
+          onChange={(enabled) =>
+            onChange({
+              ...value,
+              ownerNotification: { ...value.ownerNotification, enabled },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
@@ -979,26 +1071,31 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.ownerNotification.enabled}
           />
         )}
-      </section>
+      </AccordionCard>
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <Bell className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmReminder")}
-          </span>
-          <ToggleRow
-            id="bm-reminder-enabled"
-            label={t("admin.settings.bmEnabled")}
-            checked={value.appointmentReminder.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...value,
-                appointmentReminder: { ...value.appointmentReminder, enabled },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="reminder"
+        title={t("admin.settings.bmReminder")}
+        statusLabel={
+          value.appointmentReminder.enabled
+            ? t("admin.settings.bmEnabled")
+            : t("admin.settings.bmInactive")
+        }
+        statusTone={value.appointmentReminder.enabled ? "on" : "off"}
+        open={openCard === "reminder"}
+        onToggle={() => toggleCard("reminder")}
+      >
+        <ToggleRow
+          id="bm-reminder-enabled"
+          label={t("admin.settings.bmEnabled")}
+          checked={value.appointmentReminder.enabled}
+          onChange={(enabled) =>
+            onChange({
+              ...value,
+              appointmentReminder: { ...value.appointmentReminder, enabled },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
@@ -1065,7 +1162,7 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.appointmentReminder.enabled}
           />
         )}
-      </section>
+      </AccordionCard>
     </div>
   );
 }
