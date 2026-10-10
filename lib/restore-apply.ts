@@ -115,6 +115,10 @@ export function applyRestoreCategories(
   const next = structuredClone(live);
   for (const field of fieldsForCategories(parsed)) {
     if (backup[field] === undefined) {
+      if (field === "catalogCategories") {
+        next.catalogCategories = [];
+        continue;
+      }
       throw new Error(`RESTORE_FIELD_MISSING:${String(field)}`);
     }
     if (field === "eyeExamAppointments") {
@@ -123,6 +127,8 @@ export function applyRestoreCategories(
       next.appointments = structuredClone(backup.appointments);
     } else if (field === "products") {
       next.products = structuredClone(backup.products);
+    } else if (field === "catalogCategories") {
+      next.catalogCategories = structuredClone(backup.catalogCategories || []);
     } else if (field === "lensInventory") {
       next.lensInventory = structuredClone(backup.lensInventory);
     } else if (field === "settings") {

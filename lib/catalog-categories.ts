@@ -342,18 +342,16 @@ export function applyCategoryDelete(
   }
 
   let nextProducts = products;
-  if (opts.reassignTo) {
-    if (
-      opts.reassignTo === id ||
-      !categories.some((item) => item.id === opts.reassignTo)
-    ) {
+  const reassignTo = opts.reassignTo;
+  if (reassignTo) {
+    if (reassignTo === id || !categories.some((item) => item.id === reassignTo)) {
       throw new Error("INVALID_TARGET");
     }
     nextProducts = products.map((product) => {
       if (!productBelongsToCategory(product, id)) return product;
       const nextIds = (product.categoryIds || []).filter((item) => item !== id);
-      if (opts.reassignTo !== product.category && !nextIds.includes(opts.reassignTo)) {
-        nextIds.push(opts.reassignTo);
+      if (reassignTo !== product.category && !nextIds.includes(reassignTo)) {
+        nextIds.push(reassignTo);
       }
       return { ...product, categoryIds: nextIds };
     });

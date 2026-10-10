@@ -106,7 +106,18 @@ assert.equal(still.names.en, "Custom Shades");
 
 const luxury = custom("cat_luxury", false);
 const arrivals = custom("cat_new", true, { ar: "جديد", he: "חדש", en: "New Arrivals" });
-const categories = mergeCatalogCategories([luxury, arrivals]);
+const categories = mergeCatalogCategories([
+  luxury,
+  arrivals,
+  {
+    id: "Accessories",
+    names: SYSTEM_CATEGORY_NAMES.Accessories,
+    showInMainCatalog: false,
+    system: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+]);
 
 const frame = product({
   id: "p-frame",
