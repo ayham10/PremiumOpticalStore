@@ -12,17 +12,31 @@ import {
   mergeCategoryDefaultImages,
   storefrontProductImages,
 } from "@/lib/product-images";
+import {
+  filterProductsForRequest,
+  isProductType,
+  mergeCatalogCategories,
+  productCatalogIds,
+  publicCatalogCategories,
+  publicProductCategoryIds,
+  sanitizeCategoryIds,
+  toPublicCategory,
+} from "@/lib/catalog-categories";
 import type {
+  CatalogCategory,
   CategoryDefaultImages,
   Product,
-  ProductCategory,
   ProductStatus,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 /** Card/list DTO — omit gallery, costs, and inventory fields. */
-function toListProduct(p: Product, defaults?: CategoryDefaultImages) {
+function toListProduct(
+  p: Product,
+  defaults?: CategoryDefaultImages,
+  catalogCategories?: CatalogCategory[],
+) {
   const images = storefrontProductImages(p, defaults);
   return {
     id: p.id,
@@ -32,6 +46,9 @@ function toListProduct(p: Product, defaults?: CategoryDefaultImages) {
     sellingPrice: p.sellingPrice,
     status: p.status,
     category: p.category,
+    categoryIds: catalogCategories
+      ? publicProductCategoryIds(p, catalogCategories)
+      : productCatalogIds(p),
     createdAt: p.createdAt,
     featured: p.featured,
     images: images[0] ? [images[0]] : [],
@@ -39,27 +56,24 @@ function toListProduct(p: Product, defaults?: CategoryDefaultImages) {
   };
 }
 
-function toPublicProduct(p: Product, defaults?: CategoryDefaultImages): Product {
+function toPublicProduct(
+  p: Product,
+  defaults?: CategoryDefaultImages,
+  catalogCategories?: CatalogCategory[],
+): Product {
   return {
     ...p,
     images: storefrontProductImages(p, defaults),
+    categoryIds: catalogCategories
+      ? publicProductCategoryIds(p, catalogCategories)
+      : productCatalogIds(p),
   };
-}
-
-function isProductCategory(value: string): value is ProductCategory {
-  return [
-    "Prescription Glasses",
-    "Sunglasses",
-    "Contact Lenses",
-    "Frames",
-    "Accessories",
-    "Cleaning Products",
-  ].includes(value);
 }
 
 function sanitizeProductInput(
   input: Partial<Product>,
-  existing?: Product
+  existing?: Product,
+  knownCategoryIds?: Set<string>,
 ): Omit<Product, "id" | "createdAt" | "updatedAt"> | null {
   const name = (input.name ?? existing?.name)?.trim();
   const brand = (input.brand ?? existing?.brand ?? "").trim();
@@ -67,7 +81,7 @@ function sanitizeProductInput(
   const description = (input.description ?? existing?.description ?? "").trim();
   const skuRaw = (input.sku ?? existing?.sku)?.trim();
 
-  if (!name || !category || !isProductCategory(category)) {
+  if (!name || !category || !isProductType(category)) {
     return null;
   }
 
@@ -112,6 +126,13 @@ function sanitizeProductInput(
     supplierId: input.supplierId ?? existing?.supplierId,
     status,
     featured: Boolean(input.featured ?? existing?.featured ?? false),
+    categoryIds: knownCategoryIds
+      ? sanitizeCategoryIds(
+          input.categoryIds !== undefined ? input.categoryIds : existing?.categoryIds,
+          knownCategoryIds,
+          category,
+        )
+      : sanitizeCategoryIds(existing?.categoryIds, new Set(), category),
   };
 }
 
@@ -129,11 +150,8 @@ export async function GET(request: Request) {
       .flatMap((value) => value.split(","))
       .map((value) => value.trim())
       .filter(Boolean);
-    const categorySet = new Set(
-      categoryParams.filter(isProductCategory),
-    );
-
     const { data } = await getStore();
+    const catalogCategories = mergeCatalogCategories(data.catalogCategories);
     const defaults = mergeCategoryDefaultImages(
       data.settings?.categoryDefaultImages,
     );
@@ -170,9 +188,11 @@ export async function GET(request: Request) {
                 (p.status === "active" || p.status === "out_of_stock"),
             )
             .slice(0, 8)
-            .map((p) => toListProduct(p, defaults))
+            .map((p) => toListProduct(p, defaults, catalogCategories))
         : [];
-      const publicProduct = product ? toPublicProduct(product, defaults) : null;
+      const publicProduct = product
+        ? toPublicProduct(product, defaults, catalogCategories)
+        : null;
       return NextResponse.json(
         {
           product: publicProduct,
@@ -194,13 +214,33 @@ export async function GET(request: Request) {
       );
     }
 
-    if (categorySet.size > 0) {
-      products = products.filter((p) => categorySet.has(p.category));
+    if (featured !== "1" && featured !== "true") {
+      products = filterProductsForRequest({
+        products,
+        categories: catalogCategories,
+        requestedCategoryIds: categoryParams,
+        admin: fullRecords,
+      });
+    } else if (categoryParams.length > 0) {
+      products = filterProductsForRequest({
+        products,
+        categories: catalogCategories,
+        requestedCategoryIds: categoryParams,
+        admin: fullRecords,
+      });
     }
 
     if (q) {
       products = products.filter((p) =>
-        [p.name, p.brand, p.sku, p.barcode, p.description, p.category]
+        [
+          p.name,
+          p.brand,
+          p.sku,
+          p.barcode,
+          p.description,
+          p.category,
+          ...(p.categoryIds || []),
+        ]
           .filter(Boolean)
           .some((field) => String(field).toLowerCase().includes(q))
       );
@@ -209,12 +249,19 @@ export async function GET(request: Request) {
     // Admin inventory (`all=1` + session) needs full product records; public lists get cards only.
     const payload = fullRecords
       ? products
-      : products.map((p) => toListProduct(p, defaults));
+      : products.map((p) => toListProduct(p, defaults, catalogCategories));
 
     return NextResponse.json(
       {
         products: payload,
-        ...(fullRecords ? {} : { categoryDefaultImages: defaults }),
+        ...(fullRecords
+          ? { catalogCategories }
+          : {
+              categoryDefaultImages: defaults,
+              catalogCategories: publicCatalogCategories(catalogCategories).map(
+                (item) => toPublicCategory(item, searchParams.get("locale") || "ar"),
+              ),
+            }),
       },
       {
         headers: {
@@ -231,7 +278,11 @@ export async function POST(request: Request) {
   try {
     const session = await requireSession("inventory");
     const body = (await request.json()) as Partial<Product>;
-    const fields = sanitizeProductInput(body);
+    const { data: current } = await getStore();
+    const knownIds = new Set(
+      mergeCatalogCategories(current.catalogCategories).map((item) => item.id),
+    );
+    const fields = sanitizeProductInput(body, undefined, knownIds);
     if (!fields) {
       return jsonError("Invalid product payload", 400);
     }
@@ -286,7 +337,10 @@ export async function PUT(request: Request) {
       const index = store.products.findIndex((p) => p.id === body.id);
       if (index < 0) throw new Error("NOT_FOUND");
 
-      const fields = sanitizeProductInput(body, store.products[index]);
+      const knownIds = new Set(
+        mergeCatalogCategories(store.catalogCategories).map((item) => item.id),
+      );
+      const fields = sanitizeProductInput(body, store.products[index], knownIds);
       if (!fields) throw new Error("INVALID");
 
       const conflict = store.products.some(

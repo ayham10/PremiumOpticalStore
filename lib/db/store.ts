@@ -12,6 +12,7 @@ import {
   setIsolatedStore,
 } from "@/lib/booking-e2e";
 import { createSeedData } from "@/lib/seed";
+import { mergeCatalogCategories } from "@/lib/catalog-categories";
 import type { AppData } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -209,6 +210,7 @@ function normalizeData(data: AppData): AppData {
     ...createSeedData(),
     ...data,
     products,
+    catalogCategories: mergeCatalogCategories(data.catalogCategories),
     appointments: data.appointments ?? [],
     customers: data.customers ?? [],
     staff: data.staff?.length ? data.staff : createSeedData().staff,

@@ -345,6 +345,7 @@ export type Dictionary = {
     lensInventory: Record<string, string>;
     servicePages: Record<string, string>;
     backups: Record<string, string>;
+    catalog: Record<string, string>;
     common: Record<string, string>;
   };
   days: Record<string, string>;
@@ -2135,6 +2136,43 @@ const en: Dictionary = {
       restoreForbidden: "You do not have permission to restore data.",
       restoreProductionOnly: "Live restore is available only in the production environment",
       comingSoon: "Coming soon",
+    },
+    catalog: {
+      manage: "Manage Categories",
+      manageTitle: "Product categories",
+      create: "Create category",
+      edit: "Edit category",
+      save: "Save",
+      saving: "Saving…",
+      cancel: "Cancel",
+      nameAr: "Category name in Arabic",
+      nameHe: "Category name in Hebrew",
+      nameEn: "Category name in English",
+      showInMain: "Show in Main Catalog",
+      hidden: "Hidden",
+      visible: "Visible",
+      system: "System",
+      systemProtected: "System categories cannot be deleted",
+      productCount: "{count} products",
+      productType: "Product type",
+      extraCategories: "Additional categories",
+      allCategories: "All categories",
+      selected: "Selected categories",
+      noneSelected: "No additional categories selected",
+      search: "Search categories…",
+      noMatches: "No matching categories",
+      newHiddenHint: "New categories stay hidden until you enable them in the main catalog.",
+      nameRequired: "Enter a category name in at least one language",
+      saveError: "Could not save the category",
+      delete: "Delete",
+      deleteTitle: "Delete category",
+      deleteConfirm:
+        "Delete “{name}”? {count} product(s) are assigned. Products will not be deleted. Reassign them first.",
+      deleteBlocked: "Choose another category before deleting this one",
+      deleteEmptyHint: "No products are assigned. The category can be deleted safely.",
+      deleteError: "Could not delete the category",
+      reassignTo: "Move assigned products to",
+      chooseCategory: "Choose a category",
     },
     common: {
       add: "Add",

@@ -37,6 +37,45 @@ export function catalogueFilterLabel(
   return t("shop.categories.Accessories");
 }
 
+/** Dynamic main-catalog chips — one button per visible category. */
+export function DynamicCatalogueFilterChips({
+  categories,
+  active,
+  onChange,
+  allLabel,
+}: {
+  categories: Array<{ id: string; name: string }>;
+  active: string;
+  onChange: (value: string) => void;
+  allLabel: string;
+}) {
+  return (
+    <div className="store-filters" role="tablist" aria-label={allLabel}>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active === "all"}
+        onClick={() => onChange("all")}
+        className={`store-filter-chip${active === "all" ? " is-active" : ""}`}
+      >
+        {allLabel}
+      </button>
+      {categories.map((category) => (
+        <button
+          key={category.id}
+          type="button"
+          role="tab"
+          aria-selected={active === category.id}
+          onClick={() => onChange(category.id)}
+          className={`store-filter-chip${active === category.id ? " is-active" : ""}`}
+        >
+          {category.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Interactive filter chips for the Store page (local state). */
 export function CatalogueFilterChips({
   active,

@@ -7,13 +7,32 @@ export type AppointmentStatus =
   | "completed"
   | "rescheduled";
 
-export type ProductCategory =
-  | "Prescription Glasses"
-  | "Sunglasses"
-  | "Contact Lenses"
-  | "Frames"
-  | "Accessories"
-  | "Cleaning Products";
+export const PRODUCT_TYPES = [
+  "Prescription Glasses",
+  "Sunglasses",
+  "Contact Lenses",
+  "Frames",
+  "Accessories",
+  "Cleaning Products",
+] as const;
+
+export type ProductCategory = (typeof PRODUCT_TYPES)[number];
+
+export interface CatalogCategoryNames {
+  ar: string;
+  he: string;
+  en: string;
+}
+
+/** Owner-managed catalog category. Stable `id` is never the display name. */
+export interface CatalogCategory {
+  id: string;
+  names: CatalogCategoryNames;
+  showInMainCatalog: boolean;
+  system?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /** Categories that can have an Admin-configured default/fallback image. */
 export type CategoryDefaultImageKey = "Frames" | "Sunglasses" | "Contact Lenses";
@@ -194,7 +213,10 @@ export interface Product {
   id: string;
   slug: string;
   name: string;
+  /** Product type used by /sunglasses, /frames, defaults, and lens fields. */
   category: ProductCategory;
+  /** Extra catalog memberships. Type category is always implied. */
+  categoryIds?: string[];
   brand: string;
   frameType?: string;
   lensType?: string;
@@ -725,6 +747,8 @@ export interface LensInventoryCell {
 export interface AppData {
   version: number;
   products: Product[];
+  /** Additive catalog categories. System types are merged on read. */
+  catalogCategories?: CatalogCategory[];
   appointments: Appointment[];
   customers: Customer[];
   staff: StaffMember[];

@@ -28,13 +28,22 @@ import {
   Wallet,
 } from "lucide-react";
 import AdminProductCard from "@/components/admin/AdminProductCard";
+import CatalogCategoriesModal from "@/components/admin/CatalogCategoriesModal";
+import ProductCategoryMultiSelect from "@/components/admin/ProductCategoryMultiSelect";
 import ProductImagesField from "@/components/admin/ProductImagesField";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
+import {
+  categoryLabel,
+  mergeCatalogCategories,
+  productBelongsToCategory,
+} from "@/lib/catalog-categories";
 import { slugify } from "@/lib/format";
 import type {
   AdminSession,
+  CatalogCategory,
   Product,
   ProductCategory,
   ProductStatus,
@@ -60,6 +69,7 @@ const MUTED = "#8A929C";
 type ProductForm = {
   name: string;
   category: ProductCategory;
+  categoryIds: string[];
   brand: string;
   frameType: string;
   lensType: string;
@@ -90,6 +100,7 @@ function usesLensType(category: ProductCategory): boolean {
 const emptyForm = (): ProductForm => ({
   name: "",
   category: "Frames",
+  categoryIds: [],
   brand: "",
   frameType: "",
   lensType: "",
@@ -128,6 +139,7 @@ function toPayload(form: ProductForm, existing?: Product | null) {
     name: form.name,
     slug: slugify(form.name),
     category: form.category,
+    categoryIds: form.categoryIds.filter((id) => id && id !== form.category),
     brand: form.brand || existing?.brand || "",
     frameType: form.frameType || existing?.frameType || undefined,
     lensType: usesLensType(form.category)
@@ -154,6 +166,7 @@ function fromProduct(p: Product): ProductForm {
   return {
     name: p.name,
     category: p.category,
+    categoryIds: (p.categoryIds || []).filter((id) => id && id !== p.category),
     brand: p.brand,
     frameType: p.frameType || "",
     lensType: p.lensType || "",
@@ -176,6 +189,19 @@ function statusLabel(status: ProductStatus): string {
   if (status === "archived") return "مؤرشف";
   if (status === "out_of_stock") return "غير متوفر";
   return status;
+}
+
+function typeLabel(
+  categories: CatalogCategory[],
+  id: string,
+  locale: string,
+  t: (path: string) => string,
+): string {
+  const found = categories.find((item) => item.id === id);
+  if (found) return categoryLabel(found, locale);
+  const key = `shop.categories.${id}`;
+  const label = t(key);
+  return label === key ? id : label;
 }
 
 const goldBtn: CSSProperties = {
@@ -211,7 +237,12 @@ const dangerOutlineBtn: CSSProperties = {
 
 export default function AdminInventoryPage() {
   const { notifySaved } = useAdminSuccessNotice();
+  const { t, locale } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<CatalogCategory[]>(
+    () => mergeCatalogCategories(undefined),
+  );
+  const [manageOpen, setManageOpen] = useState(false);
   const [role, setRole] = useState<AdminSession["role"]>("admin");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -240,6 +271,13 @@ export default function AdminInventoryPage() {
         ),
       ]);
       setProducts(unwrapList<Product>(pData, ["products", "items", "data"]));
+      if (pData && typeof pData === "object" && "catalogCategories" in pData) {
+        setCatalogCategories(
+          mergeCatalogCategories(
+            (pData as { catalogCategories?: unknown }).catalogCategories,
+          ),
+        );
+      }
       if (me) {
         const user = "user" in me ? me.user : me;
         setRole(user.role);
@@ -258,7 +296,7 @@ export default function AdminInventoryPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = products.filter((p) => {
-      if (category !== "all" && p.category !== category) return false;
+      if (category !== "all" && !productBelongsToCategory(p, category)) return false;
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (!q) return true;
       return (
@@ -522,22 +560,41 @@ export default function AdminInventoryPage() {
                     <div>
                       <label className="admin-pe-label" htmlFor="p-category">
                         <Layers size={13} strokeWidth={1.7} />
-                        الفئة
+                        {t("admin.catalog.productType")}
                       </label>
                       <select
                         id="p-category"
                         className="admin-pe-input"
                         value={form.category}
-                        onChange={(e) =>
-                          setField("category", e.target.value as ProductCategory)
-                        }
+                        onChange={(e) => {
+                          const next = e.target.value as ProductCategory;
+                          setForm((prev) => ({
+                            ...prev,
+                            category: next,
+                            categoryIds: prev.categoryIds.filter((id) => id !== next),
+                          }));
+                        }}
                       >
                         {CATEGORIES.map((c) => (
                           <option key={c} value={c}>
-                            {c}
+                            {typeLabel(catalogCategories, c, locale, t)}
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <label className="admin-pe-label">
+                        <Layers size={13} strokeWidth={1.7} />
+                        {t("admin.catalog.extraCategories")}
+                      </label>
+                      <ProductCategoryMultiSelect
+                        categories={catalogCategories}
+                        selectedIds={form.categoryIds}
+                        excludeId={form.category}
+                        locale={locale}
+                        t={t}
+                        onChange={(ids) => setField("categoryIds", ids)}
+                      />
                     </div>
                     {usesLensType(form.category) ? (
                     <div>
@@ -858,6 +915,13 @@ export default function AdminInventoryPage() {
             <Plus size={14} strokeWidth={1.7} />
             إضافة منتج
           </button>
+          <button
+            type="button"
+            onClick={() => setManageOpen(true)}
+            className="admin-products-manage"
+          >
+            {t("admin.catalog.manage")}
+          </button>
           <span className="admin-products-count">
             <Package size={14} strokeWidth={1.55} />
             {filtered.length} منتج
@@ -871,10 +935,10 @@ export default function AdminInventoryPage() {
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              <option value="all">كل الفئات</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              <option value="all">{t("admin.catalog.allCategories")}</option>
+              {catalogCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {categoryLabel(c, locale)}
                 </option>
               ))}
             </select>
@@ -897,6 +961,13 @@ export default function AdminInventoryPage() {
         <button type="button" onClick={openCreate} className="admin-products-add">
           <Plus size={14} strokeWidth={1.7} />
           إضافة منتج
+        </button>
+        <button
+          type="button"
+          onClick={() => setManageOpen(true)}
+          className="admin-products-manage"
+        >
+          {t("admin.catalog.manage")}
         </button>
         <span className="admin-products-count">
           <Package size={14} strokeWidth={1.55} />
@@ -935,10 +1006,10 @@ export default function AdminInventoryPage() {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            <option value="all">كل الفئات</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="all">{t("admin.catalog.allCategories")}</option>
+            {catalogCategories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {categoryLabel(c, locale)}
               </option>
             ))}
           </select>
@@ -1001,6 +1072,12 @@ export default function AdminInventoryPage() {
               <AdminProductCard
                 key={p.id}
                 product={p}
+                categoryLabels={[
+                  typeLabel(catalogCategories, p.category, locale, t),
+                  ...((p.categoryIds || [])
+                    .filter((id) => id !== p.category)
+                    .map((id) => typeLabel(catalogCategories, id, locale, t))),
+                ]}
                 canDelete={hasPermission(role, "delete")}
                 onEdit={() => openEdit(p)}
                 onDelete={() => void onDelete(p)}
@@ -1090,6 +1167,16 @@ export default function AdminInventoryPage() {
           ) : null}
         </>
       )}
+      <CatalogCategoriesModal
+        open={manageOpen}
+        locale={locale}
+        t={t}
+        products={products}
+        categories={catalogCategories}
+        onClose={() => setManageOpen(false)}
+        onChange={setCatalogCategories}
+        onProductsChange={() => void load()}
+      />
     </div>
   );
 }
