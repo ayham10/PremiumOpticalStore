@@ -1808,7 +1808,7 @@ const ar: Dictionary = {
       chooseCategory: "اختر فئة",
       next: "التالي",
       back: "السابق",
-      finish: "إنهاء",
+      finish: "حفظ وإنهاء",
       progress: "خطوات الفئة",
       stepInfo: "معلومات الفئة",
       stepVisibility: "ظهور الفئة",

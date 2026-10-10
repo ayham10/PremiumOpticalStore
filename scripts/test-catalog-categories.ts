@@ -527,4 +527,18 @@ const typePageUnchanged = filterProductsForRequest({
 });
 assert.deepEqual(typePageUnchanged.map((item) => item.id), ["sun"]);
 
+const modalSrc = readFileSync(
+  join(process.cwd(), "components/admin/CatalogCategoriesModal.tsx"),
+  "utf8",
+);
+assert.match(modalSrc, /type WizardStep = 1 \| 2;/);
+assert.match(modalSrc, /\[1, 2\]\.map/);
+assert.match(modalSrc, /showInMainPage/);
+assert.match(modalSrc, /step === 2 \?/);
+assert.doesNotMatch(modalSrc, /type WizardStep = 1 \| 2 \| 3;/);
+assert.doesNotMatch(modalSrc, /\[1, 2, 3\]/);
+assert.doesNotMatch(modalSrc, /stepVisibilityShort/);
+assert.match(modalSrc, /notifySaved/);
+assert.match(modalSrc, /persistWizard\(draft, true\)/);
+
 console.log("catalog-categories tests passed");
