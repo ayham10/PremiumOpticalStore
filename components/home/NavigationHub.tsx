@@ -9,6 +9,7 @@ import { useBranding } from "@/components/branding/BrandingProvider";
 import { homepageCustomCards } from "@/lib/custom-service-pages";
 import { useServicePages } from "@/lib/use-service-pages";
 import type { Locale } from "@/lib/i18n/config";
+import ResponsiveHeroImage from "@/components/media/ResponsiveHeroImage";
 import type { CustomServicePage, ServicePagesLocale } from "@/lib/types";
 
 /** Existing homepage service grid — routes and cards preserved */
@@ -131,7 +132,10 @@ function ExtraHomeCard({
   const copy = page.locales[key];
   const title = copy?.homeTitle || copy?.title || page.name;
   const subtitle = copy?.homeSubtitle || "";
-  const showImage = Boolean(page.homeImage) && !imageFailed;
+  const cardMedia = page.homeMedia || (page.homeImage
+    ? { kind: "image" as const, url: page.homeImage }
+    : undefined);
+  const showImage = Boolean(cardMedia?.url) && !imageFailed;
 
   return (
     <motion.div
@@ -145,15 +149,14 @@ function ExtraHomeCard({
     >
       <Link href={`/services/${page.slug}`} className="home-card group">
         <span className="home-card-media">
-          {showImage ? (
-            <Image
-              src={page.homeImage!}
-              alt={title}
-              fill
-              sizes="(max-width: 639px) 50vw, (max-width: 1023px) 50vw, 33vw"
-              className="object-cover transition duration-[800ms] ease-out group-hover:scale-[1.05]"
-              onError={() => setImageFailed(true)}
-            />
+          {showImage && cardMedia ? (
+            <span className="csp-home-card-photo" onErrorCapture={() => setImageFailed(true)}>
+              <ResponsiveHeroImage
+                media={cardMedia}
+                alt={title}
+                className="object-cover transition duration-[800ms] ease-out group-hover:scale-[1.05]"
+              />
+            </span>
           ) : null}
           <span className="home-card-shade" aria-hidden />
         </span>

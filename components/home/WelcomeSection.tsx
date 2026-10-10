@@ -115,7 +115,7 @@ export default function WelcomeSection() {
   const shopLabel = pickServiceText(hero?.shopButtonText, t("home.shopNow"));
 
   return (
-    <section className="home-welcome" aria-label="Welcome">
+    <section className="home-welcome" aria-label="Welcome" data-csp-section="homepage-hero">
       <video
         ref={videoRef}
         className={`home-welcome-video${videoReady ? " is-ready" : ""}`}
@@ -160,6 +160,7 @@ export default function WelcomeSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="home-welcome-cta-wrap"
+          data-csp-section="homepage-buttons"
           dir="ltr"
         >
           <Link href="/book" className="home-welcome-cta home-welcome-cta--primary">

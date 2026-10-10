@@ -19,7 +19,11 @@ import type {
   ServicePagesLocale,
   ServicePagesSettings,
 } from "@/lib/types";
-import { CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES } from "@/lib/types";
+import {
+  ADDABLE_CUSTOM_SECTION_TYPES,
+  CUSTOM_CTA_KINDS,
+  CUSTOM_SECTION_TYPES,
+} from "@/lib/types";
 
 function isServicePagesLocale(
   value: string | null | undefined,
@@ -27,7 +31,7 @@ function isServicePagesLocale(
   return value === "ar" || value === "he" || value === "en";
 }
 
-export { CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES };
+export { ADDABLE_CUSTOM_SECTION_TYPES, CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES };
 
 export const MAX_CUSTOM_PAGES = 30;
 export const MAX_CUSTOM_SECTIONS = 12;
@@ -118,14 +122,25 @@ export function createCustomSection(type: CustomSectionType): CustomPageSection 
   return { id: makeId("sec"), type };
 }
 
-export function defaultCustomSections(
+export function legacyTemplateSections(
   template: CustomPageTemplate,
+): CustomSectionType[] {
+  return template === "contact-lenses"
+    ? ["heroMedia", "featureGrid", "notice"]
+    : ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"];
+}
+
+/** New pages start empty so the owner chooses every optional section. */
+export function defaultCustomSections(
+  _template?: CustomPageTemplate,
 ): CustomPageSection[] {
-  const types: CustomSectionType[] =
-    template === "contact-lenses"
-      ? ["heroMedia", "featureGrid", "notice"]
-      : ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"];
-  return types.map((type) => createCustomSection(type));
+  return [];
+}
+
+export function visibleCustomSections(
+  sections: CustomPageSection[] | undefined,
+): CustomPageSection[] {
+  return (sections || []).filter((section) => !section.hidden);
 }
 
 export const PUBLIC_INTERNAL_PATHS = [
@@ -330,7 +345,7 @@ export function sparseCustomPageCopy(saved: unknown): CustomPageCopy {
 }
 
 function hasSection(sections: CustomPageSection[], type: CustomSectionType): boolean {
-  return sections.some((section) => section.type === type);
+  return visibleCustomSections(sections).some((section) => section.type === type);
 }
 
 export type CustomPageLocaleIssue =
@@ -392,13 +407,36 @@ export function copyForCustomPageEditor(
   return saved ? structuredClone(saved) : emptyCustomPageCopy();
 }
 
+function sparseFocal(saved: unknown): CustomPageMediaRef["desktopFocal"] {
+  const raw = asRecord(saved);
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  const zoom = Number(raw.zoom);
+  if (![x, y, zoom].every((value) => Number.isFinite(value))) return undefined;
+  return { x, y, zoom };
+}
+
 function sparseMedia(saved: unknown): CustomPageMediaRef | undefined {
   const raw = asRecord(saved);
   const url = cleanText(raw.url);
   if (!url) return undefined;
   const kind = raw.kind === "video" ? "video" : "image";
   const mediaId = cleanText(raw.mediaId) || undefined;
-  return { kind, url, mediaId };
+  const desktopUrl = cleanText(raw.desktopUrl) || undefined;
+  const mobileUrl = cleanText(raw.mobileUrl) || undefined;
+  const desktopFocal = sparseFocal(raw.desktopFocal);
+  const mobileFocal = sparseFocal(raw.mobileFocal);
+  const fit = raw.fit === "contain" ? "contain" : raw.fit === "cover" ? "cover" : undefined;
+  return {
+    kind,
+    url,
+    mediaId,
+    desktopUrl,
+    mobileUrl,
+    desktopFocal,
+    mobileFocal,
+    fit,
+  };
 }
 
 function sparseGallery(saved: unknown): CustomPageMediaRef[] {
@@ -467,9 +505,11 @@ export function resolveCustomPageProducts<T extends Pick<Product, "id" | "status
 }
 
 function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPageSection[] {
-  const list = Array.isArray(saved) ? saved : [];
+  if (!Array.isArray(saved)) {
+    return legacyTemplateSections(template).map((type) => createCustomSection(type));
+  }
   const next: CustomPageSection[] = [];
-  for (const item of list) {
+  for (const item of saved) {
     const raw = asRecord(item);
     const type = raw.type;
     if (
@@ -481,10 +521,11 @@ function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPag
     next.push({
       id: cleanText(raw.id) || makeId("sec"),
       type: type as CustomSectionType,
+      hidden: raw.hidden === true ? true : undefined,
     });
     if (next.length >= MAX_CUSTOM_SECTIONS) break;
   }
-  return next.length ? next : defaultCustomSections(template);
+  return next;
 }
 
 function sparseLocales(
@@ -533,6 +574,9 @@ export function normalizeCustomServicePage(saved: unknown): CustomServicePage | 
     showOnHome: Boolean(raw.showOnHome),
     homeSort: Number.isFinite(Number(raw.homeSort)) ? Number(raw.homeSort) : 0,
     homeImage: cleanText(raw.homeImage) || undefined,
+    homeMedia: sparseMedia(raw.homeMedia) || (cleanText(raw.homeImage)
+      ? { kind: "image", url: cleanText(raw.homeImage) }
+      : undefined),
     showHeroButton,
     ctaKind,
     bookingType,
@@ -729,6 +773,12 @@ function applyUpdate(
         : op.homeImage != null
           ? cleanText(op.homeImage) || undefined
           : page.homeImage,
+    homeMedia:
+      op.homeMedia === null
+        ? undefined
+        : op.homeMedia != null
+          ? sparseMedia(op.homeMedia)
+          : page.homeMedia,
     showHeroButton,
     ctaKind,
     bookingType,
@@ -747,6 +797,8 @@ function applyUpdate(
     updatedAt: new Date().toISOString(),
     revision: page.revision + 1,
   };
+  if (next.homeMedia?.url) next.homeImage = next.homeMedia.url;
+  else if (op.homeMedia === null) next.homeImage = undefined;
   if (op.locale && op.copy) {
     const copy = sparseCustomPageCopy(op.copy);
     copy.complete = isCustomPageLocaleComplete(

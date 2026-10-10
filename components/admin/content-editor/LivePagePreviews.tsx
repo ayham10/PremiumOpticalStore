@@ -15,7 +15,7 @@ import {
   CONTENT_PREVIEW_READY,
   CONTENT_PREVIEW_VIEWPORTS,
   CONTENT_PREVIEW_VISIBILITY,
-  fitPreviewScale,
+  fitPreviewColumnScale,
   normalizeWheelDelta,
   screenDeltaToPreviewScroll,
   shouldStartPreviewDrag,
@@ -123,13 +123,10 @@ function DeviceFrame({
     if (!stage) return;
 
     function applyScale() {
-      const next = fitPreviewScale(
+      const next = fitPreviewColumnScale(
         stage?.clientWidth || viewport.width,
-        stage?.clientHeight || viewport.height,
         viewport.width,
-        viewport.height,
         chrome.width,
-        chrome.height,
       );
       scaleRef.current = next;
       setScale(next);
@@ -139,7 +136,7 @@ function DeviceFrame({
     const observer = new ResizeObserver(applyScale);
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [chrome.height, chrome.width, viewport.height, viewport.width]);
+  }, [chrome.width, viewport.width]);
 
   useEffect(() => {
     const shell = shellRef.current;

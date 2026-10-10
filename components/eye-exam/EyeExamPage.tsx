@@ -40,7 +40,7 @@ export default function EyeExamPage() {
 
   return (
     <div className="eye-exam-page" dir={rtl ? "rtl" : "ltr"}>
-      <section className="eye-exam-hero" aria-label={title}>
+      <section className="eye-exam-hero" aria-label={title} data-csp-section="eyeExam-hero">
         <div className="eye-exam-hero-media">
           <EyeExamHeroVideo alt={t("eyeExam.videoAlt")} />
         </div>
@@ -52,7 +52,7 @@ export default function EyeExamPage() {
           <p className="eye-exam-description">
             {pickServiceText(saved?.description, t("eyeExam.description"))}
           </p>
-          <div className="eye-exam-actions">
+          <div className="eye-exam-actions" data-csp-section="eyeExam-buttons">
             <Link
               href="/book?type=eye_exam"
               className="btn btn-copper eye-exam-btn"
@@ -66,6 +66,7 @@ export default function EyeExamPage() {
       <div className="eye-exam-inner">
         <section
           className="eye-exam-features"
+          data-csp-section="eyeExam-features"
           aria-label={t("eyeExam.features.aria")}
         >
           <div className="eye-exam-features-grid">
@@ -95,6 +96,7 @@ export default function EyeExamPage() {
 
         <section
           className="eye-exam-benefits"
+          data-csp-section="eyeExam-benefits"
           aria-labelledby="eye-exam-benefits-title"
         >
           <h2 id="eye-exam-benefits-title" className="eye-exam-benefits-title">

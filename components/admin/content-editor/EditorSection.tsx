@@ -32,26 +32,45 @@ export type EditorSectionIcon = keyof typeof EDITOR_SECTION_ICONS;
 export default function EditorSection({
   title,
   icon,
-  defaultOpen = true,
+  defaultOpen = false,
   children,
+  sectionId,
+  active,
+  onActivate,
 }: {
   title: string;
   icon: EditorSectionIcon;
   defaultOpen?: boolean;
   children: ReactNode;
+  sectionId?: string;
+  active?: boolean;
+  onActivate?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
   const Icon = EDITOR_SECTION_ICONS[icon];
 
+  function activate() {
+    if (sectionId) onActivate?.(sectionId);
+  }
+
   return (
-    <section className="admin-card admin-service-card csp-fold">
+    <section
+      className={
+        active ? "admin-card admin-service-card csp-fold is-active" : "admin-card admin-service-card csp-fold"
+      }
+      data-csp-editor-section={sectionId}
+      onFocusCapture={activate}
+    >
       <button
         type="button"
         className="csp-fold-toggle"
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setOpen((value) => !value);
+          activate();
+        }}
       >
         <span className="csp-fold-heading">
           <Icon size={18} strokeWidth={1.75} className="csp-fold-icon" aria-hidden />

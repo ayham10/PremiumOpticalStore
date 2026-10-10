@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  ADDABLE_CUSTOM_SECTION_TYPES,
   attachProductIds,
   bookingHrefForPage,
   detachProductId,
@@ -10,6 +11,8 @@ import {
   MAX_CUSTOM_PAGES,
   MAX_PAGE_PRODUCTS,
   normalizeCustomPages,
+  normalizeCustomServicePage,
+  visibleCustomSections,
   persistCustomPages,
   publicCustomPages,
   RESERVED_SERVICE_SLUGS,
@@ -83,10 +86,7 @@ assert.equal(created[0]?.template, "eye-exam");
 assert.equal(created[0]?.showHeroButton, true);
 assert.equal(created[0]?.ctaKind, "book");
 assert.deepEqual(created[0]?.productIds, []);
-assert.deepEqual(
-  created[0]?.sections.map((section) => section.type),
-  ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"],
-);
+assert.deepEqual(created[0]?.sections, []);
 assert.equal(created[0]?.locales.ar, undefined);
 assert.equal(
   isCustomPageLocaleComplete(created[0]!.sections, placeholders),
@@ -373,19 +373,28 @@ const lenses = persistCustomPages([], {
     template: "contact-lenses",
   },
 });
-assert.deepEqual(
-  lenses[0]?.sections.map((section) => section.type),
-  ["heroMedia", "featureGrid", "notice"],
-);
+assert.deepEqual(lenses[0]?.sections, []);
 assert.equal(lenses[0]?.showHeroButton, true);
 const lensesCopy = completeCopy();
 assert.equal(
-  isCustomPageLocaleComplete(lenses[0]!.sections, lensesCopy, true),
+  isCustomPageLocaleComplete(
+    [
+      { id: "h", type: "heroMedia" },
+      { id: "f", type: "featureGrid" },
+      { id: "n", type: "notice" },
+    ],
+    lensesCopy,
+    true,
+  ),
   true,
 );
 assert.equal(
   isCustomPageLocaleComplete(
-    lenses[0]!.sections,
+    [
+      { id: "h", type: "heroMedia" },
+      { id: "f", type: "featureGrid" },
+      { id: "n", type: "notice" },
+    ],
     { ...lensesCopy, bookingButtonText: "" },
     true,
   ),
@@ -393,17 +402,29 @@ assert.equal(
 );
 assert.equal(
   isCustomPageLocaleComplete(
-    lenses[0]!.sections,
+    [
+      { id: "h", type: "heroMedia" },
+      { id: "f", type: "featureGrid" },
+      { id: "n", type: "notice" },
+    ],
     { ...lensesCopy, bookingButtonText: "" },
     false,
   ),
   true,
 );
 assert.equal(
-  isCustomPageLocaleComplete(lenses[0]!.sections, {
-    ...lensesCopy,
-    warningText: "",
-  }, true),
+  isCustomPageLocaleComplete(
+    [
+      { id: "h", type: "heroMedia" },
+      { id: "f", type: "featureGrid" },
+      { id: "n", type: "notice" },
+    ],
+    {
+      ...lensesCopy,
+      warningText: "",
+    },
+    true,
+  ),
   false,
 );
 
@@ -627,5 +648,54 @@ const afterSecond = persistCustomPages(created, {
 });
 assert.equal(afterSecond.length, 2);
 assert.ok(listCustomPagesForEditor(afterSecond).some((page) => page.slug === "night-clinic"));
+
+assert.ok(!ADDABLE_CUSTOM_SECTION_TYPES.includes("gallery" as never));
+assert.ok(ADDABLE_CUSTOM_SECTION_TYPES.includes("heroMedia"));
+const legacyPage = normalizeCustomServicePage({
+  id: "csp_legacy",
+  slug: "legacy-page",
+  name: "Legacy",
+  template: "eye-exam",
+});
+assert.deepEqual(
+  legacyPage?.sections.map((section) => section.type),
+  ["heroMedia", "featureGrid", "benefitsList", "valuesStrip"],
+);
+assert.equal(
+  isCustomPageLocaleComplete(
+    [{ id: "n", type: "notice", hidden: true }],
+    { ...lensesCopy, warningText: "" },
+    false,
+  ),
+  true,
+);
+assert.deepEqual(
+  visibleCustomSections([{ id: "g", type: "gallery", hidden: true }]),
+  [],
+);
+const withVariants = persistCustomPages(created, {
+  customPageOp: {
+    op: "update",
+    id: created[0]!.id,
+    expectedRevision: created[0]!.revision,
+    heroMedia: {
+      kind: "image",
+      url: "https://cdn.example/original.jpg",
+      desktopUrl: "https://cdn.example/desktop.webp",
+      mobileUrl: "https://cdn.example/mobile.webp",
+      desktopFocal: { x: 0.4, y: 0.3, zoom: 1.1 },
+      fit: "contain",
+    },
+    homeMedia: {
+      kind: "image",
+      url: "https://cdn.example/card.jpg",
+      mobileUrl: "https://cdn.example/card-m.webp",
+    },
+  },
+});
+assert.equal(withVariants[0]?.heroMedia?.desktopUrl, "https://cdn.example/desktop.webp");
+assert.equal(withVariants[0]?.heroMedia?.fit, "contain");
+assert.equal(withVariants[0]?.homeImage, "https://cdn.example/card.jpg");
+assert.deepEqual(withVariants[0]?.gallery || [], created[0]?.gallery || []);
 
 console.log("custom service pages tests passed");

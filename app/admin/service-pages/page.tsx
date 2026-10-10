@@ -87,6 +87,8 @@ export default function AdminServicePagesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [pageQuery, setPageQuery] = useState("");
   const [myPagesOpen, setMyPagesOpen] = useState(true);
+  const [wizardPageId, setWizardPageId] = useState<string | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const myPagesRef = useRef<HTMLDivElement | null>(null);
   const [customDraft, setCustomDraft] = useState<{
     page: CustomServicePage;
@@ -276,17 +278,22 @@ export default function AdminServicePagesPage() {
     bundle: pages,
     customPage: customDraft?.page ?? selectedCustom,
     products: customDraft?.products,
+    activeSectionId,
   });
 
   function selectBuiltIn(next: Tab) {
     setCustomPageId(null);
     setCustomDraft(null);
+    setWizardPageId(null);
+    setActiveSectionId(null);
     setTab(next);
   }
 
-  function selectCustom(page: CustomServicePage) {
+  function selectCustom(page: CustomServicePage, startWizard = false) {
     setCustomPageId(page.id);
     setCustomDraft(null);
+    setWizardPageId(startWizard ? page.id : null);
+    setActiveSectionId(null);
     setMessage("");
     setError("");
   }
@@ -443,6 +450,9 @@ export default function AdminServicePagesPage() {
                 page={selectedCustom}
                 editLocale={editLocale}
                 t={t}
+                wizardMode={wizardPageId === selectedCustom.id}
+                activeSectionId={activeSectionId}
+                onActiveSectionChange={setActiveSectionId}
                 onDraftChange={setCustomDraft}
                 onDocument={(next) => {
                   setDocument(next);
@@ -452,6 +462,8 @@ export default function AdminServicePagesPage() {
                 onDeleted={() => {
                   setCustomPageId(null);
                   setCustomDraft(null);
+                  setWizardPageId(null);
+                  setActiveSectionId(null);
                   setPageQuery("");
                   notifySaved();
                 }}
@@ -460,7 +472,7 @@ export default function AdminServicePagesPage() {
               <ContentFieldLocaleContext.Provider
                 value={{ dir: editorDir, lang: editLocale }}
               >
-                <div className="admin-service-editor space-y-4" dir={editorDir}>
+                <div className="admin-service-editor space-y-4" dir={editorDir} key={`${tab}-${editLocale}`}>
                   <ContentEditorToolbar
                     t={t}
                     saving={saving}
@@ -481,7 +493,13 @@ export default function AdminServicePagesPage() {
                   />
                   {tab === "homepage" ? (
                     <>
-                      <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
+                      <EditorSection
+                        icon="text"
+                        title={t("admin.servicePages.groupText")}
+                        sectionId="homepage-hero"
+                        active={activeSectionId === "homepage-hero"}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.mainTitle")}
                           value={home.hero.title}
@@ -506,7 +524,13 @@ export default function AdminServicePagesPage() {
                           />
                         ))}
                       </EditorSection>
-                      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
+                      <EditorSection
+                        icon="buttons"
+                        title={t("admin.servicePages.groupButtons")}
+                        sectionId="homepage-buttons"
+                        active={activeSectionId === "homepage-buttons"}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={home.hero.bookingButtonText}
@@ -523,7 +547,13 @@ export default function AdminServicePagesPage() {
                     </>
                   ) : tab === "eyeExam" ? (
                     <>
-                      <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
+                      <EditorSection
+                        icon="hero"
+                        title={t("admin.servicePages.groupHeroMedia")}
+                        sectionId="eyeExam-hero"
+                        active={activeSectionId === "eyeExam-hero"}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.eyebrow")}
                           value={eye.eyebrow}
@@ -541,14 +571,27 @@ export default function AdminServicePagesPage() {
                           multiline
                         />
                       </EditorSection>
-                      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
+                      <EditorSection
+                        icon="buttons"
+                        title={t("admin.servicePages.groupButtons")}
+                        sectionId="eyeExam-buttons"
+                        active={activeSectionId === "eyeExam-buttons"}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={eye.bookingButtonText}
                           onChange={(value) => updateEyeExam("bookingButtonText", value)}
                         />
                       </EditorSection>
-                      <EditorSection icon="text" title={t("admin.servicePages.groupText")} defaultOpen={false}>
+                      <EditorSection
+                        icon="text"
+                        title={t("admin.servicePages.groupText")}
+                        defaultOpen={false}
+                        sectionId="eyeExam-features"
+                        active={activeSectionId === "eyeExam-features"}
+                        onActivate={setActiveSectionId}
+                      >
                         <h2>{t("admin.servicePages.features")}</h2>
                         {eye.features.map((feature, index) => (
                           <div key={`ee-f-${index}`} className="admin-service-feature">
@@ -606,7 +649,13 @@ export default function AdminServicePagesPage() {
                     </>
                   ) : tab === "contactLenses" ? (
                     <>
-                      <EditorSection icon="hero" title={t("admin.servicePages.groupHeroMedia")}>
+                      <EditorSection
+                        icon="hero"
+                        title={t("admin.servicePages.groupHeroMedia")}
+                        sectionId="contactLenses-hero"
+                        active={activeSectionId === "contactLenses-hero"}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.eyebrow")}
                           value={lenses.eyebrow}
@@ -624,14 +673,27 @@ export default function AdminServicePagesPage() {
                           multiline
                         />
                       </EditorSection>
-                      <EditorSection icon="buttons" title={t("admin.servicePages.groupButtons")}>
+                      <EditorSection
+                        icon="buttons"
+                        title={t("admin.servicePages.groupButtons")}
+                        sectionId="contactLenses-buttons"
+                        active={activeSectionId === "contactLenses-buttons"}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={lenses.bookingButtonText}
                           onChange={(value) => updateLenses("bookingButtonText", value)}
                         />
                       </EditorSection>
-                      <EditorSection icon="text" title={t("admin.servicePages.groupText")} defaultOpen={false}>
+                      <EditorSection
+                        icon="text"
+                        title={t("admin.servicePages.groupText")}
+                        defaultOpen={false}
+                        sectionId="contactLenses-features"
+                        active={activeSectionId === "contactLenses-features"}
+                        onActivate={setActiveSectionId}
+                      >
                         <h2>{t("admin.servicePages.features")}</h2>
                         {lenses.features.map((feature, index) => (
                           <div key={`cl-f-${index}`} className="admin-service-feature">
@@ -679,7 +741,13 @@ export default function AdminServicePagesPage() {
                       </EditorSection>
                     </>
                   ) : (
-                    <EditorSection icon="text" title={t("admin.servicePages.groupText")}>
+                    <EditorSection
+                      icon="text"
+                      title={t("admin.servicePages.groupText")}
+                      sectionId="footer-content"
+                      active={activeSectionId === "footer-content"}
+                      onActivate={setActiveSectionId}
+                    >
                       <Field
                         label={t("admin.servicePages.tagline")}
                         value={footer.tagline}
@@ -716,8 +784,8 @@ export default function AdminServicePagesPage() {
         onClose={() => setCreateOpen(false)}
         onCreated={(page, next) => {
           setDocument(next);
-          setMyPagesOpen(true);
-          selectCustom(page);
+          setMyPagesOpen(false);
+          selectCustom(page, true);
           invalidatePublicCache("settings:");
           notifySaved();
         }}

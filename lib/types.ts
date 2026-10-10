@@ -521,6 +521,11 @@ export type CustomPageCtaKind = (typeof CUSTOM_CTA_KINDS)[number];
 
 export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
 
+/** Gallery stays in CUSTOM_SECTION_TYPES for existing pages but cannot be added. */
+export const ADDABLE_CUSTOM_SECTION_TYPES = CUSTOM_SECTION_TYPES.filter(
+  (type) => type !== "gallery",
+) as Exclude<CustomSectionType, "gallery">[];
+
 export type CustomPageTemplate = "eye-exam" | "contact-lenses";
 
 export type CustomPageStatus = "draft" | "published";
@@ -528,12 +533,24 @@ export type CustomPageStatus = "draft" | "published";
 export interface CustomPageSection {
   id: string;
   type: CustomSectionType;
+  hidden?: boolean;
+}
+
+export interface ImageFocalPoint {
+  x: number;
+  y: number;
+  zoom: number;
 }
 
 export interface CustomPageMediaRef {
   kind: "image" | "video";
   url: string;
   mediaId?: string;
+  desktopUrl?: string;
+  mobileUrl?: string;
+  desktopFocal?: ImageFocalPoint;
+  mobileFocal?: ImageFocalPoint;
+  fit?: "cover" | "contain";
 }
 
 /** Per-language copy. `complete` is computed on save; never trust the client flag. */
@@ -564,6 +581,7 @@ export interface CustomServicePage {
   showOnHome: boolean;
   homeSort: number;
   homeImage?: string;
+  homeMedia?: CustomPageMediaRef;
   /** When true, the gold CTA is rendered inside the hero with no extra empty gap when off. */
   showHeroButton: boolean;
   /** How the page button navigates. Shared across languages. */
@@ -599,6 +617,7 @@ export type CustomPageOp =
       showOnHome?: boolean;
       homeSort?: number;
       homeImage?: string | null;
+      homeMedia?: CustomPageMediaRef | null;
       showHeroButton?: boolean;
       ctaKind?: CustomPageCtaKind;
       bookingType?: string | null;

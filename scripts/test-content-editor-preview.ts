@@ -4,13 +4,16 @@ import {
   CONTENT_PREVIEW_CHROME,
   CONTENT_PREVIEW_PATH,
   CONTENT_PREVIEW_VIEWPORTS,
+  fitPreviewColumnScale,
   fitPreviewScale,
+  previewFrameSize,
   normalizeWheelDelta,
   PREVIEW_DRAG_THRESHOLD_PX,
   screenDeltaToPreviewScroll,
   shouldStartPreviewDrag,
   customPageEditorSnapshot,
   editorPanelDir,
+  isContentPreviewFocusMessage,
   isContentPreviewMessage,
   isContentPreviewVisibilityMessage,
   PREVIEW_UPDATE_MS,
@@ -19,9 +22,19 @@ import {
   shouldFlushPreviewNow,
   viewHrefForEditor,
 } from "../lib/content-editor-preview";
+import {
+  clampWizardStep,
+  wizardCanGoBack,
+  wizardCanGoNext,
+} from "../lib/content-editor-wizard";
+import {
+  previewPlaceholderProducts,
+  withPreviewPlaceholders,
+} from "../lib/preview-placeholders";
+import { emptyCustomPageCopy, persistCustomPages } from "../lib/custom-service-pages";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
-import { persistCustomPages } from "../lib/custom-service-pages";
 import { EDITOR_SECTION_ICONS } from "../components/admin/content-editor/EditorSection";
+import { coverCropRect, mediaUrlForViewport } from "../lib/responsive-image";
 import type { CustomServicePage } from "../lib/types";
 
 const ar = defaultServicePagesForLocale("ar");
@@ -120,15 +133,58 @@ const arDoc = buildEditorPreviewDocument(undefined, "ar", {
 assert.equal(arDoc.locales?.ar?.homepage?.hero.title, "عنوان تجريبي");
 
 assert.ok(PREVIEW_UPDATE_MS >= 150 && PREVIEW_UPDATE_MS <= 300);
-assert.equal(shouldFlushPreviewNow(null, "ar:homepage:"), true);
+assert.equal(shouldFlushPreviewNow(null, "ar:homepage::"), true);
 assert.equal(
-  shouldFlushPreviewNow("ar:homepage:", previewFlushKey("ar", "homepage")),
+  shouldFlushPreviewNow("ar:homepage::", previewFlushKey("ar", "homepage")),
   false,
 );
 assert.equal(
-  shouldFlushPreviewNow("ar:homepage:", previewFlushKey("he", "homepage")),
+  shouldFlushPreviewNow("ar:homepage::", previewFlushKey("he", "homepage")),
   true,
 );
+assert.equal(
+  shouldFlushPreviewNow(
+    previewFlushKey("ar", "custom", "p1", "hero-1"),
+    previewFlushKey("ar", "custom", "p1", "hero-1"),
+  ),
+  false,
+);
+assert.equal(
+  shouldFlushPreviewNow(
+    previewFlushKey("ar", "custom", "p1", "hero-1"),
+    previewFlushKey("ar", "custom", "p1", "features-2"),
+  ),
+  true,
+);
+assert.equal(
+  isContentPreviewFocusMessage({
+    type: "oyon-content-preview-focus",
+    sectionId: "hero-1",
+  }),
+  true,
+);
+assert.equal(isContentPreviewFocusMessage({ type: "oyon-content-preview" }), false);
+assert.equal(clampWizardStep(0), 1);
+assert.equal(clampWizardStep(3), 3);
+assert.equal(clampWizardStep(9), 4);
+assert.equal(wizardCanGoBack(1), false);
+assert.equal(wizardCanGoNext(4), false);
+assert.equal(wizardCanGoNext(2), true);
+
+const blankCopy = emptyCustomPageCopy();
+const previewCopy = withPreviewPlaceholders(blankCopy, "ar");
+assert.equal(blankCopy.title, "");
+assert.ok(previewCopy.title.length > 0);
+assert.ok(previewCopy.features[0]?.title);
+assert.ok(previewCopy.benefits[0]);
+const realCopy = withPreviewPlaceholders(
+  { ...blankCopy, title: "فحص أطفال" },
+  "ar",
+);
+assert.equal(realCopy.title, "فحص أطفال");
+const fakeProducts = previewPlaceholderProducts("en");
+assert.equal(fakeProducts.length, 3);
+assert.ok(fakeProducts[0]?.id.startsWith("preview-placeholder-"));
 assert.equal(previewWriteMethodBlocked("GET"), false);
 assert.equal(previewWriteMethodBlocked("HEAD"), false);
 assert.equal(previewWriteMethodBlocked("PUT"), true);
@@ -164,6 +220,29 @@ assert.equal(EDITOR_SECTION_ICONS.settings.displayName, "Settings");
 assert.equal(EDITOR_SECTION_ICONS.page.displayName, "FileText");
 assert.equal(EDITOR_SECTION_ICONS.links.displayName, "Link");
 assert.equal(EDITOR_SECTION_ICONS.sections.displayName, "Layers");
+assert.equal(EDITOR_SECTION_ICONS.hero.displayName, "Image");
+
+const crop = coverCropRect(1600, 900, 9, 16, { x: 0.5, y: 0.38, zoom: 1 });
+assert.ok(Math.abs(crop.sw / crop.sh - 9 / 16) < 0.02);
+assert.ok(crop.sh <= 900);
+assert.equal(
+  mediaUrlForViewport(
+    {
+      kind: "image",
+      url: "https://cdn.example/orig.jpg",
+      mobileUrl: "https://cdn.example/m.webp",
+    },
+    "mobile",
+  ),
+  "https://cdn.example/m.webp",
+);
+assert.equal(
+  mediaUrlForViewport(
+    { kind: "image", url: "https://cdn.example/orig.jpg" },
+    "desktop",
+  ),
+  "https://cdn.example/orig.jpg",
+);
 
 assert.equal(CONTENT_PREVIEW_CHROME.mobile.width > 0, true);
 assert.equal(CONTENT_PREVIEW_CHROME.desktop.height > 36, true);
@@ -173,6 +252,36 @@ assert.ok(phoneScale <= (400 - 36) / 844);
 assert.ok(phoneScale < 400 / 390);
 assert.ok(fitPreviewScale(400, 400, 1280, 900, 20, 46) <= (400 - 20) / 1280);
 assert.equal(fitPreviewScale(2000, 2000, 390, 844, 24, 36), 1);
+
+const squeezedHeight = fitPreviewScale(600, 160, 390, 844, 24, 36);
+const columnPhone = fitPreviewColumnScale(600, 390, 24);
+const columnDesktop = fitPreviewColumnScale(600, 1280, 20);
+assert.ok(columnPhone > squeezedHeight);
+assert.ok(columnPhone > 0.7);
+assert.ok(columnDesktop > 0.4);
+assert.ok(columnPhone <= 1);
+assert.equal(fitPreviewColumnScale(2000, 390, 24), 1);
+
+function columnWidthForContent(contentWidth: number): number {
+  return contentWidth * 0.4 - 0.85 * 16 * 0.5;
+}
+
+for (const [label, contentWidth] of [
+  ["1920", 1560],
+  ["1440", 1296],
+  ["1366", 1222],
+] as const) {
+  const col = columnWidthForContent(contentWidth);
+  const mobile = fitPreviewColumnScale(col, 390, 24);
+  const desktop = fitPreviewColumnScale(col, 1280, 20);
+  const mobileFrame = previewFrameSize(390, 844, mobile);
+  const desktopFrame = previewFrameSize(1280, 900, desktop);
+  assert.ok(mobileFrame.width >= 240, `${label} mobile too narrow`);
+  assert.ok(desktopFrame.width >= 380, `${label} desktop too narrow`);
+  assert.ok(mobileFrame.width <= col, `${label} mobile overflow`);
+  assert.ok(desktopFrame.width <= col, `${label} desktop overflow`);
+}
+
 assert.equal(screenDeltaToPreviewScroll(30, 0.3), 100);
 assert.equal(normalizeWheelDelta({ deltaY: 2, deltaMode: 1 }), 32);
 assert.equal(normalizeWheelDelta({ deltaY: 40, deltaMode: 0 }), 40);
