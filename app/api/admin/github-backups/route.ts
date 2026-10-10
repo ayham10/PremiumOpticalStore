@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/helpers";
 import {
   isGithubBackupAllowed,
+  readGithubBackupStatus,
   runGithubBackupAll,
   toGithubBackupClientResult,
 } from "@/lib/github-backup";
@@ -16,6 +17,27 @@ export const maxDuration = 60;
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store, no-cache, must-revalidate",
 } as const;
+
+/** Client-safe GitHub backup history. Never returns tokens, repo names, or customer records. */
+export async function GET() {
+  try {
+    await requireSession("settings");
+  } catch (error) {
+    return handleRouteError(error);
+  }
+
+  try {
+    const summary = await readGithubBackupStatus();
+    return NextResponse.json(summary, { status: 200, headers: PRIVATE_HEADERS });
+  } catch (error) {
+    console.error("GitHub backup status read failed");
+    void error;
+    return NextResponse.json(
+      { error: "تعذر قراءة حالة نسخة GitHub." },
+      { status: 500, headers: PRIVATE_HEADERS },
+    );
+  }
+}
 
 /** Disaster copy to the private GitHub backup repo. Never writes live store/media. */
 export async function POST() {

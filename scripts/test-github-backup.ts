@@ -116,7 +116,14 @@ function createMemoryGithub(initial: Record<string, Uint8Array | string> = {}) {
       if (token && _message.includes(token)) {
         throw new Error("token leaked into commit message");
       }
-      for (const file of list) files.set(file.path, file.bytes);
+      for (const file of list) {
+        if (file.delete) {
+          files.delete(file.path);
+          continue;
+        }
+        if (!file.bytes) throw new Error("missing file bytes");
+        files.set(file.path, file.bytes);
+      }
       n += 1;
       const sha = `sha-${n}`;
       commits.push({ sha, paths: list.map((file) => file.path) });

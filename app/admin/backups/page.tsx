@@ -50,6 +50,7 @@ import { isLiveRestoreUiAllowed } from "@/lib/restore-status";
 import {
   isGithubBackupUiAllowed,
   type GithubBackupClientResult,
+  type GithubBackupStatusSummary,
 } from "@/lib/github-backup-status";
 
 const HISTORY_PREVIEW = 5;
@@ -102,6 +103,7 @@ export default function AdminBackupsPage() {
   const [githubCreating, setGithubCreating] = useState(false);
   const githubCreatingRef = useRef(false);
   const [githubError, setGithubError] = useState("");
+  const [githubStatus, setGithubStatus] = useState<GithubBackupStatusSummary | null>(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<RestoreCategory[]>([]);
@@ -188,6 +190,25 @@ export default function AdminBackupsPage() {
 
   const githubBackupAllowed = isGithubBackupUiAllowed();
 
+  const loadGithubStatus = useCallback(async () => {
+    if (!githubBackupAllowed) {
+      setGithubStatus(null);
+      return;
+    }
+    try {
+      const summary = await apiFetch<GithubBackupStatusSummary>(
+        "/api/admin/github-backups",
+      );
+      setGithubStatus(summary);
+    } catch {
+      setGithubStatus(null);
+    }
+  }, [githubBackupAllowed]);
+
+  useEffect(() => {
+    void loadGithubStatus();
+  }, [loadGithubStatus]);
+
   const createGithubBackup = useCallback(async () => {
     if (githubCreatingRef.current || !githubBackupAllowed) return;
     githubCreatingRef.current = true;
@@ -206,6 +227,7 @@ export default function AdminBackupsPage() {
         title: t("admin.backups.backupAllSuccess"),
         detail: formatBackupDateTime(result.createdAt),
       });
+      await loadGithubStatus();
     } catch (err) {
       if (
         err instanceof ApiError &&
@@ -227,7 +249,7 @@ export default function AdminBackupsPage() {
       githubCreatingRef.current = false;
       setGithubCreating(false);
     }
-  }, [githubBackupAllowed, notifySaved, t]);
+  }, [githubBackupAllowed, loadGithubStatus, notifySaved, t]);
 
   const toggleCategory = useCallback((key: RestoreCategory) => {
     setSelectedCategories((current) =>
@@ -589,6 +611,53 @@ export default function AdminBackupsPage() {
           );
         })}
       </div>
+
+      {githubBackupAllowed ? (
+        <section className="admin-backups-card admin-backups-github-history">
+          <div className="admin-backups-section-head">
+            <div>
+              <Archive size={16} strokeWidth={1.7} aria-hidden />
+              <h2>{t("admin.backups.githubHistoryTitle")}</h2>
+            </div>
+            <span className="admin-backups-more is-static">
+              {t("admin.backups.githubRetention", {
+                days: githubStatus?.retentionDays ?? 30,
+              })}
+            </span>
+          </div>
+          <p className="admin-backups-lead">
+            {githubStatus?.lastRun
+              ? `${t("admin.backups.githubLastRun")} ${formatBackupDateTime(githubStatus.lastRun.createdAt)} — ${
+                  githubStatus.lastRun.complete
+                    ? t("admin.backups.githubComplete")
+                    : t("admin.backups.githubIncomplete")
+                } · ${
+                  githubStatus.lastRun.remainingMedia === 0 && githubStatus.lastRun.failed === 0
+                    ? t("admin.backups.githubMediaDone")
+                    : t("admin.backups.githubMediaPending")
+                }`
+              : t("admin.backups.githubNone")}
+          </p>
+          {githubStatus?.snapshots.length ? (
+            <ul className="admin-backups-github-dates">
+              {githubStatus.snapshots
+                .slice()
+                .reverse()
+                .slice(0, 30)
+                .map((row) => (
+                  <li key={row.date}>
+                    <strong>{row.date}</strong>
+                    <span>
+                      {row.complete && row.verified
+                        ? t("admin.backups.githubComplete")
+                        : t("admin.backups.githubIncomplete")}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="admin-backups-card admin-backups-history">
         <div className="admin-backups-section-head">
