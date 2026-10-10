@@ -254,8 +254,7 @@ function hasOptionalPageSettings(
   locale?: ServicePagesLocale,
 ): boolean {
   if (!value || typeof value !== "object") return false;
-  const raw = value as {
-    [page in OptionalCatalogKey]?: unknown;
+  const raw = value as Record<string, unknown> & {
     locales?: Partial<Record<ServicePagesLocale, Record<string, unknown>>>;
   };
   if (locale) {
