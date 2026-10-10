@@ -6,12 +6,16 @@ import {
   pickServiceFeatureIcon,
 } from "@/lib/service-page-icons";
 import type {
+  CustomArticleAlign,
+  CustomArticlePosition,
   CustomPageCopy,
   CustomPageCtaKind,
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
   CustomPageTemplate,
+  CustomSectionArticle,
+  CustomSectionArticleCopy,
   CustomSectionType,
   CustomServicePage,
   Product,
@@ -21,6 +25,8 @@ import type {
 } from "@/lib/types";
 import {
   ADDABLE_CUSTOM_SECTION_TYPES,
+  CUSTOM_ARTICLE_ALIGNS,
+  CUSTOM_ARTICLE_POSITIONS,
   CUSTOM_CTA_KINDS,
   CUSTOM_SECTION_TYPES,
 } from "@/lib/types";
@@ -31,7 +37,13 @@ function isServicePagesLocale(
   return value === "ar" || value === "he" || value === "en";
 }
 
-export { ADDABLE_CUSTOM_SECTION_TYPES, CUSTOM_CTA_KINDS, CUSTOM_SECTION_TYPES };
+export {
+  ADDABLE_CUSTOM_SECTION_TYPES,
+  CUSTOM_ARTICLE_ALIGNS,
+  CUSTOM_ARTICLE_POSITIONS,
+  CUSTOM_CTA_KINDS,
+  CUSTOM_SECTION_TYPES,
+};
 
 export const MAX_CUSTOM_PAGES = 30;
 export const MAX_CUSTOM_SECTIONS = 12;
@@ -39,6 +51,8 @@ export const MAX_GALLERY_ITEMS = 6;
 export const MAX_PAGE_PRODUCTS = 16;
 export const CUSTOM_FEATURE_COUNT = 4;
 export const CUSTOM_BENEFIT_COUNT = 5;
+export const MAX_ARTICLE_HEADING = 140;
+export const MAX_ARTICLE_BODY = 4000;
 
 export const RESERVED_SERVICE_SLUGS = new Set([
   "eye-exams",
@@ -90,6 +104,89 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function cleanText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function stripMarkup(value: string): string {
+  return value.replace(/<[^>]*>/g, "");
+}
+
+export function sanitizeArticleHeading(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return stripMarkup(value)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_ARTICLE_HEADING);
+}
+
+export function sanitizeArticleBody(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return stripMarkup(value)
+    .replace(/\r\n/g, "\n")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, MAX_ARTICLE_BODY);
+}
+
+export function parseArticleAlign(value: unknown): CustomArticleAlign {
+  return (CUSTOM_ARTICLE_ALIGNS as readonly string[]).includes(String(value))
+    ? (value as CustomArticleAlign)
+    : "center";
+}
+
+export function parseArticlePosition(value: unknown): CustomArticlePosition {
+  return (CUSTOM_ARTICLE_POSITIONS as readonly string[]).includes(String(value))
+    ? (value as CustomArticlePosition)
+    : "before";
+}
+
+export function sparseSectionArticle(saved: unknown): CustomSectionArticle | undefined {
+  const raw = asRecord(saved);
+  const localeRaw = asRecord(raw.locales);
+  const locales: NonNullable<CustomSectionArticle["locales"]> = {};
+  for (const locale of ["ar", "he", "en"] as const) {
+    const copyRaw = asRecord(localeRaw[locale]);
+    const heading = sanitizeArticleHeading(copyRaw.heading);
+    const body = sanitizeArticleBody(copyRaw.body);
+    if (!heading && !body) continue;
+    locales[locale] = { heading, body };
+  }
+  if (!Object.keys(locales).length) return undefined;
+  return {
+    align: parseArticleAlign(raw.align),
+    position: parseArticlePosition(raw.position),
+    locales,
+  };
+}
+
+export function emptySectionArticleCopy(): CustomSectionArticleCopy {
+  return { heading: "", body: "" };
+}
+
+export function resolveSectionArticle(
+  section: CustomPageSection | undefined,
+  locale: ServicePagesLocale | Locale,
+): {
+  heading: string;
+  body: string;
+  align: CustomArticleAlign;
+  position: CustomArticlePosition;
+} | null {
+  const article = section?.article;
+  if (!article) return null;
+  const key: ServicePagesLocale = isServicePagesLocale(locale) ? locale : "ar";
+  const copy = article.locales?.[key];
+  const heading = sanitizeArticleHeading(copy?.heading);
+  const body = sanitizeArticleBody(copy?.body);
+  if (!heading && !body) return null;
+  return {
+    heading,
+    body,
+    align: parseArticleAlign(article.align),
+    position: parseArticlePosition(article.position),
+  };
 }
 
 function makeId(prefix: string): string {
@@ -525,11 +622,13 @@ function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPag
       continue;
     }
     const adminLabel = cleanText(raw.adminLabel);
+    const article = sparseSectionArticle(raw.article);
     next.push({
       id: cleanText(raw.id) || makeId("sec"),
       type: type as CustomSectionType,
       hidden: raw.hidden === true ? true : undefined,
       adminLabel: adminLabel || undefined,
+      ...(article ? { article } : {}),
     });
     if (next.length >= MAX_CUSTOM_SECTIONS) break;
   }

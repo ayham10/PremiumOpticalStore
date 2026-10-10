@@ -7574,6 +7574,149 @@ html[dir="ltr"] .eye-exam-benefits-rule {
   );
 }
 
+.csp-article {
+  display: block;
+  width: 100%;
+  margin: 0 0 1.15rem;
+}
+
+.csp-article:last-child {
+  margin-bottom: 0;
+}
+
+.csp-article + .eye-exam-features-grid,
+.csp-article + .cl-features-grid,
+.csp-article + .eye-exam-benefits-title,
+.csp-article + .cl-safety,
+.csp-article + .eye-exam-accuracy,
+.csp-article + .csp-gallery,
+.csp-article + .eye-exam-actions,
+.csp-article + .cl-hero-actions {
+  margin-top: 0.15rem;
+}
+
+.eye-exam-features-grid + .csp-article,
+.cl-features-grid + .csp-article,
+.eye-exam-benefits-list + .csp-article,
+.cl-safety + .csp-article,
+.eye-exam-privacy + .csp-article,
+.csp-gallery + .csp-article,
+.eye-exam-actions + .csp-article,
+.cl-hero-actions + .csp-article,
+.custom-page-products + .csp-article {
+  margin-top: 1.15rem;
+}
+
+.csp-article-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  direction: ltr;
+}
+
+.csp-article.is-left .csp-article-heading {
+  justify-content: flex-start;
+}
+
+.csp-article.is-right .csp-article-heading {
+  justify-content: flex-end;
+}
+
+.csp-article-title {
+  flex: 0 1 auto;
+  max-width: min(36rem, 78%);
+  margin: 0;
+  color: var(--ee-gold);
+  font-size: clamp(1.12rem, 3.4vw, 1.38rem);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.csp-article.is-center .csp-article-title {
+  text-align: center;
+}
+
+.csp-article.is-left .csp-article-title {
+  text-align: left;
+}
+
+.csp-article.is-right .csp-article-title {
+  text-align: right;
+}
+
+.csp-article-rule {
+  flex: 1 1 2.5rem;
+  height: 1px;
+  min-width: 2.5rem;
+  max-width: none;
+}
+
+.csp-article-rule.is-before {
+  background: linear-gradient(
+    to right,
+    rgba(212, 180, 131, 0.02),
+    rgba(212, 180, 131, 0.72)
+  );
+}
+
+.csp-article-rule.is-after {
+  background: linear-gradient(
+    to left,
+    rgba(212, 180, 131, 0.02),
+    rgba(212, 180, 131, 0.72)
+  );
+}
+
+.csp-article-body {
+  margin: 0.7rem 0 0;
+  color: #f3f3f3;
+  font-size: 0.94rem;
+  line-height: 1.7;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.csp-article.is-center .csp-article-body {
+  text-align: center;
+}
+
+.csp-article.is-left .csp-article-body {
+  text-align: left;
+}
+
+.csp-article.is-right .csp-article-body {
+  text-align: right;
+}
+
+.csp-article.is-center .csp-article-body,
+.csp-article.is-left .csp-article-body,
+.csp-article.is-right .csp-article-body {
+  max-width: 40rem;
+}
+
+.csp-article.is-center .csp-article-body {
+  margin-inline: auto;
+}
+
+.csp-article.is-right .csp-article-body {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 720px) {
+  .csp-article-title {
+    max-width: min(22rem, 70%);
+    font-size: clamp(1.02rem, 4.4vw, 1.22rem);
+  }
+
+  .csp-article-rule {
+    min-width: 1.4rem;
+  }
+}
+
 .eye-exam-benefits-list {
   list-style: none;
   margin: 0;
@@ -17813,6 +17956,59 @@ body > .admin-save-notice,
   padding-inline-start: 1.1rem;
   color: #e07a7a;
   font-size: 0.82rem;
+}
+
+.csp-article-admin {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(197, 204, 212, 0.14);
+}
+
+.csp-article-admin-title {
+  margin: 0;
+  color: #d4af6a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.csp-article-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.csp-article-choices[role="group"] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.csp-article-choices legend {
+  margin: 0 0 0.35rem;
+  color: #c5ccd4;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.csp-article-choice {
+  min-height: 2rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(197, 204, 212, 0.22);
+  background: transparent;
+  color: #d8dee6;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.csp-article-choice.is-on {
+  border-color: rgba(212, 175, 106, 0.55);
+  background: rgba(212, 175, 106, 0.14);
+  color: #e8c98a;
 }
 
 .csp-section-list {

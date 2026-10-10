@@ -556,6 +556,24 @@ export type CustomPageCtaKind = (typeof CUSTOM_CTA_KINDS)[number];
 
 export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
 
+export const CUSTOM_ARTICLE_ALIGNS = ["right", "center", "left"] as const;
+export const CUSTOM_ARTICLE_POSITIONS = ["before", "after"] as const;
+
+export type CustomArticleAlign = (typeof CUSTOM_ARTICLE_ALIGNS)[number];
+export type CustomArticlePosition = (typeof CUSTOM_ARTICLE_POSITIONS)[number];
+
+export interface CustomSectionArticleCopy {
+  heading: string;
+  body: string;
+}
+
+/** Optional article belonging to one custom-page section. Shared align/position. */
+export interface CustomSectionArticle {
+  align: CustomArticleAlign;
+  position: CustomArticlePosition;
+  locales?: Partial<Record<ServicePagesLocale, CustomSectionArticleCopy>>;
+}
+
 /** Gallery stays in CUSTOM_SECTION_TYPES for existing pages but cannot be added. */
 export const ADDABLE_CUSTOM_SECTION_TYPES = CUSTOM_SECTION_TYPES.filter(
   (type) => type !== "gallery",
@@ -571,6 +589,8 @@ export interface CustomPageSection {
   hidden?: boolean;
   /** Admin accordion name only. Never shown on the public website. */
   adminLabel?: string;
+  /** Optional per-section article. Absent on existing pages. */
+  article?: CustomSectionArticle;
 }
 
 export interface ImageFocalPoint {
