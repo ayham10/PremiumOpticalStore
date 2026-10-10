@@ -30,6 +30,12 @@ export const CONTENT_PREVIEW_CHROME = {
 
 export const PREVIEW_DRAG_THRESHOLD_PX = 6;
 
+/**
+ * Use almost all of the left-column width. Height is not a hard fit —
+ * shrinking both frames to the leftover viewport made them unreadable.
+ */
+export const PREVIEW_COLUMN_WIDTH_USAGE = 0.98;
+
 export function fitPreviewScale(
   availableWidth: number,
   availableHeight: number,
@@ -44,6 +50,30 @@ export function fitPreviewScale(
     0.08,
     Math.min(1, innerWidth / viewportWidth, innerHeight / viewportHeight),
   );
+}
+
+/** Scale a 390/1280 viewport to the preview column width only. */
+export function fitPreviewColumnScale(
+  availableWidth: number,
+  viewportWidth: number,
+  chromeWidth = 0,
+): number {
+  const innerWidth = Math.max(
+    1,
+    (availableWidth - chromeWidth) * PREVIEW_COLUMN_WIDTH_USAGE,
+  );
+  return Math.max(0.18, Math.min(1, innerWidth / viewportWidth));
+}
+
+export function previewFrameSize(
+  viewportWidth: number,
+  viewportHeight: number,
+  scale: number,
+): { width: number; height: number } {
+  return {
+    width: Math.round(viewportWidth * scale),
+    height: Math.round(viewportHeight * scale),
+  };
 }
 
 export function normalizeWheelDelta(event: {

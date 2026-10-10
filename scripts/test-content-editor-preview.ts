@@ -4,7 +4,9 @@ import {
   CONTENT_PREVIEW_CHROME,
   CONTENT_PREVIEW_PATH,
   CONTENT_PREVIEW_VIEWPORTS,
+  fitPreviewColumnScale,
   fitPreviewScale,
+  previewFrameSize,
   normalizeWheelDelta,
   PREVIEW_DRAG_THRESHOLD_PX,
   screenDeltaToPreviewScroll,
@@ -250,6 +252,36 @@ assert.ok(phoneScale <= (400 - 36) / 844);
 assert.ok(phoneScale < 400 / 390);
 assert.ok(fitPreviewScale(400, 400, 1280, 900, 20, 46) <= (400 - 20) / 1280);
 assert.equal(fitPreviewScale(2000, 2000, 390, 844, 24, 36), 1);
+
+const squeezedHeight = fitPreviewScale(600, 160, 390, 844, 24, 36);
+const columnPhone = fitPreviewColumnScale(600, 390, 24);
+const columnDesktop = fitPreviewColumnScale(600, 1280, 20);
+assert.ok(columnPhone > squeezedHeight);
+assert.ok(columnPhone > 0.7);
+assert.ok(columnDesktop > 0.4);
+assert.ok(columnPhone <= 1);
+assert.equal(fitPreviewColumnScale(2000, 390, 24), 1);
+
+function columnWidthForContent(contentWidth: number): number {
+  return contentWidth * 0.4 - 0.85 * 16 * 0.5;
+}
+
+for (const [label, contentWidth] of [
+  ["1920", 1560],
+  ["1440", 1296],
+  ["1366", 1222],
+] as const) {
+  const col = columnWidthForContent(contentWidth);
+  const mobile = fitPreviewColumnScale(col, 390, 24);
+  const desktop = fitPreviewColumnScale(col, 1280, 20);
+  const mobileFrame = previewFrameSize(390, 844, mobile);
+  const desktopFrame = previewFrameSize(1280, 900, desktop);
+  assert.ok(mobileFrame.width >= 240, `${label} mobile too narrow`);
+  assert.ok(desktopFrame.width >= 380, `${label} desktop too narrow`);
+  assert.ok(mobileFrame.width <= col, `${label} mobile overflow`);
+  assert.ok(desktopFrame.width <= col, `${label} desktop overflow`);
+}
+
 assert.equal(screenDeltaToPreviewScroll(30, 0.3), 100);
 assert.equal(normalizeWheelDelta({ deltaY: 2, deltaMode: 1 }), 32);
 assert.equal(normalizeWheelDelta({ deltaY: 40, deltaMode: 0 }), 40);

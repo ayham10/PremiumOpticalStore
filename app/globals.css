@@ -16188,7 +16188,9 @@ select.admin-pe-input {
     align-self: stretch;
     height: 100%;
     max-height: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .csp-visual-editor {
@@ -16231,16 +16233,16 @@ select.admin-pe-input {
 .csp-visual-previews {
   z-index: 2;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .csp-live-previews {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  height: 100%;
+  gap: 0.7rem;
+  height: auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   overscroll-behavior: contain;
 }
 
@@ -16250,6 +16252,7 @@ select.admin-pe-input {
   --csp-preview-height: 844px;
   display: flex;
   flex-direction: column;
+  flex: 0 0 auto;
   min-height: 0;
   overflow: hidden;
   overscroll-behavior: contain;
@@ -16260,12 +16263,9 @@ select.admin-pe-input {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
-.csp-device.is-mobile {
-  flex: 1.12 1 0;
-}
-
+.csp-device.is-mobile,
 .csp-device.is-desktop {
-  flex: 0.88 1 0;
+  flex: 0 0 auto;
 }
 
 .csp-device figcaption {
@@ -16280,12 +16280,12 @@ select.admin-pe-input {
 }
 
 .csp-device-stage {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.55rem 0.6rem;
+  padding: 0.55rem 0.6rem 0.7rem;
   overflow: hidden;
   background:
     radial-gradient(120% 80% at 50% 0%, rgba(212, 175, 106, 0.06), transparent 55%),
@@ -16840,12 +16840,13 @@ html.csp-preview-doc body::-webkit-scrollbar {
   .csp-visual-previews {
     position: relative;
     top: auto;
-    height: calc(100dvh - 8.2rem);
-    max-height: calc(100dvh - 8.2rem);
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .csp-live-previews {
-    height: 100%;
+    height: auto;
   }
 }
 
