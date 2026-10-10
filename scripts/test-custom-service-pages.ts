@@ -87,6 +87,12 @@ assert.equal(created[0]?.showHeroButton, true);
 assert.equal(created[0]?.ctaKind, "book");
 assert.deepEqual(created[0]?.productIds, []);
 assert.deepEqual(created[0]?.sections, []);
+const createdIndependent = persistCustomPages([], {
+  customPageOp: { op: "create", name: "Night Clinic", slug: "night-clinic" },
+});
+assert.equal(createdIndependent[0]?.slug, "night-clinic");
+assert.deepEqual(createdIndependent[0]?.sections, []);
+assert.equal(createdIndependent[0]?.template, "eye-exam");
 assert.equal(created[0]?.locales.ar, undefined);
 assert.equal(
   isCustomPageLocaleComplete(created[0]!.sections, placeholders),

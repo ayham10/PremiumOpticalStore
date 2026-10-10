@@ -1768,7 +1768,9 @@ const en: Dictionary = {
       searchPages: "Search created pages…",
       noPages: "No custom pages yet",
       pageName: "Page name",
+      pageNameHint: "Shown in the page list and on the website.",
       pageSlug: "URL slug",
+      pageSlugHint: "Saved after /services/. Use a unique lowercase English slug.",
       template: "Template",
       templateEyeExam: "Eye Exam",
       templateContactLenses: "Contact Lenses",
@@ -1931,13 +1933,13 @@ const en: Dictionary = {
       wizardStep3: "Edit content",
       wizardStep4: "Preview and publish",
       wizardStep1Hint:
-        "Enter the page name and URL, and review the current language. Draft copy and sections stay intact as you move between steps.",
+        "Enter the basic page information, such as the name, URL, and languages.",
       wizardStep2Hint:
-        "Choose the sections you want. Nothing is added automatically, and selected sections appear immediately in both previews.",
+        "Choose the sections to add. You can reorder or remove them later.",
       wizardStep3Hint:
-        "Edit each section in page order. The active section is outlined in gold here and in both simulators.",
+        "Add text, images, buttons, and products for each section and see the change live.",
       wizardStep4Hint:
-        "Review missing fields and language completeness before publishing. Incomplete or sample content is not published.",
+        "Review the page on mobile and desktop, and confirm the information is complete before publishing.",
       wizardNext: "Next",
       wizardBack: "Back",
       wizardProgress: "Step {n} of {total}",

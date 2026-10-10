@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   buildEditorPreviewDocument,
   CONTENT_PREVIEW_CHROME,
@@ -6,6 +8,7 @@ import {
   CONTENT_PREVIEW_VIEWPORTS,
   fitPreviewColumnScale,
   fitPreviewScale,
+  MOBILE_PREVIEW_DISPLAY_SCALE,
   previewFrameSize,
   normalizeWheelDelta,
   PREVIEW_DRAG_THRESHOLD_PX,
@@ -24,6 +27,7 @@ import {
 } from "../lib/content-editor-preview";
 import {
   clampWizardStep,
+  formatWizardStepNumber,
   wizardCanGoBack,
   wizardCanGoNext,
 } from "../lib/content-editor-wizard";
@@ -170,6 +174,8 @@ assert.equal(clampWizardStep(9), 4);
 assert.equal(wizardCanGoBack(1), false);
 assert.equal(wizardCanGoNext(4), false);
 assert.equal(wizardCanGoNext(2), true);
+assert.equal(formatWizardStepNumber(1), "01");
+assert.equal(formatWizardStepNumber(4), "04");
 
 const blankCopy = emptyCustomPageCopy();
 const previewCopy = withPreviewPlaceholders(blankCopy, "ar");
@@ -261,6 +267,12 @@ assert.ok(columnPhone > 0.7);
 assert.ok(columnDesktop > 0.4);
 assert.ok(columnPhone <= 1);
 assert.equal(fitPreviewColumnScale(2000, 390, 24), 1);
+assert.equal(MOBILE_PREVIEW_DISPLAY_SCALE, 0.75);
+assert.equal(
+  fitPreviewColumnScale(2000, 390, 24, MOBILE_PREVIEW_DISPLAY_SCALE),
+  0.75,
+);
+assert.equal(fitPreviewColumnScale(2000, 1280, 20), 1);
 
 function columnWidthForContent(contentWidth: number): number {
   return contentWidth * 0.4 - 0.85 * 16 * 0.5;
@@ -273,10 +285,21 @@ for (const [label, contentWidth] of [
 ] as const) {
   const col = columnWidthForContent(contentWidth);
   const mobile = fitPreviewColumnScale(col, 390, 24);
+  const mobileDisplayed = fitPreviewColumnScale(
+    col,
+    390,
+    24,
+    MOBILE_PREVIEW_DISPLAY_SCALE,
+  );
   const desktop = fitPreviewColumnScale(col, 1280, 20);
-  const mobileFrame = previewFrameSize(390, 844, mobile);
+  const mobileFrame = previewFrameSize(390, 844, mobileDisplayed);
   const desktopFrame = previewFrameSize(1280, 900, desktop);
-  assert.ok(mobileFrame.width >= 240, `${label} mobile too narrow`);
+  assert.equal(
+    Number(mobileDisplayed.toFixed(6)),
+    Number((mobile * MOBILE_PREVIEW_DISPLAY_SCALE).toFixed(6)),
+    `${label} mobile not 75% of current size`,
+  );
+  assert.ok(mobileFrame.width >= 180, `${label} mobile too narrow`);
   assert.ok(desktopFrame.width >= 380, `${label} desktop too narrow`);
   assert.ok(mobileFrame.width <= col, `${label} mobile overflow`);
   assert.ok(desktopFrame.width <= col, `${label} desktop overflow`);
@@ -287,5 +310,49 @@ assert.equal(normalizeWheelDelta({ deltaY: 2, deltaMode: 1 }), 32);
 assert.equal(normalizeWheelDelta({ deltaY: 40, deltaMode: 0 }), 40);
 assert.equal(shouldStartPreviewDrag(PREVIEW_DRAG_THRESHOLD_PX - 1), false);
 assert.equal(shouldStartPreviewDrag(PREVIEW_DRAG_THRESHOLD_PX), true);
+
+const createModal = readFileSync(
+  join(process.cwd(), "components/admin/CustomPageBuilder.tsx"),
+  "utf8",
+);
+assert.match(createModal, /pageNameHint/);
+assert.match(createModal, /\/services\//);
+assert.doesNotMatch(createModal, /csp-template-row/);
+assert.doesNotMatch(createModal, /templateEyeExam/);
+
+const previewCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+assert.match(previewCss, /overflow-x:\s*clip/);
+assert.match(
+  previewCss,
+  /\.csp-preview-canvas \[data-csp-section\]\.is-preview-active/,
+);
+assert.match(previewCss, /#22d3ee/);
+assert.match(previewCss, /قيد التعدיל|قيد التعديل/);
+assert.doesNotMatch(
+  previewCss,
+  /(?<!csp-preview-canvas )\[data-csp-section\]\.is-preview-active \{/,
+);
+
+const publicView = readFileSync(
+  join(process.cwd(), "components/services/CustomServicePageView.tsx"),
+  "utf8",
+);
+assert.doesNotMatch(publicView, /is-preview-active/);
+
+const livePreviews = readFileSync(
+  join(process.cwd(), "components/admin/content-editor/LivePagePreviews.tsx"),
+  "utf8",
+);
+assert.match(livePreviews, /MOBILE_PREVIEW_DISPLAY_SCALE/);
+assert.match(
+  livePreviews,
+  /mode === "mobile" \? MOBILE_PREVIEW_DISPLAY_SCALE : 1/,
+);
+
+const wizardBar = readFileSync(
+  join(process.cwd(), "components/admin/content-editor/NewPageWizardBar.tsx"),
+  "utf8",
+);
+assert.match(wizardBar, /formatWizardStepNumber/);
 
 console.log("content-editor-preview tests passed");

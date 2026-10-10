@@ -605,7 +605,8 @@ export type CustomPageOp =
       op: "create";
       name: string;
       slug: string;
-      template: CustomPageTemplate;
+      /** Kept for stored-page compatibility. New pages no longer pick a category. */
+      template?: CustomPageTemplate;
     }
   | {
       op: "update";

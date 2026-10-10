@@ -16514,13 +16514,13 @@ html.csp-preview-doc body::-webkit-scrollbar {
 }
 
 .csp-fold.is-active {
-  border-color: rgba(212, 175, 106, 0.55);
-  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.28);
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.28);
 }
 
 .csp-section-row.is-active {
-  border-color: rgba(212, 175, 106, 0.5);
-  background: rgba(212, 175, 106, 0.08);
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .csp-wizard {
@@ -16563,20 +16563,34 @@ html.csp-preview-doc body::-webkit-scrollbar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.2rem;
+  min-width: 1.45rem;
   height: 1.2rem;
+  padding: 0 0.15rem;
   border-radius: 999px;
   border: 1px solid rgba(212, 175, 106, 0.28);
   color: #d4af6a;
   font-style: normal;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
 }
 
-.csp-wizard-steps button.is-done,
+.csp-wizard-steps button.is-done {
+  color: #e4d3a8;
+  border-color: rgba(212, 175, 106, 0.28);
+  background: rgba(212, 175, 106, 0.06);
+}
+
 .csp-wizard-steps button.is-current {
   color: #f3e6c0;
-  border-color: rgba(212, 175, 106, 0.42);
-  background: rgba(212, 175, 106, 0.1);
+  border-color: rgba(212, 175, 106, 0.7);
+  background: rgba(212, 175, 106, 0.16);
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.22);
+}
+
+.csp-wizard-steps button.is-current i {
+  border-color: rgba(212, 175, 106, 0.7);
+  background: rgba(212, 175, 106, 0.18);
+  color: #f6e7c0;
 }
 
 .csp-wizard-hint {
@@ -16593,9 +16607,38 @@ html.csp-preview-doc body::-webkit-scrollbar {
 }
 
 .csp-preview-canvas [data-csp-section].is-preview-active {
-  outline: 2px solid rgba(212, 175, 106, 0.72);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgba(212, 175, 106, 0.12);
+  position: relative;
+  outline: 2px solid #22d3ee;
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 5px rgba(34, 211, 238, 0.14),
+    0 0 16px rgba(34, 211, 238, 0.22);
+}
+
+.csp-preview-canvas [data-csp-section].is-preview-active::before {
+  content: "✎ قيد التعديل";
+  position: absolute;
+  top: 0.45rem;
+  inset-inline-start: 0.55rem;
+  inset-inline-end: auto;
+  z-index: 4;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(8, 16, 22, 0.82);
+  color: #67e8f9;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.28);
+}
+
+html[lang="he"] .csp-preview-canvas [data-csp-section].is-preview-active::before {
+  content: "✎ בעריכה";
+}
+
+html[lang="en"] .csp-preview-canvas [data-csp-section].is-preview-active::before {
+  content: "✎ Editing";
 }
 
 .csp-preview-ph-media {

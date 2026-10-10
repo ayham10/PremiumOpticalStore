@@ -117,6 +117,10 @@ function ContentPreviewCanvas({
       .querySelectorAll("[data-csp-section].is-preview-active")
       .forEach((node) => node.classList.remove("is-preview-active"));
     if (!id) return;
+    const hidden = payload.customPage?.sections.some(
+      (section) => section.id === id && section.hidden,
+    );
+    if (hidden) return;
     const el = document.querySelector(
       `[data-csp-section="${escapeSectionId(id)}"]`,
     );

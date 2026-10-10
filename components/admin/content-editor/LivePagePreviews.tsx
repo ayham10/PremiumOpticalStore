@@ -15,6 +15,7 @@ import {
   CONTENT_PREVIEW_READY,
   CONTENT_PREVIEW_VIEWPORTS,
   CONTENT_PREVIEW_VISIBILITY,
+  MOBILE_PREVIEW_DISPLAY_SCALE,
   fitPreviewColumnScale,
   normalizeWheelDelta,
   screenDeltaToPreviewScroll,
@@ -127,6 +128,7 @@ function DeviceFrame({
         stage?.clientWidth || viewport.width,
         viewport.width,
         chrome.width,
+        mode === "mobile" ? MOBILE_PREVIEW_DISPLAY_SCALE : 1,
       );
       scaleRef.current = next;
       setScale(next);
@@ -136,7 +138,7 @@ function DeviceFrame({
     const observer = new ResizeObserver(applyScale);
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [chrome.width, viewport.width]);
+  }, [chrome.width, mode, viewport.width]);
 
   useEffect(() => {
     const shell = shellRef.current;

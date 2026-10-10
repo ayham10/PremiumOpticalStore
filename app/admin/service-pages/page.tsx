@@ -781,6 +781,7 @@ export default function AdminServicePagesPage() {
       <CreateCustomPageModal
         open={createOpen}
         t={t}
+        existingSlugs={(document?.customPages || []).map((page) => page.slug)}
         onClose={() => setCreateOpen(false)}
         onCreated={(page, next) => {
           setDocument(next);

@@ -70,7 +70,6 @@ import type {
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
-  CustomPageTemplate,
   CustomSectionType,
   CustomServicePage,
   Product,
@@ -158,18 +157,19 @@ function customPageErrorMessage(error: unknown, t: Translate): string {
 export function CreateCustomPageModal({
   open,
   t,
+  existingSlugs = [],
   onClose,
   onCreated,
 }: {
   open: boolean;
   t: Translate;
+  existingSlugs?: string[];
   onClose: () => void;
   onCreated: (page: CustomServicePage, document: StoreSettings["servicePages"]) => void;
 }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [template, setTemplate] = useState<CustomPageTemplate>("eye-exam");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -178,7 +178,6 @@ export function CreateCustomPageModal({
     setName("");
     setSlug("");
     setSlugTouched(false);
-    setTemplate("eye-exam");
     setSaving(false);
     setError("");
   }, [open]);
@@ -201,7 +200,6 @@ export function CreateCustomPageModal({
                 op: "create",
                 name: name.trim(),
                 slug,
-                template,
               } satisfies CustomPageOp,
             },
           },
@@ -222,10 +220,14 @@ export function CreateCustomPageModal({
   }
 
   const normalized = normalizeCustomSlug(slug);
+  const slugTaken = existingSlugs.includes(normalized);
+  const slugReserved = RESERVED_SERVICE_SLUGS.has(normalized);
+  const slugInvalid = Boolean(slug.trim()) && normalized.length < 2;
   const canCreate =
     name.trim().length > 1 &&
     normalized.length >= 2 &&
-    !RESERVED_SERVICE_SLUGS.has(normalized);
+    !slugReserved &&
+    !slugTaken;
 
   return (
     <AdminModal
@@ -246,42 +248,38 @@ export function CreateCustomPageModal({
           value={name}
           onChange={(event) => updateName(event.target.value)}
         />
+        <p className="admin-muted">{t("admin.servicePages.pageNameHint")}</p>
       </label>
       <label className="admin-service-field">
         <span className="label">{t("admin.servicePages.pageSlug")}</span>
-        <span className="csp-slug-prefix">/services/</span>
+        <span className="csp-slug-prefix" dir="ltr">
+          /services/
+        </span>
         <input
           className="input"
+          dir="ltr"
           value={slug}
           onChange={(event) => {
             setSlugTouched(true);
             setSlug(event.target.value);
           }}
         />
+        <p className="admin-muted">{t("admin.servicePages.pageSlugHint")}</p>
+        {normalized ? (
+          <p className="admin-muted" dir="ltr">
+            /services/{normalized}
+          </p>
+        ) : null}
+        {slugTaken ? (
+          <p className="csp-issues">{t("admin.servicePages.slugTaken")}</p>
+        ) : null}
+        {slugReserved ? (
+          <p className="csp-issues">{t("admin.servicePages.slugReserved")}</p>
+        ) : null}
+        {slugInvalid ? (
+          <p className="csp-issues">{t("admin.servicePages.slugInvalid")}</p>
+        ) : null}
       </label>
-      <fieldset className="admin-service-field">
-        <legend className="label">{t("admin.servicePages.template")}</legend>
-        <div className="csp-template-row">
-          <label className={template === "eye-exam" ? "is-active" : ""}>
-            <input
-              type="radio"
-              name="csp-template"
-              checked={template === "eye-exam"}
-              onChange={() => setTemplate("eye-exam")}
-            />
-            {t("admin.servicePages.templateEyeExam")}
-          </label>
-          <label className={template === "contact-lenses" ? "is-active" : ""}>
-            <input
-              type="radio"
-              name="csp-template"
-              checked={template === "contact-lenses"}
-              onChange={() => setTemplate("contact-lenses")}
-            />
-            {t("admin.servicePages.templateContactLenses")}
-          </label>
-        </div>
-      </fieldset>
       <div className="admin-service-actions" style={{ marginTop: 16 }}>
         <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
           {t("admin.servicePages.cancel")}
