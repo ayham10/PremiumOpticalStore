@@ -72,3 +72,50 @@ export function resolveTwilioContentSid(templateName: string): string | null {
     null
   );
 }
+
+/** Approved templates shown as separate Admin cards. */
+export const ADMIN_APPROVED_TEMPLATE_NAMES = [
+  "oyon_booking_manage_v2_he",
+  "oyon_booking_manage_v2_ar",
+  "oyon_booking_rescheduled_owner",
+  "oyon_booking_cancelled_owner",
+] as const;
+
+export type AdminApprovedTemplateName =
+  (typeof ADMIN_APPROVED_TEMPLATE_NAMES)[number];
+
+/** True only when a valid HX Content SID can be resolved. Env presence is not enough. */
+export function isApprovedTwilioTemplateConfigured(
+  templateName: string,
+): boolean {
+  return Boolean(sanitizeTwilioContentSid(resolveTwilioContentSid(templateName)));
+}
+
+/** Admin-safe flags only — never includes SID values or secrets. */
+export function approvedTwilioTemplatesPublicStatus(): Record<
+  AdminApprovedTemplateName,
+  { configured: boolean }
+> {
+  return {
+    oyon_booking_manage_v2_he: {
+      configured: isApprovedTwilioTemplateConfigured(
+        "oyon_booking_manage_v2_he",
+      ),
+    },
+    oyon_booking_manage_v2_ar: {
+      configured: isApprovedTwilioTemplateConfigured(
+        "oyon_booking_manage_v2_ar",
+      ),
+    },
+    oyon_booking_rescheduled_owner: {
+      configured: isApprovedTwilioTemplateConfigured(
+        "oyon_booking_rescheduled_owner",
+      ),
+    },
+    oyon_booking_cancelled_owner: {
+      configured: isApprovedTwilioTemplateConfigured(
+        "oyon_booking_cancelled_owner",
+      ),
+    },
+  };
+}

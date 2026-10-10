@@ -15361,6 +15361,17 @@ select.admin-pe-input {
   padding: 0;
   gap: 0;
   overflow: hidden;
+  min-height: 60px;
+}
+
+.admin-bm-acc-card:not(.is-open) {
+  height: 60px;
+  max-height: 60px;
+}
+
+.admin-bm-acc-card.is-open {
+  height: auto;
+  max-height: none;
 }
 
 .admin-bm-acc-heading {
@@ -15375,6 +15386,7 @@ select.admin-pe-input {
   justify-content: space-between;
   gap: 0.75rem;
   width: 100%;
+  height: 60px;
   min-height: 60px;
   padding: 0 1.15rem;
   border: 0;
@@ -15403,7 +15415,7 @@ select.admin-pe-input {
   align-items: center;
   gap: 0.45rem;
   flex-shrink: 0;
-  direction: rtl;
+  direction: ltr;
 }
 
 .admin-bm-acc-status {
@@ -15429,27 +15441,50 @@ select.admin-pe-input {
 }
 
 .admin-bm-acc-body {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.22s ease;
+  display: block;
+  overflow: visible;
 }
 
-.admin-bm-acc-card.is-open .admin-bm-acc-body {
-  grid-template-rows: 1fr;
+.admin-bm-acc-card:not(.is-open) .admin-bm-acc-body {
+  display: none;
 }
 
 .admin-bm-acc-body-inner {
-  overflow: hidden;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.85rem;
   padding: 0 1.15rem 1.15rem;
+  overflow: visible;
 }
 
-.admin-bm-acc-card.is-open .admin-bm-acc-body-inner {
-  overflow: visible;
+.admin-bm-meta-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  width: 100%;
+}
+
+.admin-bm-meta-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.admin-bm-meta-list dt {
+  margin: 0;
+  color: #8d949d;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.admin-bm-meta-list dd {
+  margin: 0;
+  color: #f3f4f5;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-align: start;
 }
 
 .admin-bm-gold-icon {
@@ -15911,6 +15946,16 @@ select.admin-pe-input {
   .admin-bm-card {
     gap: 0.85rem;
     padding: 1.1rem 1.05rem 1.15rem;
+  }
+
+  .admin-bm-acc-card {
+    gap: 0;
+    padding: 0;
+  }
+
+  .admin-bm-acc-card:not(.is-open) {
+    height: 60px;
+    max-height: 60px;
   }
 
   .admin-bm-card-head > .admin-bm-toggle {

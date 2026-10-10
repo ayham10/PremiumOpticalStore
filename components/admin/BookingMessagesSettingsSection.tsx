@@ -40,6 +40,14 @@ const SHOW_EDITABLE_TEMPLATE_CONTROLS = false;
 const DISPLAY_CUSTOMER_TEMPLATE = "oyon_booking_confirmation";
 const DISPLAY_OWNER_TEMPLATE = "owner_notification";
 const DISPLAY_REMINDER_TEMPLATE = "appointment_reminder";
+const TEMPLATE_BOOKING_HE = "oyon_booking_manage_v2_he";
+const TEMPLATE_BOOKING_AR = "oyon_booking_manage_v2_ar";
+const TEMPLATE_OWNER_RESCHEDULED = "oyon_booking_rescheduled_owner";
+const TEMPLATE_OWNER_CANCELLED = "oyon_booking_cancelled_owner";
+const ENV_BOOKING_HE = "TWILIO_TEMPLATE_BOOKING_HE";
+const ENV_BOOKING_AR = "TWILIO_TEMPLATE_BOOKING_AR";
+const ENV_OWNER_RESCHEDULED = "TWILIO_TEMPLATE_OWNER_RESCHEDULED";
+const ENV_OWNER_CANCELLED = "TWILIO_TEMPLATE_OWNER_CANCELLED";
 
 /**
  * Visual-only Admin previews with example values.
@@ -72,9 +80,51 @@ const TWILIO_APPOINTMENT_REMINDER_PREVIEW = `⏰ تذكير بموعدك في OY
 
 نتطلع لرؤيتك 💜`;
 
+const TWILIO_BOOKING_HE_PREVIEW = `שלום דנה 👋
+
+התור שלך ב-OYON Optics | עיון אופטיקה אושר
+
+📅 תאריך: 15/10/2026
+🕐 שעה: 18:30
+
+https://oyonoptics.com/booking/manage/{{5}}`;
+
+const TWILIO_BOOKING_AR_PREVIEW = `مرحباً محمد 👋
+
+تم تأكيد موعدك في OYON Optics | عيون أوبتيكا
+
+📅 التاريخ: 15/10/2026
+🕐 الساعة: 18:30
+
+https://oyonoptics.com/booking/manage/{{5}}`;
+
+const TWILIO_OWNER_RESCHEDULED_PREVIEW = `🔔 تم تغيير الموعد — OYON Optics
+
+👤 العميل: محمد علي
+📱 الهاتف: +972501234567
+👓 الخدمة: فحص نظر
+📅 من: 15/10/2026 10:30
+📅 إلى: 16/10/2026 11:00`;
+
+const TWILIO_OWNER_CANCELLED_PREVIEW = `🔔 تم إلغاء الموعد — OYON Optics
+
+👤 العميل: محمد علي
+📅 التاريخ: 15/10/2026
+🕐 الساعة: 10:30
+📱 الهاتف: +972501234567
+👓 الخدمة: فحص نظر`;
+
 const REMINDER_MINUTE_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
 
-type AccordionId = "provider" | "customer" | "manage" | "owner" | "reminder";
+type AccordionId =
+  | "provider"
+  | "customer"
+  | "bookingHe"
+  | "bookingAr"
+  | "owner"
+  | "ownerRescheduled"
+  | "ownerCancelled"
+  | "reminder";
 
 function AccordionCard({
   id,
@@ -120,16 +170,16 @@ function AccordionCard({
           </span>
         </button>
       </h3>
-      <div
-        id={`bm-${id}-panel`}
-        role="region"
-        aria-labelledby={`bm-${id}-header`}
-        aria-hidden={!open}
-        inert={!open}
-        className="admin-bm-acc-body"
-      >
-        <div className="admin-bm-acc-body-inner">{children}</div>
-      </div>
+      {open ? (
+        <div
+          id={`bm-${id}-panel`}
+          role="region"
+          aria-labelledby={`bm-${id}-header`}
+          className="admin-bm-acc-body"
+        >
+          <div className="admin-bm-acc-body-inner">{children}</div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -219,10 +269,12 @@ function WhatsAppMessagePreview({
   templateName,
   text,
   disabled,
+  lang = "ar",
 }: {
   templateName: string;
   text: string;
   disabled?: boolean;
+  lang?: "ar" | "he";
 }) {
   const { t } = useLocale();
 
@@ -239,11 +291,11 @@ function WhatsAppMessagePreview({
         <div
           className="admin-bm-wa-thread"
           dir="rtl"
-          lang="ar"
+          lang={lang}
           aria-readonly="true"
         >
           <div className="admin-bm-wa-bubble">
-            <p className="admin-bm-wa-text" dir="rtl" lang="ar">
+            <p className="admin-bm-wa-text" dir="rtl" lang={lang}>
               {text}
             </p>
           </div>
@@ -251,6 +303,67 @@ function WhatsAppMessagePreview({
       </div>
       <p className="admin-bm-placeholders">{t("admin.settings.bmPreviewHint")}</p>
     </div>
+  );
+}
+
+function ApprovedTemplateDetails({
+  templateName,
+  envName,
+  language,
+  configured,
+  enabled,
+  previewText,
+  previewLang = "ar",
+}: {
+  templateName: string;
+  envName: string;
+  language: string;
+  configured: boolean;
+  enabled: boolean;
+  previewText: string;
+  previewLang?: "ar" | "he";
+}) {
+  const { t } = useLocale();
+  return (
+    <>
+      <dl className="admin-bm-meta-list">
+        <div>
+          <dt>{t("admin.settings.bmTemplate")}</dt>
+          <dd dir="ltr">{templateName}</dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmTemplateLanguage")}</dt>
+          <dd>{language}</dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmConfigStatus")}</dt>
+          <dd>
+            {configured
+              ? t("admin.settings.bmConfigured")
+              : t("admin.settings.bmNotConfigured")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmNotificationState")}</dt>
+          <dd>
+            {enabled
+              ? t("admin.settings.bmEnabled")
+              : t("admin.settings.bmInactive")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmServerVariable")}</dt>
+          <dd dir="ltr">{envName}</dd>
+        </div>
+      </dl>
+      <p className="admin-bm-hint">{t("admin.settings.bmEnvManagedHint")}</p>
+      <WhatsAppMessagePreview
+        templateName={templateName}
+        text={previewText}
+        disabled={!enabled || !configured}
+        lang={previewLang}
+      />
+    </>
   );
 }
 
@@ -320,6 +433,9 @@ export default function BookingMessagesSettingsSection({
   const pollRef = useRef<number | null>(null);
   const pollQrRef = useRef(false);
   const [openCard, setOpenCard] = useState<AccordionId | null>(null);
+  const [templateConfigured, setTemplateConfigured] = useState<
+    Record<string, boolean>
+  >({});
 
   function toggleCard(id: AccordionId) {
     setOpenCard((current) => (current === id ? null : id));
@@ -609,6 +725,27 @@ export default function BookingMessagesSettingsSection({
   useEffect(() => {
     void checkTwilioHealth();
   }, [checkTwilioHealth]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void apiFetch<{
+      templates?: Record<string, { configured?: boolean }>;
+    }>("/api/settings/twilio/templates")
+      .then((data) => {
+        if (cancelled) return;
+        const next: Record<string, boolean> = {};
+        for (const [name, info] of Object.entries(data.templates || {})) {
+          next[name] = info?.configured === true;
+        }
+        setTemplateConfigured(next);
+      })
+      .catch(() => {
+        if (!cancelled) setTemplateConfigured({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const twilioTone =
     twilioHealth === "connected"
@@ -917,71 +1054,47 @@ export default function BookingMessagesSettingsSection({
       </AccordionCard>
 
       <AccordionCard
-        id="manage"
-        title={t("admin.settings.bmManageTemplate")}
+        id="bookingHe"
+        title={t("admin.settings.bmBookingHe")}
         statusLabel={
-          value.customerConfirmation.manageTemplateEnabled === true
-            ? t("admin.settings.bmEnabled")
-            : t("admin.settings.bmInactive")
+          templateConfigured[TEMPLATE_BOOKING_HE]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
         }
-        statusTone={
-          value.customerConfirmation.manageTemplateEnabled === true ? "on" : "off"
-        }
-        open={openCard === "manage"}
-        onToggle={() => toggleCard("manage")}
+        statusTone={templateConfigured[TEMPLATE_BOOKING_HE] ? "ready" : "idle"}
+        open={openCard === "bookingHe"}
+        onToggle={() => toggleCard("bookingHe")}
       >
-        <ToggleRow
-          id="bm-manage-template-enabled"
-          label={t("admin.settings.bmManageTemplateEnable")}
-          checked={value.customerConfirmation.manageTemplateEnabled === true}
-          onChange={(manageTemplateEnabled) =>
-            onChange({
-              ...value,
-              customerConfirmation: {
-                ...value.customerConfirmation,
-                manageTemplateEnabled,
-              },
-            })
-          }
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_BOOKING_HE}
+          envName={ENV_BOOKING_HE}
+          language={t("admin.settings.bmLanguageHe")}
+          configured={Boolean(templateConfigured[TEMPLATE_BOOKING_HE])}
+          enabled={value.customerConfirmation.enabled}
+          previewText={TWILIO_BOOKING_HE_PREVIEW}
+          previewLang="he"
         />
-        <p className="admin-bm-hint">{t("admin.settings.bmManageTemplateHint")}</p>
-        <div className="admin-bm-field">
-          <label className="admin-bm-field-label" htmlFor="bm-manage-content-sid">
-            {t("admin.settings.bmManageTemplateSid")}
-          </label>
-          <input
-            id="bm-manage-content-sid"
-            className="input admin-bm-input"
-            dir="ltr"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="HX…"
-            value={value.customerConfirmation.manageTemplateContentSid || ""}
-            onChange={(e) =>
-              onChange({
-                ...value,
-                customerConfirmation: {
-                  ...value.customerConfirmation,
-                  manageTemplateContentSid: e.target.value.trim(),
-                },
-              })
-            }
-          />
-          <p className="admin-bm-placeholders">
-            {t("admin.settings.bmManageTemplateSidHint")}
-          </p>
-        </div>
-        <WhatsAppMessagePreview
-          templateName={
-            value.customerConfirmation.manageTemplateName ||
-            "oyon_booking_manage_v2_ar / oyon_booking_manage_v2_he"
-          }
-          text={`{{1}} ${t("common.name")}
-{{2}} ${t("manage.service")}
-{{3}} ${t("common.date")}
-{{4}} ${t("common.time")}
-{{5}} https://oyonoptics.com/booking/manage/{{5}}`}
-          disabled={!value.customerConfirmation.manageTemplateEnabled}
+      </AccordionCard>
+
+      <AccordionCard
+        id="bookingAr"
+        title={t("admin.settings.bmBookingAr")}
+        statusLabel={
+          templateConfigured[TEMPLATE_BOOKING_AR]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={templateConfigured[TEMPLATE_BOOKING_AR] ? "ready" : "idle"}
+        open={openCard === "bookingAr"}
+        onToggle={() => toggleCard("bookingAr")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_BOOKING_AR}
+          envName={ENV_BOOKING_AR}
+          language={t("admin.settings.bmLanguageAr")}
+          configured={Boolean(templateConfigured[TEMPLATE_BOOKING_AR])}
+          enabled={value.customerConfirmation.enabled}
+          previewText={TWILIO_BOOKING_AR_PREVIEW}
         />
       </AccordionCard>
 
@@ -1071,6 +1184,54 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.ownerNotification.enabled}
           />
         )}
+      </AccordionCard>
+
+      <AccordionCard
+        id="ownerRescheduled"
+        title={t("admin.settings.bmOwnerRescheduled")}
+        statusLabel={
+          templateConfigured[TEMPLATE_OWNER_RESCHEDULED]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={
+          templateConfigured[TEMPLATE_OWNER_RESCHEDULED] ? "ready" : "idle"
+        }
+        open={openCard === "ownerRescheduled"}
+        onToggle={() => toggleCard("ownerRescheduled")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_OWNER_RESCHEDULED}
+          envName={ENV_OWNER_RESCHEDULED}
+          language={t("admin.settings.bmLanguageAr")}
+          configured={Boolean(templateConfigured[TEMPLATE_OWNER_RESCHEDULED])}
+          enabled={value.ownerNotification.enabled}
+          previewText={TWILIO_OWNER_RESCHEDULED_PREVIEW}
+        />
+      </AccordionCard>
+
+      <AccordionCard
+        id="ownerCancelled"
+        title={t("admin.settings.bmOwnerCancelled")}
+        statusLabel={
+          templateConfigured[TEMPLATE_OWNER_CANCELLED]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={
+          templateConfigured[TEMPLATE_OWNER_CANCELLED] ? "ready" : "idle"
+        }
+        open={openCard === "ownerCancelled"}
+        onToggle={() => toggleCard("ownerCancelled")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_OWNER_CANCELLED}
+          envName={ENV_OWNER_CANCELLED}
+          language={t("admin.settings.bmLanguageAr")}
+          configured={Boolean(templateConfigured[TEMPLATE_OWNER_CANCELLED])}
+          enabled={value.ownerNotification.enabled}
+          previewText={TWILIO_OWNER_CANCELLED_PREVIEW}
+        />
       </AccordionCard>
 
       <AccordionCard

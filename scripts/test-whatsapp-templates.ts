@@ -25,6 +25,8 @@ import {
 } from "../lib/booking-messaging";
 import { formatEyeExamDateDisplay } from "../lib/eye-exam";
 import {
+  approvedTwilioTemplatesPublicStatus,
+  isApprovedTwilioTemplateConfigured,
   resetTwilioContentSidMapForTests,
   resolveDedicatedTwilioContentSid,
   resolveTwilioContentSid,
@@ -241,6 +243,19 @@ assert.equal(
 process.env.TWILIO_TEMPLATE_OWNER_RESCHEDULED = rescheduleSid;
 assert.equal(ownerLifecycleSkipReason(ownerOn, OWNER_RESCHEDULED_TEMPLATE), null);
 
+clearTemplateEnv();
+process.env.TWILIO_TEMPLATE_BOOKING_HE = "not-a-sid";
+assert.equal(isApprovedTwilioTemplateConfigured("oyon_booking_manage_v2_he"), false);
+process.env.TWILIO_TEMPLATE_BOOKING_HE = heSid;
+assert.equal(isApprovedTwilioTemplateConfigured("oyon_booking_manage_v2_he"), true);
+const publicStatus = approvedTwilioTemplatesPublicStatus();
+assert.equal(publicStatus.oyon_booking_manage_v2_he.configured, true);
+assert.equal(publicStatus.oyon_booking_manage_v2_ar.configured, false);
+assert.equal(
+  JSON.stringify(publicStatus).includes("HX"),
+  false,
+);
+
 const settingsUi = readFileSync(
   join(process.cwd(), "components/admin/BookingMessagesSettingsSection.tsx"),
   "utf8",
@@ -248,8 +263,35 @@ const settingsUi = readFileSync(
 assert.match(settingsUi, /AccordionCard/);
 assert.match(settingsUi, /aria-expanded/);
 assert.match(settingsUi, /useState<AccordionId \| null>\(null\)/);
+assert.match(settingsUi, /\{open \? \(/);
+assert.match(settingsUi, /bmBookingHe/);
+assert.match(settingsUi, /bmBookingAr/);
+assert.match(settingsUi, /bmOwnerRescheduled/);
+assert.match(settingsUi, /bmOwnerCancelled/);
+assert.match(settingsUi, /oyon_booking_manage_v2_he/);
+assert.match(settingsUi, /oyon_booking_manage_v2_ar/);
+assert.match(settingsUi, /oyon_booking_rescheduled_owner/);
+assert.match(settingsUi, /oyon_booking_cancelled_owner/);
+assert.doesNotMatch(settingsUi, /id="manage"/);
+assert.doesNotMatch(
+  settingsUi,
+  /oyon_booking_manage_v2_ar \/ oyon_booking_manage_v2_he/,
+);
 assert.match(settingsUi, /https:\/\/oyonoptics\.com\/booking\/manage\/\{\{5\}\}/);
 assert.doesNotMatch(settingsUi, /dispatchBookingMessages/);
+
+const templateStatusRoute = readFileSync(
+  join(process.cwd(), "app/api/settings/twilio/templates/route.ts"),
+  "utf8",
+);
+assert.match(templateStatusRoute, /requireSession\("settings"\)/);
+assert.match(templateStatusRoute, /approvedTwilioTemplatesPublicStatus/);
+assert.doesNotMatch(templateStatusRoute, /resolveTwilioContentSid\(/);
+assert.doesNotMatch(templateStatusRoute, /process\.env/);
+
+const accordionCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+assert.match(accordionCss, /\.admin-bm-acc-card:not\(\.is-open\)/);
+assert.match(accordionCss, /max-height:\s*60px/);
 
 const manageRoute = readFileSync(
   join(process.cwd(), "app/api/booking/manage/route.ts"),
