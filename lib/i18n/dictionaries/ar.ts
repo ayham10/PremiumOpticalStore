@@ -777,7 +777,7 @@ const ar: Dictionary = {
     password: "كلمة المرور",
     signIn: "تسجيل الدخول",
     signingIn: "جارٍ الدخول…",
-    demoHint: "تجريبي: admin@oyon.optics / oyon2024",
+    demoHint: "يتم إعداد بيانات دخول الموظفين على الخادم.",
     sidebar: {
       dashboard: "الرئيسية",
       appointments: "الحجوزات",

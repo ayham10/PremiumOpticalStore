@@ -3,12 +3,11 @@ import {
   endTimeFromStart,
   hasConflict,
 } from "@/lib/appointments";
+import { newId, requireSession } from "@/lib/auth";
 import {
-  getSession,
-  hasPermission,
-  newId,
-  requireSession,
-} from "@/lib/auth";
+  generateLegacyAppointmentManageToken,
+  toStaffAppointmentView,
+} from "@/lib/appointment-access";
 import { getStore, updateStore } from "@/lib/db/store";
 import {
   appointmentSmsBody,
@@ -84,33 +83,15 @@ function isServiceType(value: string): value is ServiceType {
   return (SERVICE_KEYS as string[]).includes(value);
 }
 
-function enrichAppointment(
-  appointment: Appointment,
-  staffName?: string
-) {
-  return { ...appointment, staffName: staffName || null };
-}
-
 export async function GET(request: Request) {
   try {
+    await requireSession("appointments");
     const { searchParams } = new URL(request.url);
-    const token = searchParams.get("token")?.trim();
     const status = searchParams.get("status")?.trim();
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
     const date = searchParams.get("date")?.trim();
 
     const { data } = await getStore();
-
-    if (token) {
-      const appointment = data.appointments.find((a) => a.manageToken === token);
-      if (!appointment) return jsonError("Appointment not found", 404);
-      const staff = data.staff.find((s) => s.id === appointment.staffId);
-      return NextResponse.json({
-        appointment: enrichAppointment(appointment, staff?.name),
-      });
-    }
-
-    await requireSession("appointments");
 
     let appointments = [...data.appointments];
 
@@ -147,7 +128,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       appointments: appointments.map((a) =>
-        enrichAppointment(a, staffMap.get(a.staffId))
+        toStaffAppointmentView(a, staffMap.get(a.staffId))
       ),
     });
   } catch (error) {
@@ -157,6 +138,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await requireSession("appointments");
     const body = (await request.json()) as {
       service?: string;
       staffId?: string;
@@ -197,11 +179,9 @@ export async function POST(request: Request) {
       return jsonError("Invalid date or startTime format", 400);
     }
 
-    const session = await getSession();
-    const isAdmin = session && hasPermission(session.role, "appointments");
     const requestedStatus = body.status;
     const status: AppointmentStatus =
-      isAdmin && requestedStatus && STATUSES.has(requestedStatus)
+      requestedStatus && STATUSES.has(requestedStatus)
         ? requestedStatus
         : "pending";
 
@@ -284,7 +264,7 @@ export async function POST(request: Request) {
         endTime,
         status,
         notes: notes || undefined,
-        manageToken: newId("tok"),
+        manageToken: generateLegacyAppointmentManageToken(),
         createdAt: now,
         updatedAt: now,
       };
@@ -305,23 +285,13 @@ export async function POST(request: Request) {
         appointmentId: created.id,
       };
 
-      if (isAdmin && session) {
-        pushActivity(store, {
-          actor: session.email,
-          action: "create",
-          entity: "appointment",
-          entityId: created.id,
-          detail: `${customerName} — ${service} on ${date} ${startTime}`,
-        });
-      } else {
-        pushActivity(store, {
-          actor: customerEmail,
-          action: "public_booking",
-          entity: "appointment",
-          entityId: created.id,
-          detail: `${customerName} — ${service} on ${date} ${startTime}`,
-        });
-      }
+      pushActivity(store, {
+        actor: session.email,
+        action: "create",
+        entity: "appointment",
+        entityId: created.id,
+        detail: `${customerName} — ${service} on ${date} ${startTime}`,
+      });
 
       return store;
     });
@@ -331,7 +301,7 @@ export async function POST(request: Request) {
     const staff = data.staff.find((s) => s.id === staffId);
     return NextResponse.json(
       {
-        appointment: enrichAppointment(
+        appointment: toStaffAppointmentView(
           data.appointments.find((a) => a.id === created!.id)!,
           staff?.name
         ),
@@ -359,9 +329,9 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = await requireSession("appointments");
     const body = (await request.json()) as {
       id?: string;
-      token?: string;
       status?: AppointmentStatus;
       date?: string;
       startTime?: string;
@@ -370,15 +340,8 @@ export async function PATCH(request: Request) {
       sendSms?: boolean;
     };
 
-    const session = await getSession();
-    const isAdmin = session && hasPermission(session.role, "appointments");
-
-    if (!isAdmin && !body.token) {
-      return jsonError("Unauthorized", 401);
-    }
-
-    if (!body.id && !body.token) {
-      return jsonError("Appointment id or token is required", 400);
+    if (!body.id?.trim()) {
+      return jsonError("Appointment id is required", 400);
     }
 
     if (body.status && !STATUSES.has(body.status)) {
@@ -390,28 +353,10 @@ export async function PATCH(request: Request) {
     let pendingSms: PendingSms | null = null;
 
     await updateStore(async (store) => {
-      const index = store.appointments.findIndex((a) =>
-        body.id ? a.id === body.id : a.manageToken === body.token
-      );
+      const index = store.appointments.findIndex((a) => a.id === body.id);
       if (index < 0) throw new Error("NOT_FOUND");
 
       const current = store.appointments[index];
-
-      if (!isAdmin && body.token !== current.manageToken) {
-        throw new Error("UNAUTHORIZED");
-      }
-
-      // Public manage token can only cancel or reschedule
-      if (!isAdmin) {
-        if (
-          body.status &&
-          body.status !== "cancelled" &&
-          body.status !== "rescheduled" &&
-          body.status !== "pending"
-        ) {
-          throw new Error("FORBIDDEN");
-        }
-      }
 
       const nextDate = body.date?.trim() || current.date;
       const nextStart = body.startTime?.trim() || current.startTime;
@@ -443,7 +388,7 @@ export async function PATCH(request: Request) {
 
       let nextStatus = body.status || current.status;
       if (timeChanged && !body.status) {
-        nextStatus = isAdmin ? "rescheduled" : "pending";
+        nextStatus = "rescheduled";
       }
 
       updated = {
@@ -493,7 +438,7 @@ export async function PATCH(request: Request) {
       }
 
       pushActivity(store, {
-        actor: isAdmin && session ? session.email : updated.customerEmail,
+        actor: session.email,
         action: "update",
         entity: "appointment",
         entityId: updated.id,
@@ -509,7 +454,7 @@ export async function PATCH(request: Request) {
     const staff = data.staff.find((s) => s.id === updated!.staffId);
 
     return NextResponse.json({
-      appointment: enrichAppointment(updated!, staff?.name),
+      appointment: toStaffAppointmentView(updated!, staff?.name),
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -527,44 +472,31 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = await requireSession("appointments");
     const { searchParams } = new URL(request.url);
     let id = searchParams.get("id")?.trim();
-    let token = searchParams.get("token")?.trim();
 
-    if (!id && !token) {
+    if (!id) {
       try {
-        const body = (await request.json()) as { id?: string; token?: string };
+        const body = (await request.json()) as { id?: string };
         id = body.id?.trim();
-        token = body.token?.trim();
       } catch {
         // no body
       }
     }
 
-    const session = await getSession();
-    const isAdmin = session && hasPermission(session.role, "appointments");
-
-    if (!isAdmin && !token) {
-      return jsonError("Unauthorized", 401);
-    }
-
-    if (!id && !token) {
-      return jsonError("Appointment id or token is required", 400);
+    if (!id) {
+      return jsonError("Appointment id is required", 400);
     }
 
     let cancelled: Appointment | null = null;
     let pendingSms: PendingSms | null = null;
 
     await updateStore(async (store) => {
-      const index = store.appointments.findIndex((a) =>
-        id ? a.id === id : a.manageToken === token
-      );
+      const index = store.appointments.findIndex((a) => a.id === id);
       if (index < 0) throw new Error("NOT_FOUND");
 
       const current = store.appointments[index];
-      if (!isAdmin && token !== current.manageToken) {
-        throw new Error("UNAUTHORIZED");
-      }
 
       cancelled = {
         ...current,
@@ -589,7 +521,7 @@ export async function DELETE(request: Request) {
       };
 
       pushActivity(store, {
-        actor: isAdmin && session ? session.email : cancelled.customerEmail,
+        actor: session.email,
         action: "cancel",
         entity: "appointment",
         entityId: cancelled.id,
@@ -601,7 +533,10 @@ export async function DELETE(request: Request) {
 
     await deliverAppointmentSms(pendingSms);
 
-    return NextResponse.json({ ok: true, appointment: cancelled });
+    return NextResponse.json({
+      ok: true,
+      appointment: toStaffAppointmentView(cancelled!),
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_FOUND") {
       return jsonError("Appointment not found", 404);

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { serverEnv } from "@/lib/twilio/config";
+import {
+  parseFormBody,
+  verifyIncomingWebhook,
+} from "@/lib/twilio/webhook-signature";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,20 +41,16 @@ type MetaWebhookPayload = {
 
 function logStatusUpdate(status: MetaWebhookStatus): void {
   const primaryError = status.errors?.[0];
-  const errorDetails = primaryError?.error_data?.details;
 
   if (status.status === "failed") {
     for (const error of status.errors || []) {
-      console.error("[WhatsApp Webhook] delivery failed — Meta error", {
+      console.error("[WhatsApp Webhook] delivery failed", {
         messageId: status.id || "[unknown]",
-        recipientId: status.recipient_id || "[unknown]",
+        status: status.status,
         timestamp: status.timestamp || "[unknown]",
         error: {
           code: error.code ?? null,
           title: error.title ?? null,
-          message: error.message ?? null,
-          error_data: error.error_data ?? null,
-          details: error.error_data?.details ?? null,
         },
       });
     }
@@ -58,14 +58,42 @@ function logStatusUpdate(status: MetaWebhookStatus): void {
 
   console.info("[WhatsApp Webhook] message status update", {
     messageId: status.id || "[unknown]",
-    recipientId: status.recipient_id || "[unknown]",
     status: status.status || "[unknown]",
     timestamp: status.timestamp || "[unknown]",
     errorCode: primaryError?.code ?? null,
     errorTitle: primaryError?.title ?? null,
-    errorMessage: primaryError?.message ?? null,
-    errorDetails: errorDetails ?? null,
   });
+}
+
+function processMetaPayload(payload: MetaWebhookPayload): number {
+  if (payload.object !== "whatsapp_business_account") {
+    console.warn("[WhatsApp Webhook] ignored unsupported payload object", {
+      object: payload.object ? "present" : "missing",
+    });
+    return 0;
+  }
+
+  let processed = 0;
+  for (const entry of payload.entry || []) {
+    for (const change of entry.changes || []) {
+      for (const status of change.value?.statuses || []) {
+        logStatusUpdate(status);
+        processed += 1;
+      }
+    }
+  }
+  return processed;
+}
+
+function processTwilioForm(params: Record<string, string>): number {
+  const messageId = params.MessageSid || params.SmsSid || "[unknown]";
+  const status = params.MessageStatus || params.SmsStatus || "[unknown]";
+  console.info("[WhatsApp Webhook] twilio status update", {
+    messageId,
+    status,
+    errorCode: params.ErrorCode || null,
+  });
+  return 1;
 }
 
 export async function GET(request: Request) {
@@ -92,33 +120,26 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  let payload: MetaWebhookPayload;
+  const rawBody = await request.text();
+  const verification = verifyIncomingWebhook(request, rawBody);
+  if (!verification.ok) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    const processed = processTwilioForm(parseFormBody(rawBody));
+    return NextResponse.json({ ok: true, processed, source: verification.source });
+  }
+
+  let payload: MetaWebhookPayload;
   try {
-    payload = (await request.json()) as MetaWebhookPayload;
+    payload = JSON.parse(rawBody) as MetaWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  console.info("[WhatsApp Webhook RAW]", JSON.stringify(payload, null, 2));
-
-  if (payload.object !== "whatsapp_business_account") {
-    console.warn("[WhatsApp Webhook] ignored unsupported payload object", {
-      object: payload.object || "[missing]",
-    });
-    return NextResponse.json({ ok: true, processed: 0 });
-  }
-
-  let processed = 0;
-
-  for (const entry of payload.entry || []) {
-    for (const change of entry.changes || []) {
-      for (const status of change.value?.statuses || []) {
-        logStatusUpdate(status);
-        processed += 1;
-      }
-    }
-  }
-
-  return NextResponse.json({ ok: true, processed });
+  const processed = processMetaPayload(payload);
+  return NextResponse.json({ ok: true, processed, source: verification.source });
 }

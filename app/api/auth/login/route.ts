@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { authenticateUser, createSession } from "@/lib/auth";
 import { jsonError } from "@/lib/api/helpers";
+import { clientKeyFromRequest, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const LOGIN_WINDOW_MS = 15 * 60_000;
+const LOGIN_IP_LIMIT = 8;
+const LOGIN_EMAIL_LIMIT = 5;
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +21,26 @@ export async function POST(request: Request) {
 
     if (!email || !password) {
       return jsonError("Email and password are required", 400);
+    }
+
+    const ipLimit = rateLimit(
+      clientKeyFromRequest(request, "admin-login"),
+      LOGIN_IP_LIMIT,
+      LOGIN_WINDOW_MS,
+    );
+    const emailLimit = rateLimit(
+      `admin-login-email:${email.toLowerCase()}`,
+      LOGIN_EMAIL_LIMIT,
+      LOGIN_WINDOW_MS,
+    );
+    if (!ipLimit.ok || !emailLimit.ok) {
+      const retryAfterSec = Math.max(
+        ipLimit.ok ? 0 : ipLimit.retryAfterSec,
+        emailLimit.ok ? 0 : emailLimit.retryAfterSec,
+      );
+      return jsonError("Too many login attempts. Please try again shortly.", 429, {
+        retryAfterSec,
+      });
     }
 
     const user = authenticateUser(email, password);

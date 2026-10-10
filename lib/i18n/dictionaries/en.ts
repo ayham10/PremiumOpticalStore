@@ -1146,7 +1146,7 @@ const en: Dictionary = {
     password: "Password",
     signIn: "Sign in",
     signingIn: "Signing in…",
-    demoHint: "Demo: admin@oyon.optics / oyon2024",
+    demoHint: "Staff credentials are configured on the server.",
     sidebar: {
       dashboard: "Home",
       appointments: "Bookings",
