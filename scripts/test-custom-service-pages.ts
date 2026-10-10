@@ -704,6 +704,7 @@ const withVariants = persistCustomPages(created, {
 });
 assert.equal(withVariants[0]?.heroMedia?.desktopUrl, "https://cdn.example/desktop.webp");
 assert.equal(withVariants[0]?.heroMedia?.fit, "contain");
+assert.equal(withVariants[0]?.heroMedia?.desktopFocal?.zoom, 1.1);
 assert.equal(withVariants[0]?.homeImage, "https://cdn.example/card.jpg");
 assert.deepEqual(withVariants[0]?.gallery || [], created[0]?.gallery || []);
 

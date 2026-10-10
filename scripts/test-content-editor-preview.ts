@@ -49,7 +49,12 @@ import {
 import { emptyCustomPageCopy, persistCustomPages } from "../lib/custom-service-pages";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
 import { EDITOR_SECTION_ICONS } from "../components/admin/content-editor/EditorSection";
-import { coverCropRect, mediaUrlForViewport } from "../lib/responsive-image";
+import {
+  coverCropRect,
+  mediaUrlForViewport,
+  sliderPercentToZoom,
+  zoomToSliderPercent,
+} from "../lib/responsive-image";
 import type { CustomServicePage } from "../lib/types";
 
 const ar = defaultServicePagesForLocale("ar");
@@ -245,6 +250,13 @@ assert.equal(EDITOR_SECTION_ICONS.hero.displayName, "Image");
 const crop = coverCropRect(1600, 900, 9, 16, { x: 0.5, y: 0.38, zoom: 1 });
 assert.ok(Math.abs(crop.sw / crop.sh - 9 / 16) < 0.02);
 assert.ok(crop.sh <= 900);
+const cropZoomOut = coverCropRect(1600, 900, 9, 16, { x: 0.5, y: 0.38, zoom: 0.6 });
+assert.equal(crop.sw, cropZoomOut.sw);
+assert.equal(crop.sh, cropZoomOut.sh);
+assert.equal(zoomToSliderPercent(1), 50);
+assert.equal(sliderPercentToZoom(50), 1);
+assert.ok(sliderPercentToZoom(0) < 1);
+assert.ok(sliderPercentToZoom(100) > 1);
 assert.equal(
   mediaUrlForViewport(
     {
@@ -456,6 +468,19 @@ assert.match(
 );
 assert.match(previewCss, /outline-offset:\s*-2px/);
 assert.match(previewCss, /is-custom-hero/);
+assert.match(previewCss, /--csp-hero-preview-max:\s*200px/);
+assert.match(previewCss, /\.csp-hero-variants\s*\{[\s\S]*grid-template-columns:\s*1fr 1fr/);
+assert.match(previewCss, /\.csp-hero-live/);
+
+const heroField = readFileSync(
+  join(process.cwd(), "components/admin/ResponsiveHeroImageField.tsx"),
+  "utf8",
+);
+assert.match(heroField, /sliderPercentToZoom/);
+assert.match(heroField, /min=\{0\}/);
+assert.match(heroField, /max=\{100\}/);
+assert.match(heroField, /freshHeroImage/);
+assert.match(heroField, /hidePreview/);
 
 const sunglassesSrc = readFileSync(
   join(process.cwd(), "components/sunglasses/SunglassesCatalogue.tsx"),
