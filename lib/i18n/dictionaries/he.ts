@@ -643,6 +643,8 @@ const he: Dictionary = {
     statusPending: "ממתין",
     cancelledNotice: "התור בוטל.",
     rescheduledNotice: "התור עודכן בהצלחה.",
+    successRescheduled: "התור שלך עודכן בהצלחה",
+    successCancelled: "התור שלך בוטל בהצלחה",
     cannotChange: "לא ניתן יותר לשנות את התור.",
     rateLimited: "יותר מדי בקשות. נסו שוב בעוד רגע.",
     slotUnavailable: "השעה הזו כבר אינה פנויה.",
