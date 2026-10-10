@@ -24,6 +24,8 @@ import {
   sanitizeExternalUrl,
   sanitizeInternalPath,
   uniqueProductIds,
+  visibleCustomBenefits,
+  visibleCustomFeatures,
   visibleCustomSections,
   CustomPageConflictError,
   CustomPageError,
@@ -81,6 +83,30 @@ function createdPages() {
 const placeholders = emptyCustomPageCopy();
 assert.equal(placeholders.title, "");
 assert.equal(placeholders.features[0]?.icon, "user-round");
+assert.deepEqual(visibleCustomBenefits(placeholders.benefits), []);
+assert.deepEqual(visibleCustomBenefits(["One", "Two", "", "  ", ""]), ["One", "Two"]);
+assert.deepEqual(
+  visibleCustomFeatures([
+    { title: "A", description: "B" },
+    { title: "", description: "" },
+    { title: "  ", description: "   " },
+  ]),
+  [{ title: "A", description: "B" }],
+);
+assert.equal(
+  isCustomPageLocaleComplete(
+    [{ id: "b", type: "benefitsList" }],
+    completeCopy({ benefits: ["One", "Two", "", "", ""] }),
+  ),
+  true,
+);
+assert.equal(
+  isCustomPageLocaleComplete(
+    [{ id: "b", type: "benefitsList" }],
+    completeCopy({ benefits: ["One", "", "", "", ""] }),
+  ),
+  false,
+);
 const created = createdPages();
 assert.equal(created.length, 1);
 assert.equal(created[0]?.slug, "kids-exam");
@@ -159,7 +185,22 @@ const arPage = arabicSaved[0]!;
 assert.equal(arPage.revision, page.revision + 1);
 assert.equal(arPage.locales.ar?.complete, true);
 assert.equal(arPage.locales.ar?.title, "فحص أطفال");
+assert.deepEqual(arPage.locales.ar?.benefits, ["One", "Two", "", "", ""]);
+assert.deepEqual(visibleCustomBenefits(arPage.locales.ar?.benefits), ["One", "Two"]);
 assert.equal(arPage.locales.he, undefined);
+
+const heEmptyBenefits = persistCustomPages(arabicSaved, {
+  customPageOp: {
+    op: "update",
+    id: arPage.id,
+    expectedRevision: arPage.revision,
+    locale: "he",
+    copy: emptyCustomPageCopy(),
+  },
+});
+assert.deepEqual(heEmptyBenefits[0]?.locales.ar?.benefits, ["One", "Two", "", "", ""]);
+assert.deepEqual(heEmptyBenefits[0]?.locales.he?.benefits, ["", "", "", "", ""]);
+assert.deepEqual(visibleCustomBenefits(heEmptyBenefits[0]?.locales.he?.benefits), []);
 assert.equal(arPage.status, "draft");
 assert.equal(arPage.showOnHome, true);
 

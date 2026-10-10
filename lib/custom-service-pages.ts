@@ -106,6 +106,23 @@ function cleanText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** Owner-cleared / whitespace-only custom page fields stay empty. */
+export function filledText(value: unknown): string {
+  return cleanText(value);
+}
+
+export function visibleCustomBenefits(benefits?: string[] | null): string[] {
+  return (benefits || []).map(filledText).filter(Boolean);
+}
+
+export function visibleCustomFeatures<
+  T extends { title?: string; description?: string },
+>(features?: T[] | null): T[] {
+  return (features || []).filter(
+    (feature) => filledText(feature.title) || filledText(feature.description),
+  );
+}
+
 function stripMarkup(value: string): string {
   return value.replace(/<[^>]*>/g, "");
 }
@@ -461,29 +478,31 @@ export function customPageLocaleIssues(
 ): CustomPageLocaleIssue[] {
   if (!copy) return ["title", "description"];
   const issues: CustomPageLocaleIssue[] = [];
-  if (!copy.title) issues.push("title");
-  if (!copy.description) issues.push("description");
+  if (!filledText(copy.title)) issues.push("title");
+  if (!filledText(copy.description)) issues.push("description");
   if (
     pageHasVisibleButton(sections, showHeroButton) &&
-    !copy.bookingButtonText
+    !filledText(copy.bookingButtonText)
   ) {
     issues.push("bookingButtonText");
   }
   if (hasSection(sections, "featureGrid")) {
-    const filled = copy.features.filter(
-      (feature) => feature.title && feature.description,
+    const filled = visibleCustomFeatures(copy.features).filter(
+      (feature) => filledText(feature.title) && filledText(feature.description),
     );
     if (filled.length < 2) issues.push("features");
   }
   if (hasSection(sections, "benefitsList")) {
-    const items = copy.benefits.filter(Boolean);
-    if (!copy.benefitsTitle || items.length < 2) issues.push("benefits");
+    const items = visibleCustomBenefits(copy.benefits);
+    if (!filledText(copy.benefitsTitle) || items.length < 2) issues.push("benefits");
   }
-  if (hasSection(sections, "notice") && !copy.warningText) {
+  if (hasSection(sections, "notice") && !filledText(copy.warningText)) {
     issues.push("warningText");
   }
   if (hasSection(sections, "valuesStrip")) {
-    if (!copy.valuesTitle || !copy.valuesText) issues.push("values");
+    if (!filledText(copy.valuesTitle) || !filledText(copy.valuesText)) {
+      issues.push("values");
+    }
   }
   return issues;
 }
