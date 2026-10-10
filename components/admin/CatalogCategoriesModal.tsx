@@ -1,28 +1,64 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FolderTree, Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminProductCreateModal from "@/components/admin/AdminProductCreateModal";
+import CategoryProductAssigner from "@/components/admin/CategoryProductAssigner";
 import { apiFetch } from "@/lib/admin-api";
-import { categoryLabel, countCategoryProducts } from "@/lib/catalog-categories";
+import {
+  catalogCategorySaveMode,
+  categoryLabel,
+  countCategoryProducts,
+  productBelongsToCategory,
+} from "@/lib/catalog-categories";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
 import type { CatalogCategory, CatalogCategoryNames, Product } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/config";
 
 type Translate = (path: string, vars?: Record<string, string | number>) => string;
-
 type AdminCategory = CatalogCategory & { productCount?: number };
+type WizardStep = 1 | 2 | 3;
 
-type EditorState = {
+type WizardState = {
   id?: string;
   names: CatalogCategoryNames;
   showInMainCatalog: boolean;
+  selectedProductIds: string[];
+  persisted: boolean;
 };
 
 const emptyNames = (): CatalogCategoryNames => ({ ar: "", he: "", en: "" });
 
-function emptyEditor(): EditorState {
-  return { names: emptyNames(), showInMainCatalog: false };
+function emptyWizard(): WizardState {
+  return {
+    names: emptyNames(),
+    showInMainCatalog: false,
+    selectedProductIds: [],
+    persisted: false,
+  };
+}
+
+function unwrapCategory(data: unknown): CatalogCategory | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  if (obj.category && typeof obj.category === "object") {
+    return obj.category as CatalogCategory;
+  }
+  if (typeof obj.id === "string" && obj.names) return data as CatalogCategory;
+  return null;
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms = 20000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("TIMEOUT")), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export default function CatalogCategoriesModal({
@@ -45,99 +81,216 @@ export default function CatalogCategoriesModal({
   onProductsChange?: () => void;
 }) {
   const [items, setItems] = useState<AdminCategory[]>(categories);
-  const [editor, setEditor] = useState<EditorState | null>(null);
-  const [deleteId, setDeleteId] = useState<string>("");
+  const [localProducts, setLocalProducts] = useState<Product[]>(products);
+  const [wizard, setWizard] = useState<WizardState | null>(null);
+  const [step, setStep] = useState<WizardStep>(1);
+  const [deleteId, setDeleteId] = useState("");
   const [reassignTo, setReassignTo] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const savingRef = useRef(false);
+  const wizardRef = useRef<WizardState | null>(null);
+  wizardRef.current = wizard;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setWizard(null);
+      setStep(1);
+      setDeleteId("");
+      setError("");
+      setMessage("");
+      setSaving(false);
+      savingRef.current = false;
+      return;
+    }
     setItems(categories);
-    setEditor(null);
-    setDeleteId("");
-    setReassignTo("");
-    setError("");
-  }, [open, categories]);
+    setLocalProducts((prev) => {
+      if (!wizardRef.current) return products;
+      const incoming = new Set(products.map((item) => item.id));
+      const extras = prev.filter((item) => !incoming.has(item.id));
+      return extras.length ? [...extras, ...products] : products;
+    });
+  }, [open, categories, products]);
 
   const deleting = items.find((item) => item.id === deleteId) || null;
   const assignedCount = deleting
-    ? deleting.productCount ?? countCategoryProducts(products, deleting.id)
+    ? deleting.productCount ?? countCategoryProducts(localProducts, deleting.id)
     : 0;
-
   const reassignOptions = useMemo(
     () => items.filter((item) => item.id !== deleteId),
     [items, deleteId],
   );
 
-  function withCounts(list: CatalogCategory[]): AdminCategory[] {
+  function typeLabel(id: string): string {
+    const found = items.find((item) => item.id === id);
+    if (found) return categoryLabel(found, locale);
+    const key = `shop.categories.${id}`;
+    const label = t(key);
+    return label === key ? id : label;
+  }
+
+  function withCounts(
+    list: CatalogCategory[],
+    nextProducts = localProducts,
+  ): AdminCategory[] {
     return list.map((item) => ({
       ...item,
-      productCount: countCategoryProducts(products, item.id),
+      productCount: countCategoryProducts(nextProducts, item.id),
     }));
   }
 
-  async function refresh() {
-    const data = await apiFetch<{ categories: AdminCategory[] }>(
-      "/api/catalog-categories?all=1",
+  async function refreshLists(nextProducts?: Product[]) {
+    const data = await withTimeout(
+      apiFetch<{ categories: AdminCategory[] }>("/api/catalog-categories?all=1"),
     );
-    const next = withCounts(data.categories || []);
+    const next = withCounts(data.categories || [], nextProducts || localProducts);
     setItems(next);
     onChange(next);
     invalidatePublicCache("products:");
-    onProductsChange?.();
   }
 
-  async function saveEditor() {
-    if (!editor) return;
-    if (!editor.names.ar.trim() && !editor.names.he.trim() && !editor.names.en.trim()) {
-      setError(t("admin.catalog.nameRequired"));
-      return;
+  function namesReady(names: CatalogCategoryNames): boolean {
+    return Boolean(names.ar.trim() || names.he.trim() || names.en.trim());
+  }
+
+  async function persistWizard(
+    draft: WizardState,
+    includeAssignments: boolean,
+  ): Promise<WizardState> {
+    if (!namesReady(draft.names)) {
+      throw new Error(t("admin.catalog.nameRequired"));
     }
+    const payload = {
+      names: draft.names,
+      showInMainCatalog: draft.showInMainCatalog,
+      ...(draft.id && includeAssignments
+        ? { assignedProductIds: draft.selectedProductIds }
+        : {}),
+    };
+    if (catalogCategorySaveMode(draft.id) === "update" && draft.id) {
+      const updated = unwrapCategory(
+        await withTimeout(
+          apiFetch("/api/catalog-categories", {
+            method: "PUT",
+            body: JSON.stringify({ id: draft.id, ...payload }),
+          }),
+        ),
+      );
+      if (!updated) throw new Error(t("admin.catalog.saveError"));
+      return { ...draft, id: updated.id, persisted: true };
+    }
+    const created = unwrapCategory(
+      await withTimeout(
+        apiFetch("/api/catalog-categories", {
+          method: "POST",
+          body: JSON.stringify({
+            names: draft.names,
+            showInMainCatalog: draft.showInMainCatalog,
+          }),
+        }),
+      ),
+    );
+    if (!created?.id) throw new Error(t("admin.catalog.saveError"));
+    if (includeAssignments && draft.selectedProductIds.length) {
+      await withTimeout(
+        apiFetch("/api/catalog-categories", {
+          method: "PUT",
+          body: JSON.stringify({
+            id: created.id,
+            names: draft.names,
+            showInMainCatalog: draft.showInMainCatalog,
+            assignedProductIds: draft.selectedProductIds,
+          }),
+        }),
+      );
+    }
+    return { ...draft, id: created.id, persisted: true };
+  }
+
+  async function runSave(task: () => Promise<void>) {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError("");
     try {
-      if (editor.id) {
-        await apiFetch("/api/catalog-categories", {
-          method: "PUT",
-          body: JSON.stringify({
-            id: editor.id,
-            names: editor.names,
-            showInMainCatalog: editor.showInMainCatalog,
-          }),
-        });
-      } else {
-        await apiFetch("/api/catalog-categories", {
-          method: "POST",
-          body: JSON.stringify({ names: editor.names }),
-        });
-      }
-      await refresh();
-      setEditor(null);
+      await task();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("admin.catalog.saveError"));
+      const text =
+        err instanceof Error && err.message === "TIMEOUT"
+          ? t("admin.catalog.saveTimeout")
+          : err instanceof Error
+            ? err.message
+            : t("admin.catalog.saveError");
+      setError(text);
+      throw err;
     } finally {
+      savingRef.current = false;
       setSaving(false);
+    }
+  }
+
+  async function goNext() {
+    if (!wizard) return;
+    if (step === 1) {
+      if (!namesReady(wizard.names)) {
+        setError(t("admin.catalog.nameRequired"));
+        return;
+      }
+      setError("");
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      try {
+        await runSave(async () => {
+          const saved = await persistWizard(wizard, false);
+          setWizard(saved);
+          await refreshLists();
+        });
+        setMessage(t("admin.catalog.saved"));
+        setStep(3);
+      } catch {
+        /* error already set */
+      }
+    }
+  }
+
+  async function finishWizard() {
+    if (!wizard) return;
+    try {
+      await runSave(async () => {
+        const saved = await persistWizard(wizard, true);
+        setWizard(saved);
+        await refreshLists();
+        onProductsChange?.();
+      });
+      setWizard(null);
+      setStep(1);
+      setMessage(t("admin.catalog.saved"));
+    } catch {
+      /* stay on wizard with error */
     }
   }
 
   async function toggleVisibility(item: AdminCategory, showInMainCatalog: boolean) {
-    setSaving(true);
-    setError("");
     try {
-      await apiFetch("/api/catalog-categories", {
-        method: "PUT",
-        body: JSON.stringify({
-          id: item.id,
-          names: item.names,
-          showInMainCatalog,
-        }),
+      await runSave(async () => {
+        await withTimeout(
+          apiFetch("/api/catalog-categories", {
+            method: "PUT",
+            body: JSON.stringify({
+              id: item.id,
+              names: item.names,
+              showInMainCatalog,
+            }),
+          }),
+        );
+        await refreshLists();
       });
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("admin.catalog.saveError"));
-    } finally {
-      setSaving(false);
+    } catch {
+      /* error already set */
     }
   }
 
@@ -151,31 +304,61 @@ export default function CatalogCategoriesModal({
       setError(t("admin.catalog.deleteBlocked"));
       return;
     }
-    setSaving(true);
-    setError("");
     try {
-      await apiFetch("/api/catalog-categories", {
-        method: "DELETE",
-        body: JSON.stringify(
-          assignedCount > 0
-            ? { id: deleting.id, reassignTo }
-            : { id: deleting.id, removeMemberships: true },
-        ),
+      await runSave(async () => {
+        await withTimeout(
+          apiFetch("/api/catalog-categories", {
+            method: "DELETE",
+            body: JSON.stringify(
+              assignedCount > 0
+                ? { id: deleting.id, reassignTo }
+                : { id: deleting.id, removeMemberships: true },
+            ),
+          }),
+        );
+        await refreshLists();
+        onProductsChange?.();
+        setDeleteId("");
+        setReassignTo("");
       });
-      await refresh();
-      setDeleteId("");
-      setReassignTo("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("admin.catalog.deleteError"));
-    } finally {
-      setSaving(false);
+    } catch {
+      /* error already set */
     }
   }
+
+  function openCreate() {
+    setWizard(emptyWizard());
+    setStep(1);
+    setError("");
+    setMessage("");
+  }
+
+  function openEdit(item: AdminCategory) {
+    setWizard({
+      id: item.id,
+      names: { ...item.names },
+      showInMainCatalog: item.showInMainCatalog,
+      selectedProductIds: localProducts
+        .filter((product) => productBelongsToCategory(product, item.id))
+        .map((product) => product.id),
+      persisted: true,
+    });
+    setStep(1);
+    setError("");
+    setMessage("");
+  }
+
+  const stepTitle =
+    step === 1
+      ? t("admin.catalog.stepInfo")
+      : step === 2
+        ? t("admin.catalog.stepVisibility")
+        : t("admin.catalog.stepProducts");
 
   return (
     <AdminModal
       open={open}
-      title={t("admin.catalog.manageTitle")}
+      title={wizard ? stepTitle : t("admin.catalog.manageTitle")}
       onClose={onClose}
       wide
       icon={<FolderTree size={18} />}
@@ -183,6 +366,11 @@ export default function CatalogCategoriesModal({
       {error ? (
         <p className="mb-3 rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
+        </p>
+      ) : null}
+      {message && !wizard ? (
+        <p className="mb-3 rounded-xl border border-[rgba(212,175,55,0.35)] bg-[rgba(212,175,55,0.12)] px-3 py-2 text-sm text-[#d4af37]">
+          {message}
         </p>
       ) : null}
 
@@ -236,84 +424,155 @@ export default function CatalogCategoriesModal({
             </button>
           </div>
         </div>
-      ) : editor ? (
+      ) : wizard ? (
         <div className="admin-cat-panel">
-          <h3>{editor.id ? t("admin.catalog.edit") : t("admin.catalog.create")}</h3>
-          {!editor.id ? <p className="admin-cat-hint">{t("admin.catalog.newHiddenHint")}</p> : null}
-          <label className="admin-service-field">
-            <span className="label">{t("admin.catalog.nameAr")}</span>
-            <input
-              className="input"
-              value={editor.names.ar}
-              maxLength={80}
-              onChange={(event) =>
-                setEditor({ ...editor, names: { ...editor.names, ar: event.target.value } })
-              }
-            />
-          </label>
-          <label className="admin-service-field">
-            <span className="label">{t("admin.catalog.nameHe")}</span>
-            <input
-              className="input"
-              value={editor.names.he}
-              maxLength={80}
-              onChange={(event) =>
-                setEditor({ ...editor, names: { ...editor.names, he: event.target.value } })
-              }
-            />
-          </label>
-          <label className="admin-service-field">
-            <span className="label">{t("admin.catalog.nameEn")}</span>
-            <input
-              className="input"
-              value={editor.names.en}
-              maxLength={80}
-              onChange={(event) =>
-                setEditor({ ...editor, names: { ...editor.names, en: event.target.value } })
-              }
-            />
-          </label>
-          {editor.id ? (
-            <label className="admin-cat-toggle">
-              <input
-                type="checkbox"
-                checked={editor.showInMainCatalog}
-                onChange={(event) =>
-                  setEditor({ ...editor, showInMainCatalog: event.target.checked })
+          <ol className="admin-cat-progress" aria-label={t("admin.catalog.progress")}>
+            {[1, 2, 3].map((value) => (
+              <li
+                key={value}
+                className={
+                  value === step ? "is-active" : value < step ? "is-done" : ""
                 }
-              />
-              <span>{t("admin.catalog.showInMain")}</span>
-            </label>
+              >
+                <span>{value}</span>
+                {value === 1
+                  ? t("admin.catalog.stepInfoShort")
+                  : value === 2
+                    ? t("admin.catalog.stepVisibilityShort")
+                    : t("admin.catalog.stepProductsShort")}
+              </li>
+            ))}
+          </ol>
+
+          {step === 1 ? (
+            <>
+              <label className="admin-service-field">
+                <span className="label">{t("admin.catalog.nameAr")}</span>
+                <input
+                  className="input"
+                  value={wizard.names.ar}
+                  maxLength={80}
+                  onChange={(event) =>
+                    setWizard({
+                      ...wizard,
+                      names: { ...wizard.names, ar: event.target.value },
+                    })
+                  }
+                />
+              </label>
+              <label className="admin-service-field">
+                <span className="label">{t("admin.catalog.nameHe")}</span>
+                <input
+                  className="input"
+                  value={wizard.names.he}
+                  maxLength={80}
+                  onChange={(event) =>
+                    setWizard({
+                      ...wizard,
+                      names: { ...wizard.names, he: event.target.value },
+                    })
+                  }
+                />
+              </label>
+              <label className="admin-service-field">
+                <span className="label">{t("admin.catalog.nameEn")}</span>
+                <input
+                  className="input"
+                  value={wizard.names.en}
+                  maxLength={80}
+                  onChange={(event) =>
+                    setWizard({
+                      ...wizard,
+                      names: { ...wizard.names, en: event.target.value },
+                    })
+                  }
+                />
+              </label>
+            </>
           ) : null}
+
+          {step === 2 ? (
+            <>
+              <label className="admin-cat-toggle">
+                <input
+                  type="checkbox"
+                  checked={wizard.showInMainCatalog}
+                  onChange={(event) =>
+                    setWizard({ ...wizard, showInMainCatalog: event.target.checked })
+                  }
+                />
+                <span>{t("admin.catalog.showInMainPage")}</span>
+              </label>
+              <p className="admin-cat-hint">
+                {wizard.showInMainCatalog
+                  ? t("admin.catalog.visibleHint")
+                  : t("admin.catalog.hiddenHint")}
+              </p>
+            </>
+          ) : null}
+
+          {step === 3 && wizard.id ? (
+            <CategoryProductAssigner
+              products={localProducts}
+              categoryId={wizard.id}
+              selectedIds={wizard.selectedProductIds}
+              typeLabel={typeLabel}
+              t={t}
+              onChange={(ids) => setWizard({ ...wizard, selectedProductIds: ids })}
+              onAddNew={() => setCreateOpen(true)}
+            />
+          ) : null}
+
           <div className="admin-service-actions">
-            <button type="button" className="btn btn-ghost" onClick={() => setEditor(null)}>
-              {t("admin.catalog.cancel")}
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={saving}
+              onClick={() => {
+                if (step === 1) {
+                  setWizard(null);
+                  setError("");
+                  return;
+                }
+                setStep((prev) => (prev === 3 ? 2 : 1));
+              }}
+            >
+              {step === 1 ? t("admin.catalog.cancel") : t("admin.catalog.back")}
             </button>
+            {step < 3 ? (
             <button
               type="button"
               className="btn btn-accent"
               disabled={saving}
-              onClick={() => void saveEditor()}
+              aria-busy={saving}
+              onClick={() => void goNext()}
             >
-              {saving ? t("admin.catalog.saving") : t("admin.catalog.save")}
+              {saving ? t("admin.catalog.saving") : t("admin.catalog.next")}
             </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-accent"
+              disabled={saving}
+              aria-busy={saving}
+              onClick={() => void finishWizard()}
+            >
+              {saving ? t("admin.catalog.saving") : t("admin.catalog.finish")}
+            </button>
+            )}
           </div>
         </div>
       ) : (
         <>
           <div className="mb-3 flex justify-end">
-            <button
-              type="button"
-              className="admin-products-add"
-              onClick={() => setEditor(emptyEditor())}
-            >
+            <button type="button" className="admin-products-add" onClick={openCreate}>
               <Plus size={14} strokeWidth={1.7} />
               {t("admin.catalog.create")}
             </button>
           </div>
           <ul className="admin-cat-list">
             {items.map((item) => {
-              const count = item.productCount ?? countCategoryProducts(products, item.id);
+              const count = item.productCount ?? countCategoryProducts(localProducts, item.id);
               return (
                 <li key={item.id} className="admin-cat-row">
                   <div className="admin-cat-row-copy">
@@ -341,13 +600,7 @@ export default function CatalogCategoriesModal({
                       type="button"
                       className="admin-bsvc-icon-action"
                       aria-label={t("admin.catalog.edit")}
-                      onClick={() =>
-                        setEditor({
-                          id: item.id,
-                          names: { ...item.names },
-                          showInMainCatalog: item.showInMainCatalog,
-                        })
-                      }
+                      onClick={() => openEdit(item)}
                     >
                       <Pencil size={14} />
                     </button>
@@ -356,7 +609,11 @@ export default function CatalogCategoriesModal({
                       className="admin-bsvc-icon-action is-danger"
                       aria-label={t("admin.catalog.delete")}
                       disabled={Boolean(item.system)}
-                      title={item.system ? t("admin.catalog.systemProtected") : t("admin.catalog.delete")}
+                      title={
+                        item.system
+                          ? t("admin.catalog.systemProtected")
+                          : t("admin.catalog.delete")
+                      }
                       onClick={() => {
                         setDeleteId(item.id);
                         setReassignTo("");
@@ -371,6 +628,27 @@ export default function CatalogCategoriesModal({
           </ul>
         </>
       )}
+
+      <AdminProductCreateModal
+        open={createOpen}
+        t={t}
+        stacked
+        preselectCategoryId={wizard?.id}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(product) => {
+          setLocalProducts((prev) => {
+            if (prev.some((item) => item.id === product.id)) return prev;
+            return [product, ...prev];
+          });
+          if (wizard) {
+            const nextIds = wizard.selectedProductIds.includes(product.id)
+              ? wizard.selectedProductIds
+              : [...wizard.selectedProductIds, product.id];
+            setWizard({ ...wizard, selectedProductIds: nextIds });
+          }
+          setCreateOpen(false);
+        }}
+      />
     </AdminModal>
   );
 }

@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { hasPermission } from "../lib/auth";
 import {
+  applyCategoryAssignments,
   applyCategoryDelete,
+  catalogCategorySaveMode,
   categoryLabel,
   createCatalogCategory,
   filterProductsForRequest,
   isSystemCategoryId,
   mergeCatalogCategories,
+  membershipIsProductType,
   productBelongsToCategory,
   productCatalogIds,
   productVisibleInMainCatalog,
@@ -16,6 +19,8 @@ import {
   sanitizeCategoryNames,
   SYSTEM_CATEGORY_NAMES,
 } from "../lib/catalog-categories";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CatalogCategory, Product } from "../lib/types";
 
 function product(partial: Partial<Product> & Pick<Product, "id" | "category">): Product {
@@ -70,6 +75,16 @@ assert.equal(created.names.en, "New Arrivals");
 
 const hiddenByDefault = createCatalogCategory({ ar: "مسودة", he: "", en: "" });
 assert.equal(hiddenByDefault.showInMainCatalog, false);
+assert.equal(catalogCategorySaveMode(undefined), "create");
+assert.equal(catalogCategorySaveMode(null), "create");
+assert.equal(catalogCategorySaveMode(hiddenByDefault.id), "update");
+
+const visibleOnCreate = createCatalogCategory(
+  { ar: "ظاهرة", he: "", en: "Visible" },
+  "2026-01-01T00:00:00.000Z",
+  true,
+);
+assert.equal(visibleOnCreate.showInMainCatalog, true);
 
 const merged = mergeCatalogCategories([
   {
@@ -276,11 +291,118 @@ assert.deepEqual(publicProductCategoryIds(publishedMulti, categories), ["Frames"
 assert.equal(hasPermission("admin", "inventory"), true);
 assert.equal(hasPermission("employee", "inventory"), true);
 assert.equal(hasPermission("receptionist", "inventory"), false);
+assert.equal(membershipIsProductType(legacy, "Sunglasses"), true);
+assert.equal(membershipIsProductType(frame, "cat_luxury"), false);
+
+const otherVisible = custom("cat_keep_visible", true);
+const workflowHidden = createCatalogCategory({ ar: "مخفية", he: "", en: "Workflow Hidden" });
+const afterCreateReload = mergeCatalogCategories([otherVisible, workflowHidden]);
+assert.equal(afterCreateReload.find((item) => item.id === "cat_keep_visible")?.showInMainCatalog, true);
+assert.equal(afterCreateReload.find((item) => item.id === workflowHidden.id)?.showInMainCatalog, false);
+
+const assigned = applyCategoryAssignments(
+  [frame, legacy, publishedMulti],
+  workflowHidden.id,
+  ["p-frame", "p-legacy"],
+);
+const assignedFrame = assigned.find((item) => item.id === "p-frame");
+const assignedLegacy = assigned.find((item) => item.id === "p-legacy");
+const untouchedMulti = assigned.find((item) => item.id === "p-multi");
+assert.ok(assignedFrame && assignedLegacy && untouchedMulti);
+assert.equal(productBelongsToCategory(assignedFrame, workflowHidden.id), true);
+assert.equal(productBelongsToCategory(assignedLegacy, workflowHidden.id), true);
+assert.equal(productBelongsToCategory(untouchedMulti, workflowHidden.id), false);
+assert.equal(productBelongsToCategory(assignedFrame, "cat_luxury"), true);
+assert.equal(productBelongsToCategory(assignedFrame, "cat_new"), true);
+assert.equal(assignedFrame.category, "Frames");
+assert.equal(assignedLegacy.category, "Sunglasses");
+assert.equal(assignedFrame.sellingPrice, 10);
+assert.equal(assignedFrame.stockQuantity, 2);
+assert.deepEqual(assignedFrame.images, frame.images);
+assert.equal(assigned.filter((item) => item.id === "p-frame").length, 1);
+
+const retrySameSelection = applyCategoryAssignments(
+  assigned,
+  workflowHidden.id,
+  ["p-frame", "p-legacy"],
+);
+assert.deepEqual(
+  retrySameSelection.map((item) => item.categoryIds),
+  assigned.map((item) => item.categoryIds),
+);
+
+const createdInWorkflow = product({
+  id: "p-new-in-category",
+  name: "New Category Frame",
+  category: "Frames",
+  categoryIds: [workflowHidden.id],
+  sellingPrice: 42,
+  images: ["/img/new.jpg"],
+  stockQuantity: 7,
+});
+const afterNewProduct = applyCategoryAssignments(
+  [...assigned, createdInWorkflow],
+  workflowHidden.id,
+  ["p-frame", "p-legacy", "p-new-in-category"],
+);
+assert.equal(afterNewProduct.filter((item) => item.id === "p-new-in-category").length, 1);
+assert.equal(afterNewProduct.find((item) => item.id === "p-new-in-category")?.sellingPrice, 42);
+assert.deepEqual(afterNewProduct.find((item) => item.id === "p-new-in-category")?.images, ["/img/new.jpg"]);
+assert.equal(afterNewProduct.find((item) => item.id === "p-new-in-category")?.category, "Frames");
+
+const removedExtra = applyCategoryAssignments(afterNewProduct, workflowHidden.id, ["p-legacy"]);
+assert.equal(productBelongsToCategory(removedExtra.find((item) => item.id === "p-frame")!, workflowHidden.id), false);
+assert.equal(productBelongsToCategory(removedExtra.find((item) => item.id === "p-legacy")!, workflowHidden.id), true);
+assert.equal(productBelongsToCategory(removedExtra.find((item) => item.id === "p-new-in-category")!, workflowHidden.id), false);
+assert.equal(productBelongsToCategory(removedExtra.find((item) => item.id === "p-frame")!, "cat_new"), true);
+assert.equal(removedExtra.find((item) => item.id === "p-frame")?.category, "Frames");
+
+const typeLocked = applyCategoryAssignments([legacy], "Sunglasses", []);
+assert.equal(typeLocked[0].category, "Sunglasses");
+assert.equal(productBelongsToCategory(typeLocked[0], "Sunglasses"), true);
+
+const failedAssignThenRetry = applyCategoryAssignments([frame], workflowHidden.id, []);
+assert.equal(productBelongsToCategory(failedAssignThenRetry[0], workflowHidden.id), false);
+const recovered = applyCategoryAssignments(failedAssignThenRetry, workflowHidden.id, ["p-frame"]);
+assert.equal(productBelongsToCategory(recovered[0], workflowHidden.id), true);
+assert.equal(recovered[0].name, frame.name);
+
+const enabledVisible = { ...workflowHidden, showInMainCatalog: true };
+const afterVisibilityReload = mergeCatalogCategories([otherVisible, enabledVisible]);
+assert.equal(afterVisibilityReload.find((item) => item.id === workflowHidden.id)?.showInMainCatalog, true);
+assert.equal(afterVisibilityReload.find((item) => item.id === "cat_keep_visible")?.showInMainCatalog, true);
 
 const enabled = { ...luxury, showInMainCatalog: true };
 const disabled = { ...arrivals, showInMainCatalog: false };
 const toggled = mergeCatalogCategories([enabled, disabled]);
 assert.equal(toggled.find((item) => item.id === "cat_luxury")?.showInMainCatalog, true);
 assert.equal(toggled.find((item) => item.id === "cat_new")?.showInMainCatalog, false);
+
+const dictDir = join(process.cwd(), "lib/i18n/dictionaries");
+for (const file of ["en.ts", "ar.ts", "he.ts"]) {
+  const source = readFileSync(join(dictDir, file), "utf8");
+  for (const key of [
+    "next:",
+    "back:",
+    "finish:",
+    "showInMainPage:",
+    "saveTimeout:",
+    "manageProducts:",
+    "chooseExisting:",
+    "addNewProduct:",
+    "saved:",
+  ]) {
+    assert.ok(source.includes(key), `missing ${key} in ${file}`);
+  }
+}
+assert.ok(
+  readFileSync(join(dictDir, "ar.ts"), "utf8").includes(
+    "إظهار الفئة في صفحة المنتجات الرئيسية",
+  ),
+);
+assert.ok(
+  readFileSync(join(dictDir, "ar.ts"), "utf8").includes("إدارة منتجات الفئة"),
+);
+assert.ok(readFileSync(join(dictDir, "ar.ts"), "utf8").includes("التالي"));
 
 console.log("catalog-categories tests passed");

@@ -75,11 +75,12 @@ export function newCatalogCategoryId(): string {
 export function createCatalogCategory(
   names: CatalogCategoryNames,
   now = new Date().toISOString(),
+  showInMainCatalog = false,
 ): CatalogCategory {
   return {
     id: newCatalogCategoryId(),
     names: sanitizeCategoryNames(names),
-    showInMainCatalog: false,
+    showInMainCatalog: showInMainCatalog === true,
     system: false,
     createdAt: now,
     updatedAt: now,
@@ -369,4 +370,42 @@ export function applyCategoryDelete(
     categories: categories.filter((item) => item.id !== id),
     products: nextProducts,
   };
+}
+
+export function membershipIsProductType(
+  product: Pick<Product, "category">,
+  categoryId: string,
+): boolean {
+  return product.category === categoryId;
+}
+
+export function catalogCategorySaveMode(id?: string | null): "create" | "update" {
+  return id ? "update" : "create";
+}
+
+export function applyCategoryAssignments(
+  products: Product[],
+  categoryId: string,
+  selectedIds: string[],
+): Product[] {
+  if (!categoryId) return products;
+  const selected = new Set(selectedIds.filter(Boolean));
+  return products.map((product) => {
+    const belongs = productBelongsToCategory(product, categoryId);
+    const shouldBelong = selected.has(product.id);
+    if (belongs === shouldBelong) return product;
+    if (shouldBelong) {
+      if (product.category === categoryId) return product;
+      return {
+        ...product,
+        categoryIds: uniqueIds([...(product.categoryIds || []), categoryId]),
+      };
+    }
+    if (product.category === categoryId) return product;
+    if (!product.categoryIds?.includes(categoryId)) return product;
+    return {
+      ...product,
+      categoryIds: product.categoryIds.filter((id) => id !== categoryId),
+    };
+  });
 }

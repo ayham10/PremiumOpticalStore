@@ -66,11 +66,15 @@ export default function AdminProductCreateModal({
   t,
   onClose,
   onCreated,
+  preselectCategoryId,
+  stacked,
 }: {
   open: boolean;
   t: Translate;
   onClose: () => void;
   onCreated: (product: Product) => void;
+  preselectCategoryId?: string;
+  stacked?: boolean;
 }) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [tab, setTab] = useState<"details" | "images">("details");
@@ -105,6 +109,10 @@ export default function AdminProductCreateModal({
           name: form.name.trim(),
           slug: slugify(form.name),
           category: form.category,
+          categoryIds:
+            preselectCategoryId && preselectCategoryId !== form.category
+              ? [preselectCategoryId]
+              : [],
           lensType: usesLensType(form.category) ? form.lensType || undefined : undefined,
           description: form.description.trim(),
           images: form.images.filter(Boolean),
@@ -131,6 +139,7 @@ export default function AdminProductCreateModal({
       title={t("admin.servicePages.addNewProduct")}
       onClose={onClose}
       wide
+      stacked={stacked}
       icon={<Plus size={18} />}
     >
       {error ? (
