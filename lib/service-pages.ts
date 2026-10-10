@@ -99,6 +99,14 @@ export const DEFAULT_SERVICE_PAGES: ServicePagesSettings = {
     title: "المتجر",
     lead: "اكتشف مجموعتنا الفاخرة",
   },
+  sunglasses: {
+    title: "نظارات شمسية",
+    lead: "اكتشف نظارات شمسية فاخرة تجمع بين الحماية والراحة والأناقة.",
+  },
+  frames: {
+    title: "إطارات فاخرة",
+    lead: "تصاميم مختارة من الأسيتات والتيتانيوم والمعدن — بتفصيل هادئ ودقيق.",
+  },
   homepage: {
     hero: {
       title: "عِش الحياة بوضوح",
@@ -238,6 +246,35 @@ function sparseCatalog(saved: unknown): CatalogServicePage {
   return next;
 }
 
+type OptionalCatalogKey = "catalog" | "sunglasses" | "frames";
+
+function hasOptionalPageSettings(
+  value: unknown,
+  key: OptionalCatalogKey,
+  locale?: ServicePagesLocale,
+): boolean {
+  if (!value || typeof value !== "object") return false;
+  const raw = value as {
+    [page in OptionalCatalogKey]?: unknown;
+    locales?: Partial<Record<ServicePagesLocale, Record<string, unknown>>>;
+  };
+  if (locale) {
+    const localized = raw.locales?.[locale]?.[key];
+    if (localized && typeof localized === "object") return true;
+    if (locale === "ar" && raw[key] && typeof raw[key] === "object") {
+      return true;
+    }
+    return false;
+  }
+  if (raw[key] && typeof raw[key] === "object") return true;
+  const locales = raw.locales;
+  if (!locales) return false;
+  return SERVICE_CONTENT_LOCALES.some((item) => {
+    const page = locales[item]?.[key];
+    return Boolean(page && typeof page === "object");
+  });
+}
+
 function sparseAdminSectionNames(
   saved: unknown,
 ): Record<string, string> | undefined {
@@ -308,6 +345,12 @@ function sparseBundle(
   if (hasCatalogSettings(saved)) {
     bundle.catalog = sparseCatalog(raw.catalog);
   }
+  if (hasSunglassesSettings(saved)) {
+    bundle.sunglasses = sparseCatalog(raw.sunglasses);
+  }
+  if (hasFramesSettings(saved)) {
+    bundle.frames = sparseCatalog(raw.frames);
+  }
   const adminSectionNames = sparseAdminSectionNames(raw.adminSectionNames);
   if (adminSectionNames) bundle.adminSectionNames = adminSectionNames;
   return bundle;
@@ -320,7 +363,9 @@ function hasAnyRootContent(value: unknown): boolean {
       raw.contactLenses ||
       raw.homepage ||
       raw.footer ||
-      raw.catalog,
+      raw.catalog ||
+      raw.sunglasses ||
+      raw.frames,
   );
 }
 
@@ -354,26 +399,21 @@ export function hasCatalogSettings(
   value: unknown,
   locale?: ServicePagesLocale,
 ): boolean {
-  if (!value || typeof value !== "object") return false;
-  const raw = value as {
-    catalog?: unknown;
-    locales?: Partial<Record<ServicePagesLocale, { catalog?: unknown }>>;
-  };
-  if (locale) {
-    const localized = raw.locales?.[locale]?.catalog;
-    if (localized && typeof localized === "object") return true;
-    if (locale === "ar" && raw.catalog && typeof raw.catalog === "object") {
-      return true;
-    }
-    return false;
-  }
-  if (raw.catalog && typeof raw.catalog === "object") return true;
-  const locales = raw.locales;
-  if (!locales) return false;
-  return SERVICE_CONTENT_LOCALES.some((key) => {
-    const catalog = locales[key]?.catalog;
-    return Boolean(catalog && typeof catalog === "object");
-  });
+  return hasOptionalPageSettings(value, "catalog", locale);
+}
+
+export function hasSunglassesSettings(
+  value: unknown,
+  locale?: ServicePagesLocale,
+): boolean {
+  return hasOptionalPageSettings(value, "sunglasses", locale);
+}
+
+export function hasFramesSettings(
+  value: unknown,
+  locale?: ServicePagesLocale,
+): boolean {
+  return hasOptionalPageSettings(value, "frames", locale);
 }
 
 export function hasFooterSettings(
@@ -562,6 +602,15 @@ function overlayBundle(
   if (fallback.catalog || saved?.catalog) {
     next.catalog = overlayCatalog(saved?.catalog, fallback.catalog ?? {});
   }
+  if (fallback.sunglasses || saved?.sunglasses) {
+    next.sunglasses = overlayCatalog(
+      saved?.sunglasses,
+      fallback.sunglasses ?? {},
+    );
+  }
+  if (fallback.frames || saved?.frames) {
+    next.frames = overlayCatalog(saved?.frames, fallback.frames ?? {});
+  }
   if (saved?.adminSectionNames) {
     next.adminSectionNames = saved.adminSectionNames;
   }
@@ -586,6 +635,10 @@ function persistBundle(
     hasFooterSettings(patch);
   const includeCatalog =
     hasCatalogSettings(stored) || hasCatalogSettings(patch);
+  const includeSunglasses =
+    hasSunglassesSettings(stored) || hasSunglassesSettings(patch);
+  const includeFrames =
+    hasFramesSettings(stored) || hasFramesSettings(patch);
 
   const next: ServicePagesLocaleBundle = {
     eyeExam: sparseEyeExam(
@@ -629,6 +682,20 @@ function persistBundle(
     next.catalog = sparseCatalog({
       ...asRecord(storedRaw.catalog),
       ...asRecord(patchRaw.catalog),
+    });
+  }
+
+  if (includeSunglasses) {
+    next.sunglasses = sparseCatalog({
+      ...asRecord(storedRaw.sunglasses),
+      ...asRecord(patchRaw.sunglasses),
+    });
+  }
+
+  if (includeFrames) {
+    next.frames = sparseCatalog({
+      ...asRecord(storedRaw.frames),
+      ...asRecord(patchRaw.frames),
     });
   }
 
@@ -681,6 +748,8 @@ export function migrateServicePagesDocument(
     homepage: raw.homepage,
     footer: raw.footer,
     catalog: raw.catalog,
+    sunglasses: raw.sunglasses,
+    frames: raw.frames,
     adminSectionNames: raw.adminSectionNames,
   });
 
@@ -697,6 +766,8 @@ export function migrateServicePagesDocument(
   if (root.homepage) next.homepage = root.homepage;
   if (root.footer) next.footer = root.footer;
   if (root.catalog) next.catalog = root.catalog;
+  if (root.sunglasses) next.sunglasses = root.sunglasses;
+  if (root.frames) next.frames = root.frames;
   if (root.adminSectionNames) next.adminSectionNames = root.adminSectionNames;
   const customPages = normalizeCustomPages(raw.customPages);
   if (customPages.length) next.customPages = customPages;
@@ -710,6 +781,8 @@ function fillFromArabicDefaults(saved: unknown): ServicePagesLocaleBundle {
     homepage: DEFAULT_SERVICE_PAGES.homepage,
     footer: DEFAULT_SERVICE_PAGES.footer,
     catalog: DEFAULT_SERVICE_PAGES.catalog,
+    sunglasses: DEFAULT_SERVICE_PAGES.sunglasses,
+    frames: DEFAULT_SERVICE_PAGES.frames,
   });
 }
 
@@ -730,6 +803,8 @@ export function mergeServicePages(
     homepage: filledAr.homepage,
     footer: filledAr.footer,
     catalog: filledAr.catalog,
+    sunglasses: filledAr.sunglasses,
+    frames: filledAr.frames,
     locales,
   };
 }
@@ -747,6 +822,8 @@ export function hydrateServicePagesForEditor(
     homepage: migrated.homepage,
     footer: migrated.footer,
     catalog: migrated.catalog,
+    sunglasses: migrated.sunglasses,
+    frames: migrated.frames,
   };
   const sparse = saved
     ? sparseBundle(saved, iconSource)
@@ -781,6 +858,23 @@ function withFallbackHeroMedia(
             heroMedia: bundle.catalog?.heroMedia || source.catalog?.heroMedia,
           }
         : bundle.catalog,
+    sunglasses:
+      bundle.sunglasses || source.sunglasses
+        ? {
+            ...source.sunglasses,
+            ...bundle.sunglasses,
+            heroMedia:
+              bundle.sunglasses?.heroMedia || source.sunglasses?.heroMedia,
+          }
+        : bundle.sunglasses,
+    frames:
+      bundle.frames || source.frames
+        ? {
+            ...source.frames,
+            ...bundle.frames,
+            heroMedia: bundle.frames?.heroMedia || source.frames?.heroMedia,
+          }
+        : bundle.frames,
   };
 }
 
@@ -841,6 +935,8 @@ export function persistServicePages(
   if (root.homepage) next.homepage = root.homepage;
   if (root.footer) next.footer = root.footer;
   if (root.catalog) next.catalog = root.catalog;
+  if (root.sunglasses) next.sunglasses = root.sunglasses;
+  if (root.frames) next.frames = root.frames;
   if (root.adminSectionNames) next.adminSectionNames = root.adminSectionNames;
   const customPages = persistCustomPages(current.customPages, patchRaw);
   if (customPages.length) next.customPages = customPages;
@@ -906,6 +1002,8 @@ export function resolveServicePagesForLocale(
         homepage: migrated.homepage,
         footer: migrated.footer,
         catalog: migrated.catalog,
+        sunglasses: migrated.sunglasses,
+        frames: migrated.frames,
       },
     );
   }
@@ -916,6 +1014,8 @@ export function resolveServicePagesForLocale(
       homepage: migrated.homepage,
       footer: migrated.footer,
       catalog: migrated.catalog,
+      sunglasses: migrated.sunglasses,
+      frames: migrated.frames,
     };
   }
   return undefined;
@@ -982,6 +1082,14 @@ export function localePatchPayload(
     catalog: {
       ...(bundle.catalog || {}),
       heroMedia: bundle.catalog?.heroMedia ?? null,
+    },
+    sunglasses: {
+      ...(bundle.sunglasses || {}),
+      heroMedia: bundle.sunglasses?.heroMedia ?? null,
+    },
+    frames: {
+      ...(bundle.frames || {}),
+      heroMedia: bundle.frames?.heroMedia ?? null,
     },
     adminSectionNames: bundle.adminSectionNames || {},
   };

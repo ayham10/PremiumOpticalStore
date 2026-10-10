@@ -476,9 +476,15 @@ export interface ContactLensesServicePage {
 export interface CatalogServicePage {
   title?: string;
   lead?: string;
-  /** Image-only Catalog banner. Videos are ignored on the public shop page. */
+  /**
+   * Catalog `/shop` is image-only. Sunglasses and Frames also accept video.
+   * Empty/undefined keeps the built-in default media.
+   */
   heroMedia?: CustomPageMediaRef | null;
 }
+
+/** Sunglasses `/sunglasses` and Frames `/frames` editorial copy. Stored independently. */
+export type CategoryCatalogServicePage = CatalogServicePage;
 
 export interface HomepageHeroContent {
   title: string;
@@ -509,6 +515,8 @@ export interface ServicePagesLocaleBundle {
   homepage?: HomepageServicePage;
   footer?: FooterServiceContent;
   catalog?: CatalogServicePage;
+  sunglasses?: CategoryCatalogServicePage;
+  frames?: CategoryCatalogServicePage;
   /**
    * Admin accordion labels keyed by stable section id.
    * Never rendered on the public website.

@@ -29,6 +29,9 @@ import {
   rememberCategoryDefaultImages,
   useCategoryDefaultImages,
 } from "@/lib/use-category-default-images";
+import PageHeroMedia from "@/components/media/PageHeroMedia";
+import { hasCustomHeroMedia } from "@/lib/page-hero-media";
+import type { CustomPageMediaRef } from "@/lib/types";
 
 export type CatalogueSort = "newest" | "price-asc" | "price-desc";
 
@@ -157,6 +160,8 @@ export type CategoryCatalogueProps = {
   bookHref?: string;
   bookLabel?: string;
   pageClass?: string;
+  heroMedia?: CustomPageMediaRef | null;
+  heroSectionId?: string;
 };
 
 export default function CategoryCatalogue({
@@ -168,6 +173,8 @@ export default function CategoryCatalogue({
   videoLoopTailSeconds,
   activeFilter = "All",
   pageClass = "",
+  heroMedia,
+  heroSectionId,
 }: CategoryCatalogueProps) {
   const { t } = useLocale();
   const cacheKey = productsCacheKey(categories);
@@ -181,6 +188,7 @@ export default function CategoryCatalogue({
   const categorySet = useMemo(() => new Set(categories), [cacheKey]);
   const useTailLoop =
     typeof videoLoopTailSeconds === "number" && videoLoopTailSeconds > 0;
+  const customHero = hasCustomHeroMedia(heroMedia);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -191,7 +199,7 @@ export default function CategoryCatalogue({
   }, []);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (customHero || reduceMotion) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -279,7 +287,7 @@ export default function CategoryCatalogue({
       }
       window.clearTimeout(timeoutId);
     };
-  }, [reduceMotion, videoSrc, useTailLoop, videoLoopTailSeconds]);
+  }, [customHero, reduceMotion, videoSrc, useTailLoop, videoLoopTailSeconds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -324,21 +332,18 @@ export default function CategoryCatalogue({
   return (
     <div className={`frames-page catalogue-page${pageClass ? ` ${pageClass}` : ""}`}>
       <ScrollRestore />
-      <section className="frames-hero" aria-label={title}>
-        {reduceMotion ? (
-          <Image
-            src={posterSrc}
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-            quality={75}
-          />
-        ) : (
-          <>
-            {/* Poster paints immediately; video loads after idle so it never blocks LCP */}
-            {!heroVideoReady ? (
+      <section
+        className={`frames-hero${customHero ? " is-custom-hero" : ""}`}
+        aria-label={title}
+        data-csp-section={heroSectionId}
+      >
+        <PageHeroMedia
+          media={heroMedia}
+          alt=""
+          className="object-cover"
+          videoClassName="frames-hero-video"
+          fallback={
+            reduceMotion ? (
               <Image
                 src={posterSrc}
                 alt=""
@@ -348,23 +353,38 @@ export default function CategoryCatalogue({
                 className="object-cover"
                 quality={75}
               />
-            ) : null}
-            <video
-              ref={videoRef}
-              className="frames-hero-video"
-              autoPlay
-              muted
-              loop={!useTailLoop}
-              playsInline
-              preload="none"
-              poster={posterSrc}
-              onLoadedData={() => setHeroVideoReady(true)}
-              style={heroVideoReady ? undefined : { opacity: 0 }}
-            >
-              <source src={videoSrc} type="video/mp4" />
-            </video>
-          </>
-        )}
+            ) : (
+              <>
+                {/* Poster paints immediately; video loads after idle so it never blocks LCP */}
+                {!heroVideoReady ? (
+                  <Image
+                    src={posterSrc}
+                    alt=""
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover"
+                    quality={75}
+                  />
+                ) : null}
+                <video
+                  ref={videoRef}
+                  className="frames-hero-video"
+                  autoPlay
+                  muted
+                  loop={!useTailLoop}
+                  playsInline
+                  preload="none"
+                  poster={posterSrc}
+                  onLoadedData={() => setHeroVideoReady(true)}
+                  style={heroVideoReady ? undefined : { opacity: 0 }}
+                >
+                  <source src={videoSrc} type="video/mp4" />
+                </video>
+              </>
+            )
+          }
+        />
         <span className="frames-hero-veil" aria-hidden />
         <div className="catalogue-hero-copy">
           <h1 className="catalogue-hero-title">{title}</h1>

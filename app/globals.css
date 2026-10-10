@@ -6015,7 +6015,8 @@ main.frames-main {
 }
 
 .frames-hero-video,
-.frames-hero img {
+.frames-hero img,
+.frames-hero picture {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -6031,8 +6032,8 @@ main.frames-main {
     overflow: hidden;
   }
 
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-fit: cover;
     object-position: center 34%;
     transform: scale(1.72);
@@ -6053,37 +6054,37 @@ main.frames-main {
    hero. Portrait source + short 21:9 crop needs width-tuned object-position.
    Mobile framing (below) is unchanged. */
 @media (min-width: 768px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-fit: cover;
     object-position: center 24%;
   }
 }
 
 @media (min-width: 1100px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 24.5%;
   }
 }
 
 @media (min-width: 1400px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 25.5%;
   }
 }
 
 @media (min-width: 1800px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 26%;
   }
 }
 
 @media (min-width: 2400px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 27%;
   }
 }

@@ -12,12 +12,14 @@ import {
   Contact,
   Eye,
   Files,
+  Glasses,
   Home,
   MapPin,
   Plus,
   RotateCcw,
   Search,
   ShoppingBag,
+  Sun,
 } from "lucide-react";
 import ResponsiveHeroImageField from "@/components/admin/ResponsiveHeroImageField";
 import SectionIdentityFields from "@/components/admin/content-editor/SectionIdentityFields";
@@ -73,7 +75,14 @@ import type {
   StoreSettings,
 } from "@/lib/types";
 
-type Tab = "homepage" | "eyeExam" | "contactLenses" | "catalog" | "footer";
+type Tab =
+  | "homepage"
+  | "eyeExam"
+  | "contactLenses"
+  | "catalog"
+  | "sunglasses"
+  | "frames"
+  | "footer";
 
 const ContentFieldLocaleContext = createContext<{
   dir: "ltr" | "rtl";
@@ -223,6 +232,33 @@ export default function AdminServicePagesPage() {
     }));
   }
 
+  function updateSunglasses<K extends keyof CatalogServicePage>(
+    key: K,
+    value: CatalogServicePage[K],
+  ) {
+    setPages((prev) => ({
+      ...prev,
+      sunglasses: {
+        ...(prev.sunglasses ??
+          defaultServicePagesForLocale(editLocale).sunglasses),
+        [key]: value,
+      },
+    }));
+  }
+
+  function updateFrames<K extends keyof CatalogServicePage>(
+    key: K,
+    value: CatalogServicePage[K],
+  ) {
+    setPages((prev) => ({
+      ...prev,
+      frames: {
+        ...(prev.frames ?? defaultServicePagesForLocale(editLocale).frames),
+        [key]: value,
+      },
+    }));
+  }
+
   function updateAdminName(sectionId: string, value: string) {
     setPages((prev) => {
       const next = { ...(prev.adminSectionNames || {}) };
@@ -298,6 +334,10 @@ export default function AdminServicePagesPage() {
   const lenses = pages.contactLenses;
   const catalog =
     pages.catalog ?? defaultServicePagesForLocale(editLocale).catalog!;
+  const sunglasses =
+    pages.sunglasses ?? defaultServicePagesForLocale(editLocale).sunglasses!;
+  const frames =
+    pages.frames ?? defaultServicePagesForLocale(editLocale).frames!;
   const footer = pages.footer ?? defaultServicePagesForLocale(editLocale).footer!;
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
 
@@ -514,6 +554,26 @@ export default function AdminServicePagesPage() {
         >
           <ShoppingBag size={16} strokeWidth={1.6} />
           {t("admin.servicePages.tabCatalog")}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!selectedCustom && tab === "sunglasses"}
+          className={!selectedCustom && tab === "sunglasses" ? "is-active" : ""}
+          onClick={() => selectBuiltIn("sunglasses")}
+        >
+          <Sun size={16} strokeWidth={1.6} />
+          {t("admin.servicePages.tabSunglasses")}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!selectedCustom && tab === "frames"}
+          className={!selectedCustom && tab === "frames" ? "is-active" : ""}
+          onClick={() => selectBuiltIn("frames")}
+        >
+          <Glasses size={16} strokeWidth={1.6} />
+          {t("admin.servicePages.tabFrames")}
         </button>
         <button
           type="button"
@@ -927,6 +987,60 @@ export default function AdminServicePagesPage() {
                         label={t("admin.servicePages.catalogLead")}
                         value={catalog.lead || ""}
                         onChange={(value) => updateCatalog("lead", value)}
+                        multiline
+                      />
+                    </EditorSection>
+                  ) : tab === "sunglasses" ? (
+                    <EditorSection
+                      icon="hero"
+                      title={adminTitle(
+                        PREVIEW_SECTION.sunglassesHero,
+                        t("admin.servicePages.sectionHero"),
+                      )}
+                      sectionId={PREVIEW_SECTION.sunglassesHero}
+                      active={activeSectionId === PREVIEW_SECTION.sunglassesHero}
+                      onActivate={setActiveSectionId}
+                    >
+                      {renderAdminName(PREVIEW_SECTION.sunglassesHero)}
+                      {renderHeroMedia(sunglasses.heroMedia, (media) =>
+                        updateSunglasses("heroMedia", media),
+                      true)}
+                      <Field
+                        label={t("admin.servicePages.sectionHeading")}
+                        value={sunglasses.title || ""}
+                        onChange={(value) => updateSunglasses("title", value)}
+                      />
+                      <Field
+                        label={t("admin.servicePages.catalogLead")}
+                        value={sunglasses.lead || ""}
+                        onChange={(value) => updateSunglasses("lead", value)}
+                        multiline
+                      />
+                    </EditorSection>
+                  ) : tab === "frames" ? (
+                    <EditorSection
+                      icon="hero"
+                      title={adminTitle(
+                        PREVIEW_SECTION.framesHero,
+                        t("admin.servicePages.sectionHero"),
+                      )}
+                      sectionId={PREVIEW_SECTION.framesHero}
+                      active={activeSectionId === PREVIEW_SECTION.framesHero}
+                      onActivate={setActiveSectionId}
+                    >
+                      {renderAdminName(PREVIEW_SECTION.framesHero)}
+                      {renderHeroMedia(frames.heroMedia, (media) =>
+                        updateFrames("heroMedia", media),
+                      true)}
+                      <Field
+                        label={t("admin.servicePages.sectionHeading")}
+                        value={frames.title || ""}
+                        onChange={(value) => updateFrames("title", value)}
+                      />
+                      <Field
+                        label={t("admin.servicePages.catalogLead")}
+                        value={frames.lead || ""}
+                        onChange={(value) => updateFrames("lead", value)}
                         multiline
                       />
                     </EditorSection>

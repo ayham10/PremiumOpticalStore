@@ -85,6 +85,8 @@ assert.equal(viewHrefForEditor("homepage"), "/");
 assert.equal(viewHrefForEditor("eyeExam"), "/eye-exams");
 assert.equal(viewHrefForEditor("contactLenses"), "/contact-lenses");
 assert.equal(viewHrefForEditor("catalog"), "/shop");
+assert.equal(viewHrefForEditor("sunglasses"), "/sunglasses");
+assert.equal(viewHrefForEditor("frames"), "/frames");
 assert.equal(viewHrefForEditor("custom", "multifocal-lenses"), "/services/multifocal-lenses");
 assert.equal(CONTENT_PREVIEW_PATH, "/admin/service-pages/preview");
 assert.equal(CONTENT_PREVIEW_VIEWPORTS.mobile.width, 390);
@@ -397,12 +399,26 @@ const editorPage = readFileSync(
 assert.match(editorPage, /PREVIEW_SECTION\.eyeExamBenefits/);
 assert.match(editorPage, /PREVIEW_SECTION\.contactLensesNotice/);
 assert.match(editorPage, /PREVIEW_SECTION\.catalogHero/);
+assert.match(editorPage, /PREVIEW_SECTION\.sunglassesHero/);
+assert.match(editorPage, /PREVIEW_SECTION\.framesHero/);
 assert.match(editorPage, /sectionAdminName/);
 assert.match(editorPage, /restoreDefaultMedia/);
 assert.match(editorPage, /onPointerDownCapture|onActivate=\{setActiveSectionId\}/);
 assert.match(editorPage, /renderHeroMedia\(catalog\.heroMedia/);
-assert.match(editorPage, /updateCatalog\("heroMedia"/);
+assert.match(editorPage, /updateCatalog\("heroMedia", media\),\s*\n\s*false\)/);
+assert.match(editorPage, /renderHeroMedia\(sunglasses\.heroMedia/);
+assert.match(editorPage, /updateSunglasses\("heroMedia", media\),\s*\n\s*true\)/);
+assert.match(editorPage, /renderHeroMedia\(frames\.heroMedia/);
+assert.match(editorPage, /updateFrames\("heroMedia", media\),\s*\n\s*true\)/);
+assert.match(editorPage, /tabSunglasses/);
+assert.match(editorPage, /tabFrames/);
 assert.match(canvasSrc, /StoreCatalogHero/);
+assert.match(canvasSrc, /SunglassesCatalogue/);
+assert.match(canvasSrc, /FramesCatalogue/);
+assert.doesNotMatch(
+  canvasSrc,
+  /kind === "sunglasses"[\s\S]*StoreCatalogHero/,
+);
 assert.match(createModal, /sectionAdminName/);
 assert.equal(
   editorSectionDisplayName("تنظيم الفحص", "ما يميز الفحص"),
@@ -419,7 +435,17 @@ assert.equal(
 );
 assert.equal(isPreviewHeroSection("eyeExam-hero"), true);
 assert.equal(isPreviewHeroSection("catalog-hero"), true);
+assert.equal(isPreviewHeroSection("sunglasses-hero"), true);
+assert.equal(isPreviewHeroSection("frames-hero"), true);
 assert.equal(isPreviewHeroSection("eyeExam-benefits"), false);
+assert.notEqual(
+  BUILT_IN_PREVIEW_SECTION_IDS.sunglassesHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.framesHero,
+);
+assert.notEqual(
+  BUILT_IN_PREVIEW_SECTION_IDS.sunglassesHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.catalogHero,
+);
 
 const heroEl = { classList: { contains: (name: string) => name === "cl-hero" } } as HTMLElement;
 assert.equal(isPreviewHeroSection("sec_custom", heroEl), true);
@@ -429,6 +455,23 @@ assert.match(
   /\.csp-preview-canvas \[data-csp-section\]\.is-preview-active\.is-preview-hero/,
 );
 assert.match(previewCss, /outline-offset:\s*-2px/);
+assert.match(previewCss, /is-custom-hero/);
+
+const sunglassesSrc = readFileSync(
+  join(process.cwd(), "components/sunglasses/SunglassesCatalogue.tsx"),
+  "utf8",
+);
+const framesSrc = readFileSync(
+  join(process.cwd(), "components/frames/FramesCatalogue.tsx"),
+  "utf8",
+);
+assert.match(sunglassesSrc, /useLocalizedServicePages/);
+assert.match(sunglassesSrc, /heroSectionId="sunglasses-hero"/);
+assert.match(framesSrc, /useLocalizedServicePages/);
+assert.match(framesSrc, /heroSectionId="frames-hero"/);
+assert.match(editorPage, /acceptVideo[\s\S]*true/);
+assert.doesNotMatch(sunglassesSrc, /adminSectionNames/);
+assert.doesNotMatch(framesSrc, /adminSectionNames/);
 
 const wizardBar = readFileSync(
   join(process.cwd(), "components/admin/content-editor/NewPageWizardBar.tsx"),

@@ -8,7 +8,9 @@ import NavigationHub from "@/components/home/NavigationHub";
 import WelcomeSection from "@/components/home/WelcomeSection";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import CustomServicePageView from "@/components/services/CustomServicePageView";
+import FramesCatalogue from "@/components/frames/FramesCatalogue";
 import StoreCatalogHero from "@/components/shop/StoreCatalogHero";
+import SunglassesCatalogue from "@/components/sunglasses/SunglassesCatalogue";
 import {
   copyForCustomPageEditor,
   visibleCustomSections,
@@ -67,6 +69,12 @@ function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
         <StoreCatalogHero />
       </div>
     );
+  }
+  if (payload.kind === "sunglasses") {
+    return <SunglassesCatalogue />;
+  }
+  if (payload.kind === "frames") {
+    return <FramesCatalogue />;
   }
   if (payload.kind === "footer") {
     return (

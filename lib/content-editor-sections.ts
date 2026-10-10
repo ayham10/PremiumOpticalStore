@@ -10,6 +10,8 @@ export const BUILT_IN_PREVIEW_SECTION_IDS = {
   contactLensesFeatures: "contactLenses-features",
   contactLensesNotice: "contactLenses-notice",
   catalogHero: "catalog-hero",
+  sunglassesHero: "sunglasses-hero",
+  framesHero: "frames-hero",
   footerContent: "footer-content",
 } as const;
 
@@ -18,6 +20,8 @@ const BUILT_IN_HERO_SECTION_IDS = new Set<string>([
   BUILT_IN_PREVIEW_SECTION_IDS.eyeExamHero,
   BUILT_IN_PREVIEW_SECTION_IDS.contactLensesHero,
   BUILT_IN_PREVIEW_SECTION_IDS.catalogHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.sunglassesHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.framesHero,
 ]);
 
 const HERO_SECTION_CLASSES = [
