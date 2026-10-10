@@ -1631,6 +1631,10 @@ const ar: Dictionary = {
       wizardBack: "السابق",
       wizardProgress: "خطوة {n} من {total}",
       wizardNoSections: "لم يتم اختيار أقسام بعد. ارجعوا للخطوة السابقة لإضافة أقسام.",
+      editSectionsHeading: "الخطوة التالية: تعديل محتوى الأقسام",
+      editSectionsLead:
+        "بعد اختيار الأقسام التي تريد إضافتها إلى الصفحة، يمكنك الآن تعديل النصوص والصور والتفاصيل الخاصة بكل قسم من الأسفل.",
+      editSectionsFlow: "١. اختيار الأقسام → ٢. تعديل المحتوى → ٣. معاينة الصفحة وحفظها",
       wizardReviewMissing: "حقول ناقصة في هذه اللغة",
       wizardReviewReady: "هذه اللغة جاهزة للحفظ.",
     },

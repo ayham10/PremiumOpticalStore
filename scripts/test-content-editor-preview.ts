@@ -363,6 +363,9 @@ const createModal = readFileSync(
 );
 assert.match(createModal, /pageNameHint/);
 assert.match(createModal, /\/services\//);
+assert.match(createModal, /editSectionsHeading/);
+assert.match(createModal, /csp-edit-guide/);
+assert.match(createModal, /sections\.length \?/);
 assert.doesNotMatch(createModal, /csp-template-row/);
 assert.doesNotMatch(createModal, /templateEyeExam/);
 
@@ -523,6 +526,24 @@ const wizardBar = readFileSync(
   "utf8",
 );
 assert.match(wizardBar, /formatWizardStepNumber/);
+assert.match(previewCss, /\.csp-edit-guide/);
+assert.match(previewCss, /\.csp-edit-guide-flow/);
+
+const enDict = readFileSync(
+  join(process.cwd(), "lib/i18n/dictionaries/en.ts"),
+  "utf8",
+);
+const arDict = readFileSync(
+  join(process.cwd(), "lib/i18n/dictionaries/ar.ts"),
+  "utf8",
+);
+const heDict = readFileSync(
+  join(process.cwd(), "lib/i18n/dictionaries/he.ts"),
+  "utf8",
+);
+assert.match(enDict, /Next step: Edit section content/);
+assert.match(arDict, /الخطوة التالية: تعديل محتوى الأقسام/);
+assert.match(heDict, /השלב הבא: עריכת תוכן הקטעים/);
 
 const customView = readFileSync(
   join(process.cwd(), "components/services/CustomServicePageView.tsx"),

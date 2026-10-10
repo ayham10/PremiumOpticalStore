@@ -1630,6 +1630,10 @@ const he: Dictionary = {
       wizardBack: "הקודם",
       wizardProgress: "שלב {n} מתוך {total}",
       wizardNoSections: "עדיין לא נבחרו קטעים. חזרו לשלב הקודם כדי להוסיף קטעים.",
+      editSectionsHeading: "השלב הבא: עריכת תוכן הקטעים",
+      editSectionsLead:
+        "אחרי בחירת הקטעים להוספה לדף, אפשר עכשיו לערוך את הטקסטים, התמונות והפרטים של כל קטע למטה.",
+      editSectionsFlow: "1. בחירת קטעים → 2. עריכת תוכן → 3. תצוגה מקדימה ושמירה",
       wizardReviewMissing: "שדות חסרים בשפה הזו",
       wizardReviewReady: "השפה הזו מוכנה לשמירה.",
     },

@@ -1060,6 +1060,18 @@ export default function CustomPageBuilder({
       !sections.some((section) => section.type !== "gallery") ? (
         <p className="admin-muted">{t("admin.servicePages.wizardNoSections")}</p>
       ) : null}
+      {sections.length ? (
+        <div className="csp-edit-guide" role="note">
+          <div className="csp-edit-guide-title">
+            <Sparkles size={15} strokeWidth={1.85} aria-hidden />
+            <strong>{t("admin.servicePages.editSectionsHeading")}</strong>
+          </div>
+          <p>{t("admin.servicePages.editSectionsLead")}</p>
+          <p className="csp-edit-guide-flow">
+            {t("admin.servicePages.editSectionsFlow")}
+          </p>
+        </div>
+      ) : null}
       {sections.map((section) => {
         if (section.type === "gallery") {
           return (
