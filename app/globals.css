@@ -13872,6 +13872,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  margin-top: 0.2rem;
   color: #f5f1e8;
   font-size: 0.8rem;
 }

@@ -2183,7 +2183,7 @@ const en: Dictionary = {
       chooseCategory: "Choose a category",
       next: "Next",
       back: "Back",
-      finish: "Finish",
+      finish: "Save and finish",
       progress: "Category steps",
       stepInfo: "Category information",
       stepVisibility: "Category visibility",

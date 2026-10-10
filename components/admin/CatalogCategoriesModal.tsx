@@ -21,7 +21,7 @@ import type { Locale } from "@/lib/i18n/config";
 
 type Translate = (path: string, vars?: Record<string, string | number>) => string;
 type AdminCategory = CatalogCategory & { productCount?: number };
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2;
 
 type WizardState = {
   id?: string;
@@ -241,31 +241,13 @@ export default function CatalogCategoriesModal({
 
   async function goNext() {
     if (!wizard) return;
-    if (step === 1) {
-      if (!namesReady(wizard.names)) {
-        setError(t("admin.catalog.nameRequired"));
-        return;
-      }
-      setError("");
-      setStep(2);
+    if (step !== 1) return;
+    if (!namesReady(wizard.names)) {
+      setError(t("admin.catalog.nameRequired"));
       return;
     }
-    if (step === 2) {
-      try {
-        const completed = await runSave(async () => {
-          const saved = await persistWizard(wizardRef.current || wizard, false);
-          setWizard(saved);
-          await refreshLists();
-        });
-        if (!completed) {
-          setError(t("admin.catalog.saveBusy"));
-          return;
-        }
-        setStep(3);
-      } catch {
-        /* error already set */
-      }
-    }
+    setError("");
+    setStep(2);
   }
 
   async function finishWizard() {
@@ -376,11 +358,7 @@ export default function CatalogCategoriesModal({
   }
 
   const stepTitle =
-    step === 1
-      ? t("admin.catalog.stepInfo")
-      : step === 2
-        ? t("admin.catalog.stepVisibility")
-        : t("admin.catalog.stepProducts");
+    step === 1 ? t("admin.catalog.stepInfo") : t("admin.catalog.stepProducts");
 
   return (
     <AdminModal
@@ -454,7 +432,7 @@ export default function CatalogCategoriesModal({
       ) : wizard ? (
         <div className="admin-cat-panel">
           <ol className="admin-cat-progress" aria-label={t("admin.catalog.progress")}>
-            {[1, 2, 3].map((value) => (
+            {[1, 2].map((value) => (
               <li
                 key={value}
                 className={
@@ -464,9 +442,7 @@ export default function CatalogCategoriesModal({
                 <span>{value}</span>
                 {value === 1
                   ? t("admin.catalog.stepInfoShort")
-                  : value === 2
-                    ? t("admin.catalog.stepVisibilityShort")
-                    : t("admin.catalog.stepProductsShort")}
+                  : t("admin.catalog.stepProductsShort")}
               </li>
             ))}
           </ol>
@@ -515,11 +491,6 @@ export default function CatalogCategoriesModal({
                   }
                 />
               </label>
-            </>
-          ) : null}
-
-          {step === 2 ? (
-            <>
               <label className="admin-cat-toggle">
                 <input
                   type="checkbox"
@@ -538,13 +509,13 @@ export default function CatalogCategoriesModal({
             </>
           ) : null}
 
-          {step === 3 && wizard.id ? (
+          {step === 2 ? (
             <>
               <CategoryProductAssigner
                 products={localProducts}
                 categories={items}
                 locale={locale}
-                categoryId={wizard.id}
+                categoryId={wizard.id || ""}
                 selectedIds={wizard.selectedProductIds}
                 typeLabel={typeLabel}
                 t={t}
@@ -560,7 +531,7 @@ export default function CatalogCategoriesModal({
                 localProducts.filter((product) =>
                   wizard.selectedProductIds.includes(product.id),
                 ),
-                wizard.id,
+                wizard.id || "",
               ) === 0 ? (
                 <p className="admin-cat-hint">{t("admin.catalog.nonePubliclyEligible")}</p>
               ) : null}
@@ -578,20 +549,19 @@ export default function CatalogCategoriesModal({
                   setError("");
                   return;
                 }
-                setStep((prev) => (prev === 3 ? 2 : 1));
+                setStep(1);
               }}
             >
               {step === 1 ? t("admin.catalog.cancel") : t("admin.catalog.back")}
             </button>
-            {step < 3 ? (
+            {step === 1 ? (
             <button
               type="button"
               className="btn btn-accent"
               disabled={saving}
-              aria-busy={saving}
               onClick={() => void goNext()}
             >
-              {saving ? t("admin.catalog.saving") : t("admin.catalog.next")}
+              {t("admin.catalog.next")}
             </button>
           ) : (
             <button

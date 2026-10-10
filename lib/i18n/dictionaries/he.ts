@@ -1807,7 +1807,7 @@ const he: Dictionary = {
       chooseCategory: "בחירת קטגוריה",
       next: "הבא",
       back: "חזרה",
-      finish: "סיום",
+      finish: "שמירה וסיום",
       progress: "שלבי הקטגוריה",
       stepInfo: "פרטי הקטגוריה",
       stepVisibility: "נראות הקטגוריה",
