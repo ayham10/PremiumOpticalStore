@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCustomerManagePath } from "@/lib/booking-manage-constants";
 import {
   defaultLocale,
   isLocale,
@@ -18,7 +19,7 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set("x-lumina-locale", locale);
 
-  if (request.nextUrl.pathname.startsWith("/appointments/manage")) {
+  if (isCustomerManagePath(request.nextUrl.pathname)) {
     response.headers.set("Cache-Control", "no-store, max-age=0, must-revalidate");
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     response.headers.set("Referrer-Policy", "no-referrer");

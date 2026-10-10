@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   BOOKING_MANAGE_CTA_URL,
+  TWILIO_APPROVED_MANAGE_CTA_URL,
+  TWILIO_APPROVED_MANAGE_PATH,
   EXPIRED_MANAGE_LINK_MESSAGE,
   EXPIRED_MANAGE_LINK_MESSAGE_EN,
   EXPIRED_MANAGE_LINK_MESSAGE_HE,
@@ -96,6 +98,10 @@ function sampleHxSid(): string {
 
 resetTwilioContentSidMapForTests();
 delete process.env.TWILIO_WHATSAPP_CONTENT_SIDS;
+delete process.env.TWILIO_TEMPLATE_BOOKING_HE;
+delete process.env.TWILIO_TEMPLATE_BOOKING_AR;
+delete process.env.TWILIO_TEMPLATE_OWNER_RESCHEDULED;
+delete process.env.TWILIO_TEMPLATE_OWNER_CANCELLED;
 
 const issuedA = issueBookingManageToken("2026-10-15", "10:30", 30);
 const issuedB = issueBookingManageToken("2026-10-15", "11:30", 30);
@@ -299,9 +305,15 @@ assert.equal(
   BOOKING_MANAGE_CTA_URL,
   "https://oyonoptics.com/appointments/manage/{{5}}",
 );
+assert.equal(TWILIO_APPROVED_MANAGE_PATH, "/booking/manage");
+assert.equal(
+  TWILIO_APPROVED_MANAGE_CTA_URL,
+  "https://oyonoptics.com/booking/manage/{{5}}",
+);
 
 const defaults = mergeBookingMessages(null);
 assert.equal(defaults.customerConfirmation.manageTemplateEnabled, false);
+assert.equal(defaults.customerConfirmation.confirmationMode, "original");
 assert.equal(
   defaults.customerConfirmation.manageTemplateName,
   "oyon_booking_manage_v2_ar",
@@ -309,44 +321,54 @@ assert.equal(
 assert.equal(defaults.ownerNotification.templateName, "");
 assert.equal(defaults.appointmentReminder.enabled, false);
 
-const defaultPlan = resolveCustomerConfirmationTemplate(defaults);
+const defaultPlan = resolveCustomerConfirmationTemplate(defaults, "ar", "token");
 assert.equal(defaultPlan.useManageTemplate, false);
 assert.equal(defaultPlan.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
 
 const enabledNoSid = mergeBookingMessages({
   customerConfirmation: {
     ...defaults.customerConfirmation,
-    manageTemplateEnabled: true,
+    confirmationMode: "new",
   },
 });
-const enabledNoSidPlan = resolveCustomerConfirmationTemplate(enabledNoSid);
+const enabledNoSidPlan = resolveCustomerConfirmationTemplate(
+  enabledNoSid,
+  "ar",
+  "token",
+);
 assert.equal(enabledNoSidPlan.useManageTemplate, false);
-assert.equal(enabledNoSidPlan.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
+assert.equal(enabledNoSidPlan.skipReason, "missing-sid");
 
 process.env.TWILIO_WHATSAPP_CONTENT_SIDS = `oyon_booking_manage_v2_ar:${sampleHxSid()}`;
 resetTwilioContentSidMapForTests();
 const enabledWithSid = mergeBookingMessages({
   customerConfirmation: {
     ...defaults.customerConfirmation,
-    manageTemplateEnabled: true,
+    confirmationMode: "new",
     manageTemplateContentSid: sampleHxSid(),
   },
 });
-const enabledPlan = resolveCustomerConfirmationTemplate(enabledWithSid);
+const enabledPlan = resolveCustomerConfirmationTemplate(
+  enabledWithSid,
+  "ar",
+  "token",
+);
 assert.equal(enabledPlan.useManageTemplate, true);
 assert.equal(enabledPlan.templateName, "oyon_booking_manage_v2_ar");
 assert.equal(enabledPlan.contentSid, sampleHxSid());
-const liveIfMissingToken = enabledPlan.useManageTemplate && Boolean(undefined);
-assert.equal(liveIfMissingToken, false);
+assert.equal(
+  resolveCustomerConfirmationTemplate(enabledWithSid, "ar").skipReason,
+  "missing-token",
+);
 
 assert.equal(manageTemplateNameForLanguage("he"), "oyon_booking_manage_v2_he");
 assert.equal(manageTemplateNameForLanguage("ar"), "oyon_booking_manage_v2_ar");
 assert.equal(
-  resolveCustomerConfirmationTemplate(defaults, "he").useManageTemplate,
+  resolveCustomerConfirmationTemplate(defaults, "he", "token").useManageTemplate,
   false,
 );
 assert.equal(
-  resolveCustomerConfirmationTemplate(defaults, "he").templateName,
+  resolveCustomerConfirmationTemplate(defaults, "he", "token").templateName,
   LIVE_CUSTOMER_CONFIRMATION_TEMPLATE,
 );
 
@@ -356,23 +378,31 @@ resetTwilioContentSidMapForTests();
 const enabledLang = mergeBookingMessages({
   customerConfirmation: {
     ...defaults.customerConfirmation,
-    manageTemplateEnabled: true,
+    confirmationMode: "new",
   },
 });
-const heEnabledPlan = resolveCustomerConfirmationTemplate(enabledLang, "he");
+const heEnabledPlan = resolveCustomerConfirmationTemplate(
+  enabledLang,
+  "he",
+  "token",
+);
 assert.equal(heEnabledPlan.useManageTemplate, true);
 assert.equal(heEnabledPlan.templateName, "oyon_booking_manage_v2_he");
 assert.equal(heEnabledPlan.contentSid, heSid);
 assert.equal(
-  resolveCustomerConfirmationTemplate(enabledLang, "ar").templateName,
+  resolveCustomerConfirmationTemplate(enabledLang, "ar", "token").templateName,
   "oyon_booking_manage_v2_ar",
 );
 
 process.env.TWILIO_WHATSAPP_CONTENT_SIDS = `oyon_booking_manage_v2_ar:${sampleHxSid()}`;
 resetTwilioContentSidMapForTests();
-const heWithoutSid = resolveCustomerConfirmationTemplate(enabledWithSid, "he");
+const heWithoutSid = resolveCustomerConfirmationTemplate(
+  enabledWithSid,
+  "he",
+  "token",
+);
 assert.equal(heWithoutSid.useManageTemplate, false);
-assert.equal(heWithoutSid.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
+assert.equal(heWithoutSid.skipReason, "missing-sid");
 
 assert.equal(OWNER_NOTIFICATION_TEMPLATE, "owner_notification");
 assert.equal(APPOINTMENT_REMINDER_TEMPLATE, "appointment_reminder");
@@ -455,7 +485,7 @@ const messaging = readFileSync(
 );
 assert.match(messaging, /OWNER_NOTIFICATION_TEMPLATE = "owner_notification"/);
 assert.match(messaging, /APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder"/);
-assert.match(messaging, /manageTemplateEnabled === true/);
+assert.match(messaging, /customerConfirmationMode/);
 assert.match(messaging, /shouldSkipBookingWhatsApp/);
 assert.match(messaging, /isSilentManageTestAppointment/);
 assert.match(messaging, /shouldDispatchBookingMessages/);
@@ -633,6 +663,8 @@ const managePatch = readFileSync(
 );
 assert.doesNotMatch(managePatch, /dispatchBookingMessages/);
 assert.doesNotMatch(managePatch, /sendSms/);
+assert.match(managePatch, /dispatchOwnerCancelNotification/);
+assert.match(managePatch, /dispatchOwnerRescheduleNotification/);
 
 const missingSecret = resolvePreviewTestStoreConfig({
   SUPABASE_URL: "https://example.supabase.co",

@@ -60,7 +60,10 @@ export default function Navbar() {
     pathname === "/shop" ||
     pathname === "/promotions";
   const isBook = pathname === "/book";
-  const isManage = pathname?.startsWith("/appointments/manage") ?? false;
+  const isManage =
+    (pathname?.startsWith("/appointments/manage") ||
+      pathname?.startsWith("/booking/manage")) ??
+    false;
   const isSolidDark =
     isProduct ||
     isEyeExam ||

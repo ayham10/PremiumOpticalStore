@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { handleRouteError, jsonError, pushActivity } from "@/lib/api/helpers";
 import { getStore, updateStore } from "@/lib/db/store";
 import { pickLocalized } from "@/lib/booking-services";
@@ -20,6 +20,10 @@ import {
   manageAccessMessage,
   publicManageAppointmentView,
 } from "@/lib/booking-manage-token";
+import {
+  dispatchOwnerCancelNotification,
+  dispatchOwnerRescheduleNotification,
+} from "@/lib/booking-messaging";
 import {
   assertCustomerAppointmentsPreserved,
   isSilentManageTestAppointment,
@@ -67,6 +71,14 @@ function noStore(response: NextResponse) {
   response.headers.set("Cache-Control", "no-store, max-age=0");
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
+}
+
+function scheduleAfterResponse(task: () => Promise<void>) {
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
 }
 
 export async function GET(request: Request) {
@@ -157,6 +169,20 @@ export async function PATCH(request: Request) {
 
     let publicView: ReturnType<typeof publicManageAppointmentView> | null = null;
     let dateLabel = "";
+    type OwnerNotify =
+      | {
+          kind: "cancel";
+          appointment: EyeExamAppointment;
+          serviceLabel: string;
+        }
+      | {
+          kind: "reschedule";
+          appointment: EyeExamAppointment;
+          originalDate: string;
+          originalTime: string;
+          serviceLabel: string;
+        };
+    const ownerNotifyRef: { current: OwnerNotify | null } = { current: null };
 
     const previewExisting = await locatePreviewTestAppointment(token);
     if (previewExisting) {
@@ -266,6 +292,13 @@ export async function PATCH(request: Request) {
             : updated.appointmentType;
           publicView = publicManageAppointmentView(updated, serviceLabel);
           dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
+          if (!isSilentManageTestAppointment(current)) {
+            ownerNotifyRef.current = {
+              kind: "cancel",
+              appointment: current,
+              serviceLabel,
+            };
+          }
           pushActivity(store, {
             actor: "customer",
             action: "cancel",
@@ -326,6 +359,15 @@ export async function PATCH(request: Request) {
           : updated.appointmentType;
         publicView = publicManageAppointmentView(updated, serviceLabel);
         dateLabel = formatEyeExamDateDisplay(updated.appointmentDate);
+        if (!isSilentManageTestAppointment(current)) {
+          ownerNotifyRef.current = {
+            kind: "reschedule",
+            appointment: updated,
+            originalDate: current.appointmentDate,
+            originalTime: current.appointmentTime,
+            serviceLabel,
+          };
+        }
         pushActivity(store, {
           actor: "customer",
           action: "update",
@@ -336,6 +378,23 @@ export async function PATCH(request: Request) {
         return store;
       });
     });
+
+    if (ownerNotifyRef.current) {
+      const notify = ownerNotifyRef.current;
+      scheduleAfterResponse(async () => {
+        if (notify.kind === "cancel") {
+          await dispatchOwnerCancelNotification(notify.appointment, {
+            serviceLabel: notify.serviceLabel,
+          });
+          return;
+        }
+        await dispatchOwnerRescheduleNotification(notify.appointment, {
+          originalDate: notify.originalDate,
+          originalTime: notify.originalTime,
+          serviceLabel: notify.serviceLabel,
+        });
+      });
+    }
 
     return noStore(
       NextResponse.json({

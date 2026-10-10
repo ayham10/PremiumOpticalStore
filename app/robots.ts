@@ -5,7 +5,12 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/appointments/manage", "/appointments/manage/"],
+      disallow: [
+        "/appointments/manage",
+        "/appointments/manage/",
+        "/booking/manage",
+        "/booking/manage/",
+      ],
     },
   };
 }

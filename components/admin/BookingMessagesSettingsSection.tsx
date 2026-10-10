@@ -1,21 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Bell,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  ChevronDown,
   Clock,
-  MessageCircle,
   Phone,
   Plug,
   RefreshCw,
   TriangleAlert,
   Unplug,
-  UserRound,
   Zap,
 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
+import {
+  maskWhatsAppDestination,
+  resolveOwnerNotificationDestination,
+} from "@/lib/booking-messages";
 import type { BookingMessagesSettings } from "@/lib/types";
 
 type Props = {
@@ -36,6 +44,14 @@ const SHOW_EDITABLE_TEMPLATE_CONTROLS = false;
 const DISPLAY_CUSTOMER_TEMPLATE = "oyon_booking_confirmation";
 const DISPLAY_OWNER_TEMPLATE = "owner_notification";
 const DISPLAY_REMINDER_TEMPLATE = "appointment_reminder";
+const TEMPLATE_BOOKING_HE = "oyon_booking_manage_v2_he";
+const TEMPLATE_BOOKING_AR = "oyon_booking_manage_v2_ar";
+const TEMPLATE_OWNER_RESCHEDULED = "oyon_booking_rescheduled_owner";
+const TEMPLATE_OWNER_CANCELLED = "oyon_booking_cancelled_owner";
+const ENV_BOOKING_HE = "TWILIO_TEMPLATE_BOOKING_HE";
+const ENV_BOOKING_AR = "TWILIO_TEMPLATE_BOOKING_AR";
+const ENV_OWNER_RESCHEDULED = "TWILIO_TEMPLATE_OWNER_RESCHEDULED";
+const ENV_OWNER_CANCELLED = "TWILIO_TEMPLATE_OWNER_CANCELLED";
 
 /**
  * Visual-only Admin previews with example values.
@@ -68,7 +84,109 @@ const TWILIO_APPOINTMENT_REMINDER_PREVIEW = `⏰ تذكير بموعدك في OY
 
 نتطلع لرؤيتك 💜`;
 
+const TWILIO_BOOKING_HE_PREVIEW = `שלום דנה 👋
+
+התור שלך ב-OYON Optics | עיון אופטיקה אושר
+
+📅 תאריך: 15/10/2026
+🕐 שעה: 18:30
+
+https://oyonoptics.com/booking/manage/{{5}}`;
+
+const TWILIO_BOOKING_AR_PREVIEW = `مرحباً محمد 👋
+
+تم تأكيد موعدك في OYON Optics | عيون أوبتيكا
+
+📅 التاريخ: 15/10/2026
+🕐 الساعة: 18:30
+
+https://oyonoptics.com/booking/manage/{{5}}`;
+
+const TWILIO_OWNER_RESCHEDULED_PREVIEW = `🔔 تم تغيير الموعد — OYON Optics
+
+👤 العميل: محمد علي
+📱 الهاتف: +972501234567
+👓 الخدمة: فحص نظر
+📅 من: 15/10/2026 10:30
+📅 إلى: 16/10/2026 11:00`;
+
+const TWILIO_OWNER_CANCELLED_PREVIEW = `🔔 تم إلغاء الموعد — OYON Optics
+
+👤 العميل: محمد علي
+📅 التاريخ: 15/10/2026
+🕐 الساعة: 10:30
+📱 الهاتف: +972501234567
+👓 الخدمة: فحص نظر`;
+
 const REMINDER_MINUTE_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
+
+type AccordionId =
+  | "provider"
+  | "customer"
+  | "bookingHe"
+  | "bookingAr"
+  | "owner"
+  | "ownerRescheduled"
+  | "ownerCancelled"
+  | "reminder";
+
+function AccordionCard({
+  id,
+  title,
+  statusLabel,
+  statusTone = "idle",
+  open,
+  onToggle,
+  children,
+}: {
+  id: AccordionId;
+  title: string;
+  statusLabel: string;
+  statusTone?: "on" | "off" | "ready" | "idle";
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`admin-bm-card admin-bm-acc-card${open ? " is-open" : ""}`}
+    >
+      <h3 className="admin-bm-acc-heading">
+        <button
+          type="button"
+          id={`bm-${id}-header`}
+          className="admin-bm-acc-head"
+          aria-expanded={open}
+          aria-controls={`bm-${id}-panel`}
+          onClick={onToggle}
+        >
+          <span className="admin-bm-acc-title">{title}</span>
+          <span className="admin-bm-acc-meta">
+            <span className={`admin-bm-acc-status is-${statusTone}`}>
+              {statusLabel}
+            </span>
+            <ChevronDown
+              className="admin-bm-acc-chevron"
+              size={18}
+              strokeWidth={1.75}
+              aria-hidden
+            />
+          </span>
+        </button>
+      </h3>
+      {open ? (
+        <div
+          id={`bm-${id}-panel`}
+          role="region"
+          aria-labelledby={`bm-${id}-header`}
+          className="admin-bm-acc-body"
+        >
+          <div className="admin-bm-acc-body-inner">{children}</div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function reminderSelectValue(minutesBefore: number): number {
   if (
@@ -155,10 +273,12 @@ function WhatsAppMessagePreview({
   templateName,
   text,
   disabled,
+  lang = "ar",
 }: {
   templateName: string;
   text: string;
   disabled?: boolean;
+  lang?: "ar" | "he";
 }) {
   const { t } = useLocale();
 
@@ -175,11 +295,11 @@ function WhatsAppMessagePreview({
         <div
           className="admin-bm-wa-thread"
           dir="rtl"
-          lang="ar"
+          lang={lang}
           aria-readonly="true"
         >
           <div className="admin-bm-wa-bubble">
-            <p className="admin-bm-wa-text" dir="rtl" lang="ar">
+            <p className="admin-bm-wa-text" dir="rtl" lang={lang}>
               {text}
             </p>
           </div>
@@ -187,6 +307,67 @@ function WhatsAppMessagePreview({
       </div>
       <p className="admin-bm-placeholders">{t("admin.settings.bmPreviewHint")}</p>
     </div>
+  );
+}
+
+function ApprovedTemplateDetails({
+  templateName,
+  envName,
+  language,
+  configured,
+  enabled,
+  previewText,
+  previewLang = "ar",
+}: {
+  templateName: string;
+  envName: string;
+  language: string;
+  configured: boolean;
+  enabled: boolean;
+  previewText: string;
+  previewLang?: "ar" | "he";
+}) {
+  const { t } = useLocale();
+  return (
+    <>
+      <dl className="admin-bm-meta-list">
+        <div>
+          <dt>{t("admin.settings.bmTemplate")}</dt>
+          <dd dir="ltr">{templateName}</dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmTemplateLanguage")}</dt>
+          <dd>{language}</dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmConfigStatus")}</dt>
+          <dd>
+            {configured
+              ? t("admin.settings.bmConfigured")
+              : t("admin.settings.bmNotConfigured")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmNotificationState")}</dt>
+          <dd>
+            {enabled
+              ? t("admin.settings.bmEnabled")
+              : t("admin.settings.bmInactive")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("admin.settings.bmServerVariable")}</dt>
+          <dd dir="ltr">{envName}</dd>
+        </div>
+      </dl>
+      <p className="admin-bm-hint">{t("admin.settings.bmEnvManagedHint")}</p>
+      <WhatsAppMessagePreview
+        templateName={templateName}
+        text={previewText}
+        disabled={!enabled || !configured}
+        lang={previewLang}
+      />
+    </>
   );
 }
 
@@ -255,6 +436,14 @@ export default function BookingMessagesSettingsSection({
   const [qrReceivedAt, setQrReceivedAt] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const pollQrRef = useRef(false);
+  const [openCard, setOpenCard] = useState<AccordionId | null>(null);
+  const [templateConfigured, setTemplateConfigured] = useState<
+    Record<string, boolean>
+  >({});
+
+  function toggleCard(id: AccordionId) {
+    setOpenCard((current) => (current === id ? null : id));
+  }
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -541,6 +730,27 @@ export default function BookingMessagesSettingsSection({
     void checkTwilioHealth();
   }, [checkTwilioHealth]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void apiFetch<{
+      templates?: Record<string, { configured?: boolean }>;
+    }>("/api/settings/twilio/templates")
+      .then((data) => {
+        if (cancelled) return;
+        const next: Record<string, boolean> = {};
+        for (const [name, info] of Object.entries(data.templates || {})) {
+          next[name] = info?.configured === true;
+        }
+        setTemplateConfigured(next);
+      })
+      .catch(() => {
+        if (!cancelled) setTemplateConfigured({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const twilioTone =
     twilioHealth === "connected"
       ? "ready"
@@ -562,15 +772,40 @@ export default function BookingMessagesSettingsSection({
     ? t("admin.settings.bmOracleReady")
     : t("admin.settings.bmOracleBackupIdle");
 
+  const providerConnected = twilioHealth === "connected";
+  const providerStatusLabel = providerConnected
+    ? t("admin.settings.bmTwilioConnected")
+    : t("admin.settings.bmDisconnected");
+  const confirmationMode =
+    value.customerConfirmation.confirmationMode === "new" ? "new" : "original";
+  const ownerTestActive = value.ownerNotification.testDestinationEnabled === true;
+  const ownerDestination = resolveOwnerNotificationDestination(value);
+  const ownerDestinationLabel =
+    ownerDestination.source === "test"
+      ? t("admin.settings.bmOwnerDestinationTest")
+      : ownerDestination.source === "business"
+        ? t("admin.settings.bmOwnerDestinationBusiness")
+        : ownerTestActive
+          ? t("admin.settings.bmOwnerTestInvalid")
+          : t("admin.settings.bmOwnerDestinationBusiness");
+  const ownerDestinationMask = maskWhatsAppDestination(ownerDestination.to);
+
   return (
     <div className="admin-bm">
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <Plug className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmProvider")}
-          </span>
-        </header>
+      {ownerTestActive ? (
+        <p className="admin-bm-test-banner" role="status">
+          {t("admin.settings.bmOwnerTestBanner")}
+          {ownerDestinationMask ? ` (${ownerDestinationMask})` : ""}
+        </p>
+      ) : null}
+      <AccordionCard
+        id="provider"
+        title={t("admin.settings.bmProvider")}
+        statusLabel={providerStatusLabel}
+        statusTone={providerConnected ? "ready" : "idle"}
+        open={openCard === "provider"}
+        onToggle={() => toggleCard("provider")}
+      >
         <div className="admin-bm-field">
           <span className="admin-bm-field-label">{t("admin.settings.bmProviderName")}</span>
           <p className="admin-bm-provider-name">
@@ -606,7 +841,53 @@ export default function BookingMessagesSettingsSection({
           </div>
         ) : null}
         <p className="admin-bm-hint">{t("admin.settings.bmTwilioHint")}</p>
-      </section>
+      </AccordionCard>
+
+      <div className="admin-bm-card admin-bm-mode">
+        <span className="admin-bm-field-label">
+          {t("admin.settings.bmConfirmationMode")}
+        </span>
+        <div className="admin-bm-mode-switch" role="radiogroup" aria-label={t("admin.settings.bmConfirmationMode")}>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={confirmationMode === "original"}
+            onClick={() =>
+              onChange({
+                ...value,
+                customerConfirmation: {
+                  ...value.customerConfirmation,
+                  confirmationMode: "original",
+                },
+              })
+            }
+          >
+            {t("admin.settings.bmModeOriginal")}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={confirmationMode === "new"}
+            onClick={() =>
+              onChange({
+                ...value,
+                customerConfirmation: {
+                  ...value.customerConfirmation,
+                  confirmationMode: "new",
+                },
+              })
+            }
+          >
+            {t("admin.settings.bmModeNew")}
+          </button>
+        </div>
+        <p className="admin-bm-hint">
+          {confirmationMode === "new"
+            ? t("admin.settings.bmModeNewHint")
+            : t("admin.settings.bmModeOriginalHint")}
+        </p>
+        <p className="admin-bm-hint">{t("admin.settings.bmModeSaveHint")}</p>
+      </div>
 
       {SHOW_ORACLE_ADMIN_CONTROLS ? (
       <section className="admin-bm-card admin-bm-card-backup">
@@ -779,24 +1060,29 @@ export default function BookingMessagesSettingsSection({
       </AdminModal>
       ) : null}
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <MessageCircle className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmCustomer")}
-          </span>
-          <ToggleRow
-            id="bm-customer-enabled"
-            label={t("admin.settings.bmEnabled")}
-            checked={value.customerConfirmation.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...value,
-                customerConfirmation: { ...value.customerConfirmation, enabled },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="customer"
+        title={t("admin.settings.bmCustomer")}
+        statusLabel={
+          value.customerConfirmation.enabled
+            ? t("admin.settings.bmEnabled")
+            : t("admin.settings.bmInactive")
+        }
+        statusTone={value.customerConfirmation.enabled ? "on" : "off"}
+        open={openCard === "customer"}
+        onToggle={() => toggleCard("customer")}
+      >
+        <ToggleRow
+          id="bm-customer-enabled"
+          label={t("admin.settings.bmEnabled")}
+          checked={value.customerConfirmation.enabled}
+          onChange={(enabled) =>
+            onChange({
+              ...value,
+              customerConfirmation: { ...value.customerConfirmation, enabled },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
           <>
@@ -834,88 +1120,92 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.customerConfirmation.enabled}
           />
         )}
-      </section>
+      </AccordionCard>
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <MessageCircle className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmManageTemplate")}
-          </span>
-          <ToggleRow
-            id="bm-manage-template-enabled"
-            label={t("admin.settings.bmManageTemplateEnable")}
-            checked={value.customerConfirmation.manageTemplateEnabled === true}
-            onChange={(manageTemplateEnabled) =>
-              onChange({
-                ...value,
-                customerConfirmation: {
-                  ...value.customerConfirmation,
-                  manageTemplateEnabled,
-                },
-              })
-            }
-          />
-        </header>
-        <p className="admin-bm-hint">{t("admin.settings.bmManageTemplateHint")}</p>
-        <div className="admin-bm-field">
-          <label className="admin-bm-field-label" htmlFor="bm-manage-content-sid">
-            {t("admin.settings.bmManageTemplateSid")}
-          </label>
-          <input
-            id="bm-manage-content-sid"
-            className="input admin-bm-input"
-            dir="ltr"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="HX…"
-            value={value.customerConfirmation.manageTemplateContentSid || ""}
-            onChange={(e) =>
-              onChange({
-                ...value,
-                customerConfirmation: {
-                  ...value.customerConfirmation,
-                  manageTemplateContentSid: e.target.value.trim(),
-                },
-              })
-            }
-          />
-          <p className="admin-bm-placeholders">
-            {t("admin.settings.bmManageTemplateSidHint")}
-          </p>
-        </div>
-        <WhatsAppMessagePreview
-          templateName={
-            value.customerConfirmation.manageTemplateName ||
-            "oyon_booking_manage_v2_ar / oyon_booking_manage_v2_he"
-          }
-          text={`{{1}} ${t("common.name")}
-{{2}} ${t("manage.service")}
-{{3}} ${t("common.date")}
-{{4}} ${t("common.time")}
-{{5}} https://oyonoptics.com/appointments/manage/{{5}}`}
-          disabled={!value.customerConfirmation.manageTemplateEnabled}
+      <AccordionCard
+        id="bookingHe"
+        title={t("admin.settings.bmBookingHe")}
+        statusLabel={
+          templateConfigured[TEMPLATE_BOOKING_HE]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={templateConfigured[TEMPLATE_BOOKING_HE] ? "ready" : "idle"}
+        open={openCard === "bookingHe"}
+        onToggle={() => toggleCard("bookingHe")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_BOOKING_HE}
+          envName={ENV_BOOKING_HE}
+          language={t("admin.settings.bmLanguageHe")}
+          configured={Boolean(templateConfigured[TEMPLATE_BOOKING_HE])}
+          enabled={value.customerConfirmation.enabled}
+          previewText={TWILIO_BOOKING_HE_PREVIEW}
+          previewLang="he"
         />
-      </section>
+      </AccordionCard>
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <UserRound className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmOwner")}
-          </span>
-          <ToggleRow
-            id="bm-owner-enabled"
-            label={t("admin.settings.bmEnabled")}
-            checked={value.ownerNotification.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...value,
-                ownerNotification: { ...value.ownerNotification, enabled },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="bookingAr"
+        title={t("admin.settings.bmBookingAr")}
+        statusLabel={
+          templateConfigured[TEMPLATE_BOOKING_AR]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={templateConfigured[TEMPLATE_BOOKING_AR] ? "ready" : "idle"}
+        open={openCard === "bookingAr"}
+        onToggle={() => toggleCard("bookingAr")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_BOOKING_AR}
+          envName={ENV_BOOKING_AR}
+          language={t("admin.settings.bmLanguageAr")}
+          configured={Boolean(templateConfigured[TEMPLATE_BOOKING_AR])}
+          enabled={value.customerConfirmation.enabled}
+          previewText={TWILIO_BOOKING_AR_PREVIEW}
+        />
+      </AccordionCard>
+
+      <AccordionCard
+        id="owner"
+        title={t("admin.settings.bmOwner")}
+        statusLabel={
+          ownerTestActive
+            ? t("admin.settings.bmOwnerTestActive")
+            : value.ownerNotification.enabled
+              ? t("admin.settings.bmEnabled")
+              : t("admin.settings.bmInactive")
+        }
+        statusTone={ownerTestActive ? "off" : value.ownerNotification.enabled ? "on" : "off"}
+        open={openCard === "owner"}
+        onToggle={() => toggleCard("owner")}
+      >
+        {ownerTestActive ? (
+          <p className="admin-bm-test-banner" role="status">
+            {t("admin.settings.bmOwnerTestBanner")}
+          </p>
+        ) : null}
+        <p className="admin-bm-hint" role="status">
+          {ownerDestinationLabel}
+          {ownerDestinationMask ? ` (${ownerDestinationMask})` : ""}
+        </p>
+        {ownerTestActive && ownerDestination.source !== "test" ? (
+          <p className="admin-bm-test-banner" role="status">
+            {t("admin.settings.bmOwnerTestInvalid")}
+          </p>
+        ) : null}
+        <ToggleRow
+          id="bm-owner-enabled"
+          label={t("admin.settings.bmEnabled")}
+          checked={value.ownerNotification.enabled}
+          onChange={(enabled) =>
+            onChange({
+              ...value,
+              ownerNotification: { ...value.ownerNotification, enabled },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
@@ -942,6 +1232,63 @@ export default function BookingMessagesSettingsSection({
               }
             />
           </div>
+          <ToggleRow
+            id="bm-owner-test-enabled"
+            label={t("admin.settings.bmOwnerTestEnable")}
+            checked={ownerTestActive}
+            onChange={(testDestinationEnabled) =>
+              onChange({
+                ...value,
+                ownerNotification: {
+                  ...value.ownerNotification,
+                  testDestinationEnabled,
+                },
+              })
+            }
+          />
+          <div className="admin-bm-field">
+            <label className="admin-bm-field-label" htmlFor="bm-owner-test-phone">
+              {t("admin.settings.bmOwnerTestPhone")}
+            </label>
+            <input
+              id="bm-owner-test-phone"
+              className="input admin-bm-input"
+              dir="ltr"
+              inputMode="tel"
+              placeholder="972501234567"
+              value={value.ownerNotification.testWhatsApp || ""}
+              disabled={!value.ownerNotification.enabled}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  ownerNotification: {
+                    ...value.ownerNotification,
+                    testWhatsApp: e.target.value,
+                  },
+                })
+              }
+            />
+            <p className="admin-bm-placeholders">
+              {t("admin.settings.bmOwnerTestHint")}
+            </p>
+          </div>
+          {ownerTestActive ? (
+            <button
+              type="button"
+              className="btn btn-ghost admin-bm-test-btn"
+              onClick={() =>
+                onChange({
+                  ...value,
+                  ownerNotification: {
+                    ...value.ownerNotification,
+                    testDestinationEnabled: false,
+                  },
+                })
+              }
+            >
+              {t("admin.settings.bmOwnerTestRestore")}
+            </button>
+          ) : null}
           {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
             <TemplateSelect
               id="bm-owner-template"
@@ -979,26 +1326,79 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.ownerNotification.enabled}
           />
         )}
-      </section>
+      </AccordionCard>
 
-      <section className="admin-bm-card">
-        <header className="admin-bm-card-head">
-          <span className="admin-bm-card-title">
-            <Bell className="admin-bm-gold-icon" size={16} strokeWidth={1.75} aria-hidden />
-            {t("admin.settings.bmReminder")}
-          </span>
-          <ToggleRow
-            id="bm-reminder-enabled"
-            label={t("admin.settings.bmEnabled")}
-            checked={value.appointmentReminder.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...value,
-                appointmentReminder: { ...value.appointmentReminder, enabled },
-              })
-            }
-          />
-        </header>
+      <AccordionCard
+        id="ownerRescheduled"
+        title={t("admin.settings.bmOwnerRescheduled")}
+        statusLabel={
+          templateConfigured[TEMPLATE_OWNER_RESCHEDULED]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={
+          templateConfigured[TEMPLATE_OWNER_RESCHEDULED] ? "ready" : "idle"
+        }
+        open={openCard === "ownerRescheduled"}
+        onToggle={() => toggleCard("ownerRescheduled")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_OWNER_RESCHEDULED}
+          envName={ENV_OWNER_RESCHEDULED}
+          language={t("admin.settings.bmLanguageAr")}
+          configured={Boolean(templateConfigured[TEMPLATE_OWNER_RESCHEDULED])}
+          enabled={value.ownerNotification.enabled}
+          previewText={TWILIO_OWNER_RESCHEDULED_PREVIEW}
+        />
+      </AccordionCard>
+
+      <AccordionCard
+        id="ownerCancelled"
+        title={t("admin.settings.bmOwnerCancelled")}
+        statusLabel={
+          templateConfigured[TEMPLATE_OWNER_CANCELLED]
+            ? t("admin.settings.bmConfigured")
+            : t("admin.settings.bmNotConfigured")
+        }
+        statusTone={
+          templateConfigured[TEMPLATE_OWNER_CANCELLED] ? "ready" : "idle"
+        }
+        open={openCard === "ownerCancelled"}
+        onToggle={() => toggleCard("ownerCancelled")}
+      >
+        <ApprovedTemplateDetails
+          templateName={TEMPLATE_OWNER_CANCELLED}
+          envName={ENV_OWNER_CANCELLED}
+          language={t("admin.settings.bmLanguageAr")}
+          configured={Boolean(templateConfigured[TEMPLATE_OWNER_CANCELLED])}
+          enabled={value.ownerNotification.enabled}
+          previewText={TWILIO_OWNER_CANCELLED_PREVIEW}
+        />
+      </AccordionCard>
+
+      <AccordionCard
+        id="reminder"
+        title={t("admin.settings.bmReminder")}
+        statusLabel={
+          value.appointmentReminder.enabled
+            ? t("admin.settings.bmEnabled")
+            : t("admin.settings.bmInactive")
+        }
+        statusTone={value.appointmentReminder.enabled ? "on" : "off"}
+        open={openCard === "reminder"}
+        onToggle={() => toggleCard("reminder")}
+      >
+        <ToggleRow
+          id="bm-reminder-enabled"
+          label={t("admin.settings.bmEnabled")}
+          checked={value.appointmentReminder.enabled}
+          onChange={(enabled) =>
+            onChange({
+              ...value,
+              appointmentReminder: { ...value.appointmentReminder, enabled },
+            })
+          }
+        />
         <p className="admin-bm-hint">{t("admin.settings.bmViaTwilio")}</p>
         <div className="admin-bm-fields">
           <div className="admin-bm-field">
@@ -1065,7 +1465,7 @@ export default function BookingMessagesSettingsSection({
             disabled={!value.appointmentReminder.enabled}
           />
         )}
-      </section>
+      </AccordionCard>
     </div>
   );
 }

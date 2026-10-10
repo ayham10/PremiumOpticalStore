@@ -361,12 +361,19 @@ export interface BrandingSettings {
 
 export type BookingMessageProvider = "twilio" | "meta" | "console";
 
+export type CustomerConfirmationMode = "original" | "new";
+
 export interface BookingMessagesSettings {
   provider: BookingMessageProvider;
   customerConfirmation: {
     enabled: boolean;
     templateName: string;
     body: string;
+    /**
+     * original = existing working confirmation (no manage CTA).
+     * new = approved HE/AR manage templates. Missing defaults to original.
+     */
+    confirmationMode?: CustomerConfirmationMode;
     /** Pending Twilio CTA template. Off until Meta approval. */
     manageTemplateName?: string;
     manageTemplateEnabled?: boolean;
@@ -378,6 +385,9 @@ export interface BookingMessagesSettings {
     ownerWhatsApp: string;
     templateName: string;
     body: string;
+    /** Temporary owner test destination. Never overwrites ownerWhatsApp. */
+    testDestinationEnabled?: boolean;
+    testWhatsApp?: string;
   };
   appointmentReminder: {
     enabled: boolean;

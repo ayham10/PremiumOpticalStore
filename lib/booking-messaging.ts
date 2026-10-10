@@ -1,9 +1,8 @@
 import { pushSmsLog } from "@/lib/api/helpers";
 import {
-  applyBookingMessagePlaceholders,
-  DEFAULT_APPOINTMENT_REMINDER_BODY,
-  DEFAULT_OWNER_NOTIFICATION_BODY,
+  customerConfirmationMode,
   mergeBookingMessages,
+  resolveOwnerNotificationDestination,
 } from "@/lib/booking-messages";
 import { pickLocalized } from "@/lib/booking-services";
 import { getStore, invalidateStoreCache, updateStore } from "@/lib/db/store";
@@ -27,6 +26,8 @@ import {
   buildManageTemplateContentVariables,
   CUSTOMER_MANAGE_TEMPLATE_NAME_AR,
   CUSTOMER_MANAGE_TEMPLATE_NAME_HE,
+  OWNER_CANCELLED_TEMPLATE_NAME,
+  OWNER_RESCHEDULED_TEMPLATE_NAME,
 } from "@/lib/booking-manage-token";
 import { isBookingE2EIsolated, recordE2EOutbound } from "@/lib/booking-e2e";
 import { shouldSkipBookingWhatsApp } from "@/lib/booking-manage-test";
@@ -43,6 +44,8 @@ export const LIVE_CUSTOMER_CONFIRMATION_TEMPLATE =
   "oyon_booking_confirmation_hx716fcfd9ac41ae0e332e569b9b4fbc39";
 export const OWNER_NOTIFICATION_TEMPLATE = "owner_notification";
 export const APPOINTMENT_REMINDER_TEMPLATE = "appointment_reminder";
+export const OWNER_RESCHEDULED_TEMPLATE = OWNER_RESCHEDULED_TEMPLATE_NAME;
+export const OWNER_CANCELLED_TEMPLATE = OWNER_CANCELLED_TEMPLATE_NAME;
 const CUSTOMER_CONFIRMATION_TEMPLATE = LIVE_CUSTOMER_CONFIRMATION_TEMPLATE;
 
 const REMINDER_GRACE_MS = 30 * 60 * 1000;
@@ -87,6 +90,7 @@ export function resolveManageTemplateName(
   language?: string | null,
 ): string {
   if (language === "he") return CUSTOMER_MANAGE_TEMPLATE_NAME_HE;
+  if (language === "ar") return CUSTOMER_MANAGE_TEMPLATE_NAME_AR;
   return (
     bookingMessages.customerConfirmation.manageTemplateName?.trim() ||
     CUSTOMER_MANAGE_TEMPLATE_NAME_AR
@@ -106,26 +110,93 @@ export function resolveManageTemplateContentSid(
   );
 }
 
-export function resolveCustomerConfirmationTemplate(
-  bookingMessages: BookingMessagesSettings,
-  language?: string | null,
-): {
+export type CustomerConfirmationPlan = {
+  mode: "original" | "new";
   templateName: string;
   useManageTemplate: boolean;
   contentSid: string | null;
-} {
+  skipReason: "disabled" | "missing-sid" | "missing-token" | null;
+};
+
+export function resolveCustomerConfirmationTemplate(
+  bookingMessages: BookingMessagesSettings,
+  language?: string | null,
+  manageToken?: string | null,
+): CustomerConfirmationPlan {
+  const mode = customerConfirmationMode(bookingMessages);
+  const original = {
+    mode,
+    templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
+    useManageTemplate: false as const,
+    contentSid: resolveTwilioContentSid(CUSTOMER_CONFIRMATION_TEMPLATE),
+    skipReason: null as "disabled" | "missing-sid" | "missing-token" | null,
+  };
+
+  if (!bookingMessages.customerConfirmation.enabled) {
+    return { ...original, skipReason: "disabled" };
+  }
+
+  if (language === "en" || mode !== "new") {
+    return original;
+  }
+
   const manageName = resolveManageTemplateName(bookingMessages, language);
-  const enabled =
-    bookingMessages.customerConfirmation.manageTemplateEnabled === true;
   const contentSid = resolveManageTemplateContentSid(bookingMessages, language);
-  if (enabled && contentSid) {
-    return { templateName: manageName, useManageTemplate: true, contentSid };
+  if (!contentSid) {
+    return {
+      mode,
+      templateName: manageName,
+      useManageTemplate: false,
+      contentSid: null,
+      skipReason: "missing-sid",
+    };
+  }
+  if (!manageToken) {
+    return {
+      mode,
+      templateName: manageName,
+      useManageTemplate: false,
+      contentSid,
+      skipReason: "missing-token",
+    };
   }
   return {
-    templateName: CUSTOMER_CONFIRMATION_TEMPLATE,
-    useManageTemplate: false,
-    contentSid: resolveTwilioContentSid(CUSTOMER_CONFIRMATION_TEMPLATE),
+    mode,
+    templateName: manageName,
+    useManageTemplate: true,
+    contentSid,
+    skipReason: null,
   };
+}
+
+/**
+ * At most one customer confirmation. Never returns both original and new.
+ * New-mode SID/token gaps skip instead of falling back after a send attempt.
+ */
+export function planCustomerConfirmationSend(
+  bookingMessages: BookingMessagesSettings,
+  language?: string | null,
+  manageToken?: string | null,
+): CustomerConfirmationPlan[] {
+  const plan = resolveCustomerConfirmationTemplate(
+    bookingMessages,
+    language,
+    manageToken,
+  );
+  return plan.skipReason ? [] : [plan];
+}
+
+export function customerConfirmationAlreadySent(
+  store: AppData,
+  appointmentId: string,
+): boolean {
+  return store.smsLogs.some(
+    (log) =>
+      log.appointmentId === appointmentId &&
+      log.type === "appointment_confirmation" &&
+      (log.status === "sent" || log.status === "queued") &&
+      log.body.startsWith("WhatsApp:"),
+  );
 }
 
 function buildOwnerNotificationContentVariables(
@@ -147,6 +218,55 @@ function buildOwnerNotificationContentVariables(
     customer_phone: appointment.phone,
     service_name: serviceLabel,
   };
+}
+
+export function buildOwnerRescheduleContentVariables(opts: {
+  customerName: string;
+  customerPhone: string;
+  serviceLabel: string;
+  originalDateLabel: string;
+  originalTime: string;
+  newDateLabel: string;
+  newTime: string;
+}): Record<string, string> {
+  return {
+    "1": opts.customerName,
+    "2": opts.customerPhone,
+    "3": opts.serviceLabel,
+    "4": opts.originalDateLabel,
+    "5": opts.originalTime,
+    "6": opts.newDateLabel,
+    "7": opts.newTime,
+  };
+}
+
+export function buildOwnerCancelContentVariables(opts: {
+  customerName: string;
+  dateLabel: string;
+  time: string;
+  customerPhone: string;
+  serviceLabel: string;
+}): Record<string, string> {
+  return {
+    "1": opts.customerName,
+    "2": opts.dateLabel,
+    "3": opts.time,
+    "4": opts.customerPhone,
+    "5": opts.serviceLabel,
+  };
+}
+
+export function ownerRescheduleDedupNote(
+  originalDate: string,
+  originalTime: string,
+  newDate: string,
+  newTime: string,
+): string {
+  return `owner-reschedule:${originalDate} ${originalTime}->${newDate} ${newTime}`;
+}
+
+export function ownerCancelDedupNote(date: string, time: string): string {
+  return `owner-cancel:${date} ${time}`;
 }
 
 function buildBookingContentVariables(
@@ -229,6 +349,22 @@ function reminderAlreadySent(store: AppData, appointmentId: string): boolean {
   );
 }
 
+export function ownerLifecycleAlreadySent(
+  store: AppData,
+  appointmentId: string,
+  type: "appointment_rescheduled" | "appointment_cancellation",
+  note: string,
+): boolean {
+  const marker = `(${note})`;
+  return store.smsLogs.some(
+    (log) =>
+      log.appointmentId === appointmentId &&
+      log.type === type &&
+      (log.status === "sent" || log.status === "queued") &&
+      log.body.includes(marker),
+  );
+}
+
 function computeReminderSendAt(
   appointment: EyeExamAppointment,
   minutesBefore: number,
@@ -255,7 +391,12 @@ async function logWhatsAppAttempt(
   appointment: EyeExamAppointment,
   opts: {
     to: string;
-    type: "appointment_confirmation" | "appointment_reminder" | "custom";
+    type:
+      | "appointment_confirmation"
+      | "appointment_reminder"
+      | "appointment_rescheduled"
+      | "appointment_cancellation"
+      | "custom";
     templateName: string;
     result: WhatsAppSendResult | TwilioWhatsAppSendResult;
     note?: string;
@@ -292,15 +433,40 @@ export function ownerNotificationSkipReason(
   if (!bookingMessages.ownerNotification.enabled) {
     return "disabled";
   }
-  const ownerWhatsApp = bookingMessages.ownerNotification.ownerWhatsApp.trim();
-  if (!ownerWhatsApp) {
+  const destination = resolveOwnerNotificationDestination(bookingMessages);
+  if (destination.source === "missing" || !destination.to) {
     return "missing-owner-phone";
   }
-  if (!formatPhoneForWhatsAppWeb(ownerWhatsApp)) {
+  if (!formatPhoneForWhatsAppWeb(destination.to)) {
     return "invalid-owner-phone";
   }
   void useWhatsAppWeb;
   if (!resolveTwilioContentSid(OWNER_NOTIFICATION_TEMPLATE)) {
+    return "missing-template";
+  }
+  return null;
+}
+
+export function ownerLifecycleSkipReason(
+  bookingMessages: BookingMessagesSettings,
+  templateName: string,
+):
+  | "disabled"
+  | "missing-owner-phone"
+  | "invalid-owner-phone"
+  | "missing-template"
+  | null {
+  if (!bookingMessages.ownerNotification.enabled) {
+    return "disabled";
+  }
+  const destination = resolveOwnerNotificationDestination(bookingMessages);
+  if (destination.source === "missing" || !destination.to) {
+    return "missing-owner-phone";
+  }
+  if (!formatPhoneForWhatsAppWeb(destination.to)) {
+    return "invalid-owner-phone";
+  }
+  if (!resolveTwilioContentSid(templateName)) {
     return "missing-template";
   }
   return null;
@@ -313,8 +479,18 @@ async function sendViaTwilio(
     templateName: string;
     contentVariables: Record<string, string>;
     contentSid?: string | null;
-    kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
-    smsType: "appointment_confirmation" | "appointment_reminder" | "custom";
+    kind:
+      | "customer_confirmation"
+      | "owner_notification"
+      | "appointment_reminder"
+      | "owner_reschedule"
+      | "owner_cancel";
+    smsType:
+      | "appointment_confirmation"
+      | "appointment_reminder"
+      | "appointment_rescheduled"
+      | "appointment_cancellation"
+      | "custom";
     note?: string;
   },
 ): Promise<void> {
@@ -376,7 +552,10 @@ async function sendConfiguredTemplate(
     to: string;
     templateName: string;
     contentVariables: Record<string, string>;
-    kind: "customer_confirmation" | "owner_notification" | "appointment_reminder";
+    kind:
+      | "customer_confirmation"
+      | "owner_notification"
+      | "appointment_reminder";
     smsType: "appointment_confirmation" | "appointment_reminder" | "custom";
     textMessage: string;
     sendAt?: Date;
@@ -528,40 +707,57 @@ export async function dispatchBookingMessages(
       appointment,
       serviceLabel,
     );
-    const confirmation = resolveCustomerConfirmationTemplate(
-      bookingMessages,
-      appointment.language,
+    const alreadySentConfirmation = customerConfirmationAlreadySent(
+      store,
+      appointment.id,
     );
-    const useManageTemplate =
-      confirmation.useManageTemplate && Boolean(opts?.manageToken);
+    const confirmationSends = alreadySentConfirmation
+      ? []
+      : planCustomerConfirmationSend(
+          bookingMessages,
+          appointment.language,
+          opts?.manageToken,
+        );
     const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();
     const dateLabel = formatEyeExamDateDisplay(appointment.appointmentDate);
-    const customerConfirmationVariables = useManageTemplate
-      ? buildManageTemplateContentVariables({
-          customerName,
-          serviceLabel,
-          dateLabel,
-          time: appointment.appointmentTime,
-          token: opts!.manageToken!,
-        })
-      : buildCustomerConfirmationContentVariables(appointment);
     const useWhatsAppWeb = isWhatsAppWebServiceConfigured();
     const immediateSends: Promise<void>[] = [];
 
-    if (bookingMessages.customerConfirmation.enabled) {
+    if (confirmationSends.length === 0) {
+      const skipped = resolveCustomerConfirmationTemplate(
+        bookingMessages,
+        appointment.language,
+        opts?.manageToken,
+      );
+      console.info("[WhatsApp] customer confirmation skipped", {
+        appointmentId: appointment.id,
+        reason: alreadySentConfirmation ? "already-sent" : skipped.skipReason,
+        mode: skipped.mode,
+        template: skipped.templateName,
+      });
+    } else {
+      const confirmation = confirmationSends[0]!;
+      const customerConfirmationVariables = confirmation.useManageTemplate
+        ? buildManageTemplateContentVariables({
+            customerName,
+            serviceLabel,
+            dateLabel,
+            time: appointment.appointmentTime,
+            token: opts!.manageToken!,
+          })
+        : buildCustomerConfirmationContentVariables(appointment);
       immediateSends.push(
         sendCustomerConfirmationViaTwilio(appointment, {
-          templateName: useManageTemplate
-            ? confirmation.templateName
-            : CUSTOMER_CONFIRMATION_TEMPLATE,
+          templateName: confirmation.templateName,
           contentVariables: customerConfirmationVariables,
-          contentSid: useManageTemplate ? confirmation.contentSid : undefined,
+          contentSid: confirmation.useManageTemplate
+            ? confirmation.contentSid
+            : undefined,
         }),
       );
     }
 
-    const ownerWhatsApp =
-      bookingMessages.ownerNotification.ownerWhatsApp.trim();
+    const ownerDestination = resolveOwnerNotificationDestination(bookingMessages);
     const ownerSkip = ownerNotificationSkipReason(
       bookingMessages,
       useWhatsAppWeb,
@@ -570,7 +766,7 @@ export async function dispatchBookingMessages(
       console.info("[WhatsApp] owner notification skipped", {
         appointmentId: appointment.id,
         reason: ownerSkip,
-        hasOwnerPhone: Boolean(ownerWhatsApp),
+        destination: ownerDestination.source,
         hasTemplate: Boolean(OWNER_NOTIFICATION_TEMPLATE),
         templateName: OWNER_NOTIFICATION_TEMPLATE,
         useWhatsAppWeb,
@@ -578,12 +774,12 @@ export async function dispatchBookingMessages(
     } else {
       immediateSends.push(
         sendViaTwilio(appointment, {
-          to: ownerWhatsApp,
+          to: ownerDestination.to,
           templateName: OWNER_NOTIFICATION_TEMPLATE,
           contentVariables: ownerContentVariables,
           kind: "owner_notification",
           smsType: "custom",
-          note: "owner",
+          note: ownerDestination.source === "test" ? "owner-test" : "owner",
         }),
       );
     }
@@ -614,6 +810,166 @@ export async function dispatchBookingMessages(
       appointmentId: appointment.id,
       error: error instanceof Error ? error.message : "dispatch failed",
     });
+  }
+}
+
+async function loadLiveBookingMessages(): Promise<{
+  store: AppData;
+  bookingMessages: ReturnType<typeof mergeBookingMessages>;
+} | null> {
+  if (isBookingE2EIsolated()) return null;
+  invalidateStoreCache();
+  const { data: store } = await getStore();
+  const bookingMessages = mergeBookingMessages(store.settings.bookingMessages);
+  if (bookingMessages.provider === "console" || bookingMessages.provider !== "meta") {
+    return null;
+  }
+  return { store, bookingMessages };
+}
+
+/**
+ * Owner WhatsApp after a customer reschedule. Never sends a customer message.
+ * Dedupes retries of the same original→new slot.
+ */
+export async function dispatchOwnerRescheduleNotification(
+  appointment: EyeExamAppointment,
+  opts: {
+    originalDate: string;
+    originalTime: string;
+    serviceLabel: string;
+  },
+): Promise<boolean> {
+  try {
+    if (!shouldDispatchBookingMessages(appointment)) return false;
+    const loaded = await loadLiveBookingMessages();
+    if (!loaded) return false;
+
+    const note = ownerRescheduleDedupNote(
+      opts.originalDate,
+      opts.originalTime,
+      appointment.appointmentDate,
+      appointment.appointmentTime,
+    );
+    if (
+      ownerLifecycleAlreadySent(
+        loaded.store,
+        appointment.id,
+        "appointment_rescheduled",
+        note,
+      )
+    ) {
+      console.info("[WhatsApp] owner reschedule skipped — already sent", {
+        appointmentId: appointment.id,
+      });
+      return false;
+    }
+
+    const skip = ownerLifecycleSkipReason(
+      loaded.bookingMessages,
+      OWNER_RESCHEDULED_TEMPLATE,
+    );
+    if (skip) {
+      console.info("[WhatsApp] owner reschedule skipped", {
+        appointmentId: appointment.id,
+        reason: skip,
+      });
+      return false;
+    }
+
+    const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();
+    const destination = resolveOwnerNotificationDestination(loaded.bookingMessages);
+    await sendViaTwilio(appointment, {
+      to: destination.to,
+      templateName: OWNER_RESCHEDULED_TEMPLATE,
+      contentVariables: buildOwnerRescheduleContentVariables({
+        customerName,
+        customerPhone: appointment.phone,
+        serviceLabel: opts.serviceLabel,
+        originalDateLabel: formatEyeExamDateDisplay(opts.originalDate),
+        originalTime: opts.originalTime,
+        newDateLabel: formatEyeExamDateDisplay(appointment.appointmentDate),
+        newTime: appointment.appointmentTime,
+      }),
+      kind: "owner_reschedule",
+      smsType: "appointment_rescheduled",
+      note,
+    });
+    return true;
+  } catch (error) {
+    console.error("[WhatsApp] owner reschedule dispatch failed", {
+      appointmentId: appointment.id,
+      error: error instanceof Error ? error.message : "dispatch failed",
+    });
+    return false;
+  }
+}
+
+/**
+ * Owner WhatsApp after a customer cancel. Uses the booking details from
+ * immediately before cancellation. Does not send a customer-facing cancel message.
+ */
+export async function dispatchOwnerCancelNotification(
+  appointment: EyeExamAppointment,
+  opts: { serviceLabel: string },
+): Promise<boolean> {
+  try {
+    if (!shouldDispatchBookingMessages(appointment)) return false;
+    const loaded = await loadLiveBookingMessages();
+    if (!loaded) return false;
+
+    const note = ownerCancelDedupNote(
+      appointment.appointmentDate,
+      appointment.appointmentTime,
+    );
+    if (
+      ownerLifecycleAlreadySent(
+        loaded.store,
+        appointment.id,
+        "appointment_cancellation",
+        note,
+      )
+    ) {
+      console.info("[WhatsApp] owner cancel skipped — already sent", {
+        appointmentId: appointment.id,
+      });
+      return false;
+    }
+
+    const skip = ownerLifecycleSkipReason(
+      loaded.bookingMessages,
+      OWNER_CANCELLED_TEMPLATE,
+    );
+    if (skip) {
+      console.info("[WhatsApp] owner cancel skipped", {
+        appointmentId: appointment.id,
+        reason: skip,
+      });
+      return false;
+    }
+
+    const destination = resolveOwnerNotificationDestination(loaded.bookingMessages);
+    const customerName = `${appointment.firstName} ${appointment.lastName}`.trim();
+    await sendViaTwilio(appointment, {
+      to: destination.to,
+      templateName: OWNER_CANCELLED_TEMPLATE,
+      contentVariables: buildOwnerCancelContentVariables({
+        customerName,
+        dateLabel: formatEyeExamDateDisplay(appointment.appointmentDate),
+        time: appointment.appointmentTime,
+        customerPhone: appointment.phone,
+        serviceLabel: opts.serviceLabel,
+      }),
+      kind: "owner_cancel",
+      smsType: "appointment_cancellation",
+      note,
+    });
+    return true;
+  } catch (error) {
+    console.error("[WhatsApp] owner cancel dispatch failed", {
+      appointmentId: appointment.id,
+      error: error instanceof Error ? error.message : "dispatch failed",
+    });
+    return false;
   }
 }
 
