@@ -839,8 +839,8 @@ async function main() {
   // ---------------------------------------------------------------------------
   const bookRoute = readFileSync(join(process.cwd(), "app/api/eye-exam/book/route.ts"), "utf8");
   assert.match(bookRoute, /issueBookingManageToken/);
-  assert.match(bookRoute, /manageTokenHash/);
-  assert.doesNotMatch(bookRoute, /manageToken:/);
+  assert.match(bookRoute, /manageTokenHash: issued\.manageTokenHash/);
+  assert.match(bookRoute, /manageToken: issuedManageToken/);
   assert.match(bookRoute, /normalizeIsraeliPhone/);
   assert.doesNotMatch(bookRoute, /find\(\s*\(.*phone/);
   assert.match(bookRoute, /hasEyeExamSlotConflict/);
@@ -903,10 +903,9 @@ async function main() {
   const sha = createHash("sha256").update("probe", "utf8").digest("hex");
   assert.equal(sha.length, 64);
 
-  assert.equal(
-    shouldDispatchBookingMessages(bookingA, "e2e", "test"),
-    false,
-  );
+  assert.equal(shouldDispatchBookingMessages(bookingA, "preview", "test"), false);
+  assert.equal(shouldDispatchBookingMessages(bookingA, "development", "test"), false);
+  assert.equal(shouldDispatchBookingMessages(bookingA, "production", "production"), true);
 
   console.log("booking-security tests passed");
 }
