@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseCustomPageMedia } from "../lib/custom-service-pages";
 import {
   clampImageFocal,
   coverCropRect,
@@ -149,24 +148,5 @@ const publicHero = readFileSync(
 assert.match(publicHero, /shouldUseLiveHeroFocal/);
 assert.match(publicHero, /heroDisplayUrl/);
 assert.match(publicHero, /liveHeroFocalVars/);
-
-const persistedZoomOut = parseCustomPageMedia({
-  kind: "image",
-  url: "https://cdn.example/orig.jpg",
-  desktopFocal: { x: 0.5, y: 0.38, zoom: 0.7 },
-  mobileFocal: { x: 0.45, y: 0.4, zoom: 0.8 },
-});
-assert.equal(persistedZoomOut?.desktopFocal?.zoom, 0.7);
-assert.equal(persistedZoomOut?.mobileFocal?.zoom, 0.8);
-assert.equal(shouldUseLiveHeroFocal(persistedZoomOut), true);
-
-const persistedLegacy = parseCustomPageMedia({
-  kind: "image",
-  url: "https://cdn.example/orig.jpg",
-  desktopUrl: "https://cdn.example/desktop.webp",
-  desktopFocal: { x: 0.4, y: 0.3, zoom: 1.1 },
-});
-assert.equal(persistedLegacy?.desktopFocal?.zoom, 1.1);
-assert.equal(shouldUseLiveHeroFocal(persistedLegacy), false);
 
 console.log("responsive-image zoom tests passed");

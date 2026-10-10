@@ -705,6 +705,22 @@ const withVariants = persistCustomPages(created, {
 assert.equal(withVariants[0]?.heroMedia?.desktopUrl, "https://cdn.example/desktop.webp");
 assert.equal(withVariants[0]?.heroMedia?.fit, "contain");
 assert.equal(withVariants[0]?.heroMedia?.desktopFocal?.zoom, 1.1);
+
+const zoomOutSaved = persistCustomPages(created, {
+  customPageOp: {
+    op: "update",
+    id: created[0]!.id,
+    expectedRevision: created[0]!.revision,
+    heroMedia: {
+      kind: "image",
+      url: "https://cdn.example/original.jpg",
+      desktopFocal: { x: 0.5, y: 0.38, zoom: 0.7 },
+      mobileFocal: { x: 0.45, y: 0.4, zoom: 0.8 },
+    },
+  },
+});
+assert.equal(zoomOutSaved[0]?.heroMedia?.desktopFocal?.zoom, 0.7);
+assert.equal(zoomOutSaved[0]?.heroMedia?.mobileFocal?.zoom, 0.8);
 assert.equal(withVariants[0]?.homeImage, "https://cdn.example/card.jpg");
 assert.deepEqual(withVariants[0]?.gallery || [], created[0]?.gallery || []);
 
