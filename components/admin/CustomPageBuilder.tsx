@@ -43,6 +43,7 @@ import {
   attachProductIds,
   copyForCustomPageEditor,
   createCustomSection,
+  emptySectionArticleCopy,
   customPageLocaleIssues,
   detachProductId,
   emptyCustomPageCopy,
@@ -67,6 +68,8 @@ import {
   type ServiceFeatureIconId,
 } from "@/lib/service-page-icons";
 import type {
+  CustomArticleAlign,
+  CustomArticlePosition,
   CustomPageCopy,
   CustomPageCtaKind,
   CustomPageMediaRef,
@@ -527,6 +530,109 @@ export default function CustomPageBuilder({
     );
   }
 
+  function sectionArticleCopy(section: CustomPageSection) {
+    return section.article?.locales?.[editLocale] || emptySectionArticleCopy();
+  }
+
+  function updateSectionArticle(
+    id: string,
+    patch: {
+      align?: CustomArticleAlign;
+      position?: CustomArticlePosition;
+      heading?: string;
+      body?: string;
+    },
+  ) {
+    setSections((prev) =>
+      prev.map((section) => {
+        if (section.id !== id) return section;
+        const current = section.article;
+        const locales = { ...(current?.locales || {}) };
+        const localeCopy = {
+          ...(locales[editLocale] || emptySectionArticleCopy()),
+        };
+        if (patch.heading != null) localeCopy.heading = patch.heading;
+        if (patch.body != null) localeCopy.body = patch.body;
+        locales[editLocale] = localeCopy;
+        return {
+          ...section,
+          article: {
+            align: patch.align || current?.align || "center",
+            position: patch.position || current?.position || "before",
+            locales,
+          },
+        };
+      }),
+    );
+  }
+
+  function renderSectionArticle(section: CustomPageSection) {
+    const copy = sectionArticleCopy(section);
+    const align = section.article?.align || "center";
+    const position = section.article?.position || "before";
+    return (
+      <div className="csp-article-admin">
+        <p className="csp-article-admin-title">
+          {t("admin.servicePages.articleGroup")}
+        </p>
+        <BuilderField
+          id={`csp-article-heading-${section.id}`}
+          label={t("admin.servicePages.articleHeading")}
+          value={copy.heading}
+          onChange={(value) => updateSectionArticle(section.id, { heading: value })}
+          dir={editorDir}
+          lang={editLocale}
+        />
+        <BuilderField
+          id={`csp-article-body-${section.id}`}
+          label={t("admin.servicePages.articleBody")}
+          value={copy.body}
+          onChange={(value) => updateSectionArticle(section.id, { body: value })}
+          dir={editorDir}
+          lang={editLocale}
+          multiline
+        />
+        <fieldset className="csp-article-choices">
+          <legend>{t("admin.servicePages.articleAlign")}</legend>
+          {(
+            [
+              ["right", "articleAlignRight"],
+              ["center", "articleAlignCenter"],
+              ["left", "articleAlignLeft"],
+            ] as const
+          ).map(([value, key]) => (
+            <button
+              key={value}
+              type="button"
+              className={`csp-article-choice${align === value ? " is-on" : ""}`}
+              onClick={() => updateSectionArticle(section.id, { align: value })}
+            >
+              {t(`admin.servicePages.${key}`)}
+            </button>
+          ))}
+        </fieldset>
+        <fieldset className="csp-article-choices">
+          <legend>{t("admin.servicePages.articlePosition")}</legend>
+          {(
+            [
+              ["before", "articlePositionBefore"],
+              ["after", "articlePositionAfter"],
+            ] as const
+          ).map(([value, key]) => (
+            <button
+              key={value}
+              type="button"
+              className={`csp-article-choice${position === value ? " is-on" : ""}`}
+              onClick={() => updateSectionArticle(section.id, { position: value })}
+            >
+              {t(`admin.servicePages.${key}`)}
+            </button>
+          ))}
+        </fieldset>
+      </div>
+    );
+  }
+
   function addSection(type: CustomSectionType) {
     if (sections.some((section) => section.type === type)) return;
     if (sections.length >= MAX_CUSTOM_SECTIONS) return;
@@ -955,7 +1061,21 @@ export default function CustomPageBuilder({
         <p className="admin-muted">{t("admin.servicePages.wizardNoSections")}</p>
       ) : null}
       {sections.map((section) => {
-        if (section.type === "gallery") return null;
+        if (section.type === "gallery") {
+          return (
+            <EditorSection
+              key={section.id}
+              icon="gallery"
+              title={sectionTitle(section)}
+              defaultOpen={wizardMode}
+              {...foldProps(section.id)}
+            >
+              {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
+              <p className="admin-muted">{t("admin.servicePages.sectionGalleryHint")}</p>
+            </EditorSection>
+          );
+        }
         const title = sectionTitle(section);
         if (section.type === "heroMedia") {
           return (
@@ -967,6 +1087,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               <ResponsiveHeroImageField
                 value={heroMedia}
                 onChange={setHeroMedia}
@@ -1018,6 +1139,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               {copy.features.map((feature, index) => (
                 <div key={`csp-f-${index}`} className="admin-service-feature">
                   <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
@@ -1073,6 +1195,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
                 value={copy.benefitsTitle}
@@ -1108,6 +1231,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
                 value={copy.warningTitle}
@@ -1136,6 +1260,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
                 value={copy.valuesTitle}
@@ -1172,6 +1297,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
             </EditorSection>
           );
@@ -1186,6 +1312,7 @@ export default function CustomPageBuilder({
               {...foldProps(section.id)}
             >
               {renderSectionAdminName(section)}
+              {renderSectionArticle(section)}
               <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
               <div className="csp-inline-actions">
                 <button
@@ -1495,6 +1622,7 @@ export default function CustomPageBuilder({
 
 
 function BuilderField({
+  id,
   label,
   value,
   onChange,
@@ -1502,6 +1630,7 @@ function BuilderField({
   dir,
   lang,
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -1509,13 +1638,13 @@ function BuilderField({
   dir: "ltr" | "rtl";
   lang?: string;
 }) {
-  const id = label.replace(/\s+/g, "-");
+  const fieldId = id || label.replace(/\s+/g, "-");
   return (
-    <label className="admin-service-field" htmlFor={id}>
+    <label className="admin-service-field" htmlFor={fieldId}>
       <span className="label">{label}</span>
       {multiline ? (
         <textarea
-          id={id}
+          id={fieldId}
           className="textarea"
           rows={3}
           dir={dir}
@@ -1525,7 +1654,7 @@ function BuilderField({
         />
       ) : (
         <input
-          id={id}
+          id={fieldId}
           className="input"
           dir={dir}
           lang={lang}
