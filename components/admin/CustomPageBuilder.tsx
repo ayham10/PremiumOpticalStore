@@ -513,7 +513,7 @@ export default function CustomPageBuilder({
       : name;
   }
 
-  function SectionAdminName({ section }: { section: CustomPageSection }) {
+  function renderSectionAdminName(section: CustomPageSection) {
     return (
       <SectionIdentityFields
         adminName={section.adminLabel || ""}
@@ -966,7 +966,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               <ResponsiveHeroImageField
                 value={heroMedia}
                 onChange={setHeroMedia}
@@ -1017,7 +1017,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               {copy.features.map((feature, index) => (
                 <div key={`csp-f-${index}`} className="admin-service-feature">
                   <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
@@ -1072,7 +1072,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
                 value={copy.benefitsTitle}
@@ -1107,7 +1107,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
                 value={copy.warningTitle}
@@ -1135,7 +1135,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
                 value={copy.valuesTitle}
@@ -1171,7 +1171,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
             </EditorSection>
           );
@@ -1185,7 +1185,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
-              <SectionAdminName section={section} />
+              {renderSectionAdminName(section)}
               <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
               <div className="csp-inline-actions">
                 <button

@@ -233,59 +233,6 @@ export default function AdminServicePagesPage() {
     });
   }
 
-  function adminTitle(sectionId: string, fallback: string) {
-    return editorSectionDisplayName(
-      pages.adminSectionNames?.[sectionId],
-      fallback,
-    );
-  }
-
-  function AdminNameField({ sectionId }: { sectionId: string }) {
-    return (
-      <SectionIdentityFields
-        adminName={pages.adminSectionNames?.[sectionId] || ""}
-        onAdminNameChange={(value) => updateAdminName(sectionId, value)}
-        adminLabel={t("admin.servicePages.sectionAdminName")}
-        adminHint={t("admin.servicePages.sectionAdminNameHint")}
-        dir={editorDir}
-        lang={editLocale}
-        hideHeading
-      />
-    );
-  }
-
-  function HeroMediaField({
-    value,
-    onChange,
-    acceptVideo,
-  }: {
-    value?: CustomPageMediaRef | null;
-    onChange: (media?: CustomPageMediaRef) => void;
-    acceptVideo: boolean;
-  }) {
-    return (
-      <>
-        <h2>{t("admin.servicePages.sectionHero")}</h2>
-        <ResponsiveHeroImageField
-          value={value || undefined}
-          onChange={onChange}
-          t={t}
-          folder="hero"
-          acceptVideo={acceptVideo}
-        />
-        {value ? (
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => onChange(undefined)}
-          >
-            {t("admin.servicePages.restoreDefaultMedia")}
-          </button>
-        ) : null}
-      </>
-    );
-  }
-
   function updateFooter<K extends keyof FooterServiceContent>(
     key: K,
     value: FooterServiceContent[K],
@@ -353,6 +300,56 @@ export default function AdminServicePagesPage() {
     pages.catalog ?? defaultServicePagesForLocale(editLocale).catalog!;
   const footer = pages.footer ?? defaultServicePagesForLocale(editLocale).footer!;
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
+
+  function adminTitle(sectionId: string, fallback: string) {
+    return editorSectionDisplayName(
+      pages.adminSectionNames?.[sectionId],
+      fallback,
+    );
+  }
+
+  function renderAdminName(sectionId: string) {
+    return (
+      <SectionIdentityFields
+        adminName={pages.adminSectionNames?.[sectionId] || ""}
+        onAdminNameChange={(value) => updateAdminName(sectionId, value)}
+        adminLabel={t("admin.servicePages.sectionAdminName")}
+        adminHint={t("admin.servicePages.sectionAdminNameHint")}
+        dir={editorDir}
+        lang={editLocale}
+        hideHeading
+      />
+    );
+  }
+
+  function renderHeroMedia(
+    value: CustomPageMediaRef | null | undefined,
+    onChange: (media?: CustomPageMediaRef) => void,
+    acceptVideo: boolean,
+  ) {
+    return (
+      <>
+        <h2>{t("admin.servicePages.sectionHero")}</h2>
+        <ResponsiveHeroImageField
+          value={value || undefined}
+          onChange={onChange}
+          t={t}
+          folder="hero"
+          acceptVideo={acceptVideo}
+        />
+        {value ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => onChange(undefined)}
+          >
+            {t("admin.servicePages.restoreDefaultMedia")}
+          </button>
+        ) : null}
+      </>
+    );
+  }
+
   const customPages = document?.customPages || [];
   const selectedCustom = customPages.find((item) => item.id === customPageId);
   const listedCustom = listCustomPagesForEditor(customPages, pageQuery);
@@ -607,7 +604,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.homepageHero}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.homepageHero} />
+                        {renderAdminName(PREVIEW_SECTION.homepageHero)}
                         <Field
                           label={t("admin.servicePages.sectionHeading")}
                           value={home.hero.title}
@@ -642,7 +639,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.homepageButtons}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.homepageButtons} />
+                        {renderAdminName(PREVIEW_SECTION.homepageButtons)}
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={home.hero.bookingButtonText}
@@ -669,12 +666,10 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.eyeExamHero}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.eyeExamHero} />
-                        <HeroMediaField
-                          value={eye.heroMedia}
-                          acceptVideo
-                          onChange={(media) => updateEyeExam("heroMedia", media)}
-                        />
+                        {renderAdminName(PREVIEW_SECTION.eyeExamHero)}
+                        {renderHeroMedia(eye.heroMedia, (media) =>
+                          updateEyeExam("heroMedia", media),
+                        true)}
                         <Field
                           label={t("admin.servicePages.eyebrow")}
                           value={eye.eyebrow}
@@ -702,7 +697,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.eyeExamButtons}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.eyeExamButtons} />
+                        {renderAdminName(PREVIEW_SECTION.eyeExamButtons)}
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={eye.bookingButtonText}
@@ -720,7 +715,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.eyeExamFeatures}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.eyeExamFeatures} />
+                        {renderAdminName(PREVIEW_SECTION.eyeExamFeatures)}
                         <h2>{t("admin.servicePages.features")}</h2>
                         {eye.features.map((feature, index) => (
                           <div key={`ee-f-${index}`} className="admin-service-feature">
@@ -767,7 +762,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.eyeExamBenefits}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.eyeExamBenefits} />
+                        {renderAdminName(PREVIEW_SECTION.eyeExamBenefits)}
                         <Field
                           label={t("admin.servicePages.sectionHeading")}
                           value={eye.benefitsTitle}
@@ -800,12 +795,10 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.contactLensesHero}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.contactLensesHero} />
-                        <HeroMediaField
-                          value={lenses.heroMedia}
-                          acceptVideo
-                          onChange={(media) => updateLenses("heroMedia", media)}
-                        />
+                        {renderAdminName(PREVIEW_SECTION.contactLensesHero)}
+                        {renderHeroMedia(lenses.heroMedia, (media) =>
+                          updateLenses("heroMedia", media),
+                        true)}
                         <Field
                           label={t("admin.servicePages.eyebrow")}
                           value={lenses.eyebrow}
@@ -833,7 +826,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.contactLensesButtons}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.contactLensesButtons} />
+                        {renderAdminName(PREVIEW_SECTION.contactLensesButtons)}
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={lenses.bookingButtonText}
@@ -851,7 +844,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.contactLensesFeatures}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.contactLensesFeatures} />
+                        {renderAdminName(PREVIEW_SECTION.contactLensesFeatures)}
                         <h2>{t("admin.servicePages.features")}</h2>
                         {lenses.features.map((feature, index) => (
                           <div key={`cl-f-${index}`} className="admin-service-feature">
@@ -901,7 +894,7 @@ export default function AdminServicePagesPage() {
                         active={activeSectionId === PREVIEW_SECTION.contactLensesNotice}
                         onActivate={setActiveSectionId}
                       >
-                        <AdminNameField sectionId={PREVIEW_SECTION.contactLensesNotice} />
+                        {renderAdminName(PREVIEW_SECTION.contactLensesNotice)}
                         <Field
                           label={t("admin.servicePages.warningText")}
                           value={lenses.warningText}
@@ -921,12 +914,10 @@ export default function AdminServicePagesPage() {
                       active={activeSectionId === PREVIEW_SECTION.catalogHero}
                       onActivate={setActiveSectionId}
                     >
-                      <AdminNameField sectionId={PREVIEW_SECTION.catalogHero} />
-                      <HeroMediaField
-                        value={catalog.heroMedia}
-                        acceptVideo={false}
-                        onChange={(media) => updateCatalog("heroMedia", media)}
-                      />
+                      {renderAdminName(PREVIEW_SECTION.catalogHero)}
+                      {renderHeroMedia(catalog.heroMedia, (media) =>
+                        updateCatalog("heroMedia", media),
+                      false)}
                       <Field
                         label={t("admin.servicePages.sectionHeading")}
                         value={catalog.title || ""}
@@ -950,7 +941,7 @@ export default function AdminServicePagesPage() {
                       active={activeSectionId === PREVIEW_SECTION.footerContent}
                       onActivate={setActiveSectionId}
                     >
-                      <AdminNameField sectionId={PREVIEW_SECTION.footerContent} />
+                      {renderAdminName(PREVIEW_SECTION.footerContent)}
                       <Field
                         label={t("admin.servicePages.tagline")}
                         value={footer.tagline}
