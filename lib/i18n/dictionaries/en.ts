@@ -1012,6 +1012,8 @@ const en: Dictionary = {
     statusPending: "Pending",
     cancelledNotice: "This appointment has been cancelled.",
     rescheduledNotice: "Your appointment was updated successfully.",
+    successRescheduled: "Your appointment was updated successfully",
+    successCancelled: "Your appointment was cancelled successfully",
     cannotChange: "This booking can no longer be changed.",
     rateLimited: "Too many requests. Please try again shortly.",
     slotUnavailable: "This time slot is no longer available.",

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ar, enUS, he } from "date-fns/locale";
 import { format } from "date-fns";
+import CenteredSuccessNotice from "@/components/feedback/CenteredSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
   EXPIRED_MANAGE_LINK_MESSAGE,
@@ -295,8 +296,11 @@ export default function ManageBookingClient({ token }: { token: string }) {
           localizeManageError(t, data.error || t("validation.generic")),
         );
       }
-      if (data.appointment) setAppointment(data.appointment);
-      setMessage(t("manage.cancelledNotice"));
+      if (!data.appointment) {
+        throw new Error(t("validation.generic"));
+      }
+      setAppointment(data.appointment);
+      setMessage(t("manage.successCancelled"));
     } catch (err) {
       setError(
         localizeManageError(
@@ -336,12 +340,13 @@ export default function ManageBookingClient({ token }: { token: string }) {
           localizeManageError(t, data.error || t("validation.generic")),
         );
       }
-      if (data.appointment) {
-        setAppointment(data.appointment);
-        setDate(data.appointment.appointmentDate);
-        setStartTime(data.appointment.appointmentTime);
+      if (!data.appointment) {
+        throw new Error(t("validation.generic"));
       }
-      setMessage(t("manage.rescheduledNotice"));
+      setAppointment(data.appointment);
+      setDate(data.appointment.appointmentDate);
+      setStartTime(data.appointment.appointmentTime);
+      setMessage(t("manage.successRescheduled"));
     } catch (err) {
       setError(
         localizeManageError(
@@ -426,12 +431,6 @@ export default function ManageBookingClient({ token }: { token: string }) {
         {error ? (
           <p className="oyon-manage-banner is-error" role="alert">
             {error}
-          </p>
-        ) : null}
-
-        {message ? (
-          <p className="oyon-manage-banner is-success" role="status">
-            {message}
           </p>
         ) : null}
 
@@ -640,6 +639,13 @@ export default function ManageBookingClient({ token }: { token: string }) {
           </div>
         ) : null}
       </div>
+
+      {message ? (
+        <CenteredSuccessNotice
+          message={message}
+          onClose={() => setMessage("")}
+        />
+      ) : null}
 
       {confirmKind ? (
         <div

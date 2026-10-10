@@ -17315,6 +17315,81 @@ body > .admin-save-notice,
   cursor: pointer;
 }
 
+.oyon-success-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.15rem;
+  pointer-events: none;
+}
+
+.oyon-success-notice-card {
+  width: min(100%, 21rem);
+  padding: 1.25rem 1.2rem 1.15rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  background: #151a21;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  text-align: center;
+  animation: oyon-success-notice-in 0.28s ease both;
+}
+
+.oyon-success-notice.is-leaving .oyon-success-notice-card {
+  animation: oyon-success-notice-out 0.28s ease both;
+}
+
+.oyon-success-notice-check {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 0.75rem;
+  border-radius: 999px;
+  background: rgba(70, 150, 108, 0.16);
+  border: 1px solid rgba(90, 180, 126, 0.55);
+  color: #6ee7a8;
+}
+
+.oyon-success-notice-text {
+  margin: 0;
+  color: #fff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+@keyframes oyon-success-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes oyon-success-notice-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oyon-success-notice-card,
+  .oyon-success-notice.is-leaving .oyon-success-notice-card {
+    animation: none;
+  }
+}
+
 .admin-pe-step1-actions {
   display: flex;
   flex-wrap: wrap;

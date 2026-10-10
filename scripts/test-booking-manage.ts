@@ -440,6 +440,49 @@ assert.match(manageClient, /\/api\/eye-exam\/available-times/);
 assert.match(manageClient, /oyon-manage-page/);
 assert.match(manageClient, /manage\.statusConfirmed/);
 assert.match(manageClient, /Asia\/Jerusalem/);
+assert.match(manageClient, /CenteredSuccessNotice/);
+assert.match(manageClient, /manage\.successRescheduled/);
+assert.match(manageClient, /manage\.successCancelled/);
+assert.doesNotMatch(manageClient, /oyon-manage-banner is-success/);
+assert.match(manageClient, /if \(!res\.ok\)/);
+assert.match(
+  readFileSync(join(process.cwd(), "app/booking/manage/[token]/page.tsx"), "utf8"),
+  /ManageBookingClient/,
+);
+assert.match(
+  readFileSync(
+    join(process.cwd(), "app/appointments/manage/[token]/page.tsx"),
+    "utf8",
+  ),
+  /ManageBookingClient/,
+);
+const successNotice = readFileSync(
+  join(process.cwd(), "components/feedback/CenteredSuccessNotice.tsx"),
+  "utf8",
+);
+assert.match(successNotice, /aria-live="polite"/);
+assert.match(successNotice, /prefers-reduced-motion/);
+assert.match(successNotice, /CENTERED_SUCCESS_NOTICE_MS = 3500/);
+const successCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+assert.match(successCss, /\.oyon-success-notice \{/);
+assert.match(successCss, /pointer-events:\s*none/);
+assert.match(successCss, /prefers-reduced-motion:\s*reduce/);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/ar.ts"), "utf8"),
+  /successRescheduled: "تم تحديث موعدك بنجاح"/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/ar.ts"), "utf8"),
+  /successCancelled: "تم إلغاء موعدك بنجاح"/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/he.ts"), "utf8"),
+  /successRescheduled: "התור שלך עודכן בהצלחה"/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/he.ts"), "utf8"),
+  /successCancelled: "התור שלך בוטל בהצלחה"/,
+);
 assert.doesNotMatch(manageClient, /window\.confirm/);
 assert.doesNotMatch(manageClient, /dispatchBookingMessages/);
 assert.doesNotMatch(manageClient, /sendSms/);

@@ -643,6 +643,8 @@ const ar: Dictionary = {
     statusPending: "قيد الانتظار",
     cancelledNotice: "تم إلغاء هذا الموعد.",
     rescheduledNotice: "تم تحديث موعدك بنجاح.",
+    successRescheduled: "تم تحديث موعدك بنجاح",
+    successCancelled: "تم إلغاء موعدك بنجاح",
     cannotChange: "لم يعد بالإمكان تعديل هذا الموعد.",
     rateLimited: "طلبات كثيرة. يرجى المحاولة بعد لحظات.",
     slotUnavailable: "هذا الوقت لم يعد متاحاً.",
