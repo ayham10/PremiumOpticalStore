@@ -1,7 +1,31 @@
-import { createHash } from "crypto";
+import {
+  clientSafeHistory,
+  collectExternalMediaUrls,
+  githubBackupDate,
+  githubBackupRetentionDays,
+  githubDailyManifestPath,
+  githubDailySnapshotPath,
+  parseGithubHistory,
+  planDailyRetention,
+  redactBackupSecrets,
+  retentionDeletePaths,
+  sha256Bytes,
+  upsertHistorySnapshot,
+  validateGithubSnapshot,
+  verifyChecksum,
+  GITHUB_DATABASE_PATH,
+  GITHUB_HISTORY_PATH,
+  GITHUB_INDEX_PATH,
+  GITHUB_INFO_PATH,
+  GITHUB_MEDIA_PREFIX,
+  type GithubBackupHistory,
+  type GithubDailyManifest,
+  type GithubHistorySnapshot,
+} from "@/lib/github-backup-plan";
 import {
   type GithubBackupClientResult,
   type GithubBackupPurpose,
+  type GithubBackupStatusSummary,
 } from "@/lib/github-backup-status";
 import { MEDIA_BUCKET, supabaseServerConfig } from "@/lib/storage";
 import type { AppData } from "@/lib/types";
@@ -10,12 +34,7 @@ const BACKUP_BUCKET =
   process.env.SUPABASE_BACKUP_BUCKET?.trim() || "oyon-backups";
 
 const MEDIA_OBJECT_PREFIX = "media/objects/";
-const GITHUB_PREFIX = "backups/";
-const GITHUB_DATABASE_PATH = `${GITHUB_PREFIX}database.json`;
-const GITHUB_MEDIA_PREFIX = `${GITHUB_PREFIX}media/`;
-const GITHUB_INDEX_PATH = `${GITHUB_PREFIX}media-index.json`;
-const GITHUB_INFO_PATH = `${GITHUB_PREFIX}backup-info.json`;
-const GITHUB_BOOTSTRAP_PATH = `${GITHUB_PREFIX}.keep`;
+const GITHUB_BOOTSTRAP_PATH = "backups/.keep";
 /** Stop starting new copies in time to commit and return before Vercel maxDuration 60s. */
 const GITHUB_TIME_BUDGET_MS = 30_000;
 /** Never start more media work this close to the Vercel 60s kill. */
@@ -62,17 +81,25 @@ export type GithubBackupInfo = {
   githubCommitSha: string | null;
   timedOut: boolean;
   remainingMedia: number;
+  date: string;
+  retentionDays: number;
+  verified: boolean;
+  dailySnapshotPath: string | null;
+  externalMediaCount: number;
+  historyCount: number;
 };
 
 export type GithubCommitFile = {
   path: string;
-  bytes: Uint8Array;
+  bytes?: Uint8Array;
+  delete?: boolean;
 };
 
 export type GithubRepoClient = {
   probeRepository: () => Promise<void>;
   ensureReady: () => Promise<void>;
   readJsonFile: (path: string) => Promise<unknown | null>;
+  listPath?: (path: string) => Promise<string[]>;
   commitFiles: (files: GithubCommitFile[], message: string) => Promise<string>;
 };
 
@@ -157,8 +184,8 @@ function protectedObjectPath(livePath: string): string {
   return joinPath(MEDIA_OBJECT_PREFIX, livePath);
 }
 
-function hashAppData(data: AppData): string {
-  return createHash("sha256").update(JSON.stringify(data)).digest("hex");
+function utf8Text(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
 }
 
 function emptyIndex(): GithubMediaIndex {
@@ -458,10 +485,20 @@ async function commitOntoExistingBranch(
     path: string;
     mode: "100644";
     type: "blob";
-    sha: string;
+    sha: string | null;
   }> = [];
 
   for (const file of files) {
+    if (file.delete) {
+      treeItems.push({
+        path: file.path,
+        mode: "100644",
+        type: "blob",
+        sha: null,
+      });
+      continue;
+    }
+    if (!file.bytes) throw new Error("GITHUB_BACKUP_API_FAILED");
     if (file.bytes.byteLength > GITHUB_MAX_FILE_BYTES) {
       throw new Error("GITHUB_BACKUP_FILE_TOO_LARGE");
     }
@@ -583,6 +620,26 @@ export function createGithubRepoClient(): GithubRepoClient {
       const head = await resolveExistingBranchHead(config);
       return commitOntoExistingBranch(config, files, message, head);
     },
+
+    async listPath(path: string) {
+      const config = githubEnvConfig();
+      const encoded = encodeGithubContentPath(path);
+      const result = await githubApi(
+        config,
+        `/repos/${config.owner}/${config.repo}/contents/${encoded}?ref=${encodeURIComponent(config.branch)}`,
+        undefined,
+        { kind: "file", allow: [404] },
+      );
+      if (result.status === 404) return [];
+      if (!result.ok) throw new Error("GITHUB_BACKUP_API_FAILED");
+      if (Array.isArray(result.data)) {
+        return (result.data as Array<{ path?: string }>)
+          .map((item) => item.path || "")
+          .filter(Boolean);
+      }
+      const single = (result.data as { path?: string } | null)?.path;
+      return single ? [single] : [];
+    },
   };
 }
 
@@ -622,6 +679,12 @@ export function toGithubBackupClientResult(
     skipped: info.skipped,
     failed: info.failed,
     tooLarge: info.tooLarge.length,
+    date: info.date,
+    retentionDays: info.retentionDays,
+    verified: info.verified,
+    dailySnapshotPath: info.dailySnapshotPath,
+    externalMediaCount: info.externalMediaCount,
+    historyCount: info.historyCount,
   };
 }
 
@@ -729,25 +792,114 @@ export async function runGithubBackupAll(
       tooLarge.length === 0 &&
       currentLivePresentOnGithub === liveMedia.length;
 
-    const appDataSha256 = complete ? hashAppData(live.payload) : null;
+    validateGithubSnapshot(live.payload);
+    const safePayload = redactBackupSecrets(live.payload);
+    const snapshotText = utf8Text(safePayload);
+    const snapshotBytes = utf8Bytes(snapshotText);
+    const checksum = sha256Bytes(snapshotBytes);
+    const verified = complete && verifyChecksum(snapshotBytes, checksum);
+    const date = githubBackupDate(createdAt);
+    const retentionDays = githubBackupRetentionDays();
+    const externalMediaCount = collectExternalMediaUrls(safePayload).length;
+    const dailySnapshotPath = verified ? githubDailySnapshotPath(date) : null;
 
     pending.push({
       path: GITHUB_INDEX_PATH,
-      bytes: utf8Bytes(`${JSON.stringify(index, null, 2)}\n`),
+      bytes: utf8Bytes(utf8Text(index)),
     });
 
-    if (complete) {
+    if (verified) {
       pending.push({
         path: GITHUB_DATABASE_PATH,
-        bytes: utf8Bytes(`${JSON.stringify(live.payload, null, 2)}\n`),
+        bytes: snapshotBytes,
+      });
+      pending.push({
+        path: githubDailySnapshotPath(date),
+        bytes: snapshotBytes,
       });
     }
 
+    const existingHistory = parseGithubHistory(
+      await deps.github.readJsonFile(GITHUB_HISTORY_PATH),
+    );
+    const existingValidToday = existingHistory.snapshots.find(
+      (item) => item.date === date && item.complete && item.verified,
+    );
+    const historySnapshot: GithubHistorySnapshot | null = verified
+      ? {
+          date,
+          createdAt,
+          complete: true,
+          verified: true,
+          appDataSha256: checksum,
+          mediaFileCount: currentLivePresentOnGithub,
+          missingMedia: 0,
+          failedMedia: 0,
+        }
+      : null;
+
+    let history: GithubBackupHistory = {
+      ...existingHistory,
+      retentionDays,
+      lastRun: {
+        createdAt,
+        complete,
+        timedOut,
+        remainingMedia: remaining,
+        copied,
+        failed,
+        tooLarge: tooLarge.length,
+        mediaFileCount: currentLivePresentOnGithub,
+      },
+    };
+    if (historySnapshot) {
+      history = upsertHistorySnapshot(history, historySnapshot);
+    }
+
+    const deletePaths: string[] = [];
+    if (verified) {
+      const planned = planDailyRetention(history.snapshots, date, retentionDays);
+      history = { ...history, snapshots: planned.keep };
+      deletePaths.push(...retentionDeletePaths(planned.deleteDates));
+    }
+
+    const manifest: GithubDailyManifest = {
+      kind: "oyon-github-daily-manifest",
+      version: 1,
+      date,
+      createdAt,
+      complete: verified,
+      verified,
+      appDataSha256: verified ? checksum : null,
+      snapshotPath: dailySnapshotPath,
+      mediaFileCount: currentLivePresentOnGithub,
+      missingMedia: remaining,
+      failedMedia: failed,
+      tooLargeMedia: tooLarge.length,
+      externalMediaCount,
+      retentionDays,
+    };
+    if (verified || !existingValidToday) {
+      pending.push({
+        path: githubDailyManifestPath(date),
+        bytes: utf8Bytes(utf8Text(manifest)),
+      });
+    }
+
+    for (const path of deletePaths) {
+      pending.push({ path, delete: true });
+    }
+
+    pending.push({
+      path: GITHUB_HISTORY_PATH,
+      bytes: utf8Bytes(utf8Text(history)),
+    });
+
     const info: GithubBackupInfo = {
-      complete,
+      complete: verified,
       createdAt,
       purpose,
-      appDataSha256,
+      appDataSha256: verified ? checksum : null,
       store: {
         table: STORE_TABLE,
         id: STORE_ID,
@@ -764,6 +916,12 @@ export async function runGithubBackupAll(
       githubCommitSha: null,
       timedOut,
       remainingMedia: remaining,
+      date,
+      retentionDays,
+      verified,
+      dailySnapshotPath,
+      externalMediaCount,
+      historyCount: history.snapshots.filter((item) => item.complete && item.verified).length,
     };
 
     pending.push({
@@ -794,6 +952,30 @@ export async function runGithubBackupAll(
     return info;
   } finally {
     githubBackupInFlight = false;
+  }
+}
+
+export async function readGithubBackupStatus(
+  deps: Pick<GithubBackupDependencies, "github" | "vercelEnv"> = defaultDeps,
+): Promise<GithubBackupStatusSummary> {
+  const vercelEnv =
+    deps.vercelEnv !== undefined ? deps.vercelEnv : process.env.VERCEL_ENV;
+  const retentionDays = githubBackupRetentionDays();
+  if (!isGithubBackupAllowed(vercelEnv)) {
+    return { enabled: false, retentionDays, lastRun: null, snapshots: [] };
+  }
+  try {
+    const history = parseGithubHistory(
+      await deps.github.readJsonFile(GITHUB_HISTORY_PATH),
+    );
+    return {
+      enabled: true,
+      ...clientSafeHistory({ ...history, retentionDays }),
+    };
+  } catch (error) {
+    console.error("GitHub backup status read failed");
+    void error;
+    return { enabled: true, retentionDays, lastRun: null, snapshots: [] };
   }
 }
 

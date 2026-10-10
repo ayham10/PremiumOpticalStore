@@ -18,6 +18,37 @@ export type GithubBackupClientResult = {
   skipped: number;
   failed: number;
   tooLarge: number;
+  date: string;
+  retentionDays: number;
+  verified: boolean;
+  dailySnapshotPath: string | null;
+  externalMediaCount: number;
+  historyCount: number;
+};
+
+export type GithubBackupStatusSummary = {
+  enabled: boolean;
+  retentionDays: number;
+  lastRun: {
+    createdAt: string;
+    complete: boolean;
+    timedOut: boolean;
+    remainingMedia: number;
+    copied: number;
+    failed: number;
+    tooLarge: number;
+    mediaFileCount: number;
+  } | null;
+  snapshots: Array<{
+    date: string;
+    createdAt: string;
+    complete: boolean;
+    verified: boolean;
+    appDataSha256: string | null;
+    mediaFileCount: number;
+    missingMedia: number;
+    failedMedia: number;
+  }>;
 };
 
 /** Client-safe: Vercel inlines NEXT_PUBLIC_VERCEL_ENV at build time. */
