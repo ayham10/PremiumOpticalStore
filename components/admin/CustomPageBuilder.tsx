@@ -19,6 +19,8 @@ import {
 import ResponsiveHeroImageField from "@/components/admin/ResponsiveHeroImageField";
 import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
 import EditorSection from "@/components/admin/content-editor/EditorSection";
+import SectionIdentityFields from "@/components/admin/content-editor/SectionIdentityFields";
+import { editorSectionDisplayName } from "@/lib/page-hero-media";
 import NewPageWizardBar from "@/components/admin/content-editor/NewPageWizardBar";
 import {
   clampWizardStep,
@@ -493,6 +495,38 @@ export default function CustomPageBuilder({
     );
   }
 
+  function setSectionAdminLabel(id: string, value: string) {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === id
+          ? { ...section, adminLabel: value.trim() ? value : undefined }
+          : section,
+      ),
+    );
+  }
+
+  function sectionTitle(section: CustomPageSection) {
+    const fallback = t(SECTION_I18N[section.type]);
+    const name = editorSectionDisplayName(section.adminLabel, fallback);
+    return section.hidden
+      ? `${name} — ${t("admin.servicePages.hiddenSection")}`
+      : name;
+  }
+
+  function SectionAdminName({ section }: { section: CustomPageSection }) {
+    return (
+      <SectionIdentityFields
+        adminName={section.adminLabel || ""}
+        onAdminNameChange={(value) => setSectionAdminLabel(section.id, value)}
+        adminLabel={t("admin.servicePages.sectionAdminName")}
+        adminHint={t("admin.servicePages.sectionAdminNameHint")}
+        dir={editorDir}
+        lang={editLocale}
+        hideHeading
+      />
+    );
+  }
+
   function addSection(type: CustomSectionType) {
     if (sections.some((section) => section.type === type)) return;
     if (sections.length >= MAX_CUSTOM_SECTIONS) return;
@@ -847,8 +881,7 @@ export default function CustomPageBuilder({
                 <span className="csp-section-label">
                   <Icon size={16} strokeWidth={1.75} aria-hidden />
                   <span>
-                    {t(SECTION_I18N[section.type])}
-                    {section.hidden ? ` — ${t("admin.servicePages.hiddenSection")}` : ""}
+                    {sectionTitle(section)}
                   </span>
                 </span>
                 <span className="csp-section-actions">
@@ -923,9 +956,7 @@ export default function CustomPageBuilder({
       ) : null}
       {sections.map((section) => {
         if (section.type === "gallery") return null;
-        const title = `${t(SECTION_I18N[section.type])}${
-          section.hidden ? ` — ${t("admin.servicePages.hiddenSection")}` : ""
-        }`;
+        const title = sectionTitle(section);
         if (section.type === "heroMedia") {
           return (
             <EditorSection
@@ -935,6 +966,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               <ResponsiveHeroImageField
                 value={heroMedia}
                 onChange={setHeroMedia}
@@ -959,7 +991,7 @@ export default function CustomPageBuilder({
                 lang={editLocale}
               />
               <BuilderField
-                label={t("admin.servicePages.mainTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.title}
                 onChange={(value) => updateCopy("title", value)}
                 dir={editorDir}
@@ -985,6 +1017,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               {copy.features.map((feature, index) => (
                 <div key={`csp-f-${index}`} className="admin-service-feature">
                   <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
@@ -1039,8 +1072,9 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               <BuilderField
-                label={t("admin.servicePages.benefitsTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.benefitsTitle}
                 onChange={(value) => updateCopy("benefitsTitle", value)}
                 dir={editorDir}
@@ -1073,8 +1107,9 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               <BuilderField
-                label={t("admin.servicePages.warningTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.warningTitle}
                 onChange={(value) => updateCopy("warningTitle", value)}
                 dir={editorDir}
@@ -1100,8 +1135,9 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               <BuilderField
-                label={t("admin.servicePages.valuesTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.valuesTitle}
                 onChange={(value) => updateCopy("valuesTitle", value)}
                 dir={editorDir}
@@ -1135,6 +1171,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
             </EditorSection>
           );
@@ -1148,6 +1185,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              <SectionAdminName section={section} />
               <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
               <div className="csp-inline-actions">
                 <button
@@ -1220,7 +1258,7 @@ export default function CustomPageBuilder({
             lang={editLocale}
           />
           <BuilderField
-            label={t("admin.servicePages.mainTitle")}
+            label={t("admin.servicePages.sectionHeading")}
             value={copy.title}
             onChange={(value) => updateCopy("title", value)}
             dir={editorDir}

@@ -90,6 +90,10 @@ export function servicePagesDefaultsFromDictionary(
       ],
       warningText: dict.contactLenses.safety,
     },
+    catalog: {
+      title: dict.shop.title,
+      lead: dict.shop.lead,
+    },
     homepage: {
       hero: {
         title: dict.hero.title,
@@ -117,6 +121,7 @@ export function defaultServicePagesForLocale(
       contactLenses: DEFAULT_SERVICE_PAGES.contactLenses,
       homepage: DEFAULT_SERVICE_PAGES.homepage,
       footer: DEFAULT_SERVICE_PAGES.footer,
+      catalog: DEFAULT_SERVICE_PAGES.catalog,
     });
   }
   return servicePagesDefaultsFromDictionary(DICTIONARIES[locale]);

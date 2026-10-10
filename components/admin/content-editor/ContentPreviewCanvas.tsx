@@ -8,6 +8,7 @@ import NavigationHub from "@/components/home/NavigationHub";
 import WelcomeSection from "@/components/home/WelcomeSection";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import CustomServicePageView from "@/components/services/CustomServicePageView";
+import StoreCatalogHero from "@/components/shop/StoreCatalogHero";
 import {
   copyForCustomPageEditor,
   visibleCustomSections,
@@ -59,6 +60,13 @@ function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
   }
   if (payload.kind === "contactLenses") {
     return <ContactLensesPage />;
+  }
+  if (payload.kind === "catalog") {
+    return (
+      <div className="frames-page catalogue-page store-page">
+        <StoreCatalogHero />
+      </div>
+    );
   }
   if (payload.kind === "footer") {
     return (

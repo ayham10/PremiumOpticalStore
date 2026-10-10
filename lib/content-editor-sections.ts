@@ -9,8 +9,33 @@ export const BUILT_IN_PREVIEW_SECTION_IDS = {
   contactLensesButtons: "contactLenses-buttons",
   contactLensesFeatures: "contactLenses-features",
   contactLensesNotice: "contactLenses-notice",
+  catalogHero: "catalog-hero",
   footerContent: "footer-content",
 } as const;
+
+const BUILT_IN_HERO_SECTION_IDS = new Set<string>([
+  BUILT_IN_PREVIEW_SECTION_IDS.homepageHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.eyeExamHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.contactLensesHero,
+  BUILT_IN_PREVIEW_SECTION_IDS.catalogHero,
+]);
+
+const HERO_SECTION_CLASSES = [
+  "home-welcome",
+  "eye-exam-hero",
+  "cl-hero",
+  "store-hero",
+  "frames-hero",
+];
+
+export function isPreviewHeroSection(
+  sectionId: string,
+  element?: HTMLElement | null,
+): boolean {
+  if (BUILT_IN_HERO_SECTION_IDS.has(sectionId)) return true;
+  if (!element) return false;
+  return HERO_SECTION_CLASSES.some((name) => element.classList.contains(name));
+}
 
 export const CONTENT_PREVIEW_LABEL = "oyon-content-preview-label";
 export const PREVIEW_EDIT_LABEL_SAFE_TOP = 36;
@@ -66,7 +91,11 @@ export function clearPreviewActiveSections(root: ParentNode): void {
   root
     .querySelectorAll("[data-csp-section].is-preview-active")
     .forEach((node) => {
-      node.classList.remove("is-preview-active", "is-preview-label-clipped");
+      node.classList.remove(
+        "is-preview-active",
+        "is-preview-hero",
+        "is-preview-label-clipped",
+      );
     });
 }
 
@@ -84,7 +113,10 @@ export function syncPreviewActiveSection(
     return { applied: false, clipped: false, element: null };
   }
   el.classList.add("is-preview-active");
-  const clipped = shouldClipPreviewEditingLabel(el.getBoundingClientRect().top);
+  const hero = isPreviewHeroSection(sectionId, el);
+  el.classList.toggle("is-preview-hero", hero);
+  const clipped =
+    hero || shouldClipPreviewEditingLabel(el.getBoundingClientRect().top);
   el.classList.toggle("is-preview-label-clipped", clipped);
   return { applied: true, clipped, element: el };
 }

@@ -8,10 +8,14 @@ import { isLocale, type Locale } from "@/lib/i18n/config";
 import {
   normalizeCustomPages,
   persistCustomPages,
-  publicCustomPages,
+} from "@/lib/custom-service-pages";
+import {
+  parseCustomPageMedia,
 } from "@/lib/custom-service-pages";
 import type {
+  CatalogServicePage,
   ContactLensesServicePage,
+  CustomPageMediaRef,
   EyeExamServicePage,
   FooterServiceContent,
   HomepageHeroContent,
@@ -90,6 +94,10 @@ export const DEFAULT_SERVICE_PAGES: ServicePagesSettings = {
     ],
     warningText:
       "يجب اختيار العدسات اللاصقة بملاءمة مهنية. لا تستخدم العدسات لمدة أطول من الموصى بها، وأوقف استخدامها عند الشعور بألم أو احمرار أو انزعاج غير طبيعي.",
+  },
+  catalog: {
+    title: "المتجر",
+    lead: "اكتشف مجموعتنا الفاخرة",
   },
   homepage: {
     hero: {
@@ -183,6 +191,7 @@ function sparseEyeExam(
     ),
     benefitsTitle: cleanText(raw.benefitsTitle),
     benefits: sparseStringList(raw.benefits, EYE_EXAM_BENEFIT_COUNT),
+    heroMedia: persistHeroMedia(raw, "heroMedia", undefined),
   };
 }
 
@@ -204,7 +213,42 @@ function sparseContactLenses(
     ),
     warningTitle: cleanText(raw.warningTitle),
     warningText: cleanText(raw.warningText),
+    heroMedia: persistHeroMedia(raw, "heroMedia", undefined),
   };
+}
+
+function persistHeroMedia(
+  raw: Record<string, unknown>,
+  key: string,
+  fallback?: CustomPageMediaRef,
+): CustomPageMediaRef | undefined {
+  if (!(key in raw)) return fallback;
+  if (raw[key] == null) return undefined;
+  return parseCustomPageMedia(raw[key]);
+}
+
+function sparseCatalog(saved: unknown): CatalogServicePage {
+  const raw = asRecord(saved);
+  const next: CatalogServicePage = {
+    title: cleanText(raw.title),
+    lead: cleanText(raw.lead),
+  };
+  const heroMedia = persistHeroMedia(raw, "heroMedia", undefined);
+  if (heroMedia) next.heroMedia = heroMedia;
+  return next;
+}
+
+function sparseAdminSectionNames(
+  saved: unknown,
+): Record<string, string> | undefined {
+  const raw = asRecord(saved);
+  const names: Record<string, string> = {};
+  for (const [id, label] of Object.entries(raw)) {
+    if (!id.trim()) continue;
+    const value = cleanText(label).trim();
+    if (value) names[id] = value;
+  }
+  return Object.keys(names).length ? names : undefined;
 }
 
 function sparseHomepageHero(saved: unknown): HomepageHeroContent {
@@ -261,13 +305,22 @@ function sparseBundle(
   if (hasFooterSettings(saved)) {
     bundle.footer = sparseFooter(raw.footer);
   }
+  if (hasCatalogSettings(saved)) {
+    bundle.catalog = sparseCatalog(raw.catalog);
+  }
+  const adminSectionNames = sparseAdminSectionNames(raw.adminSectionNames);
+  if (adminSectionNames) bundle.adminSectionNames = adminSectionNames;
   return bundle;
 }
 
 function hasAnyRootContent(value: unknown): boolean {
   const raw = asRecord(value);
   return Boolean(
-    raw.eyeExam || raw.contactLenses || raw.homepage || raw.footer,
+    raw.eyeExam ||
+      raw.contactLenses ||
+      raw.homepage ||
+      raw.footer ||
+      raw.catalog,
   );
 }
 
@@ -294,6 +347,32 @@ export function hasHomepageSettings(
   return SERVICE_CONTENT_LOCALES.some((key) => {
     const homepage = locales[key]?.homepage;
     return Boolean(homepage && typeof homepage === "object");
+  });
+}
+
+export function hasCatalogSettings(
+  value: unknown,
+  locale?: ServicePagesLocale,
+): boolean {
+  if (!value || typeof value !== "object") return false;
+  const raw = value as {
+    catalog?: unknown;
+    locales?: Partial<Record<ServicePagesLocale, { catalog?: unknown }>>;
+  };
+  if (locale) {
+    const localized = raw.locales?.[locale]?.catalog;
+    if (localized && typeof localized === "object") return true;
+    if (locale === "ar" && raw.catalog && typeof raw.catalog === "object") {
+      return true;
+    }
+    return false;
+  }
+  if (raw.catalog && typeof raw.catalog === "object") return true;
+  const locales = raw.locales;
+  if (!locales) return false;
+  return SERVICE_CONTENT_LOCALES.some((key) => {
+    const catalog = locales[key]?.catalog;
+    return Boolean(catalog && typeof catalog === "object");
   });
 }
 
@@ -375,6 +454,7 @@ function overlayEyeExam(
     features: overlayFeatureList(saved?.features, fallback.features),
     benefitsTitle: overlayText(saved?.benefitsTitle, fallback.benefitsTitle),
     benefits: overlayStringList(saved?.benefits, fallback.benefits),
+    heroMedia: saved?.heroMedia || fallback.heroMedia,
   };
 }
 
@@ -393,7 +473,21 @@ function overlayContactLenses(
     features: overlayFeatureList(saved?.features, fallback.features),
     warningTitle: overlayText(saved?.warningTitle, fallback.warningTitle || ""),
     warningText: overlayText(saved?.warningText, fallback.warningText),
+    heroMedia: saved?.heroMedia || fallback.heroMedia,
   };
+}
+
+function overlayCatalog(
+  saved: CatalogServicePage | undefined,
+  fallback: CatalogServicePage,
+): CatalogServicePage {
+  const next: CatalogServicePage = {
+    title: overlayText(saved?.title, fallback.title || ""),
+    lead: overlayText(saved?.lead, fallback.lead || ""),
+  };
+  const heroMedia = saved?.heroMedia || fallback.heroMedia;
+  if (heroMedia) next.heroMedia = heroMedia;
+  return next;
 }
 
 function overlayHomepageHero(
@@ -465,6 +559,12 @@ function overlayBundle(
       },
     );
   }
+  if (fallback.catalog || saved?.catalog) {
+    next.catalog = overlayCatalog(saved?.catalog, fallback.catalog ?? {});
+  }
+  if (saved?.adminSectionNames) {
+    next.adminSectionNames = saved.adminSectionNames;
+  }
   return next;
 }
 
@@ -484,6 +584,8 @@ function persistBundle(
     options?.includeFooter ||
     hasFooterSettings(stored) ||
     hasFooterSettings(patch);
+  const includeCatalog =
+    hasCatalogSettings(stored) || hasCatalogSettings(patch);
 
   const next: ServicePagesLocaleBundle = {
     eyeExam: sparseEyeExam(
@@ -522,6 +624,19 @@ function persistBundle(
   } else if (hasFooterSettings(stored)) {
     next.footer = sparseFooter(storedRaw.footer);
   }
+
+  if (includeCatalog) {
+    next.catalog = sparseCatalog({
+      ...asRecord(storedRaw.catalog),
+      ...asRecord(patchRaw.catalog),
+    });
+  }
+
+  const adminSectionNames = sparseAdminSectionNames({
+    ...asRecord(storedRaw.adminSectionNames),
+    ...asRecord(patchRaw.adminSectionNames),
+  });
+  if (adminSectionNames) next.adminSectionNames = adminSectionNames;
 
   return next;
 }
@@ -565,6 +680,8 @@ export function migrateServicePagesDocument(
     contactLenses: raw.contactLenses,
     homepage: raw.homepage,
     footer: raw.footer,
+    catalog: raw.catalog,
+    adminSectionNames: raw.adminSectionNames,
   });
 
   if (!locales.ar && hasAnyRootContent(raw)) {
@@ -579,17 +696,20 @@ export function migrateServicePagesDocument(
   };
   if (root.homepage) next.homepage = root.homepage;
   if (root.footer) next.footer = root.footer;
+  if (root.catalog) next.catalog = root.catalog;
+  if (root.adminSectionNames) next.adminSectionNames = root.adminSectionNames;
   const customPages = normalizeCustomPages(raw.customPages);
   if (customPages.length) next.customPages = customPages;
   return next;
 }
 
 function fillFromArabicDefaults(saved: unknown): ServicePagesLocaleBundle {
-  return overlayBundle(sparseBundle(saved), {
+  return   overlayBundle(sparseBundle(saved), {
     eyeExam: DEFAULT_SERVICE_PAGES.eyeExam,
     contactLenses: DEFAULT_SERVICE_PAGES.contactLenses,
     homepage: DEFAULT_SERVICE_PAGES.homepage,
     footer: DEFAULT_SERVICE_PAGES.footer,
+    catalog: DEFAULT_SERVICE_PAGES.catalog,
   });
 }
 
@@ -609,6 +729,7 @@ export function mergeServicePages(
     contactLenses: filledAr.contactLenses,
     homepage: filledAr.homepage,
     footer: filledAr.footer,
+    catalog: filledAr.catalog,
     locales,
   };
 }
@@ -625,11 +746,42 @@ export function hydrateServicePagesForEditor(
     contactLenses: migrated.contactLenses,
     homepage: migrated.homepage,
     footer: migrated.footer,
+    catalog: migrated.catalog,
   };
   const sparse = saved
     ? sparseBundle(saved, iconSource)
     : sparseBundle({}, iconSource);
-  return overlayBundle(sparse, localeDefaults);
+  return withFallbackHeroMedia(
+    overlayBundle(sparse, localeDefaults),
+    iconSource,
+  );
+}
+
+function withFallbackHeroMedia(
+  bundle: ServicePagesLocaleBundle,
+  source?: ServicePagesLocaleBundle,
+): ServicePagesLocaleBundle {
+  if (!source) return bundle;
+  return {
+    ...bundle,
+    eyeExam: {
+      ...bundle.eyeExam,
+      heroMedia: bundle.eyeExam.heroMedia || source.eyeExam.heroMedia,
+    },
+    contactLenses: {
+      ...bundle.contactLenses,
+      heroMedia:
+        bundle.contactLenses.heroMedia || source.contactLenses.heroMedia,
+    },
+    catalog:
+      bundle.catalog || source.catalog
+        ? {
+            ...source.catalog,
+            ...bundle.catalog,
+            heroMedia: bundle.catalog?.heroMedia || source.catalog?.heroMedia,
+          }
+        : bundle.catalog,
+  };
 }
 
 /**
@@ -688,8 +840,33 @@ export function persistServicePages(
   };
   if (root.homepage) next.homepage = root.homepage;
   if (root.footer) next.footer = root.footer;
+  if (root.catalog) next.catalog = root.catalog;
+  if (root.adminSectionNames) next.adminSectionNames = root.adminSectionNames;
   const customPages = persistCustomPages(current.customPages, patchRaw);
   if (customPages.length) next.customPages = customPages;
+  return next;
+}
+
+function stripAdminEditorMeta(
+  bundle: ServicePagesLocaleBundle,
+): ServicePagesLocaleBundle {
+  const { adminSectionNames: _adminSectionNames, ...rest } = bundle;
+  return rest;
+}
+
+function stripAdminFromDocument(
+  document: ServicePagesSettings,
+): ServicePagesSettings {
+  const locales: Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>> =
+    {};
+  for (const locale of SERVICE_CONTENT_LOCALES) {
+    const saved = document.locales?.[locale];
+    if (saved) locales[locale] = stripAdminEditorMeta(saved);
+  }
+  const next: ServicePagesSettings = {
+    ...stripAdminEditorMeta(document),
+    locales,
+  };
   return next;
 }
 
@@ -698,8 +875,11 @@ export function publicServicePages(
   incoming?: unknown,
 ): ServicePagesSettings | undefined {
   if (!incoming || typeof incoming !== "object") return undefined;
-  const migrated = migrateServicePagesDocument(incoming);
-  const customPages = normalizeCustomPages(migrated.customPages);
+  const migrated = stripAdminFromDocument(migrateServicePagesDocument(incoming));
+  const customPages = normalizeCustomPages(migrated.customPages).map((page) => ({
+    ...page,
+    sections: page.sections.map(({ adminLabel: _adminLabel, ...rest }) => rest),
+  }));
   if (!hasHomepageSettings(incoming)) {
     const { homepage: _homepage, ...rest } = migrated;
     return customPages.length ? { ...rest, customPages } : rest;
@@ -717,13 +897,25 @@ export function resolveServicePagesForLocale(
     : "ar";
   const migrated = migrateServicePagesDocument(incoming);
   const saved = migrated.locales?.[resolved];
-  if (saved) return saved;
+  if (saved) {
+    return withFallbackHeroMedia(
+      saved,
+      migrated.locales?.ar ?? {
+        eyeExam: migrated.eyeExam,
+        contactLenses: migrated.contactLenses,
+        homepage: migrated.homepage,
+        footer: migrated.footer,
+        catalog: migrated.catalog,
+      },
+    );
+  }
   if (resolved === "ar") {
     return {
       eyeExam: migrated.eyeExam,
       contactLenses: migrated.contactLenses,
       homepage: migrated.homepage,
       footer: migrated.footer,
+      catalog: migrated.catalog,
     };
   }
   return undefined;
@@ -778,9 +970,20 @@ export function localePatchPayload(
   options?: { includeHomepage?: boolean },
 ): { locales: Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>> } {
   const copy: ServicePagesLocaleBundle = {
-    eyeExam: bundle.eyeExam,
-    contactLenses: bundle.contactLenses,
+    eyeExam: {
+      ...bundle.eyeExam,
+      heroMedia: bundle.eyeExam.heroMedia ?? null,
+    },
+    contactLenses: {
+      ...bundle.contactLenses,
+      heroMedia: bundle.contactLenses.heroMedia ?? null,
+    },
     footer: bundle.footer,
+    catalog: {
+      ...(bundle.catalog || {}),
+      heroMedia: bundle.catalog?.heroMedia ?? null,
+    },
+    adminSectionNames: bundle.adminSectionNames || {},
   };
   if (options?.includeHomepage !== false && bundle.homepage) {
     copy.homepage = bundle.homepage;

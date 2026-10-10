@@ -209,4 +209,67 @@ assert.equal(withCustomPage.customPages?.[0]?.slug, "kids-exam");
 assert.equal(withCustomPage.customPages?.[0]?.status, "draft");
 assert.equal(withCustomPage.locales?.ar?.eyeExam.title, "فحص نظر شامل");
 
+const mediaSave = persistServicePages(
+  arabicSave,
+  localePatchPayload("ar", {
+    ...DEFAULT_SERVICE_PAGES,
+    eyeExam: {
+      ...DEFAULT_SERVICE_PAGES.eyeExam,
+      title: "عنوان عربي محدّث",
+      heroMedia: {
+        kind: "image",
+        url: "https://cdn.example/eye-exam.webp",
+      },
+    },
+    catalog: {
+      title: "المتجر المحدث",
+      lead: "مجموعة جديدة",
+      heroMedia: { kind: "image", url: "https://cdn.example/shop.jpg" },
+    },
+    adminSectionNames: {
+      "eyeExam-benefits": "مميزات الفحص — تنظيم",
+    },
+  }),
+);
+assert.equal(
+  mediaSave.locales?.ar?.eyeExam.heroMedia?.url,
+  "https://cdn.example/eye-exam.webp",
+);
+assert.equal(mediaSave.locales?.ar?.catalog?.title, "المتجر المحدث");
+assert.equal(
+  mediaSave.locales?.ar?.adminSectionNames?.["eyeExam-benefits"],
+  "مميزات الفحص — تنظيم",
+);
+assert.equal(
+  mediaSave.locales?.he?.eyeExam.title,
+  "כותרת עברית שמורה",
+);
+
+const publicMedia = publicServicePages(mediaSave);
+assert.equal(
+  publicMedia?.locales?.ar?.eyeExam.heroMedia?.url,
+  "https://cdn.example/eye-exam.webp",
+);
+assert.equal(publicMedia?.locales?.ar?.catalog?.title, "المتجر المحدث");
+assert.equal(publicMedia?.locales?.ar?.adminSectionNames, undefined);
+assert.equal(
+  resolveServicePagesForLocale(publicMedia, "he")?.eyeExam.heroMedia?.url,
+  "https://cdn.example/eye-exam.webp",
+);
+assert.notEqual(
+  resolveServicePagesForLocale(publicMedia, "ar")?.eyeExam.title,
+  publicMedia?.locales?.ar?.adminSectionNames?.["eyeExam-benefits"],
+);
+
+const restoredMedia = persistServicePages(
+  mediaSave,
+  localePatchPayload("ar", {
+    ...DEFAULT_SERVICE_PAGES,
+    eyeExam: { ...DEFAULT_SERVICE_PAGES.eyeExam, title: "عنوان عربي محدّث" },
+    catalog: { title: "المتجر المحدث", lead: "مجموعة جديدة" },
+  }),
+);
+assert.equal(restoredMedia.locales?.ar?.eyeExam.heroMedia, undefined);
+assert.equal(restoredMedia.locales?.ar?.catalog?.heroMedia, undefined);
+
 console.log("service-pages i18n tests passed");

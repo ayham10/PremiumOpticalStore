@@ -6505,8 +6505,12 @@ html[dir="rtl"] .frames-product-name {
 .cl-hero-video,
 .cl-hero-media img,
 .cl-hero-media picture,
+.cl-hero-media video,
 .eye-exam-hero-media img,
 .eye-exam-hero-media picture,
+.eye-exam-hero-media video,
+.store-hero img,
+.store-hero picture,
 .csp-hero-fill {
   position: absolute;
   inset: 0;
@@ -16634,6 +16638,23 @@ html.csp-preview-doc body::-webkit-scrollbar {
   box-shadow:
     0 0 0 5px rgba(34, 211, 238, 0.14),
     0 0 16px rgba(34, 211, 238, 0.22);
+}
+
+.csp-preview-canvas [data-csp-section].is-preview-active.is-preview-hero {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.2);
+}
+
+.csp-section-identity {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.csp-section-identity .admin-muted {
+  display: block;
+  margin-top: 0.35rem;
 }
 
 .csp-preview-edit-label {

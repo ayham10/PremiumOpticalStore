@@ -457,6 +457,8 @@ export interface EyeExamServicePage {
   features: ServicePageFeature[];
   benefitsTitle: string;
   benefits: string[];
+  /** Shared hero override. Empty/undefined keeps the built-in default media. */
+  heroMedia?: CustomPageMediaRef | null;
 }
 
 export interface ContactLensesServicePage {
@@ -467,6 +469,15 @@ export interface ContactLensesServicePage {
   features: ServicePageFeature[];
   warningTitle?: string;
   warningText: string;
+  /** Shared hero override. Empty/undefined keeps the built-in default media. */
+  heroMedia?: CustomPageMediaRef | null;
+}
+
+export interface CatalogServicePage {
+  title?: string;
+  lead?: string;
+  /** Image-only Catalog banner. Videos are ignored on the public shop page. */
+  heroMedia?: CustomPageMediaRef | null;
 }
 
 export interface HomepageHeroContent {
@@ -491,12 +502,18 @@ export interface FooterServiceContent {
 
 export type ServicePagesLocale = "ar" | "he" | "en";
 
-/** One language's editable Homepage / Eye Exam / Contact Lenses / Footer copy. */
+/** One language's editable Homepage / Eye Exam / Contact Lenses / Footer / Catalog copy. */
 export interface ServicePagesLocaleBundle {
   eyeExam: EyeExamServicePage;
   contactLenses: ContactLensesServicePage;
   homepage?: HomepageServicePage;
   footer?: FooterServiceContent;
+  catalog?: CatalogServicePage;
+  /**
+   * Admin accordion labels keyed by stable section id.
+   * Never rendered on the public website.
+   */
+  adminSectionNames?: Record<string, string>;
 }
 
 export const CUSTOM_SECTION_TYPES = [
@@ -534,6 +551,8 @@ export interface CustomPageSection {
   id: string;
   type: CustomSectionType;
   hidden?: boolean;
+  /** Admin accordion name only. Never shown on the public website. */
+  adminLabel?: string;
 }
 
 export interface ImageFocalPoint {

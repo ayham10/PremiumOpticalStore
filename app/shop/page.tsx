@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   CatalogueProductCard,
@@ -9,6 +8,7 @@ import {
   sortProducts,
   type CatalogueSort,
 } from "@/components/catalogue/CategoryCatalogue";
+import StoreCatalogHero from "@/components/shop/StoreCatalogHero";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import {
   CatalogueFilterChips,
@@ -106,21 +106,7 @@ function ShopContent() {
   return (
     <div className="frames-page catalogue-page store-page">
       <ScrollRestore />
-      <section className="frames-hero store-hero" aria-label={t("shop.title")}>
-        <Image
-          src="/images/store-catalog-hero.jpg"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover store-hero-image"
-        />
-        <span className="frames-hero-veil store-hero-veil" aria-hidden />
-        <div className="catalogue-hero-copy store-hero-copy">
-          <h1 className="catalogue-hero-title">{t("shop.title")}</h1>
-          <p className="catalogue-hero-lead">{t("shop.lead")}</p>
-        </div>
-      </section>
+      <StoreCatalogHero />
 
       <section className="frames-catalogue wrap">
         <div className="store-toolbar">

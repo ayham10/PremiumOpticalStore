@@ -33,10 +33,15 @@ import {
 } from "../lib/content-editor-wizard";
 import {
   BUILT_IN_PREVIEW_SECTION_IDS,
+  isPreviewHeroSection,
   previewEditingLabel,
   previewSectionSelector,
   shouldClipPreviewEditingLabel,
 } from "../lib/content-editor-sections";
+import {
+  catalogHeroImage,
+  editorSectionDisplayName,
+} from "../lib/page-hero-media";
 import {
   previewPlaceholderProducts,
   withPreviewPlaceholders,
@@ -79,6 +84,7 @@ assert.equal(editorPanelDir("en"), "ltr");
 assert.equal(viewHrefForEditor("homepage"), "/");
 assert.equal(viewHrefForEditor("eyeExam"), "/eye-exams");
 assert.equal(viewHrefForEditor("contactLenses"), "/contact-lenses");
+assert.equal(viewHrefForEditor("catalog"), "/shop");
 assert.equal(viewHrefForEditor("custom", "multifocal-lenses"), "/services/multifocal-lenses");
 assert.equal(CONTENT_PREVIEW_PATH, "/admin/service-pages/preview");
 assert.equal(CONTENT_PREVIEW_VIEWPORTS.mobile.width, 390);
@@ -390,7 +396,38 @@ const editorPage = readFileSync(
 );
 assert.match(editorPage, /PREVIEW_SECTION\.eyeExamBenefits/);
 assert.match(editorPage, /PREVIEW_SECTION\.contactLensesNotice/);
+assert.match(editorPage, /PREVIEW_SECTION\.catalogHero/);
+assert.match(editorPage, /sectionAdminName/);
+assert.match(editorPage, /restoreDefaultMedia/);
 assert.match(editorPage, /onPointerDownCapture|onActivate=\{setActiveSectionId\}/);
+assert.match(editorPage, /acceptVideo=\{false\}/);
+assert.match(canvasSrc, /StoreCatalogHero/);
+assert.match(createModal, /sectionAdminName/);
+assert.equal(
+  editorSectionDisplayName("تنظيم الفحص", "ما يميز الفحص"),
+  "تنظيم الفحص",
+);
+assert.equal(editorSectionDisplayName("  ", "ما يميز الفحص"), "ما يميز الفحص");
+assert.equal(
+  catalogHeroImage({ kind: "video", url: "/videos/x.mp4" }),
+  undefined,
+);
+assert.equal(
+  catalogHeroImage({ kind: "image", url: "/images/shop.jpg" })?.url,
+  "/images/shop.jpg",
+);
+assert.equal(isPreviewHeroSection("eyeExam-hero"), true);
+assert.equal(isPreviewHeroSection("catalog-hero"), true);
+assert.equal(isPreviewHeroSection("eyeExam-benefits"), false);
+
+const heroEl = { classList: { contains: (name: string) => name === "cl-hero" } } as HTMLElement;
+assert.equal(isPreviewHeroSection("sec_custom", heroEl), true);
+
+assert.match(
+  previewCss,
+  /\.csp-preview-canvas \[data-csp-section\]\.is-preview-active\.is-preview-hero/,
+);
+assert.match(previewCss, /outline-offset:\s*-2px/);
 
 const wizardBar = readFileSync(
   join(process.cwd(), "components/admin/content-editor/NewPageWizardBar.tsx"),

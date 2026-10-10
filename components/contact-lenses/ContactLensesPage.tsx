@@ -19,6 +19,7 @@ import {
   pickServiceText,
 } from "@/lib/service-pages";
 import { useLocalizedServicePages } from "@/lib/use-service-pages";
+import PageHeroMedia from "@/components/media/PageHeroMedia";
 import {
   rememberCategoryDefaultImages,
   useCategoryDefaultImages,
@@ -147,28 +148,36 @@ export default function ContactLensesPage() {
     <div className="frames-page cl-page" dir={rtl ? "rtl" : "ltr"}>
       <section className="cl-hero" aria-label={title} data-csp-section="contactLenses-hero">
         <div className="cl-hero-media">
-          {reduceMotion ? (
-            <Image
-              src="/images/contact-lenses-hero-poster.jpg"
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
-          ) : (
-            <video
-              className="cl-hero-video"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              poster="/images/contact-lenses-hero-poster.jpg"
-            >
-              <source src="/videos/contact-lenses-hero.mp4" type="video/mp4" />
-            </video>
-          )}
+          <PageHeroMedia
+            media={saved?.heroMedia}
+            alt=""
+            className="object-cover"
+            videoClassName="cl-hero-video"
+            fallback={
+              reduceMotion ? (
+                <Image
+                  src="/images/contact-lenses-hero-poster.jpg"
+                  alt=""
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover"
+                />
+              ) : (
+                <video
+                  className="cl-hero-video"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  poster="/images/contact-lenses-hero-poster.jpg"
+                >
+                  <source src="/videos/contact-lenses-hero.mp4" type="video/mp4" />
+                </video>
+              )
+            }
+          />
         </div>
         <span className="cl-hero-veil" aria-hidden />
         <div className="cl-hero-copy">

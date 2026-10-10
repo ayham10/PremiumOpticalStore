@@ -104,6 +104,7 @@ export type ContentPreviewKind =
   | "homepage"
   | "eyeExam"
   | "contactLenses"
+  | "catalog"
   | "footer"
   | "custom";
 
@@ -202,6 +203,7 @@ export function viewHrefForEditor(
   if (kind === "homepage") return "/";
   if (kind === "eyeExam") return "/eye-exams";
   if (kind === "contactLenses") return "/contact-lenses";
+  if (kind === "catalog") return "/shop";
   if (kind === "footer") return "/#footer";
   const safe = (slug || "").replace(/^\/+|\/+$/g, "");
   return safe ? `/services/${safe}` : "/services";
