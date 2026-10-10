@@ -112,45 +112,24 @@ const SAMPLE: Record<ServicePagesLocale, PlaceholderCopy> = {
   },
 };
 
-function fillText(value: string, fallback: string): string {
-  return value.trim() ? value : fallback;
-}
-
 export function previewPlaceholderCopy(
   locale: ServicePagesLocale,
 ): PlaceholderCopy {
   return SAMPLE[locale] || SAMPLE.ar;
 }
 
+/**
+ * Custom-page preview must match the published page.
+ * Empty owner fields stay empty — never substitute sample benefit/feature/notice text.
+ */
 export function withPreviewPlaceholders(
   copy: CustomPageCopy,
-  locale: ServicePagesLocale,
+  _locale: ServicePagesLocale,
 ): CustomPageCopy {
-  const sample = previewPlaceholderCopy(locale);
   return {
     ...copy,
-    complete: copy.complete,
-    eyebrow: fillText(copy.eyebrow, sample.eyebrow),
-    title: fillText(copy.title, sample.title),
-    description: fillText(copy.description, sample.description),
-    bookingButtonText: fillText(copy.bookingButtonText, sample.bookingButtonText),
-    benefitsTitle: fillText(copy.benefitsTitle, sample.benefitsTitle),
-    warningTitle: fillText(copy.warningTitle, sample.warningTitle),
-    warningText: fillText(copy.warningText, sample.warningText),
-    valuesTitle: fillText(copy.valuesTitle, sample.valuesTitle),
-    valuesText: fillText(copy.valuesText, sample.valuesText),
-    privacyText: fillText(copy.privacyText, sample.privacyText),
-    features: copy.features.map((feature, index) => {
-      const fallback = sample.features[index] || sample.features[0]!;
-      return {
-        ...feature,
-        title: fillText(feature.title, fallback.title),
-        description: fillText(feature.description, fallback.description),
-      };
-    }),
-    benefits: copy.benefits.map((item, index) =>
-      fillText(item, sample.benefits[index] || sample.benefits[0] || ""),
-    ),
+    features: copy.features.map((feature) => ({ ...feature })),
+    benefits: [...copy.benefits],
   };
 }
 
@@ -170,9 +149,8 @@ export function previewPlaceholderProducts(
 
 export function copyFieldIsPlaceholder(
   value: string | undefined,
-  locale: ServicePagesLocale,
-  field: keyof Omit<PlaceholderCopy, "features" | "products" | "benefits">,
+  _locale: ServicePagesLocale,
+  _field: keyof Omit<PlaceholderCopy, "features" | "products" | "benefits">,
 ): boolean {
-  const sample = previewPlaceholderCopy(locale);
-  return !String(value || "").trim() && Boolean(sample[field]);
+  return false;
 }

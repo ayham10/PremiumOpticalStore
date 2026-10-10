@@ -46,7 +46,12 @@ import {
   previewPlaceholderProducts,
   withPreviewPlaceholders,
 } from "../lib/preview-placeholders";
-import { emptyCustomPageCopy, persistCustomPages } from "../lib/custom-service-pages";
+import {
+  emptyCustomPageCopy,
+  persistCustomPages,
+  visibleCustomBenefits,
+  visibleCustomFeatures,
+} from "../lib/custom-service-pages";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
 import { EDITOR_SECTION_ICONS } from "../components/admin/content-editor/EditorSection";
 import {
@@ -199,9 +204,24 @@ assert.equal(formatWizardStepNumber(4), "04");
 const blankCopy = emptyCustomPageCopy();
 const previewCopy = withPreviewPlaceholders(blankCopy, "ar");
 assert.equal(blankCopy.title, "");
-assert.ok(previewCopy.title.length > 0);
-assert.ok(previewCopy.features[0]?.title);
-assert.ok(previewCopy.benefits[0]);
+assert.equal(previewCopy.title, "");
+assert.deepEqual(visibleCustomBenefits(previewCopy.benefits), []);
+assert.deepEqual(visibleCustomFeatures(previewCopy.features), []);
+assert.equal(
+  previewCopy.benefits.every((item) => item === ""),
+  true,
+);
+const twoBenefits = withPreviewPlaceholders(
+  {
+    ...blankCopy,
+    benefitsTitle: "لماذا تختارون هذه الخدمة؟",
+    benefits: ["One", "Two", "", "   ", ""],
+  },
+  "he",
+);
+assert.deepEqual(visibleCustomBenefits(twoBenefits.benefits), ["One", "Two"]);
+assert.equal(twoBenefits.benefitsTitle, "لماذا تختارون هذه الخدمة؟");
+assert.equal(twoBenefits.benefits[2], "");
 const realCopy = withPreviewPlaceholders(
   { ...blankCopy, title: "فحص أطفال" },
   "ar",
@@ -503,5 +523,20 @@ const wizardBar = readFileSync(
   "utf8",
 );
 assert.match(wizardBar, /formatWizardStepNumber/);
+
+const customView = readFileSync(
+  join(process.cwd(), "components/services/CustomServicePageView.tsx"),
+  "utf8",
+);
+assert.match(customView, /visibleCustomBenefits/);
+assert.match(customView, /visibleCustomFeatures/);
+const placeholderSrc = readFileSync(
+  join(process.cwd(), "lib/preview-placeholders.ts"),
+  "utf8",
+);
+assert.doesNotMatch(
+  placeholderSrc,
+  /fillText\(copy\.benefitsTitle|fillText\(item, sample\.benefits/,
+);
 
 console.log("content-editor-preview tests passed");

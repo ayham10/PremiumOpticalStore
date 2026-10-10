@@ -6,9 +6,12 @@ import { useState, type ReactNode } from "react";
 import { Check, Lock, Target } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
+  filledText,
   isExternalCta,
   resolveCtaHref,
   resolveSectionArticle,
+  visibleCustomBenefits,
+  visibleCustomFeatures,
   visibleCustomSections,
 } from "@/lib/custom-service-pages";
 import {
@@ -216,9 +219,7 @@ function BodySection({
   const hasArticle = Boolean(resolveSectionArticle(section, locale));
 
   if (section.type === "featureGrid") {
-    const features = copy.features.filter(
-      (feature) => feature.title || feature.description,
-    );
+    const features = visibleCustomFeatures(copy.features);
     if (!features.length && !hasArticle) return null;
     const grid = features.length ? (
       isCl ? (
@@ -234,8 +235,12 @@ function BodySection({
                   <Icon size={18} strokeWidth={1.7} />
                 </span>
                 <div className="cl-feature-copy">
-                  <h2 className="cl-feature-title">{feature.title}</h2>
-                  <p className="cl-feature-text">{feature.description}</p>
+                  {filledText(feature.title) ? (
+                    <h2 className="cl-feature-title">{feature.title}</h2>
+                  ) : null}
+                  {filledText(feature.description) ? (
+                    <p className="cl-feature-text">{feature.description}</p>
+                  ) : null}
                 </div>
               </article>
             );
@@ -254,8 +259,12 @@ function BodySection({
                   <Icon size={22} strokeWidth={1.85} />
                 </span>
                 <div className="eye-exam-feature-copy">
-                  <p className="eye-exam-feature-title">{feature.title}</p>
-                  <p className="eye-exam-feature-lead">{feature.description}</p>
+                  {filledText(feature.title) ? (
+                    <p className="eye-exam-feature-title">{feature.title}</p>
+                  ) : null}
+                  {filledText(feature.description) ? (
+                    <p className="eye-exam-feature-lead">{feature.description}</p>
+                  ) : null}
                 </div>
               </article>
             );
@@ -278,17 +287,20 @@ function BodySection({
   }
 
   if (section.type === "benefitsList") {
-    const items = copy.benefits.filter(Boolean);
+    const items = visibleCustomBenefits(copy.benefits);
+    const title = filledText(copy.benefitsTitle);
     if (!items.length && !hasArticle) return null;
     const list = items.length ? (
       <>
-        <h2 className="eye-exam-benefits-title">
-          <span>{copy.benefitsTitle}</span>
-          <span className="eye-exam-benefits-rule" aria-hidden />
-        </h2>
+        {title ? (
+          <h2 className="eye-exam-benefits-title">
+            <span>{title}</span>
+            <span className="eye-exam-benefits-rule" aria-hidden />
+          </h2>
+        ) : null}
         <ul className="eye-exam-benefits-list">
-          {items.map((item) => (
-            <li key={item}>
+          {items.map((item, index) => (
+            <li key={`${section.id}-${index}`}>
               <span className="eye-exam-check-orb" aria-hidden>
                 <Check size={13} strokeWidth={2.4} />
               </span>
@@ -309,11 +321,13 @@ function BodySection({
   }
 
   if (section.type === "notice") {
-    if (!copy.warningText && !hasArticle) return null;
-    const note = copy.warningText ? (
+    const warningText = filledText(copy.warningText);
+    const warningTitle = filledText(copy.warningTitle);
+    if (!warningText && !hasArticle) return null;
+    const note = warningText ? (
       <p>
-        {copy.warningTitle ? <strong>{copy.warningTitle} </strong> : null}
-        {copy.warningText}
+        {warningTitle ? <strong>{warningTitle} </strong> : null}
+        {warningText}
       </p>
     ) : null;
     return (
@@ -328,23 +342,35 @@ function BodySection({
   }
 
   if (section.type === "valuesStrip") {
-    const strip = (
+    const valuesTitle = filledText(copy.valuesTitle);
+    const valuesText = filledText(copy.valuesText);
+    const privacyText = filledText(copy.privacyText);
+    const hasValues = Boolean(valuesTitle || valuesText);
+    if (!hasValues && !privacyText && !hasArticle) return null;
+    const strip =
+      hasValues || privacyText ? (
       <>
+        {hasValues ? (
         <section className="eye-exam-accuracy">
           <span className="eye-exam-accuracy-orb" aria-hidden>
             <Target size={16} strokeWidth={1.7} />
           </span>
-          <h2 className="eye-exam-accuracy-title">{copy.valuesTitle}</h2>
-          <p className="eye-exam-accuracy-text">{copy.valuesText}</p>
+          {valuesTitle ? (
+            <h2 className="eye-exam-accuracy-title">{valuesTitle}</h2>
+          ) : null}
+          {valuesText ? (
+            <p className="eye-exam-accuracy-text">{valuesText}</p>
+          ) : null}
         </section>
-        {copy.privacyText ? (
+        ) : null}
+        {privacyText ? (
           <p className="eye-exam-privacy">
             <Lock size={14} aria-hidden strokeWidth={1.7} />
-            <span>{copy.privacyText}</span>
+            <span>{privacyText}</span>
           </p>
         ) : null}
       </>
-    );
+      ) : null;
     return (
       <div
         className={sectionClass(section.id, activeSectionId)}
@@ -445,13 +471,17 @@ export default function CustomServicePageView({
   const pageDir = dir ?? (rtl ? "rtl" : "ltr");
   const heroCopy = (
     <>
-      {copy.eyebrow ? (
+      {filledText(copy.eyebrow) ? (
         <p className={isCl ? "cl-eyebrow" : "eye-exam-eyebrow"}>{copy.eyebrow}</p>
       ) : null}
-      <h1 className={isCl ? "cl-title" : "eye-exam-title"}>{copy.title}</h1>
-      <p className={isCl ? "cl-description" : "eye-exam-description"}>
-        {copy.description}
-      </p>
+      {filledText(copy.title) ? (
+        <h1 className={isCl ? "cl-title" : "eye-exam-title"}>{copy.title}</h1>
+      ) : null}
+      {filledText(copy.description) ? (
+        <p className={isCl ? "cl-description" : "eye-exam-description"}>
+          {copy.description}
+        </p>
+      ) : null}
       {page.showHeroButton ? (
         <PageCta page={page} copy={copy} isCl={isCl} />
       ) : null}
