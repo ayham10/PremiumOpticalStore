@@ -36,12 +36,44 @@ export function hasPermission(role: UserRole, permission: string): boolean {
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
 }
 
-function secret(): string {
+export function isProductionRuntime(): boolean {
   return (
-    process.env.AUTH_SECRET ||
-    process.env.SUPABASE_SECRET_KEY ||
-    "lumina-dev-secret-change-me"
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
   );
+}
+
+function envValue(name: string): string {
+  const value = process.env[name];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function hasAuthSecret(): boolean {
+  return Boolean(envValue("AUTH_SECRET") || envValue("SUPABASE_SECRET_KEY"));
+}
+
+function secret(): string {
+  const configured = envValue("AUTH_SECRET") || envValue("SUPABASE_SECRET_KEY");
+  if (configured) return configured;
+  if (isProductionRuntime()) {
+    throw new Error("AUTH_SECRET_MISSING");
+  }
+  return "lumina-dev-secret-change-me";
+}
+
+let testSessionOverride: AdminSession | null | undefined;
+
+function allowTestSessionOverride(): boolean {
+  return (
+    process.env.BOOKING_E2E_ISOLATED === "1" &&
+    process.env.VERCEL_ENV !== "production"
+  );
+}
+
+/** Isolated tests only. Ignored in production. */
+export function setTestSession(session: AdminSession | null | undefined): void {
+  if (!allowTestSessionOverride()) return;
+  testSessionOverride = session;
 }
 
 function sign(payload: string): string {
@@ -72,37 +104,57 @@ function decodeSession(token: string): (AdminSession & { exp: number }) | null {
   }
 }
 
+function configuredPassword(envName: string, devFallback: string): string | null {
+  const configured = envValue(envName);
+  if (configured) return configured;
+  if (isProductionRuntime()) return null;
+  return devFallback;
+}
+
 function getAdminUsers(): Array<AdminSession & { password: string }> {
-  const pass = process.env.ADMIN_PASSWORD || "oyon2024";
-  return [
-    {
+  const users: Array<AdminSession & { password: string }> = [];
+  const adminPassword = configuredPassword("ADMIN_PASSWORD", "oyon2024");
+  if (adminPassword) {
+    users.push({
       id: "staff-maya",
       name: "Maya Cohen",
-      email: process.env.ADMIN_EMAIL || "admin@oyon.optics",
+      email: envValue("ADMIN_EMAIL") || "admin@oyon.optics",
       role: "admin",
-      password: pass,
-    },
-    {
+      password: adminPassword,
+    });
+  }
+  const employeePassword = configuredPassword("EMPLOYEE_PASSWORD", "employee2024");
+  if (employeePassword) {
+    users.push({
       id: "staff-noah",
       name: "Noah Levi",
       email: "employee@oyon.optics",
       role: "employee",
-      password: process.env.EMPLOYEE_PASSWORD || "employee2024",
-    },
-    {
+      password: employeePassword,
+    });
+  }
+  const receptionistPassword = configuredPassword(
+    "RECEPTIONIST_PASSWORD",
+    "reception2024",
+  );
+  if (receptionistPassword) {
+    users.push({
       id: "staff-lina",
       name: "Lina Haddad",
       email: "receptionist@oyon.optics",
       role: "receptionist",
-      password: process.env.RECEPTIONIST_PASSWORD || "reception2024",
-    },
-  ];
+      password: receptionistPassword,
+    });
+  }
+  return users;
 }
 
 export function authenticateUser(
   email: string,
   password: string
 ): AdminSession | null {
+  if (isProductionRuntime() && !hasAuthSecret()) return null;
+
   const user = getAdminUsers().find(
     (u) => u.email.toLowerCase() === email.trim().toLowerCase()
   );
@@ -144,17 +196,27 @@ export async function destroySession(): Promise<void> {
 }
 
 export async function getSession(): Promise<AdminSession | null> {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  const data = decodeSession(token);
-  if (!data) return null;
-  return {
-    id: data.id,
-    name: data.name,
-    email: data.email,
-    role: data.role,
-  };
+  if (allowTestSessionOverride() && testSessionOverride !== undefined) {
+    return testSessionOverride;
+  }
+  try {
+    const jar = await cookies();
+    const token = jar.get(SESSION_COOKIE)?.value;
+    if (!token) return null;
+    const data = decodeSession(token);
+    if (!data) return null;
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message === "AUTH_SECRET_MISSING") {
+      return null;
+    }
+    return null;
+  }
 }
 
 export async function requireSession(

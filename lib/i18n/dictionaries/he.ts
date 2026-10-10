@@ -777,7 +777,7 @@ const he: Dictionary = {
     password: "סיסמה",
     signIn: "התחברות",
     signingIn: "מתחבר…",
-    demoHint: "דמו: admin@oyon.optics / oyon2024",
+    demoHint: "פרטי הכניסה של הצוות מוגדרים בשרת.",
     sidebar: {
       dashboard: "ראשי",
       appointments: "הזמנות",

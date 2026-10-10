@@ -11,6 +11,15 @@ export function jsonError(message: string, status: number, extra?: Record<string
   return NextResponse.json({ error: message, ...extra }, { status });
 }
 
+function sanitizeErrorMessage(message: string): string {
+  return message
+    .replace(
+      /(secret|password|token|authorization|api[_-]?key)\s*[=:]\s*\S+/gi,
+      "$1=[redacted]",
+    )
+    .slice(0, 300);
+}
+
 export function handleRouteError(error: unknown) {
   if (error instanceof Error) {
     if (error.message === "UNAUTHORIZED") {
@@ -20,11 +29,10 @@ export function handleRouteError(error: unknown) {
       return jsonError("Forbidden", 403);
     }
   }
-  console.error(error);
-  return jsonError(
-    error instanceof Error ? error.message : "Internal server error",
-    500
-  );
+  const message = error instanceof Error ? error.message : "unknown error";
+  const name = error instanceof Error ? error.name : typeof error;
+  console.error("[route]", name, sanitizeErrorMessage(message));
+  return jsonError("Internal server error", 500);
 }
 
 export function pushActivity(
