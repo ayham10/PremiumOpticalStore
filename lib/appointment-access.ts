@@ -14,6 +14,7 @@ export function toStaffAppointmentView(
   appointment: Appointment,
   staffName?: string,
 ): StaffAppointmentView {
-  const { manageToken: _manageToken, ...rest } = appointment;
+  const { manageToken, ...rest } = appointment;
+  void manageToken;
   return { ...rest, staffName: staffName || null };
 }
