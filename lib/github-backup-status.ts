@@ -1,6 +1,9 @@
 /** Client-safe GitHub disaster-backup types. No tokens, owners, repos, or URLs. */
 
+import type { GithubBackupIncompleteReason } from "@/lib/github-backup-plan";
+
 export type GithubBackupPurpose = "admin-all";
+export type { GithubBackupIncompleteReason };
 
 export type GithubBackupClientResult = {
   ok: boolean;
@@ -24,6 +27,7 @@ export type GithubBackupClientResult = {
   dailySnapshotPath: string | null;
   externalMediaCount: number;
   historyCount: number;
+  incompleteReason: GithubBackupIncompleteReason | null;
 };
 
 export type GithubBackupStatusSummary = {
@@ -35,9 +39,11 @@ export type GithubBackupStatusSummary = {
     timedOut: boolean;
     remainingMedia: number;
     copied: number;
+    skipped: number;
     failed: number;
     tooLarge: number;
     mediaFileCount: number;
+    reason: GithubBackupIncompleteReason | null;
   } | null;
   snapshots: Array<{
     date: string;

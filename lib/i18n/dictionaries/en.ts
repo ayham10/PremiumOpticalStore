@@ -2076,6 +2076,15 @@ const en: Dictionary = {
       backupAllError: "Could not create the GitHub backup.",
       backupAllIncomplete:
         "The GitHub backup did not finish. Progress was saved — press Backup All again to continue.",
+      githubProgress: "{saved} of {total} media files saved · {remaining} remaining",
+      githubReasonTimeout:
+        "Time limit reached. Already uploaded files are kept — press Backup All again.",
+      githubReasonFailed:
+        "Some media files could not be copied. Press Backup All again to retry those files.",
+      githubReasonTooLarge:
+        "One or more files exceed GitHub's 100 MB limit, so this backup cannot be marked complete.",
+      githubResumeHint:
+        "Incomplete backups are never marked successful. Press Backup All again to continue from saved files.",
       backupAllInProgress: "A GitHub backup is already running. Wait, then try again.",
       backupAllForbidden: "You do not have permission to create a GitHub backup.",
       backupAllProductionOnly: "GitHub backup is available only in the production environment",

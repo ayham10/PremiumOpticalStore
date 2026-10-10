@@ -19936,6 +19936,13 @@ body > .admin-restore-overlay,
   margin: 0 0 0.75rem;
 }
 
+.admin-backups-github-progress {
+  margin: 0.45rem 0 0;
+  color: #c5cbd3;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .admin-backups-github-dates {
   display: grid;
   gap: 0.35rem;

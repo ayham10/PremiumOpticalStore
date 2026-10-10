@@ -50,6 +50,7 @@ import { isLiveRestoreUiAllowed } from "@/lib/restore-status";
 import {
   isGithubBackupUiAllowed,
   type GithubBackupClientResult,
+  type GithubBackupIncompleteReason,
   type GithubBackupStatusSummary,
 } from "@/lib/github-backup-status";
 
@@ -89,6 +90,36 @@ function countLabel(value: number | null | undefined): string {
 
 function lastSuccessfulOf(data: BackupStatusSummary | null): BackupHistoryItem | null {
   return data?.lastSuccessful ?? data?.latest ?? null;
+}
+
+function asGithubBackupResult(value: unknown): GithubBackupClientResult | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Partial<GithubBackupClientResult>;
+  return typeof row.complete === "boolean" ? (row as GithubBackupClientResult) : null;
+}
+
+function githubReasonText(
+  reason: GithubBackupIncompleteReason | null | undefined,
+  t: (key: string) => string,
+): string {
+  if (reason === "timeout") return t("admin.backups.githubReasonTimeout");
+  if (reason === "media_failed") return t("admin.backups.githubReasonFailed");
+  if (reason === "too_large") return t("admin.backups.githubReasonTooLarge");
+  return t("admin.backups.backupAllIncomplete");
+}
+
+function githubProgressText(
+  result: Pick<
+    GithubBackupClientResult,
+    "currentLivePresentOnGithub" | "liveMediaCount" | "remainingMedia"
+  >,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  return t("admin.backups.githubProgress", {
+    saved: result.currentLivePresentOnGithub,
+    total: result.liveMediaCount,
+    remaining: result.remainingMedia,
+  });
 }
 
 export default function AdminBackupsPage() {
@@ -214,13 +245,19 @@ export default function AdminBackupsPage() {
     githubCreatingRef.current = true;
     setGithubCreating(true);
     setGithubError("");
+    const showIncomplete = async (result: GithubBackupClientResult) => {
+      setGithubError(
+        `${githubReasonText(result.incompleteReason, t)} ${githubProgressText(result, t)}`,
+      );
+      await loadGithubStatus();
+    };
     try {
       const result = await apiFetch<GithubBackupClientResult>(
         "/api/admin/github-backups",
         { method: "POST" },
       );
-      if (!result.complete) {
-        setGithubError(t("admin.backups.backupAllIncomplete"));
+      if (!result.complete || !result.verified) {
+        await showIncomplete(result);
         return;
       }
       notifySaved({
@@ -241,7 +278,13 @@ export default function AdminBackupsPage() {
       } else if (err instanceof ApiError && err.status === 502) {
         setGithubError(t("admin.backups.backupAllRepoInaccessible"));
       } else if (err instanceof ApiError && err.status === 503) {
-        setGithubError(t("admin.backups.backupAllIncomplete"));
+        const body = asGithubBackupResult(err.body);
+        if (body) {
+          await showIncomplete(body);
+        } else {
+          setGithubError(t("admin.backups.backupAllIncomplete"));
+          await loadGithubStatus();
+        }
       } else {
         setGithubError(t("admin.backups.backupAllError"));
       }
@@ -631,13 +674,30 @@ export default function AdminBackupsPage() {
                   githubStatus.lastRun.complete
                     ? t("admin.backups.githubComplete")
                     : t("admin.backups.githubIncomplete")
-                } · ${
-                  githubStatus.lastRun.remainingMedia === 0 && githubStatus.lastRun.failed === 0
-                    ? t("admin.backups.githubMediaDone")
-                    : t("admin.backups.githubMediaPending")
                 }`
               : t("admin.backups.githubNone")}
           </p>
+          {githubStatus?.lastRun ? (
+            <p className="admin-backups-github-progress">
+              {githubProgressText(
+                {
+                  currentLivePresentOnGithub: githubStatus.lastRun.mediaFileCount,
+                  liveMediaCount:
+                    githubStatus.lastRun.mediaFileCount +
+                    githubStatus.lastRun.remainingMedia,
+                  remainingMedia: githubStatus.lastRun.remainingMedia,
+                },
+                t,
+              )}
+              {githubStatus.lastRun.complete
+                ? ` · ${t("admin.backups.githubMediaDone")}`
+                : ` · ${githubReasonText(githubStatus.lastRun.reason, t)}`}
+            </p>
+          ) : (
+            <p className="admin-backups-github-progress">
+              {t("admin.backups.githubResumeHint")}
+            </p>
+          )}
           {githubStatus?.snapshots.length ? (
             <ul className="admin-backups-github-dates">
               {githubStatus.snapshots

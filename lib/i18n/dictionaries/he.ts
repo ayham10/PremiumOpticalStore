@@ -1700,6 +1700,15 @@ const he: Dictionary = {
       backupAllError: "לא ניתן ליצור את גיבוי GitHub.",
       backupAllIncomplete:
         "גיבוי GitHub לא הושלם. ההתקדמות נשמרה — לחצו Backup All שוב כדי להמשיך.",
+      githubProgress: "נשמרו {saved} מתוך {total} קובצי מדיה · נותרו {remaining}",
+      githubReasonTimeout:
+        "הזמן נגמר. הקבצים שכבר הועלו נשמרים — לחצו Backup All שוב.",
+      githubReasonFailed:
+        "חלק מקובצי המדיה לא הועתקו. לחצו Backup All שוב כדי לנסות שוב.",
+      githubReasonTooLarge:
+        "יש קובץ שחורג ממגבלת 100MB של GitHub, לכן לא ניתן לסמן את הגיבוי כהושלם.",
+      githubResumeHint:
+        "גיבוי חלקי לעולם לא מסומן כהצלחה. לחצו Backup All שוב כדי להמשיך מהקבצים שנשמרו.",
       backupAllInProgress: "גיבוי GitHub כבר רץ. המתינו ונסו שוב.",
       backupAllForbidden: "אין הרשאה ליצור גיבוי GitHub.",
       backupAllProductionOnly: "גיבוי GitHub זמין רק בסביבת הייצור",

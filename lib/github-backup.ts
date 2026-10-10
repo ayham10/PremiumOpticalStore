@@ -2,6 +2,7 @@ import {
   clientSafeHistory,
   collectExternalMediaUrls,
   githubBackupDate,
+  githubBackupIncompleteReason,
   githubBackupRetentionDays,
   githubDailyManifestPath,
   githubDailySnapshotPath,
@@ -19,6 +20,7 @@ import {
   GITHUB_INFO_PATH,
   GITHUB_MEDIA_PREFIX,
   type GithubBackupHistory,
+  type GithubBackupIncompleteReason,
   type GithubDailyManifest,
   type GithubHistorySnapshot,
 } from "@/lib/github-backup-plan";
@@ -35,10 +37,17 @@ const BACKUP_BUCKET =
 
 const MEDIA_OBJECT_PREFIX = "media/objects/";
 const GITHUB_BOOTSTRAP_PATH = "backups/.keep";
-/** Stop starting new copies in time to commit and return before Vercel maxDuration 60s. */
-const GITHUB_TIME_BUDGET_MS = 30_000;
+/**
+ * Copy + flush window. Media is committed in small batches so a 60s Vercel
+ * function can persist progress and resume on the next Backup All click.
+ */
+const GITHUB_TIME_BUDGET_MS = 48_000;
 /** Never start more media work this close to the Vercel 60s kill. */
-const GITHUB_HARD_STOP_MS = 50_000;
+const GITHUB_HARD_STOP_MS = 52_000;
+/** Persist media + index after this many new files so a later timeout keeps them. */
+const GITHUB_FLUSH_COUNT = 4;
+/** Persist sooner when a batch is already large. */
+const GITHUB_FLUSH_BYTES = 6 * 1024 * 1024;
 /** GitHub git-blob hard limit. */
 const GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024;
 const STORE_TABLE = process.env.SUPABASE_STORE_TABLE || "lumina_store";
@@ -87,6 +96,7 @@ export type GithubBackupInfo = {
   dailySnapshotPath: string | null;
   externalMediaCount: number;
   historyCount: number;
+  incompleteReason: GithubBackupIncompleteReason | null;
 };
 
 export type GithubCommitFile = {
@@ -685,6 +695,7 @@ export function toGithubBackupClientResult(
     dailySnapshotPath: info.dailySnapshotPath,
     externalMediaCount: info.externalMediaCount,
     historyCount: info.historyCount,
+    incompleteReason: info.incompleteReason,
   };
 }
 
@@ -730,6 +741,28 @@ export async function runGithubBackupAll(
     let timedOut = false;
     const tooLarge: string[] = [];
     const pending: GithubCommitFile[] = [];
+    let pendingBytes = 0;
+    const stamp = createdAt.replace(/[:.]/g, "-");
+
+    const flushPendingMedia = async () => {
+      if (!pending.length) return;
+      const files = [
+        ...pending,
+        {
+          path: GITHUB_INDEX_PATH,
+          bytes: utf8Bytes(utf8Text(index)),
+        },
+      ];
+      await deps.github.commitFiles(
+        files,
+        `OYON GitHub backup ${stamp} media progress`,
+      );
+      pending.length = 0;
+      pendingBytes = 0;
+    };
+
+    const shouldFlushMedia = () =>
+      pending.length >= GITHUB_FLUSH_COUNT || pendingBytes >= GITHUB_FLUSH_BYTES;
 
     for (const object of liveMedia) {
       if (indexMatches(object, index)) {
@@ -762,12 +795,16 @@ export async function runGithubBackupAll(
           path: githubMediaPath(object.path),
           bytes: file.bytes,
         });
+        pendingBytes += file.bytes.byteLength;
         index.objects[object.path] = {
           size: object.size || file.bytes.byteLength,
           updatedAt: object.updatedAt,
           backedUpAt: createdAt,
         };
         copied += 1;
+        if (shouldFlushMedia()) {
+          await flushPendingMedia();
+        }
       } catch (error) {
         failed += 1;
         remaining += 1;
@@ -843,13 +880,21 @@ export async function runGithubBackupAll(
       retentionDays,
       lastRun: {
         createdAt,
-        complete,
+        complete: verified,
         timedOut,
         remainingMedia: remaining,
         copied,
+        skipped,
         failed,
         tooLarge: tooLarge.length,
         mediaFileCount: currentLivePresentOnGithub,
+        reason: githubBackupIncompleteReason({
+          complete: verified,
+          timedOut,
+          failed,
+          tooLarge: tooLarge.length,
+          remainingMedia: remaining,
+        }),
       },
     };
     if (historySnapshot) {
@@ -922,6 +967,13 @@ export async function runGithubBackupAll(
       dailySnapshotPath,
       externalMediaCount,
       historyCount: history.snapshots.filter((item) => item.complete && item.verified).length,
+      incompleteReason: githubBackupIncompleteReason({
+        complete: verified,
+        timedOut,
+        failed,
+        tooLarge: tooLarge.length,
+        remainingMedia: remaining,
+      }),
     };
 
     pending.push({
@@ -929,8 +981,7 @@ export async function runGithubBackupAll(
       bytes: utf8Bytes(`${JSON.stringify(info, null, 2)}\n`),
     });
 
-    const stamp = createdAt.replace(/[:.]/g, "-");
-    const message = complete
+    const message = verified
       ? `OYON GitHub backup ${stamp} complete`
       : `OYON GitHub backup ${stamp} incomplete`;
     const commitSha = await deps.github.commitFiles(pending, message);
