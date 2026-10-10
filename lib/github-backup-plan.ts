@@ -43,16 +43,38 @@ export type GithubHistorySnapshot = {
   failedMedia: number;
 };
 
+export type GithubBackupIncompleteReason =
+  | "timeout"
+  | "media_failed"
+  | "too_large"
+  | "incomplete";
+
 export type GithubHistoryLastRun = {
   createdAt: string;
   complete: boolean;
   timedOut: boolean;
   remainingMedia: number;
   copied: number;
+  skipped: number;
   failed: number;
   tooLarge: number;
   mediaFileCount: number;
+  reason: GithubBackupIncompleteReason | null;
 };
+
+export function githubBackupIncompleteReason(info: {
+  complete: boolean;
+  timedOut: boolean;
+  failed: number;
+  tooLarge: number;
+  remainingMedia: number;
+}): GithubBackupIncompleteReason | null {
+  if (info.complete) return null;
+  if (info.tooLarge > 0) return "too_large";
+  if (info.failed > 0) return "media_failed";
+  if (info.timedOut || info.remainingMedia > 0) return "timeout";
+  return "incomplete";
+}
 
 export type GithubBackupHistory = {
   version: 1;
@@ -172,8 +194,43 @@ export function parseGithubHistory(value: unknown): GithubBackupHistory {
       typeof raw.retentionDays === "number"
         ? githubBackupRetentionDays(String(raw.retentionDays))
         : DEFAULT_GITHUB_RETENTION_DAYS,
-    lastRun: raw.lastRun && typeof raw.lastRun === "object" ? raw.lastRun : null,
+    lastRun: parseLastRun(raw.lastRun),
     snapshots: snapshots.sort((a, b) => a.date.localeCompare(b.date)),
+  };
+}
+
+function parseLastRun(value: unknown): GithubHistoryLastRun | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Partial<GithubHistoryLastRun>;
+  if (typeof raw.createdAt !== "string") return null;
+  const failed = Number(raw.failed) || 0;
+  const tooLarge = Number(raw.tooLarge) || 0;
+  const remainingMedia = Number(raw.remainingMedia) || 0;
+  const timedOut = Boolean(raw.timedOut);
+  const complete = raw.complete === true;
+  return {
+    createdAt: raw.createdAt,
+    complete,
+    timedOut,
+    remainingMedia,
+    copied: Number(raw.copied) || 0,
+    skipped: Number(raw.skipped) || 0,
+    failed,
+    tooLarge,
+    mediaFileCount: Number(raw.mediaFileCount) || 0,
+    reason:
+      raw.reason === "timeout" ||
+      raw.reason === "media_failed" ||
+      raw.reason === "too_large" ||
+      raw.reason === "incomplete"
+        ? raw.reason
+        : githubBackupIncompleteReason({
+            complete,
+            timedOut,
+            failed,
+            tooLarge,
+            remainingMedia,
+          }),
   };
 }
 

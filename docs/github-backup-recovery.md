@@ -120,10 +120,14 @@ After the store write and media copies:
 ## Triggers and schedule
 
 - GitHub “Backup All” is an **admin-triggered** production action
-  (`POST /api/admin/github-backups`).
+  (`POST /api/admin/github-backups`). There is no GitHub cron.
 - It does **not** replace the existing daily Supabase backup cron.
+- The first run with many media files may need several Backup All clicks. Each
+  click uploads a batch, writes `media-index.json`, and reuses files that are
+  already on GitHub. Dated `database.json` / `daily/YYYY-MM-DD.json` are written
+  only after every required media file and the SHA-256 checksum pass.
 - Press Backup All again to resume incomplete media copies. A failed run never
-  deletes the latest valid dated snapshot.
+  deletes the latest valid dated snapshot and is never shown as successful.
 
 ## Safety
 

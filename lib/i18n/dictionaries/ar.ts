@@ -1701,6 +1701,15 @@ const ar: Dictionary = {
       backupAllError: "تعذر إنشاء النسخة على GitHub.",
       backupAllIncomplete:
         "لم تكتمل النسخة على GitHub. تم حفظ التقدّم، ويمكن الضغط على نسخ الكل مرة أخرى.",
+      githubProgress: "تم حفظ {saved} من {total} ملف وسائط · تبقّى {remaining}",
+      githubReasonTimeout:
+        "انتهى وقت التنفيذ. الملفات المرفوعة محفوظة — اضغط Backup All مرة أخرى.",
+      githubReasonFailed:
+        "تعذّر نسخ بعض ملفات الوسائط. اضغط Backup All مرة أخرى لإعادة المحاولة.",
+      githubReasonTooLarge:
+        "يوجد ملف أكبر من حد GitHub (100 ميغابايت)، لذلك لا يمكن اعتبار النسخة مكتملة.",
+      githubResumeHint:
+        "النسخة غير المكتملة لا تُعرض كنجاح. اضغط Backup All مرة أخرى للمتابعة من الملفات المحفوظة.",
       backupAllInProgress: "جاري إنشاء نسخة GitHub بالفعل. انتظر ثم أعد المحاولة.",
       backupAllForbidden: "لا تملك صلاحية إنشاء نسخة GitHub.",
       backupAllProductionOnly: "النسخ إلى GitHub متاح فقط في بيئة الإنتاج",

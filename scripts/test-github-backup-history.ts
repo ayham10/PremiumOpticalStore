@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   collectExternalMediaUrls,
   githubBackupDate,
+  githubBackupIncompleteReason,
   githubBackupRetentionDays,
   githubDailyManifestPath,
   githubDailySnapshotPath,
@@ -18,6 +19,7 @@ import {
   readGithubBackupStatus,
   resetGithubBackupInFlightForTests,
   runGithubBackupAll,
+  toGithubBackupClientResult,
   type GithubBackupDependencies,
   type GithubCommitFile,
 } from "../lib/github-backup";
@@ -101,8 +103,10 @@ function createMemoryGithub(initial: Record<string, Uint8Array | string> = {}) {
     );
   }
   let n = 0;
+  const commits: Array<{ sha: string; paths: string[] }> = [];
   return {
     files,
+    commits,
     async probeRepository() {
       return;
     },
@@ -115,16 +119,21 @@ function createMemoryGithub(initial: Record<string, Uint8Array | string> = {}) {
       return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
     },
     async commitFiles(list: GithubCommitFile[]) {
+      const paths: string[] = [];
       for (const file of list) {
         if (file.delete) {
           files.delete(file.path);
+          paths.push(file.path);
           continue;
         }
         if (!file.bytes) throw new Error("missing file bytes");
         files.set(file.path, file.bytes);
+        paths.push(file.path);
       }
       n += 1;
-      return `sha-${n}`;
+      const sha = `sha-${n}`;
+      commits.push({ sha, paths });
+      return sha;
     },
   };
 }
@@ -417,6 +426,124 @@ async function run() {
     /GITHUB_BACKUP_API_FAILED/,
   );
 
+  assert.equal(
+    githubBackupIncompleteReason({
+      complete: false,
+      timedOut: true,
+      failed: 0,
+      tooLarge: 0,
+      remainingMedia: 40,
+    }),
+    "timeout",
+  );
+  assert.equal(
+    githubBackupIncompleteReason({
+      complete: false,
+      timedOut: false,
+      failed: 2,
+      tooLarge: 0,
+      remainingMedia: 2,
+    }),
+    "media_failed",
+  );
+  assert.equal(
+    githubBackupIncompleteReason({
+      complete: true,
+      timedOut: false,
+      failed: 0,
+      tooLarge: 0,
+      remainingMedia: 0,
+    }),
+    null,
+  );
+
+  resetGithubBackupInFlightForTests();
+  const resumeGithub = createMemoryGithub();
+  const resumePaths = ["products/a.jpg", "products/b.jpg", "products/c.jpg"];
+  let clock = Date.parse("2026-10-10T12:00:00.000Z");
+  const resumeDeps = (): GithubBackupDependencies =>
+    deps(resumeGithub, {
+      now: () => clock,
+      timeBudgetMs: 15_000,
+      listLiveMedia: async () =>
+        resumePaths.map((path) => ({
+          path,
+          size: 4,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        })),
+      downloadProtected: async () => {
+        clock += 20_000;
+        return { bytes: new Uint8Array([1, 2, 3, 4]), contentType: "image/jpeg" };
+      },
+    });
+
+  const resumeFirst = await runGithubBackupAll(resumeDeps());
+  assert.equal(resumeFirst.complete, false);
+  assert.equal(resumeFirst.timedOut, true);
+  assert.equal(resumeFirst.copied, 1);
+  assert.equal(resumeFirst.remainingMedia, 2);
+  assert.equal(resumeFirst.incompleteReason, "timeout");
+  assert.equal(resumeGithub.files.has("backups/database.json"), false);
+  assert.ok(resumeGithub.files.has("backups/media/products/a.jpg"));
+  assert.equal(resumeGithub.files.has("backups/media/products/b.jpg"), false);
+  const resumeClient = toGithubBackupClientResult(resumeFirst);
+  assert.equal(resumeClient.incompleteReason, "timeout");
+  assert.equal(resumeClient.copied, 1);
+
+  resetGithubBackupInFlightForTests();
+  const resumeSecond = await runGithubBackupAll(resumeDeps());
+  assert.equal(resumeSecond.complete, false);
+  assert.equal(resumeSecond.skipped, 1);
+  assert.equal(resumeSecond.copied, 1);
+  assert.ok(resumeGithub.files.has("backups/media/products/b.jpg"));
+  assert.equal(resumeGithub.files.has("backups/database.json"), false);
+
+  resetGithubBackupInFlightForTests();
+  const resumeThird = await runGithubBackupAll(resumeDeps());
+  assert.equal(resumeThird.complete, true);
+  assert.equal(resumeThird.verified, true);
+  assert.equal(resumeThird.skipped, 2);
+  assert.equal(resumeThird.copied, 1);
+  assert.ok(resumeGithub.files.has("backups/database.json"));
+  assert.ok(resumeGithub.files.has("backups/daily/2026-10-10.json"));
+
+  resetGithubBackupInFlightForTests();
+  const flushGithub = createMemoryGithub();
+  const flushPaths = Array.from({ length: 8 }, (_, index) => `products/f${index}.jpg`);
+  const flushed = await runGithubBackupAll(
+    deps(flushGithub, {
+      listLiveMedia: async () =>
+        flushPaths.map((path) => ({
+          path,
+          size: 4,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        })),
+    }),
+  );
+  assert.equal(flushed.complete, true);
+  assert.ok(flushGithub.commits.length >= 3, "media progress should commit in batches");
+  for (const path of flushPaths) {
+    assert.ok(flushGithub.files.has(`backups/media/${path}`));
+  }
+
+  const legacyHistory = parseGithubHistory({
+    version: 1,
+    retentionDays: 30,
+    lastRun: {
+      createdAt: "2026-10-10T12:00:00.000Z",
+      complete: false,
+      timedOut: true,
+      remainingMedia: 40,
+      copied: 12,
+      failed: 0,
+      tooLarge: 0,
+      mediaFileCount: 12,
+    },
+    snapshots: [],
+  });
+  assert.equal(legacyHistory.lastRun?.skipped, 0);
+  assert.equal(legacyHistory.lastRun?.reason, "timeout");
+
   console.log(
     JSON.stringify(
       {
@@ -429,6 +556,9 @@ async function run() {
         missingMedia: true,
         recoveryValidation: true,
         githubApiError: true,
+        resumeAcrossClicks: true,
+        batchedMediaFlush: true,
+        incompleteReason: true,
       },
       null,
       2,
