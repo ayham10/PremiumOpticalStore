@@ -1623,6 +1623,25 @@ const en: Dictionary = {
       bmMetaTesting: "Testing…",
       bmMetaTestSuccess: "Meta WhatsApp Cloud API connected.",
       bmMetaTestError: "Meta connection test failed.",
+      bmConfirmationMode: "Customer confirmation template",
+      bmModeOriginal: "Original",
+      bmModeNew: "New templates",
+      bmModeOriginalHint:
+        "Sends the existing approved confirmation. No booking-management CTA and no new Hebrew/Arabic templates.",
+      bmModeNewHint:
+        "Sends the approved Arabic or Hebrew template with the booking-management link. English stays on the original template. Both templates are never sent together.",
+      bmModeSaveHint: "Save settings to apply this mode on every server immediately, without a redeploy.",
+      bmOwnerTestEnable: "Send owner notices to a temporary test number",
+      bmOwnerTestPhone: "Owner test number",
+      bmOwnerTestHint:
+        "Does not replace the saved business number. Customer messages are never sent here.",
+      bmOwnerTestRestore: "Restore business owner number",
+      bmOwnerTestActive: "Test",
+      bmOwnerTestBanner:
+        "Owner notices are going to the test number. Customer notices still go to the customer.",
+      bmOwnerDestinationBusiness: "Current destination: business owner",
+      bmOwnerDestinationTest: "Current destination: test recipient",
+      bmOwnerTestInvalid: "Enter a valid Israeli test number before enabling test mode, or owner notices are paused.",
       bmCustomer: "Customer confirmation",
       bmManageTemplate: "Booking management template",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",

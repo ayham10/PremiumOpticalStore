@@ -20,6 +20,10 @@ import {
 import AdminModal from "@/components/admin/AdminModal";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
+import {
+  maskWhatsAppDestination,
+  resolveOwnerNotificationDestination,
+} from "@/lib/booking-messages";
 import type { BookingMessagesSettings } from "@/lib/types";
 
 type Props = {
@@ -772,9 +776,28 @@ export default function BookingMessagesSettingsSection({
   const providerStatusLabel = providerConnected
     ? t("admin.settings.bmTwilioConnected")
     : t("admin.settings.bmDisconnected");
+  const confirmationMode =
+    value.customerConfirmation.confirmationMode === "new" ? "new" : "original";
+  const ownerTestActive = value.ownerNotification.testDestinationEnabled === true;
+  const ownerDestination = resolveOwnerNotificationDestination(value);
+  const ownerDestinationLabel =
+    ownerDestination.source === "test"
+      ? t("admin.settings.bmOwnerDestinationTest")
+      : ownerDestination.source === "business"
+        ? t("admin.settings.bmOwnerDestinationBusiness")
+        : ownerTestActive
+          ? t("admin.settings.bmOwnerTestInvalid")
+          : t("admin.settings.bmOwnerDestinationBusiness");
+  const ownerDestinationMask = maskWhatsAppDestination(ownerDestination.to);
 
   return (
     <div className="admin-bm">
+      {ownerTestActive ? (
+        <p className="admin-bm-test-banner" role="status">
+          {t("admin.settings.bmOwnerTestBanner")}
+          {ownerDestinationMask ? ` (${ownerDestinationMask})` : ""}
+        </p>
+      ) : null}
       <AccordionCard
         id="provider"
         title={t("admin.settings.bmProvider")}
@@ -819,6 +842,52 @@ export default function BookingMessagesSettingsSection({
         ) : null}
         <p className="admin-bm-hint">{t("admin.settings.bmTwilioHint")}</p>
       </AccordionCard>
+
+      <div className="admin-bm-card admin-bm-mode">
+        <span className="admin-bm-field-label">
+          {t("admin.settings.bmConfirmationMode")}
+        </span>
+        <div className="admin-bm-mode-switch" role="radiogroup" aria-label={t("admin.settings.bmConfirmationMode")}>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={confirmationMode === "original"}
+            onClick={() =>
+              onChange({
+                ...value,
+                customerConfirmation: {
+                  ...value.customerConfirmation,
+                  confirmationMode: "original",
+                },
+              })
+            }
+          >
+            {t("admin.settings.bmModeOriginal")}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={confirmationMode === "new"}
+            onClick={() =>
+              onChange({
+                ...value,
+                customerConfirmation: {
+                  ...value.customerConfirmation,
+                  confirmationMode: "new",
+                },
+              })
+            }
+          >
+            {t("admin.settings.bmModeNew")}
+          </button>
+        </div>
+        <p className="admin-bm-hint">
+          {confirmationMode === "new"
+            ? t("admin.settings.bmModeNewHint")
+            : t("admin.settings.bmModeOriginalHint")}
+        </p>
+        <p className="admin-bm-hint">{t("admin.settings.bmModeSaveHint")}</p>
+      </div>
 
       {SHOW_ORACLE_ADMIN_CONTROLS ? (
       <section className="admin-bm-card admin-bm-card-backup">
@@ -1102,14 +1171,30 @@ export default function BookingMessagesSettingsSection({
         id="owner"
         title={t("admin.settings.bmOwner")}
         statusLabel={
-          value.ownerNotification.enabled
-            ? t("admin.settings.bmEnabled")
-            : t("admin.settings.bmInactive")
+          ownerTestActive
+            ? t("admin.settings.bmOwnerTestActive")
+            : value.ownerNotification.enabled
+              ? t("admin.settings.bmEnabled")
+              : t("admin.settings.bmInactive")
         }
-        statusTone={value.ownerNotification.enabled ? "on" : "off"}
+        statusTone={ownerTestActive ? "off" : value.ownerNotification.enabled ? "on" : "off"}
         open={openCard === "owner"}
         onToggle={() => toggleCard("owner")}
       >
+        {ownerTestActive ? (
+          <p className="admin-bm-test-banner" role="status">
+            {t("admin.settings.bmOwnerTestBanner")}
+          </p>
+        ) : null}
+        <p className="admin-bm-hint" role="status">
+          {ownerDestinationLabel}
+          {ownerDestinationMask ? ` (${ownerDestinationMask})` : ""}
+        </p>
+        {ownerTestActive && ownerDestination.source !== "test" ? (
+          <p className="admin-bm-test-banner" role="status">
+            {t("admin.settings.bmOwnerTestInvalid")}
+          </p>
+        ) : null}
         <ToggleRow
           id="bm-owner-enabled"
           label={t("admin.settings.bmEnabled")}
@@ -1147,6 +1232,63 @@ export default function BookingMessagesSettingsSection({
               }
             />
           </div>
+          <ToggleRow
+            id="bm-owner-test-enabled"
+            label={t("admin.settings.bmOwnerTestEnable")}
+            checked={ownerTestActive}
+            onChange={(testDestinationEnabled) =>
+              onChange({
+                ...value,
+                ownerNotification: {
+                  ...value.ownerNotification,
+                  testDestinationEnabled,
+                },
+              })
+            }
+          />
+          <div className="admin-bm-field">
+            <label className="admin-bm-field-label" htmlFor="bm-owner-test-phone">
+              {t("admin.settings.bmOwnerTestPhone")}
+            </label>
+            <input
+              id="bm-owner-test-phone"
+              className="input admin-bm-input"
+              dir="ltr"
+              inputMode="tel"
+              placeholder="972501234567"
+              value={value.ownerNotification.testWhatsApp || ""}
+              disabled={!value.ownerNotification.enabled}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  ownerNotification: {
+                    ...value.ownerNotification,
+                    testWhatsApp: e.target.value,
+                  },
+                })
+              }
+            />
+            <p className="admin-bm-placeholders">
+              {t("admin.settings.bmOwnerTestHint")}
+            </p>
+          </div>
+          {ownerTestActive ? (
+            <button
+              type="button"
+              className="btn btn-ghost admin-bm-test-btn"
+              onClick={() =>
+                onChange({
+                  ...value,
+                  ownerNotification: {
+                    ...value.ownerNotification,
+                    testDestinationEnabled: false,
+                  },
+                })
+              }
+            >
+              {t("admin.settings.bmOwnerTestRestore")}
+            </button>
+          ) : null}
           {SHOW_EDITABLE_TEMPLATE_CONTROLS ? (
             <TemplateSelect
               id="bm-owner-template"

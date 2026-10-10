@@ -1,4 +1,8 @@
-import type { BookingMessagesSettings } from "@/lib/types";
+import type {
+  BookingMessagesSettings,
+  CustomerConfirmationMode,
+} from "@/lib/types";
+import { normalizeIsraeliPhone } from "@/lib/israeli-phone";
 import { sanitizeTwilioContentSid } from "@/lib/twilio/content-sid-format";
 
 export const BOOKING_MESSAGE_PLACEHOLDERS = [
@@ -53,6 +57,7 @@ export const DEFAULT_BOOKING_MESSAGES: BookingMessagesSettings = {
     enabled: true,
     templateName: "oyon_booking_confirmation_hx716fcfd9ac41ae0e332e569b9b4fbc39",
     body: DEFAULT_CUSTOMER_CONFIRMATION_BODY,
+    confirmationMode: "original",
     manageTemplateName: "oyon_booking_manage_v2_ar",
     manageTemplateEnabled: false,
     manageTemplateContentSid: "",
@@ -62,6 +67,8 @@ export const DEFAULT_BOOKING_MESSAGES: BookingMessagesSettings = {
     ownerWhatsApp: "",
     templateName: "",
     body: DEFAULT_OWNER_NOTIFICATION_BODY,
+    testDestinationEnabled: false,
+    testWhatsApp: "",
   },
   appointmentReminder: {
     enabled: false,
@@ -100,6 +107,99 @@ function withDefaultBody(body: string | undefined, fallback: string): string {
   return trimmed || fallback;
 }
 
+export function customerConfirmationMode(
+  settings?: Partial<BookingMessagesSettings> | null,
+): CustomerConfirmationMode {
+  return settings?.customerConfirmation?.confirmationMode === "new"
+    ? "new"
+    : "original";
+}
+
+function storedOwnerPhone(value?: string | null): string {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return "";
+  return normalizeIsraeliPhone(trimmed) || trimmed;
+}
+
+export function resolveOwnerNotificationDestination(
+  settings:
+    | BookingMessagesSettings
+    | BookingMessagesSettings["ownerNotification"],
+): {
+  to: string;
+  source: "business" | "test";
+} | {
+  to: "";
+  source: "missing";
+} {
+  const owner =
+    "ownerNotification" in settings
+      ? settings.ownerNotification
+      : settings;
+  const testEnabled = owner.testDestinationEnabled === true;
+  const testTo = storedOwnerPhone(owner.testWhatsApp);
+  if (testEnabled) {
+    if (testTo && normalizeIsraeliPhone(testTo)) {
+      return { to: testTo, source: "test" };
+    }
+    return { to: "", source: "missing" };
+  }
+  const business = storedOwnerPhone(owner.ownerWhatsApp);
+  if (business && normalizeIsraeliPhone(business)) {
+    return { to: business, source: "business" };
+  }
+  return { to: "", source: "missing" };
+}
+
+/** Mask a WhatsApp number for Admin display. Never used as a send destination. */
+export function maskWhatsAppDestination(value?: string | null): string {
+  const normalized = storedOwnerPhone(value);
+  if (!normalized) return "";
+  const digits = normalized.replace(/\D/g, "");
+  if (digits.length < 6) return "••••";
+  return `+${digits.slice(0, 3)}••••${digits.slice(-4)}`;
+}
+
+export type OwnerNotificationPatch = Partial<
+  BookingMessagesSettings["ownerNotification"]
+>;
+
+/**
+ * Merge owner-notification fields without letting test mode overwrite the
+ * saved business number. Clearing ownerWhatsApp while test mode is on is ignored.
+ */
+export function mergeOwnerNotification(
+  current?: BookingMessagesSettings["ownerNotification"] | null,
+  patch?: OwnerNotificationPatch | null,
+): BookingMessagesSettings["ownerNotification"] {
+  const base = {
+    ...DEFAULT_BOOKING_MESSAGES.ownerNotification,
+    ...(current || {}),
+  };
+  const next = {
+    ...base,
+    ...(patch || {}),
+  };
+  const testDestinationEnabled = next.testDestinationEnabled === true;
+  const incomingBusiness =
+    patch && Object.prototype.hasOwnProperty.call(patch, "ownerWhatsApp")
+      ? storedOwnerPhone(patch.ownerWhatsApp)
+      : storedOwnerPhone(base.ownerWhatsApp);
+  const preservedBusiness = storedOwnerPhone(base.ownerWhatsApp);
+  const ownerWhatsApp =
+    testDestinationEnabled && !incomingBusiness
+      ? preservedBusiness
+      : incomingBusiness;
+
+  return {
+    ...next,
+    body: withDefaultBody(next.body, DEFAULT_OWNER_NOTIFICATION_BODY),
+    ownerWhatsApp,
+    testDestinationEnabled,
+    testWhatsApp: storedOwnerPhone(next.testWhatsApp),
+  };
+}
+
 export function mergeBookingMessages(
   partial?: Partial<BookingMessagesSettings> | null,
 ): BookingMessagesSettings {
@@ -110,10 +210,10 @@ export function mergeBookingMessages(
     ...DEFAULT_BOOKING_MESSAGES.customerConfirmation,
     ...(partial?.customerConfirmation || {}),
   };
-  const ownerNotification = {
-    ...DEFAULT_BOOKING_MESSAGES.ownerNotification,
-    ...(partial?.ownerNotification || {}),
-  };
+  const ownerNotification = mergeOwnerNotification(
+    partial?.ownerNotification,
+    null,
+  );
   const rawAppointmentReminder = (partial?.appointmentReminder ||
     {}) as LegacyAppointmentReminder;
   const appointmentReminder = {
@@ -132,6 +232,7 @@ export function mergeBookingMessages(
         customerConfirmation.body,
         DEFAULT_CUSTOMER_CONFIRMATION_BODY,
       ),
+      confirmationMode: customerConfirmationMode({ customerConfirmation }),
       manageTemplateName:
         customerConfirmation.manageTemplateName?.trim() ||
         DEFAULT_BOOKING_MESSAGES.customerConfirmation.manageTemplateName,
@@ -140,13 +241,7 @@ export function mergeBookingMessages(
         sanitizeTwilioContentSid(customerConfirmation.manageTemplateContentSid) ||
         "",
     },
-    ownerNotification: {
-      ...ownerNotification,
-      body: withDefaultBody(
-        ownerNotification.body,
-        DEFAULT_OWNER_NOTIFICATION_BODY,
-      ),
-    },
+    ownerNotification,
     appointmentReminder: {
       enabled: appointmentReminder.enabled,
       minutesBefore: appointmentReminder.minutesBefore,

@@ -1249,6 +1249,25 @@ const ar: Dictionary = {
       bmMetaTesting: "جارٍ الاختبار…",
       bmMetaTestSuccess: "تم الاتصال بـ Meta WhatsApp Cloud API.",
       bmMetaTestError: "فشل اختبار اتصال Meta.",
+      bmConfirmationMode: "قالب تأكيد الحجز",
+      bmModeOriginal: "القالب الأصلي",
+      bmModeNew: "القوالب الجديدة",
+      bmModeOriginalHint:
+        "يُرسل قالب التأكيد الحالي المعتمد. لا يُرسل رابط إدارة الموعد ولا القوالب العبرية/العربية الجديدة.",
+      bmModeNewHint:
+        "يُرسل قالب عربي أو عبري معتمد مع رابط إدارة الموعد. الإنجليزية تبقى على القالب الأصلي. لا يُرسل القالبان معاً.",
+      bmModeSaveHint: "احفظ الإعدادات لتطبيق الوضع على كل الخوادم فوراً، دون إعادة نشر.",
+      bmOwnerTestEnable: "إرسال إشعارات المالك إلى رقم اختبار مؤقت",
+      bmOwnerTestPhone: "رقم اختبار المالك",
+      bmOwnerTestHint:
+        "لا يستبدل رقم العمل المحفوظ. إشعارات الزبائن لا تُحوَّل إلى هذا الرقم.",
+      bmOwnerTestRestore: "إعادة الإرسال إلى رقم العمل",
+      bmOwnerTestActive: "اختبار",
+      bmOwnerTestBanner:
+        "إشعارات المالك تُرسل الآن إلى رقم الاختبار. إشعارات الزبائن تبقى للزبون.",
+      bmOwnerDestinationBusiness: "الوجهة الحالية: رقم العمل",
+      bmOwnerDestinationTest: "الوجهة الحالية: رقم الاختبار",
+      bmOwnerTestInvalid: "فعّل الاختبار فقط بعد إدخال رقم إسرائيلي صالح. وإلا تُوقف إشعارات المالك.",
       bmCustomer: "تأكيد العميل",
       bmManageTemplate: "قالب إدارة الموعد",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",

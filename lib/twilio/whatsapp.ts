@@ -33,6 +33,12 @@ function sanitizeWhatsAppError(detail: string): string {
     .slice(0, 500);
 }
 
+/** Twilio 2xx accepted/queued is not confirmed handset delivery. */
+export function mapTwilioAcceptStatus(status?: string): "sent" | "queued" {
+  const value = (status || "").toLowerCase();
+  return value === "sent" || value === "delivered" ? "sent" : "queued";
+}
+
 function parseTwilioError(raw: string): string {
   if (!raw) return "";
   try {
@@ -148,7 +154,7 @@ async function postTwilioWhatsAppMessage(
     return {
       ok: true,
       provider: "twilio",
-      status: json.status === "queued" ? "queued" : "sent",
+      status: mapTwilioAcceptStatus(json.status),
       externalId: json.sid,
       templateName,
     };

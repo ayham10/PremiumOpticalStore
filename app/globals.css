@@ -15357,6 +15357,52 @@ select.admin-pe-input {
   direction: rtl;
 }
 
+.admin-bm-mode {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.admin-bm-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.28rem;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 106, 0.28);
+  background: rgba(8, 12, 16, 0.55);
+}
+
+.admin-bm-mode-switch button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #c5ccd4;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-bm-mode-switch button[aria-checked="true"] {
+  background: rgba(212, 175, 106, 0.16);
+  color: #f3e6c0;
+}
+
+.admin-bm-test-banner {
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(224, 122, 122, 0.35);
+  background: rgba(224, 122, 122, 0.1);
+  color: #e7b0b0;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
 .admin-bm-acc-card {
   padding: 0;
   gap: 0;

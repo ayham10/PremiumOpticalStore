@@ -8,7 +8,11 @@ import {
 } from "@/lib/api/helpers";
 import { mergeBranding } from "@/lib/branding";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
-import { getApprovedWhatsAppTemplates, mergeBookingMessages } from "@/lib/booking-messages";
+import {
+  getApprovedWhatsAppTemplates,
+  mergeBookingMessages,
+  mergeOwnerNotification,
+} from "@/lib/booking-messages";
 import { getTwilioWhatsAppPublicStatus } from "@/lib/twilio/config";
 import { ensureFutureAvailability } from "@/lib/eye-exam";
 import { normalizeOpeningHours, validateDayPeriods, getDayPeriods } from "@/lib/working-hours";
@@ -138,10 +142,10 @@ export async function PUT(request: Request) {
             ...store.settings.bookingMessages?.customerConfirmation,
             ...(patch.bookingMessages?.customerConfirmation || {}),
           },
-          ownerNotification: {
-            ...store.settings.bookingMessages?.ownerNotification,
-            ...(patch.bookingMessages?.ownerNotification || {}),
-          },
+          ownerNotification: mergeOwnerNotification(
+            store.settings.bookingMessages?.ownerNotification,
+            patch.bookingMessages?.ownerNotification,
+          ),
           appointmentReminder: {
             ...store.settings.bookingMessages?.appointmentReminder,
             ...(patch.bookingMessages?.appointmentReminder || {}),

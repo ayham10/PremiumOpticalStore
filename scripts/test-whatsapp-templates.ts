@@ -10,20 +10,29 @@ import {
   bookingManageUrlParam,
   buildManageTemplateContentVariables,
 } from "../lib/booking-manage-token";
-import { mergeBookingMessages } from "../lib/booking-messages";
+import {
+  customerConfirmationMode,
+  maskWhatsAppDestination,
+  mergeBookingMessages,
+  mergeOwnerNotification,
+  resolveOwnerNotificationDestination,
+} from "../lib/booking-messages";
 import {
   LIVE_CUSTOMER_CONFIRMATION_TEMPLATE,
   OWNER_CANCELLED_TEMPLATE,
   OWNER_RESCHEDULED_TEMPLATE,
   buildOwnerCancelContentVariables,
   buildOwnerRescheduleContentVariables,
+  customerConfirmationAlreadySent,
   ownerCancelDedupNote,
   ownerLifecycleAlreadySent,
   ownerLifecycleSkipReason,
   ownerRescheduleDedupNote,
+  planCustomerConfirmationSend,
   resolveCustomerConfirmationTemplate,
 } from "../lib/booking-messaging";
 import { formatEyeExamDateDisplay } from "../lib/eye-exam";
+import { mapTwilioAcceptStatus } from "../lib/twilio/whatsapp";
 import {
   approvedTwilioTemplatesPublicStatus,
   isApprovedTwilioTemplateConfigured,
@@ -31,7 +40,7 @@ import {
   resolveDedicatedTwilioContentSid,
   resolveTwilioContentSid,
 } from "../lib/twilio/content-sids";
-import type { AppData, SmsLog } from "../lib/types";
+import type { AppData } from "../lib/types";
 
 function sampleHx(char: string): string {
   return `HX${char.repeat(32)}`;
@@ -72,28 +81,75 @@ assert.equal(resolveTwilioContentSid(OWNER_CANCELLED_TEMPLATE), cancelSid);
 assert.equal(resolveTwilioContentSid("owner_notification"), null);
 
 const defaults = mergeBookingMessages(null);
-const hePlan = resolveCustomerConfirmationTemplate(defaults, "he");
+assert.equal(customerConfirmationMode(defaults), "original");
+assert.equal(defaults.customerConfirmation.confirmationMode, "original");
+const originalHe = resolveCustomerConfirmationTemplate(defaults, "he", "token");
+assert.equal(originalHe.useManageTemplate, false);
+assert.equal(originalHe.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
+assert.equal(originalHe.skipReason, null);
+const originalPlans = planCustomerConfirmationSend(defaults, "he", "token");
+assert.equal(originalPlans.length, 1);
+assert.equal(originalPlans[0]?.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
+assert.equal(originalPlans[0]?.useManageTemplate, false);
+
+const newSettings = mergeBookingMessages({
+  customerConfirmation: {
+    ...defaults.customerConfirmation,
+    confirmationMode: "new",
+    manageTemplateEnabled: false,
+  },
+});
+assert.equal(customerConfirmationMode(newSettings), "new");
+const hePlan = resolveCustomerConfirmationTemplate(newSettings, "he", "token");
 assert.equal(hePlan.useManageTemplate, true);
 assert.equal(hePlan.templateName, "oyon_booking_manage_v2_he");
 assert.equal(hePlan.contentSid, heSid);
+assert.equal(hePlan.skipReason, null);
+const newPlans = planCustomerConfirmationSend(newSettings, "he", "token");
+assert.equal(newPlans.length, 1);
+assert.equal(newPlans[0]?.templateName, "oyon_booking_manage_v2_he");
+assert.notEqual(originalPlans[0]?.templateName, newPlans[0]?.templateName);
+assert.equal(
+  planCustomerConfirmationSend(defaults, "he", "token").length +
+    planCustomerConfirmationSend(newSettings, "he", "token").length,
+  2,
+);
 
-const arPlan = resolveCustomerConfirmationTemplate(defaults, "ar");
+const arPlan = resolveCustomerConfirmationTemplate(newSettings, "ar", "token");
 assert.equal(arPlan.useManageTemplate, true);
 assert.equal(arPlan.templateName, "oyon_booking_manage_v2_ar");
 assert.equal(arPlan.contentSid, arSid);
 
-const enPlan = resolveCustomerConfirmationTemplate(defaults, "en");
+const enPlan = resolveCustomerConfirmationTemplate(newSettings, "en", "token");
 assert.equal(enPlan.useManageTemplate, false);
 assert.equal(enPlan.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
 
-const enabledEnglish = mergeBookingMessages({
+const legacyToggleOriginal = mergeBookingMessages({
   customerConfirmation: {
     ...defaults.customerConfirmation,
+    confirmationMode: "original",
     manageTemplateEnabled: true,
   },
 });
 assert.equal(
-  resolveCustomerConfirmationTemplate(enabledEnglish, "en").useManageTemplate,
+  resolveCustomerConfirmationTemplate(legacyToggleOriginal, "he", "token")
+    .useManageTemplate,
+  false,
+);
+
+const missingToken = resolveCustomerConfirmationTemplate(newSettings, "he");
+assert.equal(missingToken.skipReason, "missing-token");
+assert.equal(missingToken.useManageTemplate, false);
+
+const enabledEnglish = mergeBookingMessages({
+  customerConfirmation: {
+    ...defaults.customerConfirmation,
+    confirmationMode: "new",
+    manageTemplateEnabled: true,
+  },
+});
+assert.equal(
+  resolveCustomerConfirmationTemplate(enabledEnglish, "en", "token").useManageTemplate,
   false,
 );
 
@@ -106,13 +162,26 @@ const mapHe = resolveCustomerConfirmationTemplate(
   mergeBookingMessages({
     customerConfirmation: {
       ...defaults.customerConfirmation,
-      manageTemplateEnabled: true,
+      confirmationMode: "new",
     },
   }),
   "he",
+  "token",
 );
 assert.equal(mapHe.useManageTemplate, true);
 assert.equal(mapHe.contentSid, mapOnlySid);
+const originalIgnoresMap = resolveCustomerConfirmationTemplate(
+  mergeBookingMessages({
+    customerConfirmation: {
+      ...defaults.customerConfirmation,
+      confirmationMode: "original",
+    },
+  }),
+  "he",
+  "token",
+);
+assert.equal(originalIgnoresMap.useManageTemplate, false);
+assert.equal(originalIgnoresMap.templateName, LIVE_CUSTOMER_CONFIRMATION_TEMPLATE);
 
 clearTemplateEnv();
 process.env.TWILIO_WHATSAPP_CONTENT_SIDS = `oyon_booking_manage_v2_he:${mapOnlySid}`;
@@ -243,6 +312,128 @@ assert.equal(
 process.env.TWILIO_TEMPLATE_OWNER_RESCHEDULED = rescheduleSid;
 assert.equal(ownerLifecycleSkipReason(ownerOn, OWNER_RESCHEDULED_TEMPLATE), null);
 
+const ownerBusiness = mergeBookingMessages({
+  ownerNotification: {
+    ...defaults.ownerNotification,
+    enabled: true,
+    ownerWhatsApp: "0521234567",
+    testWhatsApp: "0501234567",
+    testDestinationEnabled: false,
+  },
+});
+assert.deepEqual(resolveOwnerNotificationDestination(ownerBusiness), {
+  to: "+972521234567",
+  source: "business",
+});
+const ownerTest = mergeBookingMessages({
+  ownerNotification: {
+    ...ownerBusiness.ownerNotification,
+    testDestinationEnabled: true,
+  },
+});
+assert.equal(ownerTest.ownerNotification.ownerWhatsApp, "+972521234567");
+assert.deepEqual(resolveOwnerNotificationDestination(ownerTest), {
+  to: "+972501234567",
+  source: "test",
+});
+const restored = mergeBookingMessages({
+  ownerNotification: {
+    ...ownerTest.ownerNotification,
+    testDestinationEnabled: false,
+  },
+});
+assert.deepEqual(resolveOwnerNotificationDestination(restored), {
+  to: "+972521234567",
+  source: "business",
+});
+assert.equal(restored.ownerNotification.testWhatsApp, "+972501234567");
+
+const preserved = mergeOwnerNotification(
+  {
+    ...ownerBusiness.ownerNotification,
+    ownerWhatsApp: "+972521234567",
+  },
+  {
+    testDestinationEnabled: true,
+    testWhatsApp: "0509998887",
+    ownerWhatsApp: "",
+  },
+);
+assert.equal(preserved.ownerWhatsApp, "+972521234567");
+assert.deepEqual(resolveOwnerNotificationDestination(preserved), {
+  to: "+972509998887",
+  source: "test",
+});
+
+const invalidTest = mergeBookingMessages({
+  ownerNotification: {
+    ...ownerBusiness.ownerNotification,
+    testDestinationEnabled: true,
+    testWhatsApp: "not-a-phone",
+  },
+});
+assert.equal(invalidTest.ownerNotification.ownerWhatsApp, "+972521234567");
+assert.deepEqual(resolveOwnerNotificationDestination(invalidTest), {
+  to: "",
+  source: "missing",
+});
+assert.equal(maskWhatsAppDestination("+972521234567"), "+972••••4567");
+
+const alreadySentStore = {
+  smsLogs: [
+    {
+      id: "sms_wa",
+      to: "+972501111111",
+      body: `WhatsApp:${LIVE_CUSTOMER_CONFIRMATION_TEMPLATE}`,
+      type: "appointment_confirmation",
+      status: "queued",
+      provider: "twilio",
+      appointmentId: "eea_1",
+      createdAt: "2026-10-10T00:00:00.000Z",
+    },
+  ],
+} as AppData;
+assert.equal(customerConfirmationAlreadySent(alreadySentStore, "eea_1"), true);
+assert.equal(
+  customerConfirmationAlreadySent(
+    {
+      smsLogs: [
+        {
+          id: "sms_sms",
+          to: "+972501111111",
+          body: "SMS confirmation",
+          type: "appointment_confirmation",
+          status: "sent",
+          provider: "console",
+          appointmentId: "eea_1",
+          createdAt: "2026-10-10T00:00:00.000Z",
+        },
+      ],
+    } as AppData,
+    "eea_1",
+  ),
+  false,
+);
+
+assert.equal(mapTwilioAcceptStatus("queued"), "queued");
+assert.equal(mapTwilioAcceptStatus("accepted"), "queued");
+assert.equal(mapTwilioAcceptStatus("sent"), "sent");
+assert.equal(mapTwilioAcceptStatus("delivered"), "sent");
+
+const productionLike = mergeBookingMessages({
+  customerConfirmation: {
+    enabled: true,
+    templateName: LIVE_CUSTOMER_CONFIRMATION_TEMPLATE,
+    body: defaults.customerConfirmation.body,
+    manageTemplateEnabled: true,
+  },
+});
+assert.equal(customerConfirmationMode(productionLike), "original");
+assert.equal(
+  planCustomerConfirmationSend(productionLike, "he", "token")[0]?.templateName,
+  LIVE_CUSTOMER_CONFIRMATION_TEMPLATE,
+);
+
 clearTemplateEnv();
 process.env.TWILIO_TEMPLATE_BOOKING_HE = "not-a-sid";
 assert.equal(isApprovedTwilioTemplateConfigured("oyon_booking_manage_v2_he"), false);
@@ -264,6 +455,14 @@ assert.match(settingsUi, /AccordionCard/);
 assert.match(settingsUi, /aria-expanded/);
 assert.match(settingsUi, /useState<AccordionId \| null>\(null\)/);
 assert.match(settingsUi, /\{open \? \(/);
+assert.match(settingsUi, /bmModeOriginal/);
+assert.match(settingsUi, /bmModeNew/);
+assert.match(settingsUi, /bmModeSaveHint/);
+assert.match(settingsUi, /bmOwnerTestEnable/);
+assert.match(settingsUi, /bmOwnerTestRestore/);
+assert.match(settingsUi, /bmOwnerDestinationTest/);
+assert.match(settingsUi, /confirmationMode: "original"/);
+assert.match(settingsUi, /confirmationMode: "new"/);
 assert.match(settingsUi, /bmBookingHe/);
 assert.match(settingsUi, /bmBookingAr/);
 assert.match(settingsUi, /bmOwnerRescheduled/);
@@ -279,6 +478,21 @@ assert.doesNotMatch(
 );
 assert.match(settingsUi, /https:\/\/oyonoptics\.com\/booking\/manage\/\{\{5\}\}/);
 assert.doesNotMatch(settingsUi, /dispatchBookingMessages/);
+
+const bookingMessagesSrc = readFileSync(
+  join(process.cwd(), "lib/booking-messages.ts"),
+  "utf8",
+);
+assert.match(bookingMessagesSrc, /from "\.\.\/lib\/israeli-phone"|from "@\/lib\/israeli-phone"/);
+assert.doesNotMatch(bookingMessagesSrc, /from "@\/lib\/eye-exam"/);
+
+const settingsRoute = readFileSync(
+  join(process.cwd(), "app/api/settings/route.ts"),
+  "utf8",
+);
+assert.match(settingsRoute, /toPublicSettings[\s\S]*ownerWhatsApp/);
+assert.doesNotMatch(settingsRoute, /toPublicSettings[\s\S]*testWhatsApp/);
+assert.match(settingsRoute, /mergeOwnerNotification/);
 
 const templateStatusRoute = readFileSync(
   join(process.cwd(), "app/api/settings/twilio/templates/route.ts"),
@@ -315,8 +529,15 @@ const messaging = readFileSync(
   "utf8",
 );
 assert.match(messaging, /Never sends a customer message/);
-assert.match(messaging, /resolveDedicatedTwilioContentSid/);
 assert.match(messaging, /OWNER_CANCELLED_TEMPLATE/);
+assert.match(messaging, /planCustomerConfirmationSend/);
+assert.match(messaging, /customerConfirmationAlreadySent/);
+const customerSendFn = messaging.slice(
+  messaging.indexOf("async function sendCustomerConfirmationViaTwilio"),
+  messaging.indexOf("async function sendConfiguredTemplate"),
+);
+assert.match(customerSendFn, /to: appointment\.phone/);
+assert.doesNotMatch(customerSendFn, /ownerDestination/);
 assert.equal(messaging.includes("sendCustomerConfirmationViaTwilio(appointment"), true);
 assert.equal(
   /dispatchOwnerCancelNotification[\s\S]*sendCustomerConfirmationViaTwilio/.test(

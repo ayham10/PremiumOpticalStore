@@ -1249,6 +1249,25 @@ const he: Dictionary = {
       bmMetaTesting: "בודק…",
       bmMetaTestSuccess: "החיבור ל-Meta WhatsApp Cloud API הצליח.",
       bmMetaTestError: "בדיקת חיבור Meta נכשלה.",
+      bmConfirmationMode: "תבנית אישור התור",
+      bmModeOriginal: "התבנית המקורית",
+      bmModeNew: "התבניות החדשות",
+      bmModeOriginalHint:
+        "נשלחת תבנית האישור הקיימת והמאושרת. בלי קישור ניהול תור ובלי התבניות החדשות.",
+      bmModeNewHint:
+        "נשלחת תבנית ערבית או עברית מאושרת עם קישור ניהול התור. אנגלית נשארת בתבנית המקורית. שתי התבניות לא נשלחות יחד.",
+      bmModeSaveHint: "שמרו את ההגדרות כדי להחיל את המצב על כל השרתים מיד, בלי פריסה מחדש.",
+      bmOwnerTestEnable: "שליחת התראות בעלים למספר בדיקה זמני",
+      bmOwnerTestPhone: "מספר בדיקה לבעלים",
+      bmOwnerTestHint:
+        "לא מחליף את מספר העסק השמור. הודעות ללקוחות לא נשלחות למספר הזה.",
+      bmOwnerTestRestore: "חזרה למספר העסק",
+      bmOwnerTestActive: "בדיקה",
+      bmOwnerTestBanner:
+        "התראות הבעלים נשלחות כעת למספר הבדיקה. הודעות הלקוח נשארות אצל הלקוח.",
+      bmOwnerDestinationBusiness: "יעד נוכחי: מספר העסק",
+      bmOwnerDestinationTest: "יעד נוכחי: מספר הבדיקה",
+      bmOwnerTestInvalid: "יש להזין מספר ישראלי תקין לפני הפעלת מצב בדיקה, אחרת התראות הבעלים מושהות.",
       bmCustomer: "אישור ללקוח",
       bmManageTemplate: "תבנית ניהול תור",
       bmManageTemplateName: "oyon_booking_manage_v2_ar",
