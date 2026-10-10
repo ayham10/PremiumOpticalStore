@@ -19,6 +19,8 @@ import {
 import ResponsiveHeroImageField from "@/components/admin/ResponsiveHeroImageField";
 import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
 import EditorSection from "@/components/admin/content-editor/EditorSection";
+import SectionIdentityFields from "@/components/admin/content-editor/SectionIdentityFields";
+import { editorSectionDisplayName } from "@/lib/page-hero-media";
 import NewPageWizardBar from "@/components/admin/content-editor/NewPageWizardBar";
 import {
   clampWizardStep,
@@ -70,7 +72,6 @@ import type {
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
-  CustomPageTemplate,
   CustomSectionType,
   CustomServicePage,
   Product,
@@ -158,18 +159,19 @@ function customPageErrorMessage(error: unknown, t: Translate): string {
 export function CreateCustomPageModal({
   open,
   t,
+  existingSlugs = [],
   onClose,
   onCreated,
 }: {
   open: boolean;
   t: Translate;
+  existingSlugs?: string[];
   onClose: () => void;
   onCreated: (page: CustomServicePage, document: StoreSettings["servicePages"]) => void;
 }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [template, setTemplate] = useState<CustomPageTemplate>("eye-exam");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -178,7 +180,6 @@ export function CreateCustomPageModal({
     setName("");
     setSlug("");
     setSlugTouched(false);
-    setTemplate("eye-exam");
     setSaving(false);
     setError("");
   }, [open]);
@@ -201,7 +202,6 @@ export function CreateCustomPageModal({
                 op: "create",
                 name: name.trim(),
                 slug,
-                template,
               } satisfies CustomPageOp,
             },
           },
@@ -222,10 +222,14 @@ export function CreateCustomPageModal({
   }
 
   const normalized = normalizeCustomSlug(slug);
+  const slugTaken = existingSlugs.includes(normalized);
+  const slugReserved = RESERVED_SERVICE_SLUGS.has(normalized);
+  const slugInvalid = Boolean(slug.trim()) && normalized.length < 2;
   const canCreate =
     name.trim().length > 1 &&
     normalized.length >= 2 &&
-    !RESERVED_SERVICE_SLUGS.has(normalized);
+    !slugReserved &&
+    !slugTaken;
 
   return (
     <AdminModal
@@ -246,42 +250,38 @@ export function CreateCustomPageModal({
           value={name}
           onChange={(event) => updateName(event.target.value)}
         />
+        <p className="admin-muted">{t("admin.servicePages.pageNameHint")}</p>
       </label>
       <label className="admin-service-field">
         <span className="label">{t("admin.servicePages.pageSlug")}</span>
-        <span className="csp-slug-prefix">/services/</span>
+        <span className="csp-slug-prefix" dir="ltr">
+          /services/
+        </span>
         <input
           className="input"
+          dir="ltr"
           value={slug}
           onChange={(event) => {
             setSlugTouched(true);
             setSlug(event.target.value);
           }}
         />
+        <p className="admin-muted">{t("admin.servicePages.pageSlugHint")}</p>
+        {normalized ? (
+          <p className="admin-muted" dir="ltr">
+            /services/{normalized}
+          </p>
+        ) : null}
+        {slugTaken ? (
+          <p className="csp-issues">{t("admin.servicePages.slugTaken")}</p>
+        ) : null}
+        {slugReserved ? (
+          <p className="csp-issues">{t("admin.servicePages.slugReserved")}</p>
+        ) : null}
+        {slugInvalid ? (
+          <p className="csp-issues">{t("admin.servicePages.slugInvalid")}</p>
+        ) : null}
       </label>
-      <fieldset className="admin-service-field">
-        <legend className="label">{t("admin.servicePages.template")}</legend>
-        <div className="csp-template-row">
-          <label className={template === "eye-exam" ? "is-active" : ""}>
-            <input
-              type="radio"
-              name="csp-template"
-              checked={template === "eye-exam"}
-              onChange={() => setTemplate("eye-exam")}
-            />
-            {t("admin.servicePages.templateEyeExam")}
-          </label>
-          <label className={template === "contact-lenses" ? "is-active" : ""}>
-            <input
-              type="radio"
-              name="csp-template"
-              checked={template === "contact-lenses"}
-              onChange={() => setTemplate("contact-lenses")}
-            />
-            {t("admin.servicePages.templateContactLenses")}
-          </label>
-        </div>
-      </fieldset>
       <div className="admin-service-actions" style={{ marginTop: 16 }}>
         <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
           {t("admin.servicePages.cancel")}
@@ -492,6 +492,38 @@ export default function CustomPageBuilder({
       prev.map((section) =>
         section.id === id ? { ...section, hidden: !section.hidden } : section,
       ),
+    );
+  }
+
+  function setSectionAdminLabel(id: string, value: string) {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === id
+          ? { ...section, adminLabel: value.trim() ? value : undefined }
+          : section,
+      ),
+    );
+  }
+
+  function sectionTitle(section: CustomPageSection) {
+    const fallback = t(SECTION_I18N[section.type]);
+    const name = editorSectionDisplayName(section.adminLabel, fallback);
+    return section.hidden
+      ? `${name} — ${t("admin.servicePages.hiddenSection")}`
+      : name;
+  }
+
+  function renderSectionAdminName(section: CustomPageSection) {
+    return (
+      <SectionIdentityFields
+        adminName={section.adminLabel || ""}
+        onAdminNameChange={(value) => setSectionAdminLabel(section.id, value)}
+        adminLabel={t("admin.servicePages.sectionAdminName")}
+        adminHint={t("admin.servicePages.sectionAdminNameHint")}
+        dir={editorDir}
+        lang={editLocale}
+        hideHeading
+      />
     );
   }
 
@@ -849,8 +881,7 @@ export default function CustomPageBuilder({
                 <span className="csp-section-label">
                   <Icon size={16} strokeWidth={1.75} aria-hidden />
                   <span>
-                    {t(SECTION_I18N[section.type])}
-                    {section.hidden ? ` — ${t("admin.servicePages.hiddenSection")}` : ""}
+                    {sectionTitle(section)}
                   </span>
                 </span>
                 <span className="csp-section-actions">
@@ -925,9 +956,7 @@ export default function CustomPageBuilder({
       ) : null}
       {sections.map((section) => {
         if (section.type === "gallery") return null;
-        const title = `${t(SECTION_I18N[section.type])}${
-          section.hidden ? ` — ${t("admin.servicePages.hiddenSection")}` : ""
-        }`;
+        const title = sectionTitle(section);
         if (section.type === "heroMedia") {
           return (
             <EditorSection
@@ -937,6 +966,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               <ResponsiveHeroImageField
                 value={heroMedia}
                 onChange={setHeroMedia}
@@ -961,7 +991,7 @@ export default function CustomPageBuilder({
                 lang={editLocale}
               />
               <BuilderField
-                label={t("admin.servicePages.mainTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.title}
                 onChange={(value) => updateCopy("title", value)}
                 dir={editorDir}
@@ -987,6 +1017,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               {copy.features.map((feature, index) => (
                 <div key={`csp-f-${index}`} className="admin-service-feature">
                   <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
@@ -1041,8 +1072,9 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               <BuilderField
-                label={t("admin.servicePages.benefitsTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.benefitsTitle}
                 onChange={(value) => updateCopy("benefitsTitle", value)}
                 dir={editorDir}
@@ -1075,8 +1107,9 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               <BuilderField
-                label={t("admin.servicePages.warningTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.warningTitle}
                 onChange={(value) => updateCopy("warningTitle", value)}
                 dir={editorDir}
@@ -1102,8 +1135,9 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               <BuilderField
-                label={t("admin.servicePages.valuesTitle")}
+                label={t("admin.servicePages.sectionHeading")}
                 value={copy.valuesTitle}
                 onChange={(value) => updateCopy("valuesTitle", value)}
                 dir={editorDir}
@@ -1137,6 +1171,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
             </EditorSection>
           );
@@ -1150,6 +1185,7 @@ export default function CustomPageBuilder({
               defaultOpen={wizardMode}
               {...foldProps(section.id)}
             >
+              {renderSectionAdminName(section)}
               <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
               <div className="csp-inline-actions">
                 <button
@@ -1222,7 +1258,7 @@ export default function CustomPageBuilder({
             lang={editLocale}
           />
           <BuilderField
-            label={t("admin.servicePages.mainTitle")}
+            label={t("admin.servicePages.sectionHeading")}
             value={copy.title}
             onChange={(value) => updateCopy("title", value)}
             dir={editorDir}

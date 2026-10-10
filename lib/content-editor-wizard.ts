@@ -36,3 +36,7 @@ export function wizardCanGoBack(step: NewPageWizardStep): boolean {
 export function wizardCanGoNext(step: NewPageWizardStep): boolean {
   return step < 4;
 }
+
+export function formatWizardStepNumber(step: NewPageWizardStep): string {
+  return String(step).padStart(2, "0");
+}

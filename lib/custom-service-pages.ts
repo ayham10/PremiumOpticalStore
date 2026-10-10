@@ -416,6 +416,12 @@ function sparseFocal(saved: unknown): CustomPageMediaRef["desktopFocal"] {
   return { x, y, zoom };
 }
 
+export function parseCustomPageMedia(
+  saved: unknown,
+): CustomPageMediaRef | undefined {
+  return sparseMedia(saved);
+}
+
 function sparseMedia(saved: unknown): CustomPageMediaRef | undefined {
   const raw = asRecord(saved);
   const url = cleanText(raw.url);
@@ -518,10 +524,12 @@ function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPag
     ) {
       continue;
     }
+    const adminLabel = cleanText(raw.adminLabel);
     next.push({
       id: cleanText(raw.id) || makeId("sec"),
       type: type as CustomSectionType,
       hidden: raw.hidden === true ? true : undefined,
+      adminLabel: adminLabel || undefined,
     });
     if (next.length >= MAX_CUSTOM_SECTIONS) break;
   }
@@ -635,11 +643,21 @@ function publicLocales(
   return locales;
 }
 
+function publicCustomSections(
+  sections: CustomPageSection[],
+): CustomPageSection[] {
+  return sections.map((section) => {
+    const { adminLabel: _adminLabel, ...rest } = section;
+    return rest;
+  });
+}
+
 export function publicCustomPages(saved: unknown): CustomServicePage[] {
   return normalizeCustomPages(saved)
     .filter((page) => page.status === "published")
     .map((page) => ({
       ...page,
+      sections: publicCustomSections(page.sections),
       locales: publicLocales(page),
     }))
     .filter((page) => Object.keys(page.locales).length > 0);
@@ -669,6 +687,7 @@ export function resolvePublishedCustomPage(
   return {
     page: {
       ...page,
+      sections: publicCustomSections(page.sections),
       locales: { [key]: copy },
     },
     copy,

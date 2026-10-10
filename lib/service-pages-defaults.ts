@@ -90,6 +90,18 @@ export function servicePagesDefaultsFromDictionary(
       ],
       warningText: dict.contactLenses.safety,
     },
+    catalog: {
+      title: dict.shop.title,
+      lead: dict.shop.lead,
+    },
+    sunglasses: {
+      title: dict.destinations.sunglasses.title,
+      lead: dict.destinations.sunglasses.lead,
+    },
+    frames: {
+      title: dict.destinations.frames.title,
+      lead: dict.destinations.frames.lead,
+    },
     homepage: {
       hero: {
         title: dict.hero.title,
@@ -117,6 +129,9 @@ export function defaultServicePagesForLocale(
       contactLenses: DEFAULT_SERVICE_PAGES.contactLenses,
       homepage: DEFAULT_SERVICE_PAGES.homepage,
       footer: DEFAULT_SERVICE_PAGES.footer,
+      catalog: DEFAULT_SERVICE_PAGES.catalog,
+      sunglasses: DEFAULT_SERVICE_PAGES.sunglasses,
+      frames: DEFAULT_SERVICE_PAGES.frames,
     });
   }
   return servicePagesDefaultsFromDictionary(DICTIONARIES[locale]);

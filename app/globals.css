@@ -6015,7 +6015,8 @@ main.frames-main {
 }
 
 .frames-hero-video,
-.frames-hero img {
+.frames-hero img,
+.frames-hero picture {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -6031,8 +6032,8 @@ main.frames-main {
     overflow: hidden;
   }
 
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-fit: cover;
     object-position: center 34%;
     transform: scale(1.72);
@@ -6053,37 +6054,37 @@ main.frames-main {
    hero. Portrait source + short 21:9 crop needs width-tuned object-position.
    Mobile framing (below) is unchanged. */
 @media (min-width: 768px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-fit: cover;
     object-position: center 24%;
   }
 }
 
 @media (min-width: 1100px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 24.5%;
   }
 }
 
 @media (min-width: 1400px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 25.5%;
   }
 }
 
 @media (min-width: 1800px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 26%;
   }
 }
 
 @media (min-width: 2400px) {
-  .sunglasses-page .frames-hero-video,
-  .sunglasses-page .frames-hero img {
+  .sunglasses-page .frames-hero:not(.is-custom-hero) .frames-hero-video,
+  .sunglasses-page .frames-hero:not(.is-custom-hero) img {
     object-position: center 27%;
   }
 }
@@ -6505,8 +6506,12 @@ html[dir="rtl"] .frames-product-name {
 .cl-hero-video,
 .cl-hero-media img,
 .cl-hero-media picture,
+.cl-hero-media video,
 .eye-exam-hero-media img,
 .eye-exam-hero-media picture,
+.eye-exam-hero-media video,
+.store-hero img,
+.store-hero picture,
 .csp-hero-fill {
   position: absolute;
   inset: 0;
@@ -16424,6 +16429,10 @@ body:has(.admin-service-pages--visual) {
 }
 
 .csp-device figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
   flex: 0 0 auto;
   padding: 0.32rem 0.7rem;
   color: #d4af6a;
@@ -16432,6 +16441,19 @@ body:has(.admin-service-pages--visual) {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(212, 175, 106, 0.14);
+}
+
+.csp-device-editing {
+  flex-shrink: 0;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(8, 16, 22, 0.72);
+  color: #67e8f9;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.22);
 }
 
 .csp-device-stage {
@@ -16705,13 +16727,13 @@ html.csp-preview-doc body::-webkit-scrollbar {
 }
 
 .csp-fold.is-active {
-  border-color: rgba(212, 175, 106, 0.55);
-  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.28);
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.28);
 }
 
 .csp-section-row.is-active {
-  border-color: rgba(212, 175, 106, 0.5);
-  background: rgba(212, 175, 106, 0.08);
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .csp-wizard {
@@ -16754,20 +16776,34 @@ html.csp-preview-doc body::-webkit-scrollbar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.2rem;
+  min-width: 1.45rem;
   height: 1.2rem;
+  padding: 0 0.15rem;
   border-radius: 999px;
   border: 1px solid rgba(212, 175, 106, 0.28);
   color: #d4af6a;
   font-style: normal;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
 }
 
-.csp-wizard-steps button.is-done,
+.csp-wizard-steps button.is-done {
+  color: #e4d3a8;
+  border-color: rgba(212, 175, 106, 0.28);
+  background: rgba(212, 175, 106, 0.06);
+}
+
 .csp-wizard-steps button.is-current {
   color: #f3e6c0;
-  border-color: rgba(212, 175, 106, 0.42);
-  background: rgba(212, 175, 106, 0.1);
+  border-color: rgba(212, 175, 106, 0.7);
+  background: rgba(212, 175, 106, 0.16);
+  box-shadow: 0 0 0 1px rgba(212, 175, 106, 0.22);
+}
+
+.csp-wizard-steps button.is-current i {
+  border-color: rgba(212, 175, 106, 0.7);
+  background: rgba(212, 175, 106, 0.18);
+  color: #f6e7c0;
 }
 
 .csp-wizard-hint {
@@ -16783,10 +16819,50 @@ html.csp-preview-doc body::-webkit-scrollbar {
   gap: 0.5rem;
 }
 
+.csp-preview-canvas {
+  position: relative;
+  overflow: visible;
+}
+
 .csp-preview-canvas [data-csp-section].is-preview-active {
-  outline: 2px solid rgba(212, 175, 106, 0.72);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgba(212, 175, 106, 0.12);
+  outline: 2px solid #22d3ee;
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 5px rgba(34, 211, 238, 0.14),
+    0 0 16px rgba(34, 211, 238, 0.22);
+}
+
+.csp-preview-canvas [data-csp-section].is-preview-active.is-preview-hero {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.2);
+}
+
+.csp-section-identity {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.csp-section-identity .admin-muted {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.csp-preview-edit-label {
+  position: absolute;
+  z-index: 8;
+  padding: 0.16rem 0.48rem;
+  border-radius: 999px;
+  background: rgba(8, 16, 22, 0.82);
+  color: #67e8f9;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.28);
 }
 
 .csp-preview-ph-media {

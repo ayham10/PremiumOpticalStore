@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   DEFAULT_SERVICE_PAGES,
   hydrateServicePagesForEditor,
@@ -8,6 +10,7 @@ import {
   pickServiceText,
   publicServicePages,
   resolveServicePagesForLocale,
+  storeServicePages,
 } from "../lib/service-pages";
 import { defaultServicePagesForLocale } from "../lib/service-pages-defaults";
 
@@ -85,6 +88,12 @@ assert.equal(heDefaults.footer?.address, "דיר חנא");
 const enDefaults = defaultServicePagesForLocale("en");
 assert.equal(enDefaults.homepage?.hero.title, "SEE LIFE IN FOCUS");
 assert.equal(enDefaults.footer?.hoursLabel, "Hours");
+assert.equal(enDefaults.sunglasses?.title, "Sunglasses");
+assert.equal(enDefaults.frames?.title, "Premium Frames");
+assert.equal(heDefaults.sunglasses?.title, "משקפי שמש");
+assert.equal(heDefaults.frames?.title, "מסגרות פרימיום");
+assert.equal(DEFAULT_SERVICE_PAGES.sunglasses?.title, "نظارات شمسية");
+assert.equal(DEFAULT_SERVICE_PAGES.frames?.title, "إطارات فاخرة");
 
 const hydratedHe = hydrateServicePagesForEditor(
   legacyArabic,
@@ -208,5 +217,165 @@ const withCustomPage = persistServicePages(
 assert.equal(withCustomPage.customPages?.[0]?.slug, "kids-exam");
 assert.equal(withCustomPage.customPages?.[0]?.status, "draft");
 assert.equal(withCustomPage.locales?.ar?.eyeExam.title, "فحص نظر شامل");
+
+const mediaSave = persistServicePages(
+  arabicSave,
+  localePatchPayload("ar", {
+    ...DEFAULT_SERVICE_PAGES,
+    eyeExam: {
+      ...DEFAULT_SERVICE_PAGES.eyeExam,
+      title: "عنوان عربي محدّث",
+      heroMedia: {
+        kind: "image",
+        url: "https://cdn.example/eye-exam.webp",
+      },
+    },
+    catalog: {
+      title: "المتجر المحدث",
+      lead: "مجموعة جديدة",
+      heroMedia: { kind: "image", url: "https://cdn.example/shop.jpg" },
+    },
+    sunglasses: {
+      title: "شمسية محدثة",
+      lead: "وصف الشمسية",
+      heroMedia: { kind: "video", url: "https://cdn.example/sun.mp4" },
+    },
+    frames: {
+      title: "إطارات محدثة",
+      lead: "وصف الإطارات",
+      heroMedia: { kind: "image", url: "https://cdn.example/frames.jpg" },
+    },
+    adminSectionNames: {
+      "eyeExam-benefits": "مميزات الفحص — تنظيم",
+    },
+  }),
+);
+assert.equal(
+  mediaSave.locales?.ar?.eyeExam.heroMedia?.url,
+  "https://cdn.example/eye-exam.webp",
+);
+assert.equal(mediaSave.locales?.ar?.catalog?.title, "المتجر المحدث");
+assert.equal(mediaSave.locales?.ar?.sunglasses?.title, "شمسية محدثة");
+assert.equal(mediaSave.locales?.ar?.sunglasses?.heroMedia?.url, "https://cdn.example/sun.mp4");
+assert.equal(mediaSave.locales?.ar?.frames?.title, "إطارات محدثة");
+assert.equal(mediaSave.locales?.ar?.frames?.heroMedia?.url, "https://cdn.example/frames.jpg");
+assert.equal(
+  mediaSave.locales?.ar?.adminSectionNames?.["eyeExam-benefits"],
+  "مميزات الفحص — تنظيم",
+);
+assert.equal(
+  mediaSave.locales?.he?.eyeExam.title,
+  "כותרת עברית שמורה",
+);
+
+const publicMedia = publicServicePages(mediaSave);
+assert.equal(
+  publicMedia?.locales?.ar?.eyeExam.heroMedia?.url,
+  "https://cdn.example/eye-exam.webp",
+);
+assert.equal(publicMedia?.locales?.ar?.catalog?.title, "المتجر المحدث");
+assert.equal(publicMedia?.locales?.ar?.sunglasses?.title, "شمسية محدثة");
+assert.equal(publicMedia?.locales?.ar?.frames?.title, "إطارات محدثة");
+assert.equal(publicMedia?.locales?.ar?.adminSectionNames, undefined);
+const storedMedia = storeServicePages(mediaSave);
+assert.equal(
+  storedMedia?.locales?.ar?.adminSectionNames?.["eyeExam-benefits"],
+  "مميزات الفحص — تنظيم",
+);
+assert.equal(storedMedia?.locales?.ar?.sunglasses?.title, "شمسية محدثة");
+const reloadedPublic = publicServicePages(storedMedia);
+assert.equal(reloadedPublic?.locales?.ar?.adminSectionNames, undefined);
+assert.equal(reloadedPublic?.locales?.ar?.sunglasses?.title, "شمسية محدثة");
+assert.equal(
+  resolveServicePagesForLocale(publicMedia, "he")?.eyeExam.heroMedia?.url,
+  "https://cdn.example/eye-exam.webp",
+);
+assert.notEqual(
+  resolveServicePagesForLocale(publicMedia, "ar")?.eyeExam.title,
+  publicMedia?.locales?.ar?.adminSectionNames?.["eyeExam-benefits"],
+);
+
+const restoredMedia = persistServicePages(
+  mediaSave,
+  localePatchPayload("ar", {
+    ...DEFAULT_SERVICE_PAGES,
+    eyeExam: { ...DEFAULT_SERVICE_PAGES.eyeExam, title: "عنوان عربي محدّث" },
+    catalog: { title: "المتجر المحدث", lead: "مجموعة جديدة" },
+    sunglasses: { title: "شمسية محدثة", lead: "وصف الشمسية" },
+    frames: { title: "إطارات محدثة", lead: "وصف الإطارات" },
+  }),
+);
+assert.equal(restoredMedia.locales?.ar?.eyeExam.heroMedia, undefined);
+assert.equal(restoredMedia.locales?.ar?.catalog?.heroMedia, undefined);
+assert.equal(restoredMedia.locales?.ar?.sunglasses?.heroMedia, undefined);
+assert.equal(restoredMedia.locales?.ar?.frames?.heroMedia, undefined);
+
+const sunglassesOnly = persistServicePages(
+  mediaSave,
+  localePatchPayload("ar", {
+    ...DEFAULT_SERVICE_PAGES,
+    eyeExam: { ...DEFAULT_SERVICE_PAGES.eyeExam, title: "عنوان عربي محدّث" },
+    catalog: {
+      title: "المتجر المحدث",
+      lead: "مجموعة جديدة",
+      heroMedia: { kind: "image", url: "https://cdn.example/shop.jpg" },
+    },
+    sunglasses: {
+      title: "شمسية مستقلة",
+      lead: "لا تلمس الإطارات",
+      heroMedia: { kind: "image", url: "https://cdn.example/sun-only.jpg" },
+    },
+    frames: {
+      title: "إطارات محدثة",
+      lead: "وصف الإطارات",
+      heroMedia: { kind: "image", url: "https://cdn.example/frames.jpg" },
+    },
+  }),
+);
+assert.equal(sunglassesOnly.locales?.ar?.sunglasses?.title, "شمسية مستقلة");
+assert.equal(
+  sunglassesOnly.locales?.ar?.sunglasses?.heroMedia?.url,
+  "https://cdn.example/sun-only.jpg",
+);
+assert.equal(sunglassesOnly.locales?.ar?.frames?.title, "إطارات محدثة");
+assert.equal(
+  sunglassesOnly.locales?.ar?.frames?.heroMedia?.url,
+  "https://cdn.example/frames.jpg",
+);
+assert.equal(sunglassesOnly.locales?.ar?.catalog?.title, "المتجر المحدث");
+assert.equal(
+  sunglassesOnly.locales?.ar?.catalog?.heroMedia?.url,
+  "https://cdn.example/shop.jpg",
+);
+
+const framesOnly = persistServicePages(
+  sunglassesOnly,
+  localePatchPayload("he", {
+    ...heDefaults,
+    sunglasses: {
+      title: "משקפי שמש עברית",
+      lead: "תיאור שמש",
+      heroMedia: { kind: "video", url: "https://cdn.example/sun-he.mp4" },
+    },
+    frames: {
+      title: "מסגרות עברית",
+      lead: "תיאור מסגרות",
+      heroMedia: { kind: "image", url: "https://cdn.example/frames-he.jpg" },
+    },
+  }),
+);
+assert.equal(framesOnly.locales?.he?.sunglasses?.title, "משקפי שמש עברית");
+assert.equal(framesOnly.locales?.he?.frames?.title, "מסגרות עברית");
+assert.equal(framesOnly.locales?.ar?.sunglasses?.title, "شمسية مستقلة");
+assert.equal(framesOnly.locales?.ar?.frames?.title, "إطارات محدثة");
+assert.equal(framesOnly.locales?.ar?.catalog?.title, "المتجر المحدث");
+assert.notEqual(
+  framesOnly.locales?.he?.sunglasses?.heroMedia?.url,
+  framesOnly.locales?.he?.frames?.heroMedia?.url,
+);
+
+const storeSrc = readFileSync(join(process.cwd(), "lib/db/store.ts"), "utf8");
+assert.match(storeSrc, /storeServicePages\(/);
+assert.doesNotMatch(storeSrc, /publicServicePages\(/);
 
 console.log("service-pages i18n tests passed");

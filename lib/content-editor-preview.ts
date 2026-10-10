@@ -35,6 +35,8 @@ export const PREVIEW_DRAG_THRESHOLD_PX = 6;
  * shrinking both frames to the leftover viewport made them unreadable.
  */
 export const PREVIEW_COLUMN_WIDTH_USAGE = 0.98;
+/** Display-only shrink for the Mobile frame. Internal viewport stays 390×844. */
+export const MOBILE_PREVIEW_DISPLAY_SCALE = 0.75;
 
 export function fitPreviewScale(
   availableWidth: number,
@@ -57,12 +59,14 @@ export function fitPreviewColumnScale(
   availableWidth: number,
   viewportWidth: number,
   chromeWidth = 0,
+  displayScale = 1,
 ): number {
   const innerWidth = Math.max(
     1,
     (availableWidth - chromeWidth) * PREVIEW_COLUMN_WIDTH_USAGE,
   );
-  return Math.max(0.18, Math.min(1, innerWidth / viewportWidth));
+  const fitted = Math.min(1, innerWidth / viewportWidth);
+  return Math.max(0.18, fitted * displayScale);
 }
 
 export function previewFrameSize(
@@ -100,6 +104,9 @@ export type ContentPreviewKind =
   | "homepage"
   | "eyeExam"
   | "contactLenses"
+  | "catalog"
+  | "sunglasses"
+  | "frames"
   | "footer"
   | "custom";
 
@@ -198,6 +205,9 @@ export function viewHrefForEditor(
   if (kind === "homepage") return "/";
   if (kind === "eyeExam") return "/eye-exams";
   if (kind === "contactLenses") return "/contact-lenses";
+  if (kind === "catalog") return "/shop";
+  if (kind === "sunglasses") return "/sunglasses";
+  if (kind === "frames") return "/frames";
   if (kind === "footer") return "/#footer";
   const safe = (slug || "").replace(/^\/+|\/+$/g, "");
   return safe ? `/services/${safe}` : "/services";

@@ -15,6 +15,7 @@ import {
   CONTENT_PREVIEW_READY,
   CONTENT_PREVIEW_VIEWPORTS,
   CONTENT_PREVIEW_VISIBILITY,
+  MOBILE_PREVIEW_DISPLAY_SCALE,
   fitPreviewColumnScale,
   normalizeWheelDelta,
   screenDeltaToPreviewScroll,
@@ -23,6 +24,10 @@ import {
   viewHrefForEditor,
   type ContentPreviewPayload,
 } from "@/lib/content-editor-preview";
+import {
+  isContentPreviewLabelMessage,
+  previewEditingLabel,
+} from "@/lib/content-editor-sections";
 
 function scrollPreviewWindow(
   frame: HTMLIFrameElement | null,
@@ -63,6 +68,7 @@ function DeviceFrame({
   } | null>(null);
   const [scale, setScale] = useState(0.28);
   const [dragging, setDragging] = useState(false);
+  const [chromeEditing, setChromeEditing] = useState(false);
   const viewport = CONTENT_PREVIEW_VIEWPORTS[mode];
   const chrome = CONTENT_PREVIEW_CHROME[mode];
   const href = viewHrefForEditor(payload.kind, payload.customPage?.slug);
@@ -96,6 +102,12 @@ function DeviceFrame({
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
       if (event.source !== frameRef.current?.contentWindow) return;
+      if (isContentPreviewLabelMessage(event.data)) {
+        setChromeEditing(
+          Boolean(payloadRef.current.activeSectionId) && event.data.clipped,
+        );
+        return;
+      }
       if (
         event.data &&
         typeof event.data === "object" &&
@@ -115,6 +127,10 @@ function DeviceFrame({
   }, [payload]);
 
   useEffect(() => {
+    if (!payload.activeSectionId) setChromeEditing(false);
+  }, [payload.activeSectionId]);
+
+  useEffect(() => {
     postVisibility(visible);
   }, [visible]);
 
@@ -127,6 +143,7 @@ function DeviceFrame({
         stage?.clientWidth || viewport.width,
         viewport.width,
         chrome.width,
+        mode === "mobile" ? MOBILE_PREVIEW_DISPLAY_SCALE : 1,
       );
       scaleRef.current = next;
       setScale(next);
@@ -136,7 +153,7 @@ function DeviceFrame({
     const observer = new ResizeObserver(applyScale);
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [chrome.width, viewport.width]);
+  }, [chrome.width, mode, viewport.width]);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -252,7 +269,14 @@ function DeviceFrame({
         } as CSSProperties
       }
     >
-      <figcaption>{label}</figcaption>
+      <figcaption>
+        <span>{label}</span>
+        {payload.activeSectionId && chromeEditing ? (
+          <span className="csp-device-editing" dir={payload.locale === "en" ? "ltr" : "rtl"}>
+            {previewEditingLabel(payload.locale)}
+          </span>
+        ) : null}
+      </figcaption>
       <div className="csp-device-stage" ref={stageRef}>
         {mode === "mobile" ? (
           <div className="csp-phone">

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   NEW_PAGE_WIZARD_STEPS,
   WIZARD_STEP_I18N,
+  formatWizardStepNumber,
   wizardCanGoBack,
   wizardCanGoNext,
   type NewPageWizardStep,
@@ -40,7 +41,7 @@ export default function NewPageWizardBar({
                 aria-current={item === step ? "step" : undefined}
                 onClick={() => onStepChange(item)}
               >
-                <i>{item}</i>
+                <i>{formatWizardStepNumber(item)}</i>
                 <span>{t(meta.title)}</span>
               </button>
             </li>

@@ -87,6 +87,12 @@ assert.equal(created[0]?.showHeroButton, true);
 assert.equal(created[0]?.ctaKind, "book");
 assert.deepEqual(created[0]?.productIds, []);
 assert.deepEqual(created[0]?.sections, []);
+const createdIndependent = persistCustomPages([], {
+  customPageOp: { op: "create", name: "Night Clinic", slug: "night-clinic" },
+});
+assert.equal(createdIndependent[0]?.slug, "night-clinic");
+assert.deepEqual(createdIndependent[0]?.sections, []);
+assert.equal(createdIndependent[0]?.template, "eye-exam");
 assert.equal(created[0]?.locales.ar, undefined);
 assert.equal(
   isCustomPageLocaleComplete(created[0]!.sections, placeholders),
@@ -697,5 +703,31 @@ assert.equal(withVariants[0]?.heroMedia?.desktopUrl, "https://cdn.example/deskto
 assert.equal(withVariants[0]?.heroMedia?.fit, "contain");
 assert.equal(withVariants[0]?.homeImage, "https://cdn.example/card.jpg");
 assert.deepEqual(withVariants[0]?.gallery || [], created[0]?.gallery || []);
+
+const renamed = persistCustomPages(created, {
+  customPageOp: {
+    op: "update",
+    id: created[0]!.id,
+    expectedRevision: created[0]!.revision,
+    status: "published",
+    locale: "ar",
+    copy: completeCopy(),
+    sections: [
+      {
+        id: "sec_hero",
+        type: "heroMedia",
+        adminLabel: "الهيرو التنظيمي",
+      },
+    ],
+  },
+});
+assert.equal(renamed[0]?.sections[0]?.adminLabel, "الهيرو التنظيمي");
+assert.equal(renamed[0]?.locales.ar?.title, completeCopy().title);
+const publicRenamed = publicCustomPages(renamed);
+assert.equal(publicRenamed[0]?.sections[0]?.id, "sec_hero");
+assert.equal(publicRenamed[0]?.sections[0]?.adminLabel, undefined);
+const resolved = resolvePublishedCustomPage(renamed, created[0]!.slug, "ar");
+assert.equal(resolved?.page.sections[0]?.adminLabel, undefined);
+assert.equal(resolved?.copy.title, completeCopy().title);
 
 console.log("custom service pages tests passed");

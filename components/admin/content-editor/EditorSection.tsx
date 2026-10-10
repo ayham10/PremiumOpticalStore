@@ -60,6 +60,7 @@ export default function EditorSection({
         active ? "admin-card admin-service-card csp-fold is-active" : "admin-card admin-service-card csp-fold"
       }
       data-csp-editor-section={sectionId}
+      onPointerDownCapture={activate}
       onFocusCapture={activate}
     >
       <button

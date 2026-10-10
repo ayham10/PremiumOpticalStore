@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, Lock, Target } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import EyeExamHeroVideo from "@/components/eye-exam/EyeExamHeroVideo";
+import PageHeroMedia from "@/components/media/PageHeroMedia";
 import {
   EYE_EXAM_DEFAULT_FEATURE_ICONS,
   resolveServiceFeatureIcon,
@@ -42,7 +43,13 @@ export default function EyeExamPage() {
     <div className="eye-exam-page" dir={rtl ? "rtl" : "ltr"}>
       <section className="eye-exam-hero" aria-label={title} data-csp-section="eyeExam-hero">
         <div className="eye-exam-hero-media">
-          <EyeExamHeroVideo alt={t("eyeExam.videoAlt")} />
+          <PageHeroMedia
+            media={saved?.heroMedia}
+            alt={t("eyeExam.videoAlt")}
+            className="object-cover"
+            videoClassName="eye-exam-video is-visible"
+            fallback={<EyeExamHeroVideo alt={t("eyeExam.videoAlt")} />}
+          />
         </div>
         <div className="eye-exam-hero-copy">
           <p className="eye-exam-eyebrow">

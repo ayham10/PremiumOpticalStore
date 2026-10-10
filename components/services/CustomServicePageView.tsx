@@ -140,12 +140,11 @@ function PageCta({
 }
 
 function sectionClass(
-  sectionId: string,
-  activeSectionId?: string | null,
+  _sectionId: string,
+  _activeSectionId?: string | null,
   extra?: string,
 ): string {
-  const active = activeSectionId === sectionId ? "is-preview-active" : "";
-  return [extra, active].filter(Boolean).join(" ");
+  return extra || "";
 }
 
 function BodySection({
