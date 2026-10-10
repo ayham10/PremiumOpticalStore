@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import ContactLensesPage from "@/components/contact-lenses/ContactLensesPage";
 import EyeExamPage from "@/components/eye-exam/EyeExamPage";
 import Footer from "@/components/Footer";
@@ -13,6 +13,12 @@ import {
   visibleCustomSections,
 } from "@/lib/custom-service-pages";
 import { editorPanelDir, type ContentPreviewPayload } from "@/lib/content-editor-preview";
+import {
+  CONTENT_PREVIEW_LABEL,
+  PREVIEW_EDIT_LABEL_HEIGHT,
+  previewEditingLabel,
+  syncPreviewActiveSection,
+} from "@/lib/content-editor-sections";
 import { isRtl, type Locale } from "@/lib/i18n/config";
 import ar from "@/lib/i18n/dictionaries/ar";
 import en from "@/lib/i18n/dictionaries/en";
@@ -24,13 +30,6 @@ import {
 import { ServicePagesPreviewProvider } from "@/lib/use-service-pages";
 
 const DICTS = { ar, he, en } as const;
-
-function escapeSectionId(value: string): string {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(value);
-  }
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
 
 function PreviewBody({ payload }: { payload: ContentPreviewPayload }) {
   const dir = editorPanelDir(payload.locale);
@@ -103,6 +102,12 @@ function ContentPreviewCanvas({
 }) {
   const locale = payload.locale as Locale;
   const dict = DICTS[payload.locale];
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [floatLabel, setFloatLabel] = useState<{
+    top: number;
+    start: number;
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.remove("admin-dark");
@@ -112,31 +117,70 @@ function ContentPreviewCanvas({
   }, [locale]);
 
   useEffect(() => {
-    const id = payload.activeSectionId;
-    document
-      .querySelectorAll("[data-csp-section].is-preview-active")
-      .forEach((node) => node.classList.remove("is-preview-active"));
-    if (!id) return;
-    const hidden = payload.customPage?.sections.some(
-      (section) => section.id === id && section.hidden,
+    const id = payload.activeSectionId || null;
+    const hidden = Boolean(
+      id &&
+        payload.customPage?.sections.some(
+          (section) => section.id === id && section.hidden,
+        ),
     );
-    if (hidden) return;
-    const el = document.querySelector(
-      `[data-csp-section="${escapeSectionId(id)}"]`,
-    );
-    if (!(el instanceof HTMLElement)) return;
-    el.classList.add("is-preview-active");
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [payload.activeSectionId, payload.kind, payload.customPage?.id]);
+    const next = syncPreviewActiveSection(document, id, hidden);
+    const text = previewEditingLabel(locale);
+
+    function postLabel(clipped: boolean, sectionId: string | null) {
+      window.parent.postMessage(
+        { type: CONTENT_PREVIEW_LABEL, clipped, sectionId },
+        window.location.origin,
+      );
+    }
+
+    if (!next.element || !canvasRef.current) {
+      setFloatLabel(null);
+      postLabel(false, next.applied ? id : null);
+      return;
+    }
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const elRect = next.element.getBoundingClientRect();
+    const clipped =
+      next.clipped ||
+      elRect.top - canvasRect.top < PREVIEW_EDIT_LABEL_HEIGHT + 8;
+    if (clipped) {
+      setFloatLabel(null);
+      postLabel(true, id);
+      return;
+    }
+
+    setFloatLabel({
+      top: elRect.top - canvasRect.top - PREVIEW_EDIT_LABEL_HEIGHT - 8,
+      start: isRtl(locale)
+        ? canvasRect.right - elRect.right
+        : elRect.left - canvasRect.left,
+      text,
+    });
+    postLabel(false, id);
+  }, [payload.activeSectionId, payload.kind, payload.customPage?.id, locale]);
 
   return (
     <LocaleProvider locale={locale} dict={dict}>
       <ServicePagesPreviewProvider value={payload.document}>
-        <div className="csp-preview-canvas">
+        <div className="csp-preview-canvas" ref={canvasRef}>
           <PreviewBody
             key={`${payload.kind}:${payload.locale}`}
             payload={payload}
           />
+          {floatLabel ? (
+            <span
+              className="csp-preview-edit-label"
+              style={{
+                top: floatLabel.top,
+                insetInlineStart: floatLabel.start,
+              }}
+              aria-hidden
+            >
+              {floatLabel.text}
+            </span>
+          ) : null}
         </div>
       </ServicePagesPreviewProvider>
     </LocaleProvider>

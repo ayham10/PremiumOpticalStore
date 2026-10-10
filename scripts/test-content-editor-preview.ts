@@ -32,6 +32,12 @@ import {
   wizardCanGoNext,
 } from "../lib/content-editor-wizard";
 import {
+  BUILT_IN_PREVIEW_SECTION_IDS,
+  previewEditingLabel,
+  previewSectionSelector,
+  shouldClipPreviewEditingLabel,
+} from "../lib/content-editor-sections";
+import {
   previewPlaceholderProducts,
   withPreviewPlaceholders,
 } from "../lib/preview-placeholders";
@@ -320,6 +326,20 @@ assert.match(createModal, /\/services\//);
 assert.doesNotMatch(createModal, /csp-template-row/);
 assert.doesNotMatch(createModal, /templateEyeExam/);
 
+assert.equal(previewEditingLabel("ar"), "✎ قيد التعديل");
+assert.equal(previewEditingLabel("he"), "✎ בעריכה");
+assert.equal(previewEditingLabel("en"), "✎ Editing");
+assert.equal(shouldClipPreviewEditingLabel(10), true);
+assert.equal(shouldClipPreviewEditingLabel(80), false);
+assert.equal(
+  previewSectionSelector(BUILT_IN_PREVIEW_SECTION_IDS.eyeExamBenefits),
+  '[data-csp-section="eyeExam-benefits"]',
+);
+assert.notEqual(
+  BUILT_IN_PREVIEW_SECTION_IDS.eyeExamFeatures,
+  BUILT_IN_PREVIEW_SECTION_IDS.eyeExamBenefits,
+);
+
 const previewCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 assert.match(previewCss, /overflow-x:\s*clip/);
 assert.match(
@@ -327,7 +347,12 @@ assert.match(
   /\.csp-preview-canvas \[data-csp-section\]\.is-preview-active/,
 );
 assert.match(previewCss, /#22d3ee/);
-assert.match(previewCss, /قيد التعدיל|قيد التعديل/);
+assert.match(previewCss, /\.csp-preview-edit-label/);
+assert.match(previewCss, /\.csp-device-editing/);
+assert.doesNotMatch(
+  previewCss,
+  /\[data-csp-section\]\.is-preview-active::before/,
+);
 assert.doesNotMatch(
   previewCss,
   /(?<!csp-preview-canvas )\[data-csp-section\]\.is-preview-active \{/,
@@ -348,6 +373,24 @@ assert.match(
   livePreviews,
   /mode === "mobile" \? MOBILE_PREVIEW_DISPLAY_SCALE : 1/,
 );
+assert.match(livePreviews, /csp-device-editing/);
+assert.doesNotMatch(livePreviews, /scrollIntoView/);
+
+const canvasSrc = readFileSync(
+  join(process.cwd(), "components/admin/content-editor/ContentPreviewCanvas.tsx"),
+  "utf8",
+);
+assert.match(canvasSrc, /syncPreviewActiveSection/);
+assert.doesNotMatch(canvasSrc, /scrollIntoView/);
+assert.match(canvasSrc, /csp-preview-edit-label/);
+
+const editorPage = readFileSync(
+  join(process.cwd(), "app/admin/service-pages/page.tsx"),
+  "utf8",
+);
+assert.match(editorPage, /PREVIEW_SECTION\.eyeExamBenefits/);
+assert.match(editorPage, /PREVIEW_SECTION\.contactLensesNotice/);
+assert.match(editorPage, /onPointerDownCapture|onActivate=\{setActiveSectionId\}/);
 
 const wizardBar = readFileSync(
   join(process.cwd(), "components/admin/content-editor/NewPageWizardBar.tsx"),

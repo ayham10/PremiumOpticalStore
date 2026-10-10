@@ -16233,6 +16233,10 @@ body:has(.admin-service-pages--visual) {
 }
 
 .csp-device figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
   flex: 0 0 auto;
   padding: 0.32rem 0.7rem;
   color: #d4af6a;
@@ -16241,6 +16245,19 @@ body:has(.admin-service-pages--visual) {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(212, 175, 106, 0.14);
+}
+
+.csp-device-editing {
+  flex-shrink: 0;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(8, 16, 22, 0.72);
+  color: #67e8f9;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.22);
 }
 
 .csp-device-stage {
@@ -16606,8 +16623,12 @@ html.csp-preview-doc body::-webkit-scrollbar {
   gap: 0.5rem;
 }
 
-.csp-preview-canvas [data-csp-section].is-preview-active {
+.csp-preview-canvas {
   position: relative;
+  overflow: visible;
+}
+
+.csp-preview-canvas [data-csp-section].is-preview-active {
   outline: 2px solid #22d3ee;
   outline-offset: 4px;
   box-shadow:
@@ -16615,30 +16636,20 @@ html.csp-preview-doc body::-webkit-scrollbar {
     0 0 16px rgba(34, 211, 238, 0.22);
 }
 
-.csp-preview-canvas [data-csp-section].is-preview-active::before {
-  content: "✎ قيد التعديل";
+.csp-preview-edit-label {
   position: absolute;
-  top: 0.45rem;
-  inset-inline-start: 0.55rem;
-  inset-inline-end: auto;
-  z-index: 4;
-  padding: 0.18rem 0.5rem;
+  z-index: 8;
+  padding: 0.16rem 0.48rem;
   border-radius: 999px;
   background: rgba(8, 16, 22, 0.82);
   color: #67e8f9;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.01em;
+  line-height: 1.2;
   pointer-events: none;
+  white-space: nowrap;
   box-shadow: 0 0 10px rgba(34, 211, 238, 0.28);
-}
-
-html[lang="he"] .csp-preview-canvas [data-csp-section].is-preview-active::before {
-  content: "✎ בעריכה";
-}
-
-html[lang="en"] .csp-preview-canvas [data-csp-section].is-preview-active::before {
-  content: "✎ Editing";
 }
 
 .csp-preview-ph-media {

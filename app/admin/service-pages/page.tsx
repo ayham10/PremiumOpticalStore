@@ -37,6 +37,7 @@ import {
   snapshotForDirty,
   viewHrefForEditor,
 } from "@/lib/content-editor-preview";
+import { BUILT_IN_PREVIEW_SECTION_IDS as PREVIEW_SECTION } from "@/lib/content-editor-sections";
 import type { CustomPageProductCard } from "@/components/services/CustomPageProductsCarousel";
 import {
   SERVICE_CONTENT_LOCALES,
@@ -496,8 +497,8 @@ export default function AdminServicePagesPage() {
                       <EditorSection
                         icon="text"
                         title={t("admin.servicePages.groupText")}
-                        sectionId="homepage-hero"
-                        active={activeSectionId === "homepage-hero"}
+                        sectionId={PREVIEW_SECTION.homepageHero}
+                        active={activeSectionId === PREVIEW_SECTION.homepageHero}
                         onActivate={setActiveSectionId}
                       >
                         <Field
@@ -527,8 +528,8 @@ export default function AdminServicePagesPage() {
                       <EditorSection
                         icon="buttons"
                         title={t("admin.servicePages.groupButtons")}
-                        sectionId="homepage-buttons"
-                        active={activeSectionId === "homepage-buttons"}
+                        sectionId={PREVIEW_SECTION.homepageButtons}
+                        active={activeSectionId === PREVIEW_SECTION.homepageButtons}
                         onActivate={setActiveSectionId}
                       >
                         <Field
@@ -550,8 +551,8 @@ export default function AdminServicePagesPage() {
                       <EditorSection
                         icon="hero"
                         title={t("admin.servicePages.groupHeroMedia")}
-                        sectionId="eyeExam-hero"
-                        active={activeSectionId === "eyeExam-hero"}
+                        sectionId={PREVIEW_SECTION.eyeExamHero}
+                        active={activeSectionId === PREVIEW_SECTION.eyeExamHero}
                         onActivate={setActiveSectionId}
                       >
                         <Field
@@ -574,8 +575,8 @@ export default function AdminServicePagesPage() {
                       <EditorSection
                         icon="buttons"
                         title={t("admin.servicePages.groupButtons")}
-                        sectionId="eyeExam-buttons"
-                        active={activeSectionId === "eyeExam-buttons"}
+                        sectionId={PREVIEW_SECTION.eyeExamButtons}
+                        active={activeSectionId === PREVIEW_SECTION.eyeExamButtons}
                         onActivate={setActiveSectionId}
                       >
                         <Field
@@ -586,10 +587,10 @@ export default function AdminServicePagesPage() {
                       </EditorSection>
                       <EditorSection
                         icon="text"
-                        title={t("admin.servicePages.groupText")}
+                        title={t("admin.servicePages.features")}
                         defaultOpen={false}
-                        sectionId="eyeExam-features"
-                        active={activeSectionId === "eyeExam-features"}
+                        sectionId={PREVIEW_SECTION.eyeExamFeatures}
+                        active={activeSectionId === PREVIEW_SECTION.eyeExamFeatures}
                         onActivate={setActiveSectionId}
                       >
                         <h2>{t("admin.servicePages.features")}</h2>
@@ -626,7 +627,15 @@ export default function AdminServicePagesPage() {
                             />
                           </div>
                         ))}
-                        <h2>{t("admin.servicePages.benefits")}</h2>
+                      </EditorSection>
+                      <EditorSection
+                        icon="text"
+                        title={t("admin.servicePages.benefits")}
+                        defaultOpen={false}
+                        sectionId={PREVIEW_SECTION.eyeExamBenefits}
+                        active={activeSectionId === PREVIEW_SECTION.eyeExamBenefits}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.benefitsTitle")}
                           value={eye.benefitsTitle}
@@ -652,8 +661,8 @@ export default function AdminServicePagesPage() {
                       <EditorSection
                         icon="hero"
                         title={t("admin.servicePages.groupHeroMedia")}
-                        sectionId="contactLenses-hero"
-                        active={activeSectionId === "contactLenses-hero"}
+                        sectionId={PREVIEW_SECTION.contactLensesHero}
+                        active={activeSectionId === PREVIEW_SECTION.contactLensesHero}
                         onActivate={setActiveSectionId}
                       >
                         <Field
@@ -676,8 +685,8 @@ export default function AdminServicePagesPage() {
                       <EditorSection
                         icon="buttons"
                         title={t("admin.servicePages.groupButtons")}
-                        sectionId="contactLenses-buttons"
-                        active={activeSectionId === "contactLenses-buttons"}
+                        sectionId={PREVIEW_SECTION.contactLensesButtons}
+                        active={activeSectionId === PREVIEW_SECTION.contactLensesButtons}
                         onActivate={setActiveSectionId}
                       >
                         <Field
@@ -688,10 +697,10 @@ export default function AdminServicePagesPage() {
                       </EditorSection>
                       <EditorSection
                         icon="text"
-                        title={t("admin.servicePages.groupText")}
+                        title={t("admin.servicePages.features")}
                         defaultOpen={false}
-                        sectionId="contactLenses-features"
-                        active={activeSectionId === "contactLenses-features"}
+                        sectionId={PREVIEW_SECTION.contactLensesFeatures}
+                        active={activeSectionId === PREVIEW_SECTION.contactLensesFeatures}
                         onActivate={setActiveSectionId}
                       >
                         <h2>{t("admin.servicePages.features")}</h2>
@@ -731,7 +740,15 @@ export default function AdminServicePagesPage() {
                             />
                           </div>
                         ))}
-                        <h2>{t("admin.servicePages.warning")}</h2>
+                      </EditorSection>
+                      <EditorSection
+                        icon="text"
+                        title={t("admin.servicePages.warning")}
+                        defaultOpen={false}
+                        sectionId={PREVIEW_SECTION.contactLensesNotice}
+                        active={activeSectionId === PREVIEW_SECTION.contactLensesNotice}
+                        onActivate={setActiveSectionId}
+                      >
                         <Field
                           label={t("admin.servicePages.warningText")}
                           value={lenses.warningText}
@@ -744,8 +761,8 @@ export default function AdminServicePagesPage() {
                     <EditorSection
                       icon="text"
                       title={t("admin.servicePages.groupText")}
-                      sectionId="footer-content"
-                      active={activeSectionId === "footer-content"}
+                      sectionId={PREVIEW_SECTION.footerContent}
+                      active={activeSectionId === PREVIEW_SECTION.footerContent}
                       onActivate={setActiveSectionId}
                     >
                       <Field
