@@ -2006,6 +2006,10 @@ const en: Dictionary = {
       wizardBack: "Back",
       wizardProgress: "Step {n} of {total}",
       wizardNoSections: "No sections selected yet. Go back to add sections.",
+      editSectionsHeading: "Next step: Edit section content",
+      editSectionsLead:
+        "After choosing the sections to add to the page, you can now edit the text, images, and details for each section below.",
+      editSectionsFlow: "1. Choose sections → 2. Edit content → 3. Preview and save",
       wizardReviewMissing: "Missing fields in this language",
       wizardReviewReady: "This language is ready to save.",
     },

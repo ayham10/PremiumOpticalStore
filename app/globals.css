@@ -17321,6 +17321,49 @@ html.csp-preview-doc body::-webkit-scrollbar {
   margin-top: 0.7rem;
 }
 
+.csp-edit-guide {
+  display: grid;
+  gap: 0.22rem;
+  margin: 0.1rem 0 0.15rem;
+  padding: 0.68rem 0.82rem 0.72rem;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 106, 0.3);
+  background:
+    linear-gradient(180deg, rgba(212, 175, 106, 0.09), rgba(8, 12, 17, 0.42));
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.csp-edit-guide-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #d4af6a;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.csp-edit-guide-title svg {
+  flex: 0 0 auto;
+  color: #d4af6a;
+}
+
+.csp-edit-guide p {
+  margin: 0;
+  color: rgba(243, 241, 234, 0.78);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.csp-edit-guide-flow {
+  margin-top: 0.18rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(212, 175, 106, 0.22);
+  color: rgba(212, 175, 106, 0.9);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
 .csp-add-section {
   display: flex;
   align-items: center;
