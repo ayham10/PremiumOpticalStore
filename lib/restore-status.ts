@@ -1,11 +1,20 @@
 import type { RestoreCategory } from "@/lib/restore-apply";
 import type {
+  MembershipPolicy,
   RestoreChangeItem,
+  RestoreLostMembership,
   RestoreMode,
   RestorePreviewDetails,
 } from "@/lib/restore-plan";
 
-export type { RestoreCategory, RestoreChangeItem, RestoreMode, RestorePreviewDetails };
+export type {
+  MembershipPolicy,
+  RestoreCategory,
+  RestoreChangeItem,
+  RestoreLostMembership,
+  RestoreMode,
+  RestorePreviewDetails,
+};
 
 /** Client-safe: Vercel inlines NEXT_PUBLIC_VERCEL_ENV at build time. */
 export function isLiveRestoreUiAllowed(): boolean {

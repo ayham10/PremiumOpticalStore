@@ -277,7 +277,7 @@ export async function executeRestoreRequest(
           missing: 0,
           failed: 0,
         };
-    if (!media.complete) {
+    if (!media.complete || media.missing > 0 || media.failed > 0) {
       throw new Error("RESTORE_MEDIA_FAILED");
     }
 

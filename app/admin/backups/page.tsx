@@ -38,6 +38,7 @@ import {
   type ManualBackupClientResult,
 } from "@/lib/backup-status";
 import type {
+  MembershipPolicy,
   RestoreCategory,
   RestoreChangeItem,
   RestoreExecuteClientResult,
@@ -108,6 +109,8 @@ export default function AdminBackupsPage() {
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [membershipPolicy, setMembershipPolicy] =
+    useState<MembershipPolicy>("preserve-live");
   const [snapshotItems, setSnapshotItems] = useState<RestoreSnapshotItems | null>(null);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemQuery, setItemQuery] = useState("");
@@ -295,6 +298,7 @@ export default function AdminBackupsPage() {
         mode: "product",
         backupId: selectedBackupId,
         productId: selectedProductId,
+        membershipPolicy,
       };
     }
     if (!selectedCategoryIds.length) return null;
@@ -302,6 +306,7 @@ export default function AdminBackupsPage() {
       mode: "categoryWithProducts",
       backupId: selectedBackupId,
       categoryIds: selectedCategoryIds,
+      membershipPolicy,
     };
   }
 
@@ -337,6 +342,7 @@ export default function AdminBackupsPage() {
     selectedCategoryIds,
     selectedPageId,
     selectedProductId,
+    membershipPolicy,
     t,
   ]);
 
@@ -358,6 +364,7 @@ export default function AdminBackupsPage() {
             pageId: preview.details.pages?.[0]?.id,
             productId: preview.details.products?.[0]?.id,
             categoryIds: preview.details.categories?.map((item) => item.id),
+            membershipPolicy: preview.details.membershipPolicy,
             confirm: true,
           }),
         },
@@ -758,6 +765,31 @@ export default function AdminBackupsPage() {
               onCategories={setSelectedCategoryIds}
             />
           ) : null}
+          {restoreMode === "categoryWithProducts" || restoreMode === "product" ? (
+            <div className="admin-backups-membership">
+              <p className="admin-backups-restore-note">
+                {t("admin.backups.restoreMembershipHint")}
+              </p>
+              <label>
+                <input
+                  type="radio"
+                  name="restore-membership"
+                  checked={membershipPolicy === "preserve-live"}
+                  onChange={() => setMembershipPolicy("preserve-live")}
+                />
+                <span>{t("admin.backups.restoreMembershipPreserve")}</span>
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="restore-membership"
+                  checked={membershipPolicy === "backup-exact"}
+                  onChange={() => setMembershipPolicy("backup-exact")}
+                />
+                <span>{t("admin.backups.restoreMembershipExact")}</span>
+              </label>
+            </div>
+          ) : null}
           {data?.rollback ? (
             <button
               type="button"
@@ -777,6 +809,12 @@ export default function AdminBackupsPage() {
             <p className="admin-backups-restore-note">
               {t("admin.backups.restoreRollbackHint")}{" "}
               {formatBackupDateTime(data.rollback.createdAt)}
+            </p>
+          ) : null}
+          {data?.rollback ? (
+            <p className="admin-restore-warning admin-backups-inline-warn">
+              <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+              {t("admin.backups.restoreRollbackWarn")}
             </p>
           ) : null}
           {restoreError ? (
@@ -987,9 +1025,8 @@ function warningFor(
   preview: RestorePreviewResult,
   t: (key: string) => string,
 ) {
-  if (preview.mode === "full" || preview.mode === "rollback") {
-    return t("admin.backups.restoreFullWarn");
-  }
+  if (preview.mode === "rollback") return t("admin.backups.restoreRollbackWarn");
+  if (preview.mode === "full") return t("admin.backups.restoreFullWarn");
   if (preview.mode === "customPage") return t("admin.backups.restorePageWarn");
   if (preview.mode === "product") return t("admin.backups.restoreProductWarn");
   if (preview.mode === "categoryWithProducts") {
@@ -1142,6 +1179,38 @@ function ChangeList({
   );
 }
 
+function OverwriteList({
+  preview,
+  t,
+}: {
+  preview: RestorePreviewResult;
+  t: (key: string) => string;
+}) {
+  const overwritten = [
+    ...(preview.details.categories || []).filter((item) => item.overwrite),
+    ...(preview.details.products || []).filter((item) => item.overwrite),
+    ...(preview.details.pages || []).filter((item) => item.overwrite),
+  ];
+  if (!overwritten.length) return null;
+  return (
+    <div className="admin-restore-overwrite">
+      <p className="admin-restore-warning">
+        <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+        {t("admin.backups.restoreOverwriteWarn")}
+      </p>
+      <p className="admin-restore-meta">{t("admin.backups.restoreOverwriteTitle")}</p>
+      <ul className="admin-restore-changes">
+        {overwritten.map((item) => (
+          <li key={item.id} className="is-overwrite">
+            <strong>{item.label}</strong>
+            <span>{t("admin.backups.restoreChangeUpdate")}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RestoreDialog({
   preview,
   confirmOpen,
@@ -1216,11 +1285,22 @@ function RestoreDialog({
         <ChangeList items={preview.details.categories} t={t} />
         <ChangeList items={preview.details.pages} t={t} />
         <ChangeList items={preview.details.products} t={t} />
-        {preview.details.overwriteProductIds?.length ? (
-          <p className="admin-restore-warning">
-            <AlertTriangle size={15} strokeWidth={2} aria-hidden />
-            {t("admin.backups.restoreOverwriteWarn")}
-          </p>
+        <OverwriteList preview={preview} t={t} />
+        {preview.details.lostMemberships?.length ? (
+          <div className="admin-restore-overwrite">
+            <p className="admin-restore-warning">
+              <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+              {t("admin.backups.restoreLostMemberships")}
+            </p>
+            <ul className="admin-restore-changes">
+              {preview.details.lostMemberships.map((item) => (
+                <li key={item.productId} className="is-overwrite">
+                  <strong>{item.productLabel}</strong>
+                  <span>{item.categoryIds.join(" · ")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
         <p className="admin-restore-meta">
           {t("admin.backups.restoreMediaCounts", {

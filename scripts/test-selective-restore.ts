@@ -6,7 +6,7 @@ import {
   unchangedOutsidePlan,
   validateRestorableAppData,
 } from "../lib/restore-plan";
-import { restoreMissingMedia } from "../lib/restore-media";
+import { collectReferencedMediaPaths, restoreMissingMedia } from "../lib/restore-media";
 import {
   executeRestore,
   executeRestoreRequest,
@@ -290,6 +290,7 @@ const productPlan = applyRestorePlan(live, backup, {
   mode: "product",
   backupId: "daily:2026-10-09T00:00:00.000Z",
   productId: "p-old",
+  membershipPolicy: "preserve-live",
 });
 assert.ok(productPlan.next.products.some((item) => item.id === "p-keep"));
 assert.equal(productPlan.next.products.find((item) => item.id === "p-old")?.stockQuantity, 11);
@@ -303,6 +304,7 @@ const categoryPlan = applyRestorePlan(live, backup, {
   mode: "categoryWithProducts",
   backupId: "daily:2026-10-09T00:00:00.000Z",
   categoryIds: ["cat_old"],
+  membershipPolicy: "preserve-live",
 });
 assert.ok(categoryPlan.next.catalogCategories?.some((item) => item.id === "cat_keep"));
 assert.equal(
@@ -316,15 +318,44 @@ assert.equal(
 assert.equal(categoryPlan.next.products.find((item) => item.id === "p-keep")?.name, "Keep me");
 const overwritten = categoryPlan.next.products.find((item) => item.id === "p-live");
 assert.equal(overwritten?.name, "Overwritten frame");
-assert.deepEqual(overwritten?.categoryIds, ["cat_old"]);
+assert.deepEqual(overwritten?.categoryIds, ["cat_old", "cat_live"]);
 assert.ok(categoryPlan.details.overwriteProductIds?.includes("p-live"));
+assert.equal(categoryPlan.details.lostMemberships?.length || 0, 0);
 assert.ok(categoryPlan.next.products.some((item) => item.id === "p-old"));
 assert.ok(
   unchangedOutsidePlan(live, categoryPlan.next, {
     mode: "categoryWithProducts",
     backupId: "x",
     categoryIds: ["cat_old"],
+    membershipPolicy: "preserve-live",
   }),
+);
+
+const exactPlan = applyRestorePlan(live, backup, {
+  mode: "categoryWithProducts",
+  backupId: "daily:2026-10-09T00:00:00.000Z",
+  categoryIds: ["cat_old"],
+  membershipPolicy: "backup-exact",
+});
+assert.deepEqual(
+  exactPlan.next.products.find((item) => item.id === "p-live")?.categoryIds,
+  ["cat_old"],
+);
+assert.ok(
+  exactPlan.details.lostMemberships?.some(
+    (item) => item.productId === "p-live" && item.categoryIds.includes("cat_live"),
+  ),
+);
+
+const keepOverwrite = applyRestorePlan(live, backup, {
+  mode: "categoryWithProducts",
+  backupId: "daily:2026-10-09T00:00:00.000Z",
+  categoryIds: ["cat_keep"],
+  membershipPolicy: "preserve-live",
+});
+assert.ok(keepOverwrite.details.overwriteCategoryIds?.includes("cat_keep"));
+assert.ok(
+  keepOverwrite.details.categories?.some((item) => item.id === "cat_keep" && item.overwrite),
 );
 
 const fullPlan = applyRestorePlan(live, backup, {
@@ -434,6 +465,35 @@ async function run() {
   );
   assert.equal(wrote, 0);
   assert.equal(preRestore, 1);
+
+  await assert.rejects(
+    () =>
+      executeRestoreRequest(
+        {
+          backupId: "manual:2026-10-09T19:00:10.289Z",
+          mode: "full",
+          confirm: true,
+        },
+        {
+          ...goodDeps,
+          restoreMedia: async () => ({
+            complete: true,
+            referenced: 1,
+            alreadyPresent: 0,
+            restored: 0,
+            missing: 1,
+            failed: 0,
+          }),
+        },
+      ),
+    /RESTORE_MEDIA_FAILED/,
+  );
+  assert.equal(wrote, 0);
+  assert.equal(preRestore, 2);
+
+  assert.deepEqual(collectReferencedMediaPaths({ images: ["products/gone.jpg"] }), [
+    "products/gone.jpg",
+  ]);
 
   const media = await restoreMissingMedia(
     {

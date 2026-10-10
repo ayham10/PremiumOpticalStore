@@ -19908,6 +19908,34 @@ body > .admin-restore-overlay,
   color: #e6c58a;
 }
 
+.admin-backups-membership {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.admin-backups-membership label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  color: #e8eaed;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.admin-backups-membership input {
+  margin-top: 0.15rem;
+  accent-color: #e6c56a;
+}
+
+.admin-backups-inline-warn {
+  margin-top: 0.55rem;
+}
+
+.admin-restore-overwrite {
+  margin: 0 0 0.75rem;
+}
+
 .admin-backups-soon {
   display: flex;
   align-items: center;

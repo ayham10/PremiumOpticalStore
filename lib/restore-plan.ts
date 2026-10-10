@@ -32,6 +32,9 @@ export const RESTORE_MODES = [
 
 export type RestoreMode = (typeof RESTORE_MODES)[number];
 
+export const MEMBERSHIP_POLICIES = ["preserve-live", "backup-exact"] as const;
+export type MembershipPolicy = (typeof MEMBERSHIP_POLICIES)[number];
+
 export type RestoreRequest =
   | {
       mode: "sections";
@@ -51,11 +54,13 @@ export type RestoreRequest =
       mode: "product";
       backupId: string;
       productId: string;
+      membershipPolicy: MembershipPolicy;
     }
   | {
       mode: "categoryWithProducts";
       backupId: string;
       categoryIds: string[];
+      membershipPolicy: MembershipPolicy;
     }
   | {
       mode: "rollback";
@@ -63,6 +68,12 @@ export type RestoreRequest =
     };
 
 export type RestoreChangeAction = "add" | "update" | "unchanged";
+
+export type RestoreLostMembership = {
+  productId: string;
+  productLabel: string;
+  categoryIds: string[];
+};
 
 export type RestoreChangeItem = {
   action: RestoreChangeAction;
@@ -85,7 +96,10 @@ export type RestorePreviewDetails = {
   products?: RestoreChangeItem[];
   categories?: RestoreChangeItem[];
   overwriteProductIds?: string[];
+  overwriteCategoryIds?: string[];
   droppedMemberships?: number;
+  lostMemberships?: RestoreLostMembership[];
+  membershipPolicy?: MembershipPolicy;
   replacedFields?: string[];
 };
 
@@ -190,13 +204,27 @@ export function parseRestoreRequest(body: unknown): RestoreRequest {
   if (mode === "product") {
     const productId = asId(rec.productId);
     if (!productId) throw new Error("RESTORE_PRODUCT_REQUIRED");
-    return { mode: "product", backupId, productId };
+    return {
+      mode: "product",
+      backupId,
+      productId,
+      membershipPolicy: parseMembershipPolicy(rec.membershipPolicy),
+    };
   }
   const categoryIds = Array.isArray(rec.categoryIds)
     ? [...new Set(rec.categoryIds.map(asId).filter(Boolean))]
     : [];
   if (!categoryIds.length) throw new Error("RESTORE_CATEGORY_IDS_REQUIRED");
-  return { mode: "categoryWithProducts", backupId, categoryIds };
+  return {
+    mode: "categoryWithProducts",
+    backupId,
+    categoryIds,
+    membershipPolicy: parseMembershipPolicy(rec.membershipPolicy),
+  };
+}
+
+export function parseMembershipPolicy(value: unknown): MembershipPolicy {
+  return value === "backup-exact" ? "backup-exact" : "preserve-live";
 }
 
 export function customPagesOf(data: AppData): CustomServicePage[] {
@@ -287,6 +315,40 @@ function uniqueExistingIds(raw: unknown, knownIds: Set<string>): string[] {
   return out;
 }
 
+function extraIdsOf(product: Product, knownIds: Set<string>): string[] {
+  const type = isProductType(product.category) ? product.category : "";
+  return uniqueExistingIds(product.categoryIds, knownIds).filter((id) => id !== type);
+}
+
+export function applyMembershipPolicy(
+  backupProduct: Product,
+  liveProduct: Product | undefined,
+  knownIds: Set<string>,
+  policy: MembershipPolicy,
+): { product: Product; droppedBackupUnknown: number; lostLiveIds: string[] } {
+  const sanitized = sanitizeRestoredProduct(backupProduct, knownIds);
+  const nextExtras = extraIdsOf(sanitized.product, knownIds);
+  const liveExtras = liveProduct ? extraIdsOf(liveProduct, knownIds) : [];
+  if (policy === "backup-exact" || !liveProduct) {
+    return {
+      product: sanitized.product,
+      droppedBackupUnknown: sanitized.dropped,
+      lostLiveIds: liveExtras.filter((id) => !nextExtras.includes(id)),
+    };
+  }
+  const type = isProductType(sanitized.product.category)
+    ? sanitized.product.category
+    : sanitized.product.category;
+  const merged = uniqueExistingIds([...nextExtras, ...liveExtras], knownIds).filter(
+    (id) => id !== type,
+  );
+  return {
+    product: { ...sanitized.product, categoryIds: merged },
+    droppedBackupUnknown: sanitized.dropped,
+    lostLiveIds: [],
+  };
+}
+
 function withUpdatedSettingsPages(
   live: AppData,
   pages: CustomServicePage[],
@@ -323,30 +385,53 @@ export function applyProductRestore(
   live: AppData,
   backup: AppData,
   productId: string,
-): { next: AppData; change: RestoreChangeItem; dropped: number } {
+  membershipPolicy: MembershipPolicy = "preserve-live",
+): {
+  next: AppData;
+  change: RestoreChangeItem;
+  dropped: number;
+  lostMemberships: RestoreLostMembership[];
+} {
   const incoming = (backup.products || []).find((item) => item.id === productId);
   if (!incoming) {
     throw new Error("RESTORE_PRODUCT_NOT_FOUND");
   }
   const known = knownCategoryIdSet(mergeCatalogCategories(live.catalogCategories));
-  const sanitized = sanitizeRestoredProduct(incoming, known);
   const existing = (live.products || []).find((item) => item.id === productId);
-  const change = changeFor(existing, sanitized.product, productLabel(sanitized.product));
+  const applied = applyMembershipPolicy(incoming, existing, known, membershipPolicy);
+  const change = changeFor(existing, applied.product, productLabel(applied.product));
   const next = structuredClone(live);
-  next.products = upsertById(next.products || [], sanitized.product);
-  return { next, change, dropped: sanitized.dropped };
+  next.products = upsertById(next.products || [], applied.product);
+  return {
+    next,
+    change,
+    dropped: applied.droppedBackupUnknown,
+    lostMemberships:
+      applied.lostLiveIds.length && existing
+        ? [
+            {
+              productId: applied.product.id,
+              productLabel: productLabel(applied.product),
+              categoryIds: applied.lostLiveIds,
+            },
+          ]
+        : [],
+  };
 }
 
 export function applyCategoryWithProductsRestore(
   live: AppData,
   backup: AppData,
   categoryIds: string[],
+  membershipPolicy: MembershipPolicy = "preserve-live",
 ): {
   next: AppData;
   categories: RestoreChangeItem[];
   products: RestoreChangeItem[];
   overwriteProductIds: string[];
+  overwriteCategoryIds: string[];
   droppedMemberships: number;
+  lostMemberships: RestoreLostMembership[];
 } {
   const wanted = [...new Set(categoryIds.map(asId).filter(Boolean))];
   if (!wanted.length) throw new Error("RESTORE_CATEGORY_IDS_REQUIRED");
@@ -373,16 +458,23 @@ export function applyCategoryWithProductsRestore(
   let droppedMemberships = 0;
   const productChanges: RestoreChangeItem[] = [];
   const overwriteProductIds: string[] = [];
+  const lostMemberships: RestoreLostMembership[] = [];
   let mergedProducts = (live.products || []).map((item) => structuredClone(item));
   for (const incoming of backupProducts) {
-    const sanitized = sanitizeRestoredProduct(incoming, known);
-    droppedMemberships += sanitized.dropped;
-    const nextProduct: Product = sanitized.product;
-    const existing = mergedProducts.find((item) => item.id === nextProduct.id);
-    const change = changeFor(existing, nextProduct, productLabel(nextProduct));
+    const existing = mergedProducts.find((item) => item.id === incoming.id);
+    const applied = applyMembershipPolicy(incoming, existing, known, membershipPolicy);
+    droppedMemberships += applied.droppedBackupUnknown;
+    const change = changeFor(existing, applied.product, productLabel(applied.product));
     productChanges.push(change);
-    if (change.overwrite) overwriteProductIds.push(nextProduct.id);
-    mergedProducts = upsertById(mergedProducts, nextProduct);
+    if (change.overwrite) overwriteProductIds.push(applied.product.id);
+    if (applied.lostLiveIds.length) {
+      lostMemberships.push({
+        productId: applied.product.id,
+        productLabel: productLabel(applied.product),
+        categoryIds: applied.lostLiveIds,
+      });
+    }
+    mergedProducts = upsertById(mergedProducts, applied.product);
   }
 
   const next = structuredClone(live);
@@ -393,7 +485,9 @@ export function applyCategoryWithProductsRestore(
     categories: categoryChanges,
     products: productChanges,
     overwriteProductIds,
+    overwriteCategoryIds: categoryChanges.filter((item) => item.overwrite).map((item) => item.id),
     droppedMemberships,
+    lostMemberships,
   };
 }
 
@@ -446,7 +540,12 @@ export function applyRestorePlan(
     };
   }
   if (request.mode === "product") {
-    const result = applyProductRestore(live, backup, request.productId);
+    const result = applyProductRestore(
+      live,
+      backup,
+      request.productId,
+      request.membershipPolicy,
+    );
     return {
       next: result.next,
       details: {
@@ -455,10 +554,17 @@ export function applyRestorePlan(
         products: [result.change],
         overwriteProductIds: result.change.overwrite ? [result.change.id] : [],
         droppedMemberships: result.dropped,
+        lostMemberships: result.lostMemberships,
+        membershipPolicy: request.membershipPolicy,
       },
     };
   }
-  const result = applyCategoryWithProductsRestore(live, backup, request.categoryIds);
+  const result = applyCategoryWithProductsRestore(
+    live,
+    backup,
+    request.categoryIds,
+    request.membershipPolicy,
+  );
   return {
     next: result.next,
     details: {
@@ -467,7 +573,10 @@ export function applyRestorePlan(
       categories: result.categories,
       products: result.products,
       overwriteProductIds: result.overwriteProductIds,
+      overwriteCategoryIds: result.overwriteCategoryIds,
       droppedMemberships: result.droppedMemberships,
+      lostMemberships: result.lostMemberships,
+      membershipPolicy: request.membershipPolicy,
     },
   };
 }

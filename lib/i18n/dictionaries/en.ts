@@ -2153,12 +2153,20 @@ const en: Dictionary = {
       restoreRollbackNone: "No safety snapshot is available to undo.",
       restoreRollbackRunning: "Undoing…",
       restoreFullWarn:
-        "The entire website will be replaced by this backup, including bookings, settings, pages, products, and offers.",
+        "The current website will be replaced by this backup, including bookings, settings, pages, products, offers, and any newer data added after the backup date.",
+      restoreRollbackWarn:
+        "Undo will replace bookings, settings, products, pages, and any newer data with the snapshot saved before the last restore.",
       restorePageWarn: "Only this page will be restored. Other pages and operational settings stay unchanged.",
       restoreProductWarn: "Only this product will be restored. Other products will not be deleted.",
       restoreCategoryWarn:
         "The selected categories and their products will be restored. Unrelated categories and products stay unchanged.",
-      restoreOverwriteWarn: "Warning: current records for these products will be overwritten.",
+      restoreOverwriteWarn: "Warning: current records for the items below will be overwritten.",
+      restoreOverwriteTitle: "Items that will be overwritten",
+      restoreMembershipPreserve: "Keep current category memberships",
+      restoreMembershipExact: "Restore backup memberships only",
+      restoreMembershipHint:
+        "Keep current memberships so newer category assignments stay. Exact restore uses only the backup’s categoryIds.",
+      restoreLostMemberships: "Current category memberships that will be removed:",
       restoreMediaNote: "Missing media files will be restored from backup storage before saving data.",
       restoreMediaCounts: "Media: {referenced} referenced, {already} present, {restore} to restore.",
       restorePickPage: "Choose a page from this backup.",

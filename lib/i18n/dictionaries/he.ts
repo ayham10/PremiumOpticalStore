@@ -1777,12 +1777,20 @@ const he: Dictionary = {
       restoreRollbackNone: "אין עותק בטיחות לביטול.",
       restoreRollbackRunning: "מבטל…",
       restoreFullWarn:
-        "כל נתוני האתר יוחלפו בגיבוי זה, כולל הזמנות, הגדרות, עמודים, מוצרים ומבצעים.",
+        "נתוני האתר הנוכחיים יוחלפו בגיבוי זה, כולל הזמנות, הגדרות, עמודים, מוצרים, מבצעים וכל נתון חדש יותר מתאריך הגיבוי.",
+      restoreRollbackWarn:
+        "הביטול יחליף הזמנות, הגדרות, מוצרים, עמודים וכל נתון חדש יותר בעותק שנשמר לפני השחזור האחרון.",
       restorePageWarn: "רק עמוד זה ישוחזר. שאר העמודים והגדרות התפעול לא ישתנו.",
       restoreProductWarn: "רק מוצר זה ישוחזר. שאר המוצרים לא יימחקו.",
       restoreCategoryWarn:
         "הקטגוריות שנבחרו והמוצרים שלהן ישוחזרו. קטגוריות ומוצרים שאינם קשורים יישארו.",
-      restoreOverwriteWarn: "אזהרה: הרשומות הנוכחיות של מוצרים אלה יוחלפו.",
+      restoreOverwriteWarn: "אזהרה: הרשומות הנוכחיות של הפריטים הבאים יוחלפו.",
+      restoreOverwriteTitle: "פריטים שיוחלפו",
+      restoreMembershipPreserve: "שמירת שיוכי הקטגוריות הנוכחיים",
+      restoreMembershipExact: "שחזור שיוכי הגיבוי בלבד",
+      restoreMembershipHint:
+        "שמירת השיוכים הנוכחיים משאירה קטגוריות חדשות יותר. שחזור מדויק משתמש רק ב-categoryIds של הגיבוי.",
+      restoreLostMemberships: "שיוכי קטגוריה נוכחיים שיוסרו:",
       restoreMediaNote: "קבצי מדיה חסרים ישוחזרו מאחסון הגיבוי לפני שמירת הנתונים.",
       restoreMediaCounts: "מדיה: {referenced} בהפניה, {already} קיימים, {restore} לשחזור.",
       restorePickPage: "בחרו עמוד מהגיבוי.",

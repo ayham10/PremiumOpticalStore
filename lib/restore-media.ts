@@ -55,11 +55,19 @@ function joinPath(...parts: string[]) {
     .join("/");
 }
 
+const BARE_MEDIA_PREFIX = /^(products|custom-pages|media|promotions|branding)\//;
+
+function isReferencedMediaValue(value: string): boolean {
+  return (
+    value.includes("/storage/v1/object/") ||
+    value.startsWith("http") ||
+    BARE_MEDIA_PREFIX.test(value)
+  );
+}
+
 function collectUrlStrings(value: unknown, into: string[]) {
   if (typeof value === "string") {
-    if (value.includes("/storage/v1/object/") || value.startsWith("http")) {
-      into.push(value);
-    }
+    if (isReferencedMediaValue(value)) into.push(value);
     return;
   }
   if (Array.isArray(value)) {
@@ -76,7 +84,7 @@ export function collectReferencedMediaPaths(data: unknown): string[] {
   collectUrlStrings(data, urls);
   const paths = new Set<string>();
   for (const url of urls) {
-    const path = getStoragePathFromUrl(url);
+    const path = getStoragePathFromUrl(url) || (BARE_MEDIA_PREFIX.test(url) ? url : null);
     if (path) paths.add(path);
   }
   return [...paths].sort();
