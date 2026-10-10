@@ -899,6 +899,18 @@ function isListedSnapshot(
   );
 }
 
+function isPreRestoreSnapshot(value: unknown): value is OyonStoreSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snapshot = value as Partial<OyonStoreSnapshot>;
+  return (
+    snapshot.kind === "oyon-store-snapshot" &&
+    snapshot.purpose === "pre-restore" &&
+    Boolean(snapshot.createdAt) &&
+    Boolean(snapshot.appData) &&
+    typeof snapshot.appData === "object"
+  );
+}
+
 function toHistoryItem(
   date: string,
   sizeBytes: number,
@@ -1045,7 +1057,22 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
     lastSuccessful,
     history,
     media,
+    rollback: await readLatestRollbackSafe(),
   };
+}
+
+async function readLatestRollbackSafe(): Promise<BackupStatusSummary["rollback"]> {
+  try {
+    const latest = await loadLatestPreRestoreSnapshot();
+    if (!latest) return null;
+    return {
+      id: `pre-restore:${latest.createdAt}`,
+      createdAt: latest.createdAt,
+    };
+  } catch (error) {
+    console.error("Backup status skipped unreadable pre-restore snapshot", error);
+    return null;
+  }
 }
 
 /**
@@ -1059,9 +1086,19 @@ export async function loadRestorableSnapshot(
   if (sep < 0) return null;
   const kind = id.slice(0, sep);
   const createdAt = id.slice(sep + 1);
-  if ((kind !== "daily" && kind !== "manual") || !createdAt) return null;
+  if (
+    (kind !== "daily" && kind !== "manual" && kind !== "pre-restore") ||
+    !createdAt
+  ) {
+    return null;
+  }
 
-  const prefix = kind === "manual" ? MANUAL_PREFIX : DAILY_PREFIX;
+  const prefix =
+    kind === "manual"
+      ? MANUAL_PREFIX
+      : kind === "pre-restore"
+        ? PRE_RESTORE_PREFIX
+        : DAILY_PREFIX;
   const objects = await listPrefix(BACKUP_BUCKET, prefix.replace(/\/$/, ""));
   for (const object of objects) {
     try {
@@ -1069,7 +1106,11 @@ export async function loadRestorableSnapshot(
       const parsed = JSON.parse(
         Buffer.from(bytes).toString("utf8"),
       ) as unknown;
-      if (!isListedSnapshot(parsed)) continue;
+      if (kind === "pre-restore") {
+        if (!isPreRestoreSnapshot(parsed)) continue;
+      } else if (!isListedSnapshot(parsed)) {
+        continue;
+      }
       if (parsed.purpose !== kind || parsed.createdAt !== createdAt) continue;
       if (!parsed.appData || typeof parsed.appData !== "object") return null;
       return parsed;
@@ -1078,4 +1119,25 @@ export async function loadRestorableSnapshot(
     }
   }
   return null;
+}
+
+export async function loadLatestPreRestoreSnapshot(): Promise<OyonStoreSnapshot | null> {
+  const objects = await listPrefix(
+    BACKUP_BUCKET,
+    PRE_RESTORE_PREFIX.replace(/\/$/, ""),
+  );
+  let latest: OyonStoreSnapshot | null = null;
+  for (const object of objects) {
+    try {
+      const { bytes } = await downloadObject(BACKUP_BUCKET, object.path);
+      const parsed = JSON.parse(
+        Buffer.from(bytes).toString("utf8"),
+      ) as unknown;
+      if (!isPreRestoreSnapshot(parsed)) continue;
+      if (!latest || parsed.createdAt > latest.createdAt) latest = parsed;
+    } catch (error) {
+      console.error("Pre-restore lookup skipped unreadable object", error);
+    }
+  }
+  return latest;
 }

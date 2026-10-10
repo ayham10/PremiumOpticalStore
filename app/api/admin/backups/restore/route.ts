@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleRouteError } from "@/lib/api/helpers";
-import { executeRestore, isLiveRestoreAllowed } from "@/lib/restore";
+import { executeRestoreRequest, isLiveRestoreAllowed } from "@/lib/restore";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store, no-cache, must-revalidate",
 } as const;
 
-/** Selective restore. Writes live store only after a complete pre-restore snapshot. */
+/** Selective or full restore. Writes live store only after a complete pre-restore snapshot and media check. */
 export async function POST(request: Request) {
   try {
     await requireSession("settings");
@@ -29,16 +29,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as {
-      backupId?: unknown;
-      categories?: unknown;
-      confirm?: unknown;
-    };
-    const result = await executeRestore(
-      body.backupId,
-      body.categories,
-      body.confirm,
-    );
+    const body = await request.json();
+    const result = await executeRestoreRequest(body);
     return NextResponse.json(result, { status: 200, headers: PRIVATE_HEADERS });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
@@ -63,7 +55,12 @@ export async function POST(request: Request) {
     if (
       message === "RESTORE_BACKUP_INVALID" ||
       message === "RESTORE_CATEGORY_INVALID" ||
-      message === "RESTORE_CATEGORIES_REQUIRED"
+      message === "RESTORE_CATEGORIES_REQUIRED" ||
+      message === "RESTORE_REQUEST_INVALID" ||
+      message === "RESTORE_MODE_REQUIRED" ||
+      message === "RESTORE_PAGE_REQUIRED" ||
+      message === "RESTORE_PRODUCT_REQUIRED" ||
+      message === "RESTORE_CATEGORY_IDS_REQUIRED"
     ) {
       return NextResponse.json(
         { error: "طلب الاستعادة غير صالح." },
@@ -73,7 +70,12 @@ export async function POST(request: Request) {
     if (
       message === "RESTORE_BACKUP_NOT_FOUND" ||
       message === "RESTORE_BACKUP_NOT_RESTORABLE" ||
-      message === "RESTORE_BACKUP_INCOMPLETE"
+      message === "RESTORE_BACKUP_INCOMPLETE" ||
+      message === "RESTORE_BACKUP_INCOMPATIBLE" ||
+      message === "RESTORE_PAGE_NOT_FOUND" ||
+      message === "RESTORE_PRODUCT_NOT_FOUND" ||
+      message === "RESTORE_CATEGORY_NOT_FOUND" ||
+      message === "RESTORE_ROLLBACK_NOT_FOUND"
     ) {
       return NextResponse.json(
         { error: "لا يمكن استعادة هذه النسخة." },
@@ -83,6 +85,12 @@ export async function POST(request: Request) {
     if (message === "RESTORE_PRE_SNAPSHOT_FAILED") {
       return NextResponse.json(
         { error: "تعذر إنشاء نسخة الأمان قبل الاستعادة. لم يتم تغيير البيانات." },
+        { status: 503, headers: PRIVATE_HEADERS },
+      );
+    }
+    if (message === "RESTORE_MEDIA_FAILED") {
+      return NextResponse.json(
+        { error: "تعذر استعادة ملفات الوسائط الناقصة. لم يتم تغيير بيانات الموقع." },
         { status: 503, headers: PRIVATE_HEADERS },
       );
     }

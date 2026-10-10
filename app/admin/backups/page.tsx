@@ -12,9 +12,12 @@ import {
   Clock3,
   Database,
   DatabaseBackup,
+  FileText,
   Image as ImageIcon,
   Info,
+  Layers,
   Package,
+  RotateCcw,
   Settings,
   ShieldCheck,
   Tag,
@@ -35,9 +38,13 @@ import {
   type ManualBackupClientResult,
 } from "@/lib/backup-status";
 import type {
+  MembershipPolicy,
   RestoreCategory,
+  RestoreChangeItem,
   RestoreExecuteClientResult,
+  RestoreMode,
   RestorePreviewResult,
+  RestoreSnapshotItems,
 } from "@/lib/restore-status";
 import { isLiveRestoreUiAllowed } from "@/lib/restore-status";
 import {
@@ -56,6 +63,17 @@ const RESTORE_ITEMS: Array<{
   { key: "lenses", icon: Database },
   { key: "settings", icon: Settings },
   { key: "promotions", icon: Tag },
+];
+
+const RESTORE_MODES: Array<{
+  key: Exclude<RestoreMode, "rollback">;
+  icon: LucideIcon;
+}> = [
+  { key: "sections", icon: Layers },
+  { key: "full", icon: Database },
+  { key: "customPage", icon: FileText },
+  { key: "product", icon: Package },
+  { key: "categoryWithProducts", icon: Tag },
 ];
 
 function statusIcon(status: BackupHealthStatus | BackupRowStatus) {
@@ -87,6 +105,15 @@ export default function AdminBackupsPage() {
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<RestoreCategory[]>([]);
+  const [restoreMode, setRestoreMode] = useState<Exclude<RestoreMode, "rollback">>("sections");
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [membershipPolicy, setMembershipPolicy] =
+    useState<MembershipPolicy>("preserve-live");
+  const [snapshotItems, setSnapshotItems] = useState<RestoreSnapshotItems | null>(null);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemQuery, setItemQuery] = useState("");
   const [restoreError, setRestoreError] = useState("");
   const [previewing, setPreviewing] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -214,21 +241,85 @@ export default function AdminBackupsPage() {
   const selectedBackup =
     data?.history.find((row) => row.id === selectedBackupId) ?? null;
 
+  const needsItems =
+    restoreMode === "customPage" ||
+    restoreMode === "product" ||
+    restoreMode === "categoryWithProducts";
+
+  useEffect(() => {
+    if (!selectedBackupId || !needsItems) {
+      setSnapshotItems(null);
+      return;
+    }
+    let cancelled = false;
+    setItemsLoading(true);
+    setSnapshotItems(null);
+    void apiFetch<RestoreSnapshotItems>("/api/admin/backups/restore/items", {
+      method: "POST",
+      body: JSON.stringify({ backupId: selectedBackupId }),
+    })
+      .then((items) => {
+        if (!cancelled) setSnapshotItems(items);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSnapshotItems(null);
+          setRestoreError(t("admin.backups.restoreItemsError"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setItemsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsItems, selectedBackupId, t]);
+
+  function previewBody(): Record<string, unknown> | null {
+    if (!selectedBackupId) return null;
+    if (restoreMode === "sections") {
+      if (!selectedCategories.length) return null;
+      return {
+        mode: "sections",
+        backupId: selectedBackupId,
+        categories: selectedCategories,
+      };
+    }
+    if (restoreMode === "full") {
+      return { mode: "full", backupId: selectedBackupId };
+    }
+    if (restoreMode === "customPage") {
+      if (!selectedPageId) return null;
+      return { mode: "customPage", backupId: selectedBackupId, pageId: selectedPageId };
+    }
+    if (restoreMode === "product") {
+      if (!selectedProductId) return null;
+      return {
+        mode: "product",
+        backupId: selectedBackupId,
+        productId: selectedProductId,
+        membershipPolicy,
+      };
+    }
+    if (!selectedCategoryIds.length) return null;
+    return {
+      mode: "categoryWithProducts",
+      backupId: selectedBackupId,
+      categoryIds: selectedCategoryIds,
+      membershipPolicy,
+    };
+  }
+
   const openPreview = useCallback(async () => {
-    if (!selectedBackupId || selectedCategories.length === 0 || previewing) return;
+    const body = previewBody();
+    if (!body || previewing) return;
     setPreviewing(true);
     setRestoreError("");
     setConfirmOpen(false);
     try {
       const result = await apiFetch<RestorePreviewResult>(
         "/api/admin/backups/restore/preview",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            backupId: selectedBackupId,
-            categories: selectedCategories,
-          }),
-        },
+        { method: "POST", body: JSON.stringify(body) },
       );
       setPreview(result);
     } catch (err) {
@@ -243,7 +334,17 @@ export default function AdminBackupsPage() {
     } finally {
       setPreviewing(false);
     }
-  }, [previewing, selectedBackupId, selectedCategories, t]);
+  }, [
+    previewing,
+    restoreMode,
+    selectedBackupId,
+    selectedCategories,
+    selectedCategoryIds,
+    selectedPageId,
+    selectedProductId,
+    membershipPolicy,
+    t,
+  ]);
 
   const liveRestoreAllowed = isLiveRestoreUiAllowed();
 
@@ -258,7 +359,12 @@ export default function AdminBackupsPage() {
           method: "POST",
           body: JSON.stringify({
             backupId: preview.backup.id,
+            mode: preview.mode,
             categories: preview.categories,
+            pageId: preview.details.pages?.[0]?.id,
+            productId: preview.details.products?.[0]?.id,
+            categoryIds: preview.details.categories?.map((item) => item.id),
+            membershipPolicy: preview.details.membershipPolicy,
             confirm: true,
           }),
         },
@@ -278,6 +384,8 @@ export default function AdminBackupsPage() {
         setRestoreError(t("admin.backups.restoreProductionOnly"));
       } else if (err instanceof ApiError && err.status === 403) {
         setRestoreError(t("admin.backups.restoreForbidden"));
+      } else if (err instanceof ApiError && err.status === 503) {
+        setRestoreError(t("admin.backups.restoreMediaFailed"));
       } else {
         setRestoreError(
           err instanceof Error ? err.message : t("admin.backups.restoreError"),
@@ -287,6 +395,32 @@ export default function AdminBackupsPage() {
       setRestoring(false);
     }
   }, [liveRestoreAllowed, load, notifySaved, preview, restoring, t]);
+
+  const runRollbackPreview = useCallback(async () => {
+    if (!data?.rollback || previewing) return;
+    setPreviewing(true);
+    setRestoreError("");
+    try {
+      const result = await apiFetch<RestorePreviewResult>(
+        "/api/admin/backups/restore/preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mode: "rollback",
+            backupId: data.rollback.id,
+          }),
+        },
+      );
+      setPreview(result);
+    } catch (err) {
+      setPreview(null);
+      setRestoreError(
+        err instanceof Error ? err.message : t("admin.backups.restorePreviewError"),
+      );
+    } finally {
+      setPreviewing(false);
+    }
+  }, [data?.rollback, previewing, t]);
 
   const lastSuccessful = lastSuccessfulOf(data);
   const status = data?.status ?? "none";
@@ -559,24 +693,130 @@ export default function AdminBackupsPage() {
                 }`
               : t("admin.backups.restorePickBackup")}
           </p>
-          <ul>
-            {RESTORE_ITEMS.map((item) => {
+          <ul className="admin-backups-restore-modes">
+            {RESTORE_MODES.map((item) => {
               const Icon = item.icon;
-              const active = selectedCategories.includes(item.key);
+              const active = restoreMode === item.key;
+              const label =
+                item.key === "sections"
+                  ? t("admin.backups.restoreModeSections")
+                  : item.key === "full"
+                    ? t("admin.backups.restoreModeFull")
+                    : item.key === "customPage"
+                      ? t("admin.backups.restoreModePage")
+                      : item.key === "product"
+                        ? t("admin.backups.restoreModeProduct")
+                        : t("admin.backups.restoreModeCategory");
               return (
                 <li key={item.key}>
                   <button
                     type="button"
                     className={active ? "is-active" : undefined}
-                    onClick={() => toggleCategory(item.key)}
+                    onClick={() => {
+                      setRestoreMode(item.key);
+                      setRestoreError("");
+                    }}
                   >
                     <Icon size={14} strokeWidth={1.7} aria-hidden />
-                    <span>{t(`admin.backups.restore_${item.key}`)}</span>
+                    <span>{label}</span>
                   </button>
                 </li>
               );
             })}
           </ul>
+          {restoreMode === "sections" ? (
+            <ul>
+              {RESTORE_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = selectedCategories.includes(item.key);
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      className={active ? "is-active" : undefined}
+                      onClick={() => toggleCategory(item.key)}
+                    >
+                      <Icon size={14} strokeWidth={1.7} aria-hidden />
+                      <span>{t(`admin.backups.restore_${item.key}`)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+          {restoreMode === "full" ? (
+            <p className="admin-backups-restore-note">
+              {t("admin.backups.restoreFullWarn")}
+            </p>
+          ) : null}
+          {needsItems ? (
+            <RestoreItemPicker
+              mode={restoreMode}
+              loading={itemsLoading}
+              items={snapshotItems}
+              query={itemQuery}
+              pageId={selectedPageId}
+              productId={selectedProductId}
+              categoryIds={selectedCategoryIds}
+              t={t}
+              onQuery={setItemQuery}
+              onPage={setSelectedPageId}
+              onProduct={setSelectedProductId}
+              onCategories={setSelectedCategoryIds}
+            />
+          ) : null}
+          {restoreMode === "categoryWithProducts" || restoreMode === "product" ? (
+            <div className="admin-backups-membership">
+              <p className="admin-backups-restore-note">
+                {t("admin.backups.restoreMembershipHint")}
+              </p>
+              <label>
+                <input
+                  type="radio"
+                  name="restore-membership"
+                  checked={membershipPolicy === "preserve-live"}
+                  onChange={() => setMembershipPolicy("preserve-live")}
+                />
+                <span>{t("admin.backups.restoreMembershipPreserve")}</span>
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="restore-membership"
+                  checked={membershipPolicy === "backup-exact"}
+                  onChange={() => setMembershipPolicy("backup-exact")}
+                />
+                <span>{t("admin.backups.restoreMembershipExact")}</span>
+              </label>
+            </div>
+          ) : null}
+          {data?.rollback ? (
+            <button
+              type="button"
+              className="admin-backups-rollback"
+              disabled={previewing || restoring}
+              onClick={() => void runRollbackPreview()}
+            >
+              <RotateCcw size={14} strokeWidth={1.8} aria-hidden />
+              <span>{t("admin.backups.restoreRollback")}</span>
+            </button>
+          ) : (
+            <p className="admin-backups-restore-note">
+              {t("admin.backups.restoreRollbackNone")}
+            </p>
+          )}
+          {data?.rollback ? (
+            <p className="admin-backups-restore-note">
+              {t("admin.backups.restoreRollbackHint")}{" "}
+              {formatBackupDateTime(data.rollback.createdAt)}
+            </p>
+          ) : null}
+          {data?.rollback ? (
+            <p className="admin-restore-warning admin-backups-inline-warn">
+              <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+              {t("admin.backups.restoreRollbackWarn")}
+            </p>
+          ) : null}
           {restoreError ? (
             <p className="admin-backups-action-error" role="alert">
               {restoreError}
@@ -585,12 +825,7 @@ export default function AdminBackupsPage() {
           <button
             type="button"
             className="admin-backups-restore-go"
-            disabled={
-              !selectedBackupId ||
-              selectedCategories.length === 0 ||
-              previewing ||
-              restoring
-            }
+            disabled={!previewBody() || previewing || restoring}
             onClick={() => void openPreview()}
           >
             {previewing
@@ -774,6 +1009,208 @@ function HistoryMobileRow({
   );
 }
 
+function modeLabel(
+  mode: RestoreMode,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+) {
+  if (mode === "full") return t("admin.backups.restoreModeFull");
+  if (mode === "customPage") return t("admin.backups.restoreModePage");
+  if (mode === "product") return t("admin.backups.restoreModeProduct");
+  if (mode === "categoryWithProducts") return t("admin.backups.restoreModeCategory");
+  if (mode === "rollback") return t("admin.backups.restoreRollback");
+  return t("admin.backups.restoreModeSections");
+}
+
+function warningFor(
+  preview: RestorePreviewResult,
+  t: (key: string) => string,
+) {
+  if (preview.mode === "rollback") return t("admin.backups.restoreRollbackWarn");
+  if (preview.mode === "full") return t("admin.backups.restoreFullWarn");
+  if (preview.mode === "customPage") return t("admin.backups.restorePageWarn");
+  if (preview.mode === "product") return t("admin.backups.restoreProductWarn");
+  if (preview.mode === "categoryWithProducts") {
+    return t("admin.backups.restoreCategoryWarn");
+  }
+  return t("admin.backups.restoreWarning");
+}
+
+function RestoreItemPicker({
+  mode,
+  loading,
+  items,
+  query,
+  pageId,
+  productId,
+  categoryIds,
+  t,
+  onQuery,
+  onPage,
+  onProduct,
+  onCategories,
+}: {
+  mode: Exclude<RestoreMode, "rollback" | "sections" | "full">;
+  loading: boolean;
+  items: RestoreSnapshotItems | null;
+  query: string;
+  pageId: string | null;
+  productId: string | null;
+  categoryIds: string[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  onQuery: (value: string) => void;
+  onPage: (id: string) => void;
+  onProduct: (id: string) => void;
+  onCategories: (ids: string[]) => void;
+}) {
+  const needle = query.trim().toLowerCase();
+  const hint =
+    mode === "customPage"
+      ? t("admin.backups.restorePickPage")
+      : mode === "product"
+        ? t("admin.backups.restorePickProduct")
+        : t("admin.backups.restorePickCategory");
+  const rows =
+    mode === "customPage"
+      ? (items?.pages || [])
+          .filter((item) =>
+            !needle
+              ? true
+              : `${item.name} ${item.slug}`.toLowerCase().includes(needle),
+          )
+          .map((item) => ({ id: item.id, label: `${item.name} · ${item.slug}` }))
+      : mode === "product"
+        ? (items?.products || [])
+            .filter((item) =>
+              !needle
+                ? true
+                : `${item.name} ${item.sku}`.toLowerCase().includes(needle),
+            )
+            .map((item) => ({
+              id: item.id,
+              label: `${item.name}${item.sku ? ` · ${item.sku}` : ""}`,
+            }))
+        : (items?.categories || [])
+            .filter((item) =>
+              !needle
+                ? true
+                : `${item.name} ${item.names.ar} ${item.names.he} ${item.names.en}`
+                    .toLowerCase()
+                    .includes(needle),
+            )
+            .map((item) => ({
+              id: item.id,
+              label: `${item.name} · ${item.productCount}`,
+            }));
+
+  return (
+    <div className="admin-backups-item-picker">
+      <p className="admin-backups-restore-note">{hint}</p>
+      <input
+        className="admin-backups-item-search"
+        value={query}
+        onChange={(event) => onQuery(event.target.value)}
+        placeholder={t("admin.backups.restoreSearchItems")}
+      />
+      {loading ? (
+        <p className="admin-backups-restore-note">{t("admin.backups.loading")}</p>
+      ) : rows.length === 0 ? (
+        <p className="admin-backups-restore-note">{t("admin.backups.restoreItemsEmpty")}</p>
+      ) : (
+        <ul className="admin-backups-item-list">
+          {rows.map((row) => {
+            const active =
+              mode === "categoryWithProducts"
+                ? categoryIds.includes(row.id)
+                : mode === "customPage"
+                  ? pageId === row.id
+                  : productId === row.id;
+            return (
+              <li key={row.id}>
+                <button
+                  type="button"
+                  className={active ? "is-active" : undefined}
+                  onClick={() => {
+                    if (mode === "categoryWithProducts") {
+                      onCategories(
+                        categoryIds.includes(row.id)
+                          ? categoryIds.filter((id) => id !== row.id)
+                          : [...categoryIds, row.id],
+                      );
+                      return;
+                    }
+                    if (mode === "customPage") onPage(row.id);
+                    else onProduct(row.id);
+                  }}
+                >
+                  {row.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ChangeList({
+  items,
+  t,
+}: {
+  items?: RestoreChangeItem[];
+  t: (key: string) => string;
+}) {
+  if (!items?.length) return null;
+  return (
+    <ul className="admin-restore-changes">
+      {items.map((item) => (
+        <li key={item.id} className={item.overwrite ? "is-overwrite" : undefined}>
+          <strong>{item.label}</strong>
+          <span>
+            {item.action === "add"
+              ? t("admin.backups.restoreChangeAdd")
+              : item.action === "update"
+                ? t("admin.backups.restoreChangeUpdate")
+                : t("admin.backups.restoreChangeKeep")}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function OverwriteList({
+  preview,
+  t,
+}: {
+  preview: RestorePreviewResult;
+  t: (key: string) => string;
+}) {
+  const overwritten = [
+    ...(preview.details.categories || []).filter((item) => item.overwrite),
+    ...(preview.details.products || []).filter((item) => item.overwrite),
+    ...(preview.details.pages || []).filter((item) => item.overwrite),
+  ];
+  if (!overwritten.length) return null;
+  return (
+    <div className="admin-restore-overwrite">
+      <p className="admin-restore-warning">
+        <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+        {t("admin.backups.restoreOverwriteWarn")}
+      </p>
+      <p className="admin-restore-meta">{t("admin.backups.restoreOverwriteTitle")}</p>
+      <ul className="admin-restore-changes">
+        {overwritten.map((item) => (
+          <li key={item.id} className="is-overwrite">
+            <strong>{item.label}</strong>
+            <span>{t("admin.backups.restoreChangeUpdate")}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RestoreDialog({
   preview,
   confirmOpen,
@@ -788,7 +1225,7 @@ function RestoreDialog({
   confirmOpen: boolean;
   restoring: boolean;
   executeAllowed: boolean;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
   onClose: () => void;
   onAskConfirm: () => void;
   onConfirm: () => void;
@@ -819,28 +1256,64 @@ function RestoreDialog({
             : t("admin.backups.restorePreviewTitle")}
         </h2>
         <p className="admin-restore-meta">
-          {formatBackupDateTime(preview.backup.createdAt)} —{" "}
+          {modeLabel(preview.mode, t)} · {formatBackupDateTime(preview.backup.createdAt)} —{" "}
           {preview.backup.kind === "manual"
             ? t("admin.backups.kindManual")
-            : t("admin.backups.kindDaily")}
+            : preview.backup.kind === "pre-restore"
+              ? t("admin.backups.restoreRollback")
+              : t("admin.backups.kindDaily")}
         </p>
-        <ul className="admin-restore-sections">
-          {preview.sections.map((section) => (
-            <li key={section.category}>
-              <strong>{t(`admin.backups.restore_${section.category}`)}</strong>
-              <span>
-                {t("admin.backups.restoreLiveCount")} {section.liveCount}
-              </span>
-              <span>
-                {t("admin.backups.restoreBackupCount")} {section.backupCount}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {preview.sections.length ? (
+          <ul className="admin-restore-sections">
+            {preview.sections.map((section) => (
+              <li key={section.category}>
+                <strong>
+                  {section.category.startsWith("restore_")
+                    ? section.category
+                    : t(`admin.backups.restore_${section.category}`)}
+                </strong>
+                <span>
+                  {t("admin.backups.restoreLiveCount")} {section.liveCount}
+                </span>
+                <span>
+                  {t("admin.backups.restoreBackupCount")} {section.backupCount}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <ChangeList items={preview.details.categories} t={t} />
+        <ChangeList items={preview.details.pages} t={t} />
+        <ChangeList items={preview.details.products} t={t} />
+        <OverwriteList preview={preview} t={t} />
+        {preview.details.lostMemberships?.length ? (
+          <div className="admin-restore-overwrite">
+            <p className="admin-restore-warning">
+              <AlertTriangle size={15} strokeWidth={2} aria-hidden />
+              {t("admin.backups.restoreLostMemberships")}
+            </p>
+            <ul className="admin-restore-changes">
+              {preview.details.lostMemberships.map((item) => (
+                <li key={item.productId} className="is-overwrite">
+                  <strong>{item.productLabel}</strong>
+                  <span>{item.categoryIds.join(" · ")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <p className="admin-restore-meta">
+          {t("admin.backups.restoreMediaCounts", {
+            referenced: preview.media.referenced,
+            already: preview.media.alreadyPresent,
+            restore: preview.media.willRestore,
+          })}
+        </p>
         <p className="admin-restore-warning">
           <AlertTriangle size={15} strokeWidth={2} aria-hidden />
-          {t("admin.backups.restoreWarning")}
+          {warningFor(preview, t)}
         </p>
+        <p className="admin-restore-meta">{t("admin.backups.restoreMediaNote")}</p>
         <div className="admin-restore-actions">
           <button
             type="button"

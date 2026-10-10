@@ -61,6 +61,10 @@ export type BackupStatusSummary = {
     incremental: true;
     lastSyncedAt: string | null;
   };
+  rollback: {
+    id: string;
+    createdAt: string;
+  } | null;
 };
 
 export function formatBackupBytes(bytes: number): string {
