@@ -16105,102 +16105,70 @@ select.admin-pe-input {
   overflow-x: hidden;
 }
 
+/*
+  overflow-x:hidden computes overflow-y to auto and creates a scroll
+  container as tall as the content. Sticky then sticks to that parent
+  instead of the document, and a later 100dvh lock trapped the editor
+  in its own panel. Use clip (no scrollport) on this page only.
+*/
+html:has(.admin-service-pages--visual),
+body:has(.admin-service-pages--visual) {
+  overflow-x: clip;
+  overflow-y: visible;
+  height: auto;
+  max-height: none;
+}
+
+.admin-shell:has(.admin-service-pages--visual) {
+  overflow-x: clip;
+  overflow-y: visible;
+  height: auto;
+  max-height: none;
+}
+
+.admin-main:has(.admin-service-pages--visual),
+.admin-main.min-w-0.overflow-x-hidden:has(.admin-service-pages--visual) {
+  overflow-x: clip;
+  overflow-y: visible;
+  height: auto;
+  max-height: none;
+}
+
+.admin-service-pages--visual {
+  overflow-x: clip;
+  overflow-y: visible;
+  height: auto;
+  max-height: none;
+}
+
 @media (min-width: 1100px) {
   .admin-main:has(.admin-service-pages--visual) {
     --admin-content-max: 1560px;
   }
 }
 
-/*
-  Sticky failed because overflow-x:hidden on html/body/.admin-shell/.admin-main
-  and .admin-service-pages computes overflow-y to auto. That makes those
-  ancestors the sticky containing block — as tall as the editor — so both
-  simulators scroll away with the page. Lock the visual editor to the
-  viewport and scroll only the RIGHT column.
-*/
 @media (min-width: 900px) {
-  html:has(.admin-service-pages--visual),
-  body:has(.admin-service-pages--visual) {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  .admin-shell:has(.admin-service-pages--visual) {
-    height: 100dvh;
-    max-height: 100dvh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .admin-main:has(.admin-service-pages--visual) {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-    padding-bottom: 0.55rem;
-    grid-template-rows: auto minmax(0, 1fr);
-    align-content: stretch;
-  }
-
-  .admin-main:has(.admin-service-pages--visual) > .admin-desktop-topbar {
-    grid-row: 1;
-  }
-
-  .admin-main:has(.admin-service-pages--visual) > .admin-service-pages--visual {
-    grid-row: 2;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-  }
-
-  .admin-service-pages--visual.space-y-5 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.7rem;
-  }
-
-  .admin-service-pages--visual .admin-page-header,
-  .admin-service-pages--visual .admin-service-langs,
-  .admin-service-pages--visual .csp-toolbar,
-  .admin-service-pages--visual .admin-service-tabs {
-    flex: 0 0 auto;
-  }
-
-  .csp-visual-workspace {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
+  .csp-visual-workspace,
   .csp-visual-grid {
-    flex: 1 1 auto;
+    height: auto;
     min-height: 0;
-    height: 100%;
-    align-items: stretch;
+    align-items: start;
   }
 
   .csp-visual-previews {
-    position: relative;
-    top: auto;
+    position: sticky;
+    top: 4.4rem;
     z-index: 2;
-    align-self: stretch;
-    height: 100%;
-    max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    align-self: start;
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .csp-visual-editor {
     min-width: 0;
-    min-height: 0;
-    height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-inline-end: 0.1rem;
+    height: auto;
+    overflow: visible;
   }
 }
 
@@ -16211,10 +16179,6 @@ select.admin-pe-input {
 
   .admin-service-pages--visual .admin-page-title {
     font-size: 1.28rem;
-  }
-
-  .admin-service-pages--visual.space-y-5 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.48rem;
   }
 }
 
@@ -16233,7 +16197,7 @@ select.admin-pe-input {
 .csp-visual-previews {
   z-index: 2;
   min-width: 0;
-  overflow-x: hidden;
+  overflow: visible;
 }
 
 .csp-live-previews {
