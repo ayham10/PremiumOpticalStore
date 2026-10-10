@@ -182,11 +182,15 @@ export default function AdminProductCreateModal({
                   setField("category", event.target.value as ProductCategory)
                 }
               >
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
+                {CATEGORIES.map((category) => {
+                  const key = `shop.categories.${category}`;
+                  const label = t(key);
+                  return (
+                    <option key={category} value={category}>
+                      {label === key ? category : label}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             {usesLensType(form.category) ? (

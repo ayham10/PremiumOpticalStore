@@ -10,61 +10,40 @@ import {
 } from "@/components/catalogue/CategoryCatalogue";
 import StoreCatalogHero from "@/components/shop/StoreCatalogHero";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
-import {
-  CatalogueFilterChips,
-  type CatalogueFilterKey,
-} from "@/components/catalogue/CatalogueFilters";
+import { DynamicCatalogueFilterChips } from "@/components/catalogue/CatalogueFilters";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
-import type { CategoryDefaultImages, Product, ProductCategory } from "@/lib/types";
+import {
+  productBelongsToCategory,
+  productVisibleInMainCatalog,
+} from "@/lib/catalog-categories";
+import type { CatalogCategory, CategoryDefaultImages, Product } from "@/lib/types";
 import { rememberCategoryDefaultImages } from "@/lib/use-category-default-images";
 
-const FILTER_CATEGORIES: Record<
-  Exclude<CatalogueFilterKey, "All">,
-  ProductCategory[]
-> = {
-  "Prescription Frames": ["Frames", "Prescription Glasses"],
-  Sunglasses: ["Sunglasses"],
-  "Contact Lenses": ["Contact Lenses"],
-  Accessories: ["Accessories", "Cleaning Products"],
-};
+type PublicCategory = { id: string; name: string; showInMainCatalog?: boolean };
 
 function ShopContent() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const searchParams = useSearchParams();
 
-  const initialFilter = useMemo(() => {
+  const requested = useMemo(() => {
     const raw = searchParams.get("category");
-    if (!raw) return "All" as CatalogueFilterKey;
+    if (!raw) return "all";
     const decoded = decodeURIComponent(raw);
-    if (decoded === "Frames" || decoded === "Prescription Glasses") {
-      return "Prescription Frames";
-    }
-    if (
-      (
-        [
-          "All",
-          "Prescription Frames",
-          "Sunglasses",
-          "Contact Lenses",
-          "Accessories",
-        ] as string[]
-      ).includes(decoded)
-    ) {
-      return decoded as CatalogueFilterKey;
-    }
-    return "All";
+    if (decoded === "All" || decoded === "Prescription Frames") return "all";
+    return decoded;
   }, [searchParams]);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<CatalogueFilterKey>(initialFilter);
+  const [filter, setFilter] = useState(requested);
   const [sort, setSort] = useState<CatalogueSort>("newest");
 
   useEffect(() => {
-    setFilter(initialFilter);
-  }, [initialFilter]);
+    setFilter(requested);
+  }, [requested]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,15 +52,22 @@ function ShopContent() {
         const data = await cachedJsonFetch<{
           products: Product[];
           categoryDefaultImages?: CategoryDefaultImages;
+          catalogCategories?: PublicCategory[];
         }>(
-          productsCacheKey(["__all__"]),
-          "/api/products",
+          productsCacheKey(["__all__", locale]),
+          `/api/products?locale=${encodeURIComponent(locale)}`,
           { ttlMs: 60_000 },
         );
         rememberCategoryDefaultImages(data.categoryDefaultImages);
-        if (!cancelled) setProducts(data.products || []);
+        if (!cancelled) {
+          setProducts(data.products || []);
+          setCategories(data.catalogCategories || []);
+        }
       } catch {
-        if (!cancelled) setProducts([]);
+        if (!cancelled) {
+          setProducts([]);
+          setCategories([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -89,19 +75,47 @@ function ShopContent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
+
+  const visibleCategories = useMemo(
+    () => categories.filter((item) => item.id && item.name),
+    [categories],
+  );
+
+  const activeFilter = useMemo(() => {
+    if (filter === "all") return "all";
+    return visibleCategories.some((item) => item.id === filter) ? filter : "all";
+  }, [filter, visibleCategories]);
 
   const filtered = useMemo(() => {
-    const list = products.filter((p) => {
-      if (p.status !== "active") return false;
-      if (filter !== "All") {
-        const allowed = FILTER_CATEGORIES[filter];
-        if (!allowed.includes(p.category)) return false;
-      }
+    const catalog = visibleCategories.map(
+      (item) =>
+        ({
+          id: item.id,
+          names: { ar: item.name, he: item.name, en: item.name },
+          showInMainCatalog: true,
+          createdAt: "",
+          updatedAt: "",
+        }) satisfies CatalogCategory,
+    );
+    const seen = new Set<string>();
+    const list = products.filter((product) => {
+      if (product.status !== "active") return false;
+      if (seen.has(product.id)) return false;
+      const visible =
+        activeFilter === "all"
+          ? productVisibleInMainCatalog(product, catalog) ||
+            (product.categoryIds || []).some((id) =>
+              visibleCategories.some((item) => item.id === id),
+            ) ||
+            visibleCategories.some((item) => item.id === product.category)
+          : productBelongsToCategory(product, activeFilter);
+      if (!visible) return false;
+      seen.add(product.id);
       return true;
     });
     return sortProducts(list, sort);
-  }, [products, filter, sort]);
+  }, [products, sort, activeFilter, visibleCategories]);
 
   return (
     <div className="frames-page catalogue-page store-page">
@@ -110,7 +124,12 @@ function ShopContent() {
 
       <section className="frames-catalogue wrap">
         <div className="store-toolbar">
-          <CatalogueFilterChips active={filter} onChange={setFilter} />
+          <DynamicCatalogueFilterChips
+            categories={visibleCategories}
+            active={activeFilter}
+            onChange={setFilter}
+            allLabel={t("shop.all")}
+          />
           <div className="catalogue-toolbar">
             <CatalogueSortSelect value={sort} onChange={setSort} />
           </div>
@@ -127,7 +146,7 @@ function ShopContent() {
         ) : (
           <CataloguePagedList
             items={filtered}
-            resetKey={`${filter}:${sort}`}
+            resetKey={`${activeFilter}:${sort}`}
             renderItem={(product) => <CatalogueProductCard product={product} />}
           />
         )}

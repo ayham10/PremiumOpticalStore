@@ -18,7 +18,7 @@ export type RestoreCategory = (typeof RESTORE_CATEGORIES)[number];
  */
 export const RESTORE_CATEGORY_FIELDS = {
   bookings: ["eyeExamAppointments", "appointments"],
-  products: ["products"],
+  products: ["products", "catalogCategories"],
   lenses: ["lensInventory"],
   settings: ["settings"],
   promotions: ["promotions"],
