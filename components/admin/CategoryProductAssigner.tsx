@@ -3,14 +3,19 @@
 import { useMemo, useState } from "react";
 import { Check, Package, Plus, Search, X } from "lucide-react";
 import { formatPrice } from "@/lib/format";
-import { membershipIsProductType } from "@/lib/catalog-categories";
-import type { Product, ProductCategory } from "@/lib/types";
-import { PRODUCT_TYPES } from "@/lib/types";
+import {
+  categorySelectorGroups,
+  membershipIsProductType,
+  productMatchesCategoryFilter,
+} from "@/lib/catalog-categories";
+import type { CatalogCategory, Product, ProductCategory } from "@/lib/types";
 
 type Translate = (path: string, vars?: Record<string, string | number>) => string;
 
 export default function CategoryProductAssigner({
   products,
+  categories,
+  locale,
   categoryId,
   selectedIds,
   typeLabel,
@@ -19,6 +24,8 @@ export default function CategoryProductAssigner({
   onAddNew,
 }: {
   products: Product[];
+  categories: Array<Pick<CatalogCategory, "id" | "names" | "system">>;
+  locale: string;
   categoryId: string;
   selectedIds: string[];
   typeLabel: (id: string) => string;
@@ -28,6 +35,10 @@ export default function CategoryProductAssigner({
 }) {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const groups = useMemo(
+    () => categorySelectorGroups(categories, locale),
+    [categories, locale],
+  );
   const chosen = useMemo(
     () => products.filter((product) => selectedIds.includes(product.id)),
     [products, selectedIds],
@@ -36,7 +47,7 @@ export default function CategoryProductAssigner({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((product) => {
-      if (typeFilter !== "all" && product.category !== typeFilter) return false;
+      if (!productMatchesCategoryFilter(product, typeFilter)) return false;
       if (!q) return true;
       return [product.name, product.brand, product.sku, product.category]
         .filter(Boolean)
@@ -116,10 +127,21 @@ export default function CategoryProductAssigner({
           aria-label={t("admin.catalog.productType")}
         >
           <option value="all">{t("admin.catalog.allProductTypes")}</option>
-          {PRODUCT_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {typeLabel(type)}
-            </option>
+          {groups.map((group) => (
+            <optgroup
+              key={group.key}
+              label={
+                group.key === "types"
+                  ? t("admin.catalog.productTypesGroup")
+                  : t("admin.catalog.extraCategoriesGroup")
+              }
+            >
+              {group.items.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
