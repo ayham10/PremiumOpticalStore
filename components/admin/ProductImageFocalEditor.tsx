@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type CSSProperties, type PointerEvent } from "react";
+import { useRef, type PointerEvent } from "react";
 import {
   clampProductImageFocal,
   productImageStyle,
@@ -47,12 +47,11 @@ export default function ProductImageFocalEditor({
       <p className="admin-pe-lead">
         الصورة الأصلية محفوظة. المعاينة تعرض الشكل النهائي في الكتالوج.
       </p>
-      <div className="csp-hero-variant">
-        <p>المعاينة</p>
-        <div className="csp-hero-focal-wrap">
+      <div className="admin-pe-focal-layout">
+        <div className="admin-pe-focal-preview-col">
+          <p>المعاينة</p>
           <div
-            className="csp-hero-focal admin-pe-focal-preview"
-            style={{ "--hero-aw": 1, "--hero-ah": 1 } as CSSProperties}
+            className="admin-pe-focal-preview"
             onPointerDown={(event) => {
               dragging.current = true;
               event.currentTarget.setPointerCapture(event.pointerId);
@@ -70,31 +69,31 @@ export default function ProductImageFocalEditor({
             <img src={src} alt="" style={previewStyle} />
           </div>
         </div>
-        <label className="csp-hero-zoom">
-          <span className="label">
-            {t
-              ? t("admin.servicePages.heroZoom", { n: zoomPercent })
-              : `التكبير: ${zoomPercent}٪`}
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            dir="ltr"
-            value={zoomPercent}
-            onChange={(event) =>
-              onChange(
-                clampProductImageFocal({
-                  ...focal,
-                  zoom: sliderPercentToZoom(Number(event.target.value)),
-                }),
-              )
-            }
-          />
-        </label>
-        <div className="csp-hero-pos">
-          <label>
+        <div className="admin-pe-focal-sliders">
+          <label className="csp-hero-zoom">
+            <span className="label">
+              {t
+                ? t("admin.servicePages.heroZoom", { n: zoomPercent })
+                : `التكبير: ${zoomPercent}٪`}
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              dir="ltr"
+              value={zoomPercent}
+              onChange={(event) =>
+                onChange(
+                  clampProductImageFocal({
+                    ...focal,
+                    zoom: sliderPercentToZoom(Number(event.target.value)),
+                  }),
+                )
+              }
+            />
+          </label>
+          <label className="csp-hero-zoom">
             <span className="label">
               {t ? t("admin.servicePages.heroPositionX") : "أفقي (يمين / يسار)"}
             </span>
@@ -115,7 +114,7 @@ export default function ProductImageFocalEditor({
               }
             />
           </label>
-          <label>
+          <label className="csp-hero-zoom">
             <span className="label">
               {t ? t("admin.servicePages.heroPositionY") : "عمودي (أعلى / أسفل)"}
             </span>

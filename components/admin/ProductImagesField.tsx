@@ -295,7 +295,10 @@ export default function ProductImagesField({
                       type="button"
                       aria-label="حذف"
                       className="admin-pe-thumb-del"
-                      onClick={() => removeAt(0)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeAt(0);
+                      }}
                     >
                       <Trash2 size={13} strokeWidth={1.55} />
                     </button>
@@ -306,7 +309,10 @@ export default function ProductImagesField({
                       type="button"
                       aria-label="حذف"
                       className="admin-pe-thumb-del"
-                      onClick={() => removeAt(index)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeAt(index);
+                      }}
                     >
                       <Trash2 size={13} strokeWidth={1.55} />
                     </button>
@@ -314,7 +320,10 @@ export default function ProductImagesField({
                       type="button"
                       title="تعيين كرئيسية"
                       className="admin-pe-thumb-star"
-                      onClick={() => makeMain(index)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        makeMain(index);
+                      }}
                     >
                       <Star size={13} strokeWidth={1.55} />
                     </button>
@@ -332,6 +341,7 @@ export default function ProductImagesField({
 
       {images[selectedIndex] ? (
         <ProductImageFocalEditor
+          key={`${images[selectedIndex]}-${selectedIndex}`}
           src={images[selectedIndex]!}
           focal={focals[selectedIndex]!}
           isMain={selectedIndex === 0}

@@ -259,5 +259,12 @@ const focalEditor = readFileSync(
 assert.match(focalEditor, /type="range"/);
 assert.match(focalEditor, /sliderPercentToZoom/);
 assert.match(focalEditor, /heroPositionX/);
+assert.match(focalEditor, /admin-pe-focal-layout/);
+assert.match(focalEditor, /admin-pe-focal-preview/);
+const peCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+assert.match(peCss, /\.admin-pe-focal-preview\s*\{[\s\S]*width:\s*240px/);
+assert.match(peCss, /\.admin-pe-focal-layout\s*\{[\s\S]*grid-template-columns:\s*240px/);
+assert.match(peCss, /\.admin-pe-thumb\s*\{[\s\S]*width:\s*72px/);
+assert.match(imagesField, /setSelectedIndex\(index\)/);
 
 console.log("test-product-form: ok");
