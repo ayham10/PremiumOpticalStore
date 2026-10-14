@@ -19146,19 +19146,24 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
 }
 
 .admin-lens-order table {
-  width: 100%;
-  min-width: 36rem;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline-end: auto;
   border-collapse: collapse;
+  table-layout: auto;
   direction: ltr;
 }
 
 .admin-lens-order th,
 .admin-lens-order td {
-  padding: 0.35rem 0.55rem;
+  width: 1%;
+  padding: 0.35rem 0.4rem;
   border-bottom: 1px solid rgba(212, 175, 106, 0.16);
   text-align: center;
   font-size: 0.84rem;
   line-height: 1.25;
+  white-space: nowrap;
 }
 
 .admin-lens-order th {

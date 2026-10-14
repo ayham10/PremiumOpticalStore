@@ -91,21 +91,41 @@ export function moveLensCoord(
   return next;
 }
 
-export function lensArrowFieldSwitch(
+export type LensEditTarget = {
+  coord: LensGridCoord;
+  field: LensEditField;
+};
+
+export type LensArrowKey =
+  | "ArrowLeft"
+  | "ArrowRight"
+  | "ArrowUp"
+  | "ArrowDown";
+
+/** Excel-style move between current/required values, not characters. `visualLtr` follows the on-screen table. */
+export function moveLensEditTarget(
+  coord: LensGridCoord,
   field: LensEditField,
-  key: "ArrowLeft" | "ArrowRight",
-  selectionStart: number,
-  selectionEnd: number,
-  valueLength: number,
-): LensEditField | null {
-  if (selectionStart !== selectionEnd) return null;
-  if (key === "ArrowRight" && field === "current" && selectionStart === valueLength) {
-    return "desired";
+  key: LensArrowKey,
+  visualLtr = true,
+): LensEditTarget | null {
+  if (key === "ArrowUp") {
+    const next = moveLensCoord(coord, -1, 0);
+    return next ? { coord: next, field } : null;
   }
-  if (key === "ArrowLeft" && field === "desired" && selectionStart === 0) {
-    return "current";
+  if (key === "ArrowDown") {
+    const next = moveLensCoord(coord, 1, 0);
+    return next ? { coord: next, field } : null;
   }
-  return null;
+  const colStep = visualLtr ? 1 : -1;
+  if (key === "ArrowRight") {
+    if (field === "current") return { coord, field: "desired" };
+    const next = moveLensCoord(coord, 0, colStep);
+    return next ? { coord: next, field: "current" } : null;
+  }
+  if (field === "desired") return { coord, field: "current" };
+  const next = moveLensCoord(coord, 0, -colStep);
+  return next ? { coord: next, field: "desired" } : null;
 }
 
 export function tabLensCoord(

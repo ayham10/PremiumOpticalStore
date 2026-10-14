@@ -31,11 +31,11 @@ import {
 import {
   applyLensPaste,
   draftsToWriteItems,
-  lensArrowFieldSwitch,
   lensCellToCoord,
   lensCoordToCell,
   lensDraftCount,
   moveLensCoord,
+  moveLensEditTarget,
   parseLensPasteGrid,
   parseLensQtyInput,
   setLensDraft,
@@ -594,7 +594,6 @@ export default function AdminLensInventoryPage() {
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th dir="rtl">{t("admin.lensInventory.colType")}</th>
                         <th>SPH</th>
                         <th>CYL</th>
                         <th dir="rtl">{t("admin.lensInventory.colCurrent")}</th>
@@ -626,7 +625,6 @@ function OrderRowView({ row, index }: { row: LensOrderRow; index: number }) {
   return (
     <tr>
       <td>{index}</td>
-      <td>{lensSignLabel(row.type)}</td>
       <td className="admin-lens-ltr">{row.sph}</td>
       <td className="admin-lens-ltr">{formatLensCylDisplay(row.cyl)}</td>
       <td>{row.currentStock}</td>
@@ -712,19 +710,30 @@ function LensStockCell({
       onActivate(type, sph, cyl, active?.field === "desired" ? "current" : "desired");
       return;
     }
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-      const input = event.currentTarget;
-      const nextField = lensArrowFieldSwitch(
+    if (
+      event.key === "ArrowLeft" ||
+      event.key === "ArrowRight" ||
+      event.key === "ArrowUp" ||
+      event.key === "ArrowDown"
+    ) {
+      event.preventDefault();
+      if (!coord) return;
+      const next = moveLensEditTarget(
+        coord,
         active?.field ?? "current",
         event.key,
-        input.selectionStart ?? 0,
-        input.selectionEnd ?? 0,
-        input.value.length,
+        true,
       );
-      if (nextField) {
-        event.preventDefault();
-        onActivate(type, sph, cyl, nextField);
+      if (!next) return;
+      if (
+        next.coord.type === coord.type &&
+        next.coord.row === coord.row &&
+        next.coord.col === coord.col
+      ) {
+        onActivate(type, sph, cyl, next.field);
+        return;
       }
+      onMove(next.coord, next.field);
     }
   }
 

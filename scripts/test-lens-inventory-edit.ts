@@ -13,10 +13,10 @@ import {
   applyLensWrites,
   draftsToWriteItems,
   findLensWriteConflicts,
-  lensArrowFieldSwitch,
   lensCyls,
   lensDraftCount,
   moveLensCoord,
+  moveLensEditTarget,
   parseLensInventoryWriteBody,
   parseLensPasteGrid,
   parseLensPasteToken,
@@ -94,12 +94,51 @@ const lastPlus = {
 assert.equal(tabLensCoord(lastPlus), null);
 assert.deepEqual(tabLensCoord({ type: "plus", row: 0, col: 0 }, true), lastMinus);
 
-assert.equal(lensArrowFieldSwitch("current", "ArrowRight", 1, 1, 1), "desired");
-assert.equal(lensArrowFieldSwitch("current", "ArrowRight", 0, 0, 1), null);
-assert.equal(lensArrowFieldSwitch("current", "ArrowLeft", 0, 0, 1), null);
-assert.equal(lensArrowFieldSwitch("desired", "ArrowLeft", 0, 0, 2), "current");
-assert.equal(lensArrowFieldSwitch("desired", "ArrowRight", 2, 2, 2), null);
-assert.equal(lensArrowFieldSwitch("current", "ArrowRight", 0, 1, 1), null);
+const arrowAt = { type: "minus" as const, row: 1, col: 1 };
+assert.deepEqual(moveLensEditTarget(arrowAt, "current", "ArrowRight"), {
+  coord: arrowAt,
+  field: "desired",
+});
+assert.deepEqual(moveLensEditTarget(arrowAt, "desired", "ArrowRight"), {
+  coord: { type: "minus", row: 1, col: 2 },
+  field: "current",
+});
+assert.deepEqual(moveLensEditTarget(arrowAt, "desired", "ArrowLeft"), {
+  coord: arrowAt,
+  field: "current",
+});
+assert.deepEqual(moveLensEditTarget(arrowAt, "current", "ArrowLeft"), {
+  coord: { type: "minus", row: 1, col: 0 },
+  field: "desired",
+});
+assert.deepEqual(moveLensEditTarget(arrowAt, "desired", "ArrowDown"), {
+  coord: { type: "minus", row: 2, col: 1 },
+  field: "desired",
+});
+assert.deepEqual(moveLensEditTarget(arrowAt, "current", "ArrowUp"), {
+  coord: { type: "minus", row: 0, col: 1 },
+  field: "current",
+});
+assert.equal(
+  moveLensEditTarget({ type: "minus", row: 0, col: 0 }, "current", "ArrowLeft"),
+  null,
+);
+assert.equal(
+  moveLensEditTarget({ type: "minus", row: 0, col: 0 }, "current", "ArrowUp"),
+  null,
+);
+assert.equal(
+  moveLensEditTarget(
+    { type: "minus", row: 0, col: lensCyls().length - 1 },
+    "desired",
+    "ArrowRight",
+  ),
+  null,
+);
+assert.deepEqual(
+  moveLensEditTarget(arrowAt, "desired", "ArrowRight", false),
+  { coord: { type: "minus", row: 1, col: 0 }, field: "current" },
+);
 
 const saved: LensInventoryCell[] = [
   {
@@ -267,18 +306,19 @@ assert.match(page, /onClick=\{\(\) => onActivate\(type, sph, cyl, "current"\)\}/
 assert.match(page, /onDoubleClick=\{\(\) => onActivate\(type, sph, cyl, "desired"\)\}/);
 assert.match(page, /undoChanges/);
 assert.match(page, /cancelAll/);
-assert.match(page, /lensArrowFieldSwitch/);
+assert.match(page, /moveLensEditTarget/);
 assert.match(page, /orderOpen/);
 assert.match(page, /ChevronDown/);
 assert.match(page, /dir="ltr"/);
 assert.match(page, /admin-lens-order-toggle/);
-assert.match(page, /colType/);
-assert.doesNotMatch(page, /ArrowLeft" \|\| event\.key === "ArrowRight" \|\| event\.key === "ArrowUp"/);
+assert.doesNotMatch(page, /admin\.lensInventory\.colType/);
+assert.match(page, /event\.preventDefault\(\);\s*if \(!coord\) return;/);
 
 const css = readFileSync("app/globals.css", "utf8");
 assert.match(css, /max-height: 17\.2rem/);
 assert.match(css, /\.admin-lens-order th \{\s*position: sticky;/);
-assert.match(css, /padding: 0\.35rem 0\.55rem/);
+assert.match(css, /padding: 0\.35rem 0\.4rem/);
+assert.match(css, /width: max-content/);
 
 const route = readFileSync("app/api/lens-inventory/route.ts", "utf8");
 assert.match(route, /parseLensInventoryWriteBody/);
