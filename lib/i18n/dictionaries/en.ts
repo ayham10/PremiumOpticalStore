@@ -2043,6 +2043,11 @@ const en: Dictionary = {
       cancel: "إلغاء",
       save: "حفظ",
       saving: "جارٍ الحفظ…",
+      saveChanges: "Save Changes",
+      undo: "Undo",
+      dirtyCount: "{n} unsaved changes",
+      conflictError:
+        "Inventory was updated elsewhere. Newer values were not overwritten.",
     },
     backups: {
       title: "Backup & Recovery",

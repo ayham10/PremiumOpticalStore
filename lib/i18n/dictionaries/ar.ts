@@ -1668,6 +1668,11 @@ const ar: Dictionary = {
       cancel: "إلغاء",
       save: "حفظ",
       saving: "جارٍ الحفظ…",
+      saveChanges: "حفظ التغييرات",
+      undo: "تراجع",
+      dirtyCount: "{n} تغيير غير محفوظ",
+      conflictError:
+        "تم تحديث المخزون من جهة أخرى. لم يتم الكتابة فوق القيم الأحدث.",
     },
     backups: {
       title: "النسخ الاحتياطي والاستعادة",
