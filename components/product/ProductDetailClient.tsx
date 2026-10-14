@@ -13,7 +13,7 @@ import {
   productSlugCacheKey,
 } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
-import { productDisplayGallery } from "@/lib/product-images";
+import { productDisplayGallery, productImageStyle } from "@/lib/product-images";
 import { storeWhatsAppHref } from "@/lib/store-whatsapp";
 import {
   rememberCategoryDefaultImages,
@@ -191,11 +191,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 className="object-contain"
                 sizes="(max-width: 1023px) 100vw, 520px"
                 quality={75}
+                style={productImageStyle(product.imageFocals?.[0])}
               />
             </div>
             {images.length > 1 ? (
               <div className="product-thumbs">
-                {images.slice(1, 4).map((src) => (
+                {images.slice(1, 4).map((src, index) => (
                   <div key={src} className="product-thumb">
                     <Image
                       src={src}
@@ -205,6 +206,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                       sizes="120px"
                       loading="lazy"
                       quality={65}
+                      style={productImageStyle(product.imageFocals?.[index + 1])}
                     />
                   </div>
                 ))}

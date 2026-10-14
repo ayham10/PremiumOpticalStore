@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   isFrameSizeInput,
   normalizeFrameSize,
@@ -14,6 +16,11 @@ import {
   resolveProductNumber,
   uniqueProductSlug,
 } from "../lib/product-number";
+import {
+  alignProductImageFocals,
+  persistProductImageFocals,
+  productImageStyle,
+} from "../lib/product-images";
 import { computeDiscountedPrice } from "../lib/promo-price";
 import {
   bestPromotionForProduct,
@@ -203,5 +210,47 @@ const sunPromo = promo({
 });
 assert.equal(productDiscountedPrice(sunglasses, [sunPromo]), 300);
 assert.equal(productDiscountedPrice(frame, [sunPromo]), undefined);
+
+assert.equal(persistProductImageFocals(["a.jpg"], []), undefined);
+assert.equal(persistProductImageFocals(["a.jpg"], [{ x: 0.5, y: 0.5, zoom: 1 }]), undefined);
+assert.equal(productImageStyle(undefined), undefined);
+assert.equal(productImageStyle({ x: 0.5, y: 0.5, zoom: 1 }), undefined);
+
+const savedFocal = persistProductImageFocals(
+  ["a.jpg", "b.jpg"],
+  [{ x: 0.2, y: 0.8, zoom: 1.2 }],
+);
+assert.equal(savedFocal?.[0]?.x, 0.2);
+assert.equal(savedFocal?.[0]?.zoom, 1.2);
+assert.equal(savedFocal?.[1]?.x, 0.5);
+assert.equal(savedFocal?.[1]?.zoom, 1);
+
+const reordered = alignProductImageFocals(
+  ["b.jpg", "a.jpg"],
+  [savedFocal![1], savedFocal![0]],
+);
+assert.equal(reordered[0].x, 0.5);
+assert.equal(reordered[1].x, 0.2);
+
+const panned = productImageStyle({ x: 0.25, y: 0.75, zoom: 1 });
+assert.match(panned?.objectPosition || "", /25%/);
+assert.equal(panned?.transform, undefined);
+
+const zoomed = productImageStyle({ x: 0.5, y: 0.5, zoom: 1.4 }, { preview: true });
+assert.match(zoomed?.transform || "", /1\.4/);
+
+const imagesField = readFileSync(
+  join(process.cwd(), "components/admin/ProductImagesField.tsx"),
+  "utf8",
+);
+assert.match(imagesField, /ProductImageFocalEditor/);
+assert.match(imagesField, /imageFocals/);
+const focalEditor = readFileSync(
+  join(process.cwd(), "components/admin/ProductImageFocalEditor.tsx"),
+  "utf8",
+);
+assert.match(focalEditor, /type="range"/);
+assert.match(focalEditor, /sliderPercentToZoom/);
+assert.match(focalEditor, /heroPositionX/);
 
 console.log("test-product-form: ok");

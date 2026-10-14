@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import CatalogPrice from "@/components/catalog/CatalogPrice";
 import { productPublicKey } from "@/lib/format";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 import type { Product } from "@/lib/types";
 
@@ -17,6 +17,7 @@ export type CustomPageProductCard = Pick<
   | "images"
   | "sellingPrice"
   | "discountedPrice"
+  | "imageFocals"
   | "category"
   | "status"
 >;
@@ -55,6 +56,7 @@ export default function CustomPageProductsCarousel({
                   className="object-cover"
                   loading="lazy"
                   quality={70}
+                  style={productImageStyle(product.imageFocals?.[0])}
                 />
               </Link>
               <div className="csp-products-body">

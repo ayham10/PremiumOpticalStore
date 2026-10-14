@@ -6,7 +6,7 @@ import type { Product } from "@/lib/types";
 import CatalogPrice from "@/components/catalog/CatalogPrice";
 import { productPublicKey } from "@/lib/format";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -30,6 +30,7 @@ export default function ProductCard({ product }: { product: Product }) {
           fill
           sizes="(max-width: 768px) 50vw, 33vw"
           className="object-cover transition duration-700 group-hover:scale-[1.04]"
+          style={productImageStyle(product.imageFocals?.[0])}
         />
         <span className="absolute start-3 top-3 pill bg-white/90">{categoryLabel}</span>
       </Link>

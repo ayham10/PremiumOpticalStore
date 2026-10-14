@@ -238,6 +238,11 @@ export interface Product {
   discountedPrice?: number;
   description: string;
   images: string[];
+  /**
+   * Per-image zoom/pan, aligned with `images`. Original files stay unchanged.
+   * Missing/neutral values keep the previous catalog crop.
+   */
+  imageFocals?: ImageFocalPoint[];
   purchasePrice: number;
   sellingPrice: number;
   stockQuantity: number;

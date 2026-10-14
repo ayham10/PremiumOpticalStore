@@ -25,7 +25,7 @@ import {
   productsCacheKey,
 } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product, ProductCategory } from "@/lib/types";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import {
   rememberCategoryDefaultImages,
   useCategoryDefaultImages,
@@ -102,6 +102,7 @@ export function CatalogueProductCard({ product }: { product: Product }) {
           className="object-cover"
           loading="lazy"
           quality={70}
+          style={productImageStyle(product.imageFocals?.[0])}
         />
       </SaveReturnLink>
       <div className="frames-product-body">

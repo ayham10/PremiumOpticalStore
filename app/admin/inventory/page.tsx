@@ -55,6 +55,7 @@ import { allocateProductNumber } from "@/lib/product-number";
 import type {
   AdminSession,
   CatalogCategory,
+  ImageFocalPoint,
   Product,
   ProductCategory,
   ProductStatus,
@@ -92,6 +93,7 @@ type ProductForm = {
   frameSize: string;
   description: string;
   images: string[];
+  imageFocals: ImageFocalPoint[];
   purchasePrice: string;
   sellingPrice: string;
   stockQuantity: string;
@@ -126,6 +128,7 @@ const emptyForm = (): ProductForm => ({
   frameSize: "",
   description: "",
   images: [],
+  imageFocals: [],
   purchasePrice: "0",
   sellingPrice: "0",
   stockQuantity: "0",
@@ -182,6 +185,7 @@ function toPayload(
     frameSize: form.frameSize.trim() || undefined,
     description: form.description,
     images: form.images.filter(Boolean),
+    imageFocals: form.imageFocals,
     purchasePrice: Number(form.purchasePrice) || existing?.purchasePrice || 0,
     sellingPrice: parseWholeNonNeg(form.sellingPrice, 0),
     stockQuantity: parseWholeNonNeg(form.stockQuantity, 0),
@@ -210,6 +214,7 @@ function fromProduct(p: Product, promotions: Promotion[]): ProductForm {
     frameSize: p.frameSize || "",
     description: p.description,
     images: [...(p.images || [])],
+    imageFocals: [...(p.imageFocals || [])],
     purchasePrice: String(p.purchasePrice),
     sellingPrice: String(p.sellingPrice),
     stockQuantity: String(p.stockQuantity),
@@ -979,7 +984,14 @@ export default function AdminInventoryPage() {
                     <p className="admin-pe-lead">يمكنك إضافة حتى 6 صور</p>
                     <ProductImagesField
                       images={form.images}
-                      onChange={(images) => setField("images", images)}
+                      imageFocals={form.imageFocals}
+                      onChange={(images, focals) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          images,
+                          imageFocals: focals || prev.imageFocals,
+                        }))
+                      }
                     />
                   </div>
 

@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, Loader2, Star, Trash2, Upload } from "lucide-react";
 import AdminMediaPicker from "@/components/admin/AdminMediaPicker";
+import ProductImageFocalEditor from "@/components/admin/ProductImageFocalEditor";
 import { uploadImageFromPc } from "@/lib/admin-media-upload";
 import { MEDIA_IMAGE_ACCEPT } from "@/lib/media-upload";
+import {
+  alignProductImageFocals,
+  DEFAULT_PRODUCT_IMAGE_FOCAL,
+  productImageStyle,
+} from "@/lib/product-images";
+import type { ImageFocalPoint } from "@/lib/types";
 
 const MAX_GALLERY = 5;
 
@@ -12,13 +19,15 @@ type Translate = (path: string, vars?: Record<string, string | number>) => strin
 
 type Props = {
   images: string[];
-  onChange: (images: string[]) => void;
+  imageFocals?: ImageFocalPoint[];
+  onChange: (images: string[], focals?: ImageFocalPoint[]) => void;
   allowLibrary?: boolean;
   t?: Translate;
 };
 
 export default function ProductImagesField({
   images,
+  imageFocals,
   onChange,
   allowLibrary,
   t,
@@ -29,6 +38,23 @@ export default function ProductImagesField({
   const [error, setError] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const focals = alignProductImageFocals(images, imageFocals);
+
+  useEffect(() => {
+    if (!images.length) {
+      setSelectedIndex(0);
+      return;
+    }
+    setSelectedIndex((current) => Math.min(current, images.length - 1));
+  }, [images.length]);
+
+  const commit = useCallback(
+    (nextImages: string[], nextFocals: ImageFocalPoint[]) => {
+      onChange(nextImages, alignProductImageFocals(nextImages, nextFocals));
+    },
+    [onChange],
+  );
 
   const canAddMore = images.length < 1 + MAX_GALLERY;
   const typeError = t
@@ -45,14 +71,19 @@ export default function ProductImagesField({
   const addUrls = useCallback(
     (urls: string[]) => {
       const next = [...images];
+      const nextFocals = [...focals];
+      let added = 0;
       for (const url of urls) {
         if (!url || next.includes(url)) continue;
         next.push(url);
+        nextFocals.push({ ...DEFAULT_PRODUCT_IMAGE_FOCAL });
+        added += 1;
         if (next.length >= 1 + MAX_GALLERY) break;
       }
-      onChange(next);
+      commit(next, nextFocals);
+      if (added) setSelectedIndex(next.length - 1);
     },
-    [images, onChange],
+    [images, focals, commit],
   );
 
   async function handleFiles(fileList: FileList | File[] | null) {
@@ -99,15 +130,21 @@ export default function ProductImagesField({
   }
 
   function removeAt(index: number) {
-    onChange(images.filter((_, i) => i !== index));
+    const next = images.filter((_, i) => i !== index);
+    const nextFocals = focals.filter((_, i) => i !== index);
+    commit(next, nextFocals);
   }
 
   function makeMain(index: number) {
     if (index <= 0) return;
     const next = [...images];
+    const nextFocals = [...focals];
     const [picked] = next.splice(index, 1);
+    const [pickedFocal] = nextFocals.splice(index, 1);
     next.unshift(picked);
-    onChange(next);
+    nextFocals.unshift(pickedFocal);
+    commit(next, nextFocals);
+    setSelectedIndex(0);
   }
 
   function onDragStart(index: number) {
@@ -118,10 +155,20 @@ export default function ProductImagesField({
     e.preventDefault();
     if (dragIndex === null || dragIndex === index) return;
     const next = [...images];
+    const nextFocals = [...focals];
     const [item] = next.splice(dragIndex, 1);
+    const [itemFocal] = nextFocals.splice(dragIndex, 1);
     next.splice(index, 0, item);
+    nextFocals.splice(index, 0, itemFocal);
     setDragIndex(index);
-    onChange(next);
+    setSelectedIndex(index);
+    commit(next, nextFocals);
+  }
+
+  function updateSelectedFocal(nextFocal: ImageFocalPoint) {
+    const nextFocals = [...focals];
+    nextFocals[selectedIndex] = nextFocal;
+    commit(images, nextFocals);
   }
 
   return (
@@ -229,10 +276,17 @@ export default function ProductImagesField({
                 onDragStart={() => onDragStart(index)}
                 onDragOver={(e) => onDragOverItem(e, index)}
                 onDragEnd={() => setDragIndex(null)}
-                className={isMain ? "admin-pe-thumb is-main" : "admin-pe-thumb"}
+                className={`${isMain ? "admin-pe-thumb is-main" : "admin-pe-thumb"}${
+                  index === selectedIndex ? " is-selected" : ""
+                }`}
+                onClick={() => setSelectedIndex(index)}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" />
+                <img
+                  src={url}
+                  alt=""
+                  style={productImageStyle(focals[index], { preview: true })}
+                />
 
                 {isMain ? (
                   <>
@@ -274,6 +328,16 @@ export default function ProductImagesField({
 
       {images.length > 1 ? (
         <p className="admin-pe-reorder">اسحب الصور لتغيير الترتيب ←</p>
+      ) : null}
+
+      {images[selectedIndex] ? (
+        <ProductImageFocalEditor
+          src={images[selectedIndex]!}
+          focal={focals[selectedIndex]!}
+          isMain={selectedIndex === 0}
+          t={t}
+          onChange={updateSelectedFocal}
+        />
       ) : null}
     </div>
   );

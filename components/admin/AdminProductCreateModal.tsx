@@ -6,7 +6,12 @@ import AdminModal from "@/components/admin/AdminModal";
 import ProductImagesField from "@/components/admin/ProductImagesField";
 import { apiFetch } from "@/lib/admin-api";
 import { slugify } from "@/lib/format";
-import type { Product, ProductCategory, ProductStatus } from "@/lib/types";
+import type {
+  ImageFocalPoint,
+  Product,
+  ProductCategory,
+  ProductStatus,
+} from "@/lib/types";
 
 type Translate = (path: string, vars?: Record<string, string | number>) => string;
 
@@ -29,6 +34,7 @@ type FormState = {
   minimumStock: string;
   status: ProductStatus;
   images: string[];
+  imageFocals: ImageFocalPoint[];
 };
 
 function usesLensType(category: ProductCategory): boolean {
@@ -50,6 +56,7 @@ function emptyForm(): FormState {
     minimumStock: "5",
     status: "active",
     images: [],
+    imageFocals: [],
   };
 }
 
@@ -116,6 +123,7 @@ export default function AdminProductCreateModal({
           lensType: usesLensType(form.category) ? form.lensType || undefined : undefined,
           description: form.description.trim(),
           images: form.images.filter(Boolean),
+          imageFocals: form.imageFocals,
           sellingPrice: Number(form.sellingPrice) || 0,
           stockQuantity: Math.max(0, Math.floor(Number(form.stockQuantity) || 0)),
           minimumStock: Math.max(0, Math.floor(Number(form.minimumStock) || 0)),
@@ -275,7 +283,14 @@ export default function AdminProductCreateModal({
         ) : (
           <ProductImagesField
             images={form.images}
-            onChange={(images) => setField("images", images)}
+            imageFocals={form.imageFocals}
+            onChange={(images, focals) =>
+              setForm((prev) => ({
+                ...prev,
+                images,
+                imageFocals: focals || prev.imageFocals,
+              }))
+            }
             allowLibrary
             t={t}
           />

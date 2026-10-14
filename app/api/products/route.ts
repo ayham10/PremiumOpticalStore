@@ -9,6 +9,8 @@ import {
 import { mergeBookingMessages } from "@/lib/booking-messages";
 import {
   mergeCategoryDefaultImages,
+  persistProductImageFocals,
+  productHasOwnImages,
   storefrontProductImages,
 } from "@/lib/product-images";
 import {
@@ -74,6 +76,14 @@ function toListProduct(
     ...(priced.lensType ? { lensType: priced.lensType } : {}),
     ...(priced.color ? { color: priced.color } : {}),
     ...(priced.frameSize ? { frameSize: priced.frameSize } : {}),
+    ...(productHasOwnImages(p.images)
+      ? {
+          imageFocals: persistProductImageFocals(
+            images[0] ? [images[0]] : [],
+            priced.imageFocals,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -84,9 +94,13 @@ function toPublicProduct(
   promotions: Promotion[] = [],
 ): Product {
   const priced = withCatalogPrice(p, promotions);
+  const images = storefrontProductImages(priced, defaults);
   return {
     ...priced,
-    images: storefrontProductImages(priced, defaults),
+    images,
+    imageFocals: productHasOwnImages(p.images)
+      ? persistProductImageFocals(images, priced.imageFocals)
+      : undefined,
     categoryIds: catalogCategories
       ? publicProductCategoryIds(priced, catalogCategories)
       : productCatalogIds(priced),
@@ -124,6 +138,9 @@ function sanitizeProductInput(
     ? Math.max(0, Math.floor(minimumStock))
     : 0;
   const status = (input.status ?? existing?.status ?? "active") as ProductStatus;
+  const images = Array.isArray(input.images)
+    ? input.images.filter((u): u is string => typeof u === "string")
+    : existing?.images ?? [];
 
   return {
     slug: existing?.slug || "",
@@ -143,9 +160,11 @@ function sanitizeProductInput(
       input.frameSize !== undefined ? input.frameSize : existing?.frameSize,
     ),
     description,
-    images: Array.isArray(input.images)
-      ? input.images.filter((u): u is string => typeof u === "string")
-      : existing?.images ?? [],
+    images,
+    imageFocals: persistProductImageFocals(
+      images,
+      input.imageFocals !== undefined ? input.imageFocals : existing?.imageFocals,
+    ),
     purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
     sellingPrice: Number.isFinite(sellingPrice) ? sellingPrice : 0,
     stockQuantity: wholeStock,

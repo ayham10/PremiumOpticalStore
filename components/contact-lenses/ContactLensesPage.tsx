@@ -10,7 +10,7 @@ import { productPublicKey } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import {
   CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
   resolveServiceFeatureIcon,
@@ -49,6 +49,7 @@ function ContactLensCard({ product }: { product: Product }) {
           sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
           className="object-contain"
           loading="lazy"
+          style={productImageStyle(product.imageFocals?.[0])}
         />
       </Link>
       <div className="frames-product-body">

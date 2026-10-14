@@ -23,7 +23,7 @@ import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice, productPublicKey } from "@/lib/format";
 import type { Product, Promotion } from "@/lib/types";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 import { computeDiscountedPrice } from "@/lib/promo-price";
 
@@ -372,6 +372,7 @@ function PromoProductCard({
             fill
             sizes="(max-width: 767px) 42vw, 220px"
             className="object-cover"
+            style={productImageStyle(product.imageFocals?.[0])}
           />
         </Link>
         {hasDiscount ? (

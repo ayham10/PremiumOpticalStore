@@ -8,12 +8,19 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import CatalogPrice from "@/components/catalog/CatalogPrice";
 import { productPublicKey } from "@/lib/format";
 import type { Product } from "@/lib/types";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 type RelatedItem = Pick<
   Product,
-  "id" | "slug" | "name" | "images" | "sellingPrice" | "discountedPrice" | "category"
+  | "id"
+  | "slug"
+  | "name"
+  | "images"
+  | "sellingPrice"
+  | "discountedPrice"
+  | "imageFocals"
+  | "category"
 >;
 
 export default function RelatedProductsCarousel({
@@ -126,6 +133,7 @@ export default function RelatedProductsCarousel({
                   className="object-cover"
                   loading="lazy"
                   quality={70}
+                  style={productImageStyle(product.imageFocals?.[0])}
                 />
               </SaveReturnLink>
               <div className="product-related-body">
