@@ -1860,6 +1860,10 @@ const ar: Dictionary = {
       promotionsEmpty: "لا توجد عروض بمنتجات محددة",
       promoInactive: "غير نشط",
       allCategories: "كل الفئات",
+      contentLanguages: "لغات المنتج",
+      overwriteManual:
+        "توجد ترجمة مصحّحة يدويًا. هل تريد استبدال الترجمات التلقائية في اللغات الأخرى؟",
+      translating: "جارٍ الترجمة…",
       selected: "الفئات المحددة",
       noneSelected: "لم يتم اختيار فئات إضافية",
       search: "ابحث في الفئات…",

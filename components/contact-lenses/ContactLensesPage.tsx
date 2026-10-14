@@ -96,7 +96,7 @@ const FEATURES = [
 ] as const;
 
 export default function ContactLensesPage() {
-  const { t, rtl } = useLocale();
+  const { t, rtl, locale } = useLocale();
   const saved = useLocalizedServicePages()?.contactLenses;
   const title = pickServiceText(saved?.title, t("contactLenses.title"));
   const features = pickServiceFeatures(
@@ -126,8 +126,8 @@ export default function ContactLensesPage() {
           products: Product[];
           categoryDefaultImages?: CategoryDefaultImages;
         }>(
-          productsCacheKey(["Contact Lenses"]),
-          "/api/products?category=Contact%20Lenses",
+          productsCacheKey(["Contact Lenses"], locale),
+          `/api/products?category=Contact%20Lenses&locale=${encodeURIComponent(locale)}`,
           { ttlMs: 60_000 },
         );
         rememberCategoryDefaultImages(data.categoryDefaultImages);
@@ -141,7 +141,7 @@ export default function ContactLensesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   const items = useMemo(
     () => products.filter((p) => p.status === "active"),

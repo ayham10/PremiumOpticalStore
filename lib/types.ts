@@ -237,6 +237,25 @@ export interface Product {
    */
   discountedPrice?: number;
   description: string;
+  /**
+   * Per-language name/description/color. Root `name` / `description` / `color`
+   * stay as the original fallback and are never used as the permanent id.
+   */
+  locales?: Partial<
+    Record<
+      "ar" | "he" | "en",
+      {
+        name?: string;
+        description?: string;
+        color?: string;
+        origins?: Partial<
+          Record<"name" | "description" | "color", "source" | "machine" | "manual">
+        >;
+      }
+    >
+  >;
+  /** Language the product was created in. Root copy follows this locale. */
+  i18nSource?: "ar" | "he" | "en";
   images: string[];
   /**
    * Per-image zoom/pan, aligned with `images`. Original files stay unchanged.

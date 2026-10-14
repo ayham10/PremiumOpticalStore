@@ -34,13 +34,14 @@ import {
   Wallet,
 } from "lucide-react";
 import AdminProductCard from "@/components/admin/AdminProductCard";
+import AdminContentLangSwitch from "@/components/admin/AdminContentLangSwitch";
 import CatalogCategoriesModal from "@/components/admin/CatalogCategoriesModal";
 import AdminPeekMultiSelect from "@/components/admin/AdminPeekMultiSelect";
 import ProductCategoryMultiSelect from "@/components/admin/ProductCategoryMultiSelect";
 import ProductImagesField from "@/components/admin/ProductImagesField";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { apiFetch } from "@/lib/admin-api";
+import { apiFetch, ApiError } from "@/lib/admin-api";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
 import { hasPermission } from "@/lib/admin-permissions";
 import {
@@ -50,7 +51,18 @@ import {
   productBelongsToCategory,
 } from "@/lib/catalog-categories";
 import { slugify } from "@/lib/format";
+import { isLocale, type Locale } from "@/lib/i18n/config";
 import { isFrameSizeInput, normalizeFrameSize } from "@/lib/product-fields";
+import {
+  MANUAL_TRANSLATIONS_CODE,
+  productSearchText,
+  resolveProductCopy,
+  sanitizeProductLocales,
+  withProductLocale,
+  type ProductCopyOrigin,
+  type ProductLocaleCopy,
+  type ProductLocales,
+} from "@/lib/product-i18n";
 import { allocateProductNumber } from "@/lib/product-number";
 import type {
   AdminSession,
@@ -61,6 +73,8 @@ import type {
   ProductStatus,
   Promotion,
 } from "@/lib/types";
+
+const CONTENT_LOCALE_KEY = "oyon-admin-product-locale";
 
 const CATEGORIES: ProductCategory[] = [
   "Prescription Glasses",
@@ -162,12 +176,35 @@ function assignedPromotionIds(productId: string, promotions: Promotion[]): strin
     .map((promo) => promo.id);
 }
 
+function copyFromForm(
+  form: ProductForm,
+  origin: ProductCopyOrigin,
+): ProductLocaleCopy {
+  const color = form.color.trim();
+  return {
+    name: form.name.trim(),
+    description: form.description.trim(),
+    color: color || undefined,
+    origins: {
+      name: origin,
+      description: origin,
+      ...(color ? { color: origin } : {}),
+    },
+  };
+}
+
 function toPayload(
   form: ProductForm,
   existing: Product | null | undefined,
   skuManual: boolean,
+  locale: Locale,
+  locales: ProductLocales,
+  overwriteManual: boolean,
 ) {
   return {
+    locale,
+    locales,
+    overwriteManual,
     name: form.name,
     slug: slugify(form.name),
     category: form.category,
@@ -199,9 +236,14 @@ function toPayload(
   };
 }
 
-function fromProduct(p: Product, promotions: Promotion[]): ProductForm {
+function fromProduct(
+  p: Product,
+  promotions: Promotion[],
+  locale: Locale,
+): ProductForm {
+  const copy = resolveProductCopy(p, locale);
   return {
-    name: p.name,
+    name: copy.name,
     category: p.category,
     categoryIds: (p.categoryIds || []).filter((id) => id && id !== p.category),
     promotionIds: assignedPromotionIds(p.id, promotions),
@@ -210,9 +252,9 @@ function fromProduct(p: Product, promotions: Promotion[]): ProductForm {
     lensType: p.lensType || "",
     barcode: p.barcode || "",
     sku: p.sku,
-    color: p.color || "",
+    color: copy.color || "",
     frameSize: p.frameSize || "",
-    description: p.description,
+    description: copy.description,
     images: [...(p.images || [])],
     imageFocals: [...(p.imageFocals || [])],
     purchasePrice: String(p.purchasePrice),
@@ -282,6 +324,9 @@ const dangerOutlineBtn: CSSProperties = {
 export default function AdminInventoryPage() {
   const { notifySaved } = useAdminSuccessNotice();
   const { t, locale } = useLocale();
+  const [contentLocale, setContentLocale] = useState<Locale>("ar");
+  const [draftLocales, setDraftLocales] = useState<ProductLocales>({});
+  const [translating, setTranslating] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogCategories, setCatalogCategories] = useState<CatalogCategory[]>(
     () => mergeCatalogCategories(undefined),
@@ -345,6 +390,23 @@ export default function AdminInventoryPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(CONTENT_LOCALE_KEY);
+      if (isLocale(saved)) setContentLocale(saved);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CONTENT_LOCALE_KEY, contentLocale);
+    } catch {
+      /* ignore */
+    }
+  }, [contentLocale]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = products.filter((p) => {
@@ -352,19 +414,23 @@ export default function AdminInventoryPage() {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (!q) return true;
       return (
-        p.name.toLowerCase().includes(q) ||
+        productSearchText(p).includes(q) ||
         p.brand.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
         (p.barcode || "").toLowerCase().includes(q) ||
-        (p.color || "").toLowerCase().includes(q) ||
         (p.frameSize || "").toLowerCase().includes(q)
       );
     });
     if (sortMode === "name") {
-      return [...list].sort((a, b) => a.name.localeCompare(b.name, "ar"));
+      return [...list].sort((a, b) =>
+        resolveProductCopy(a, contentLocale).name.localeCompare(
+          resolveProductCopy(b, contentLocale).name,
+          contentLocale,
+        ),
+      );
     }
     return list;
-  }, [products, query, category, statusFilter, sortMode]);
+  }, [products, query, category, statusFilter, sortMode, contentLocale]);
 
   useEffect(() => {
     setListPage(1);
@@ -377,10 +443,80 @@ export default function AdminInventoryPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, safePage]);
 
+  async function fillLocaleFromSource(
+    source: ProductLocaleCopy,
+    from: Locale | "auto",
+    to: Locale,
+  ) {
+    if (to === from) return;
+    if (!source.name && !source.description && !source.color) return;
+    setTranslating(true);
+    try {
+      const data = await apiFetch<{ copy: ProductLocaleCopy }>("/api/products/i18n", {
+        method: "POST",
+        body: JSON.stringify({ from, to, copy: source }),
+      });
+      const copy = data.copy;
+      setDraftLocales((prev) => ({ ...prev, [to]: copy }));
+      setForm((prev) => ({
+        ...prev,
+        name: copy.name || prev.name,
+        description: copy.description || prev.description,
+        color: copy.color || prev.color,
+      }));
+    } catch {
+      /* keep fallback copy */
+    } finally {
+      setTranslating(false);
+    }
+  }
+
+  function persistContentLocale(next: Locale) {
+    setContentLocale(next);
+  }
+
+  function switchContentLocale(next: Locale) {
+    if (next === contentLocale) return;
+    if (editorOpen) {
+      const stashed: ProductLocales = {
+        ...draftLocales,
+        [contentLocale]: copyFromForm(form, "manual"),
+      };
+      setDraftLocales(stashed);
+      const existing = stashed[next];
+      persistContentLocale(next);
+      if (existing?.name || existing?.description) {
+        setForm((prev) => ({
+          ...prev,
+          name: existing.name || "",
+          description: existing.description || "",
+          color: existing.color || "",
+        }));
+        return;
+      }
+      const sourceLocale = (editing?.i18nSource && isLocale(editing.i18nSource)
+        ? editing.i18nSource
+        : contentLocale) as Locale | "auto";
+      const source =
+        stashed[contentLocale] ||
+        copyFromForm(form, "manual");
+      setForm((prev) => ({
+        ...prev,
+        name: source.name || prev.name,
+        description: source.description || prev.description,
+        color: source.color || prev.color,
+      }));
+      void fillLocaleFromSource(source, sourceLocale, next);
+      return;
+    }
+    persistContentLocale(next);
+  }
+
   function openCreate() {
     const sku = allocateProductNumber(products);
     allocatedSkuRef.current = sku;
     setEditing(null);
+    setDraftLocales({});
     setForm({ ...emptyForm(), sku });
     setTab("details");
     setSuccess(null);
@@ -391,11 +527,16 @@ export default function AdminInventoryPage() {
   function openEdit(p: Product) {
     allocatedSkuRef.current = p.sku || "";
     setEditing(p);
-    setForm(fromProduct(p, promotions));
+    setDraftLocales(sanitizeProductLocales(p.locales));
+    setForm(fromProduct(p, promotions, contentLocale));
     setTab("details");
     setSuccess(null);
     setMessage("");
     setEditorOpen(true);
+    const existing = sanitizeProductLocales(p.locales)[contentLocale];
+    if (!existing?.name && p.name.trim()) {
+      void fillLocaleFromSource(copyFromForm(fromProduct(p, promotions, contentLocale), "source"), p.i18nSource || "auto", contentLocale);
+    }
   }
 
   function closeEditor() {
@@ -409,6 +550,7 @@ export default function AdminInventoryPage() {
     const sku = allocateProductNumber(products);
     allocatedSkuRef.current = sku;
     setEditing(null);
+    setDraftLocales({});
     setForm({ ...emptyForm(), sku });
     setTab("details");
     setSuccess(null);
@@ -434,8 +576,20 @@ export default function AdminInventoryPage() {
       ? form.sku.trim() !== (editing.sku || "").trim()
       : Boolean(form.sku.trim()) &&
         form.sku.trim() !== allocatedSkuRef.current;
-    const payload = toPayload(form, editing, skuManual);
-    try {
+    const mergedLocales: ProductLocales = {
+      ...draftLocales,
+      [contentLocale]: copyFromForm(form, "manual"),
+    };
+
+    const persist = async (overwriteManual: boolean) => {
+      const payload = toPayload(
+        form,
+        editing,
+        skuManual,
+        contentLocale,
+        mergedLocales,
+        overwriteManual,
+      );
       invalidatePublicCache("products:");
       invalidatePublicCache("product:");
       if (editing) {
@@ -451,6 +605,7 @@ export default function AdminInventoryPage() {
           prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p)),
         );
         setEditing({ ...editing, ...row });
+        setDraftLocales(sanitizeProductLocales(row.locales));
         notifySaved();
         void load({ silent: true });
       } else {
@@ -465,9 +620,34 @@ export default function AdminInventoryPage() {
         setProducts((prev) => [row, ...prev]);
         setSuccess("add");
       }
+    };
+
+    try {
+      await persist(false);
     } catch (err) {
-      setSuccess(null);
-      setMessage(err instanceof Error ? err.message : "فشل الحفظ");
+      const body =
+        err instanceof ApiError && err.body && typeof err.body === "object"
+          ? (err.body as { code?: string })
+          : null;
+      if (body?.code === MANUAL_TRANSLATIONS_CODE) {
+        const confirmed = window.confirm(t("admin.catalog.overwriteManual"));
+        if (confirmed) {
+          try {
+            await persist(true);
+          } catch (retryErr) {
+            setSuccess(null);
+            setMessage(
+              retryErr instanceof Error ? retryErr.message : "فشل الحفظ",
+            );
+          }
+        } else {
+          setSaving(false);
+          return;
+        }
+      } else {
+        setSuccess(null);
+        setMessage(err instanceof Error ? err.message : "فشل الحفظ");
+      }
     } finally {
       setSaving(false);
     }
@@ -567,6 +747,18 @@ export default function AdminInventoryPage() {
             <Box size={18} strokeWidth={1.55} />
           </span>
         </header>
+
+        <AdminContentLangSwitch
+          className="admin-pe-langs"
+          value={contentLocale}
+          onChange={switchContentLocale}
+          ariaLabel={t("admin.catalog.contentLanguages")}
+        />
+        {translating ? (
+          <p className="mb-3 text-sm" style={{ color: MUTED }}>
+            {t("admin.catalog.translating")}
+          </p>
+        ) : null}
 
         {message ? (
           <p
@@ -1074,6 +1266,13 @@ export default function AdminInventoryPage() {
         </div>
       </header>
 
+      <AdminContentLangSwitch
+        className="admin-products-langs"
+        value={contentLocale}
+        onChange={switchContentLocale}
+        ariaLabel={t("admin.catalog.contentLanguages")}
+      />
+
       {/* MOBILE toolbar */}
       <section className="admin-products-toolbar is-mobile">
         <div className="admin-products-toolbar-row">
@@ -1237,7 +1436,7 @@ export default function AdminInventoryPage() {
             {paged.map((p) => (
               <AdminProductCard
                 key={p.id}
-                product={p}
+                product={withProductLocale(p, contentLocale)}
                 categoryLabels={[
                   typeLabel(catalogCategories, p.category, locale, t),
                   ...((p.categoryIds || [])

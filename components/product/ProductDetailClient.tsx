@@ -59,9 +59,9 @@ function ProductSkeleton() {
 }
 
 export default function ProductDetailClient({ slug }: { slug: string }) {
-  const { t, dict } = useLocale();
+  const { t, dict, locale } = useLocale();
   const defaults = useCategoryDefaultImages();
-  const cacheKey = productSlugCacheKey(slug);
+  const cacheKey = productSlugCacheKey(slug, locale);
   const cached = peekPublicCache<ProductPayload>(cacheKey);
   const [payload, setPayload] = useState<ProductPayload | null>(cached);
   const [loading, setLoading] = useState(!cached?.product);
@@ -79,7 +79,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
     cachedJsonFetch<ProductPayload>(
       cacheKey,
-      `/api/products?slug=${encodeURIComponent(slug)}`,
+      `/api/products?slug=${encodeURIComponent(slug)}&locale=${encodeURIComponent(locale)}`,
       { ttlMs: 60_000 },
     )
       .then((data) => {
@@ -107,7 +107,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, slug]);
+  }, [cacheKey, slug, locale]);
 
   if (loading && !payload?.product) {
     return <ProductSkeleton />;
