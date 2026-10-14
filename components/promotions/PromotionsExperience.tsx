@@ -23,8 +23,11 @@ import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { formatPrice, productPublicKey } from "@/lib/format";
 import type { Product, Promotion } from "@/lib/types";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
+import { computeDiscountedPrice } from "@/lib/promo-price";
+
+export { computeDiscountedPrice } from "@/lib/promo-price";
 
 const FALLBACK_HERO = "/images/store-hero.jpg";
 const PROMO_HERO = "/images/promotions-hero.png";
@@ -34,33 +37,6 @@ export type PromoSlide = {
   promotion: Promotion;
   products: Product[];
 };
-
-/** Compute discounted price from typed fields, with discount-string fallback. */
-export function computeDiscountedPrice(
-  sellingPrice: number,
-  promo: Promotion
-): number {
-  const type = promo.discountType;
-  const value = promo.discountValue;
-
-  if (type === "percentage" && typeof value === "number" && !Number.isNaN(value)) {
-    return Math.max(0, sellingPrice * (1 - value / 100));
-  }
-  if (type === "fixed" && typeof value === "number" && !Number.isNaN(value)) {
-    return Math.max(0, sellingPrice - value);
-  }
-
-  const d = promo.discount || "";
-  const pct = d.match(/(\d+(?:\.\d+)?)\s*%/);
-  if (pct) {
-    return Math.max(0, sellingPrice * (1 - parseFloat(pct[1]) / 100));
-  }
-  const fixed = d.match(/(?:₪|NIS|ILS)?\s*(\d+(?:\.\d+)?)/i);
-  if (fixed) {
-    return Math.max(0, sellingPrice - parseFloat(fixed[1]));
-  }
-  return sellingPrice;
-}
 
 function formatUntil(dateStr: string, locale: string) {
   try {
@@ -396,6 +372,7 @@ function PromoProductCard({
             fill
             sizes="(max-width: 767px) 42vw, 220px"
             className="object-cover"
+            style={productImageStyle(product.imageFocals?.[0])}
           />
         </Link>
         {hasDiscount ? (

@@ -3,9 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/lib/types";
-import { formatPrice, productPublicKey } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { productPublicKey } from "@/lib/format";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -29,6 +30,7 @@ export default function ProductCard({ product }: { product: Product }) {
           fill
           sizes="(max-width: 768px) 50vw, 33vw"
           className="object-cover transition duration-700 group-hover:scale-[1.04]"
+          style={productImageStyle(product.imageFocals?.[0])}
         />
         <span className="absolute start-3 top-3 pill bg-white/90">{categoryLabel}</span>
       </Link>
@@ -46,7 +48,11 @@ export default function ProductCard({ product }: { product: Product }) {
         </Link>
         <p className="line-clamp-2 text-sm text-[var(--slate)]">{product.description}</p>
         <div className="mt-auto flex items-center justify-between pt-4">
-          <strong className="text-lg">{formatPrice(product.sellingPrice)}</strong>
+          <CatalogPrice
+            className="text-lg"
+            sellingPrice={product.sellingPrice}
+            discountedPrice={product.discountedPrice}
+          />
           <Link
             href={href}
             className="btn btn-ghost !min-h-10 !px-4 !text-sm"

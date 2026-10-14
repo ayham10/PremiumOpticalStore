@@ -3,14 +3,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice, productPublicKey } from "@/lib/format";
-import { productDisplayImage } from "@/lib/product-images";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { productPublicKey } from "@/lib/format";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 import type { Product } from "@/lib/types";
 
 export type CustomPageProductCard = Pick<
   Product,
-  "id" | "slug" | "name" | "images" | "sellingPrice" | "category" | "status"
+  | "id"
+  | "slug"
+  | "name"
+  | "images"
+  | "sellingPrice"
+  | "discountedPrice"
+  | "imageFocals"
+  | "category"
+  | "status"
 >;
 
 export default function CustomPageProductsCarousel({
@@ -47,6 +56,7 @@ export default function CustomPageProductsCarousel({
                   className="object-cover"
                   loading="lazy"
                   quality={70}
+                  style={productImageStyle(product.imageFocals?.[0])}
                 />
               </Link>
               <div className="csp-products-body">
@@ -55,9 +65,11 @@ export default function CustomPageProductsCarousel({
                   {product.name}
                 </Link>
                 <strong className="csp-products-price">
-                  {formatPrice(product.sellingPrice, {
-                    currencySymbol: currencySymbol || "₪",
-                  })}
+                  <CatalogPrice
+                    sellingPrice={product.sellingPrice}
+                    discountedPrice={product.discountedPrice}
+                    currencySymbol={currencySymbol || "₪"}
+                  />
                 </strong>
               </div>
             </article>

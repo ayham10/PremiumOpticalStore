@@ -1,7 +1,16 @@
+import { clampImageFocal, objectPositionCss } from "@/lib/responsive-image";
 import type {
   CategoryDefaultImageKey,
   CategoryDefaultImages,
+  ImageFocalPoint,
 } from "@/lib/types";
+
+/** Catalog default: centered, fitted. Does not shift existing product photos. */
+export const DEFAULT_PRODUCT_IMAGE_FOCAL: ImageFocalPoint = {
+  x: 0.5,
+  y: 0.5,
+  zoom: 1,
+};
 
 export const PLACEHOLDER_PRODUCT_IMAGE = "/images/placeholder-frame.svg";
 
@@ -123,6 +132,72 @@ export function productDisplayGallery(
   );
   if (own.length) return own.map((value) => value.trim());
   return [productDisplayImage(product, defaults)];
+}
+
+export function clampProductImageFocal(
+  value?: Partial<ImageFocalPoint> | null,
+): ImageFocalPoint {
+  return clampImageFocal({
+    x: value?.x ?? DEFAULT_PRODUCT_IMAGE_FOCAL.x,
+    y: value?.y ?? DEFAULT_PRODUCT_IMAGE_FOCAL.y,
+    zoom: value?.zoom ?? DEFAULT_PRODUCT_IMAGE_FOCAL.zoom,
+  });
+}
+
+export function isNeutralProductFocal(focal: ImageFocalPoint): boolean {
+  return (
+    Math.abs(focal.x - DEFAULT_PRODUCT_IMAGE_FOCAL.x) < 1e-6 &&
+    Math.abs(focal.y - DEFAULT_PRODUCT_IMAGE_FOCAL.y) < 1e-6 &&
+    Math.abs(focal.zoom - DEFAULT_PRODUCT_IMAGE_FOCAL.zoom) < 1e-6
+  );
+}
+
+export function alignProductImageFocals(
+  images: string[],
+  focals?: Array<Partial<ImageFocalPoint> | null> | null,
+): ImageFocalPoint[] {
+  return images.map((_, index) => clampProductImageFocal(focals?.[index]));
+}
+
+/** Persist only when at least one image was actually adjusted. */
+export function persistProductImageFocals(
+  images: string[],
+  focals?: Array<Partial<ImageFocalPoint> | null> | null,
+): ImageFocalPoint[] | undefined {
+  if (!images.length) return undefined;
+  const aligned = alignProductImageFocals(images, focals);
+  if (aligned.every(isNeutralProductFocal)) return undefined;
+  return aligned;
+}
+
+export function productImageStyle(
+  focal?: Partial<ImageFocalPoint> | null,
+  opts?: { preview?: boolean },
+): {
+  objectPosition: string;
+  transform?: string;
+  transformOrigin?: string;
+} | undefined {
+  const point = clampProductImageFocal(focal);
+  const preview = Boolean(opts?.preview);
+  if (!preview && isNeutralProductFocal(point) && !focal) return undefined;
+  if (!preview && isNeutralProductFocal(point)) return undefined;
+  const style: {
+    objectPosition: string;
+    transform?: string;
+    transformOrigin?: string;
+  } = {
+    objectPosition: objectPositionCss(point),
+  };
+  if (preview || Math.abs(point.zoom - DEFAULT_PRODUCT_IMAGE_FOCAL.zoom) > 1e-6) {
+    style.transform = `scale(${point.zoom})`;
+    style.transformOrigin = "center center";
+  }
+  return style;
+}
+
+export function productHasOwnImages(images?: string[] | null): boolean {
+  return Boolean(firstOwnImage(images || undefined));
 }
 
 /** Storefront-only image list. Does not change the stored product record. */

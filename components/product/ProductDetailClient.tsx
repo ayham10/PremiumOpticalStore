@@ -6,14 +6,15 @@ import Link from "next/link";
 import RelatedProductsCarousel from "@/components/product/RelatedProductsCarousel";
 import ProductBackButton from "@/components/navigation/ProductBackButton";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
 import {
   cachedJsonFetch,
   peekPublicCache,
   productSlugCacheKey,
 } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
-import { productDisplayGallery } from "@/lib/product-images";
+import { formatFrameSizePublic } from "@/lib/product-fields";
+import { productDisplayGallery, productImageStyle } from "@/lib/product-images";
 import { storeWhatsAppHref } from "@/lib/store-whatsapp";
 import {
   rememberCategoryDefaultImages,
@@ -136,12 +137,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const images = productDisplayGallery(product, defaults);
 
-  const availabilityLabel =
-    product.status === "out_of_stock"
-      ? t("product.outOfStock")
-      : product.stockQuantity > 0
-        ? t("product.inStore")
-        : t("product.availability");
+  const isAvailable =
+    product.status === "active" && Number(product.stockQuantity) > 0;
+  const availabilityLabel = isAvailable
+    ? t("product.available")
+    : t("product.unavailable");
+  const frameSizeLabel = formatFrameSizePublic(product.frameSize);
 
   const categoryLabel =
     dict.shop.categories[product.category as keyof typeof dict.shop.categories] ||
@@ -191,11 +192,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 className="object-contain"
                 sizes="(max-width: 1023px) 100vw, 520px"
                 quality={75}
+                style={productImageStyle(product.imageFocals?.[0])}
               />
             </div>
             {images.length > 1 ? (
               <div className="product-thumbs">
-                {images.slice(1, 4).map((src) => (
+                {images.slice(1, 4).map((src, index) => (
                   <div key={src} className="product-thumb">
                     <Image
                       src={src}
@@ -205,6 +207,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                       sizes="120px"
                       loading="lazy"
                       quality={65}
+                      style={productImageStyle(product.imageFocals?.[index + 1])}
                     />
                   </div>
                 ))}
@@ -216,18 +219,42 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <h1 className="product-name">{product.name}</h1>
             <p className="product-category">{categoryLabel}</p>
             <p className="product-price">
-              {formatPrice(product.sellingPrice, {
-                currencySymbol: settings?.currencySymbol || "₪",
-              })}
+              <CatalogPrice
+                sellingPrice={product.sellingPrice}
+                discountedPrice={product.discountedPrice}
+                currencySymbol={settings?.currencySymbol || "₪"}
+              />
             </p>
-            {product.status === "out_of_stock" ? (
+            {!isAvailable ? (
               <span className="product-stock-pill">
-                {t("product.outOfStock")}
+                {t("product.unavailable")}
               </span>
             ) : null}
             <p className="product-description">{description}</p>
 
             <dl className="product-meta">
+              <div>
+                <dt>{t("product.productNumber")}</dt>
+                <dd>{product.sku || "—"}</dd>
+              </div>
+              {product.barcode ? (
+                <div>
+                  <dt>{t("product.barcode")}</dt>
+                  <dd>{product.barcode}</dd>
+                </div>
+              ) : null}
+              {product.color ? (
+                <div>
+                  <dt>{t("product.colour")}</dt>
+                  <dd>{product.color}</dd>
+                </div>
+              ) : null}
+              {frameSizeLabel ? (
+                <div>
+                  <dt>{t("product.frameSize")}</dt>
+                  <dd>{frameSizeLabel}</dd>
+                </div>
+              ) : null}
               {lensLabel ? (
                 <div>
                   <dt>

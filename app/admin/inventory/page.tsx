@@ -5,10 +5,13 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
 import {
+  BadgePercent,
+  Barcode,
   Box,
   Calendar,
   Check,
@@ -16,11 +19,14 @@ import {
   ChevronRight,
   CircleDot,
   FileText,
+  Hash,
   ImageIcon,
   Layers,
   Minus,
   Package,
+  Palette,
   Plus,
+  Ruler,
   Save,
   Search,
   Tag,
@@ -29,11 +35,13 @@ import {
 } from "lucide-react";
 import AdminProductCard from "@/components/admin/AdminProductCard";
 import CatalogCategoriesModal from "@/components/admin/CatalogCategoriesModal";
+import AdminPeekMultiSelect from "@/components/admin/AdminPeekMultiSelect";
 import ProductCategoryMultiSelect from "@/components/admin/ProductCategoryMultiSelect";
 import ProductImagesField from "@/components/admin/ProductImagesField";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
+import { invalidatePublicCache } from "@/lib/public-data-cache";
 import { hasPermission } from "@/lib/admin-permissions";
 import {
   categoryLabel,
@@ -42,12 +50,16 @@ import {
   productBelongsToCategory,
 } from "@/lib/catalog-categories";
 import { slugify } from "@/lib/format";
+import { isFrameSizeInput, normalizeFrameSize } from "@/lib/product-fields";
+import { allocateProductNumber } from "@/lib/product-number";
 import type {
   AdminSession,
   CatalogCategory,
+  ImageFocalPoint,
   Product,
   ProductCategory,
   ProductStatus,
+  Promotion,
 } from "@/lib/types";
 
 const CATEGORIES: ProductCategory[] = [
@@ -71,13 +83,17 @@ type ProductForm = {
   name: string;
   category: ProductCategory;
   categoryIds: string[];
+  promotionIds: string[];
   brand: string;
   frameType: string;
   lensType: string;
   barcode: string;
   sku: string;
+  color: string;
+  frameSize: string;
   description: string;
   images: string[];
+  imageFocals: ImageFocalPoint[];
   purchasePrice: string;
   sellingPrice: string;
   stockQuantity: string;
@@ -102,13 +118,17 @@ const emptyForm = (): ProductForm => ({
   name: "",
   category: "Frames",
   categoryIds: [],
+  promotionIds: [],
   brand: "",
   frameType: "",
   lensType: "",
   barcode: "",
   sku: "",
+  color: "",
+  frameSize: "",
   description: "",
   images: [],
+  imageFocals: [],
   purchasePrice: "0",
   sellingPrice: "0",
   stockQuantity: "0",
@@ -135,21 +155,37 @@ function parseWholeNonNeg(value: string, fallback: number): number {
   return Math.max(0, Math.floor(parsed));
 }
 
-function toPayload(form: ProductForm, existing?: Product | null) {
+function assignedPromotionIds(productId: string, promotions: Promotion[]): string[] {
+  return promotions
+    .filter((promo) => (promo.scope || "all") === "specific")
+    .filter((promo) => (promo.productIds || []).includes(productId))
+    .map((promo) => promo.id);
+}
+
+function toPayload(
+  form: ProductForm,
+  existing: Product | null | undefined,
+  skuManual: boolean,
+) {
   return {
     name: form.name,
     slug: slugify(form.name),
     category: form.category,
     categoryIds: form.categoryIds.filter((id) => id && id !== form.category),
+    promotionIds: form.promotionIds,
     brand: form.brand || existing?.brand || "",
     frameType: form.frameType || existing?.frameType || undefined,
     lensType: usesLensType(form.category)
       ? form.lensType || existing?.lensType || undefined
       : existing?.lensType || undefined,
-    barcode: form.barcode || existing?.barcode || undefined,
-    sku: form.sku || existing?.sku || undefined,
+    barcode: form.barcode.trim() || undefined,
+    sku: form.sku.trim() || undefined,
+    skuManual,
+    color: form.color.trim() || undefined,
+    frameSize: form.frameSize.trim() || undefined,
     description: form.description,
     images: form.images.filter(Boolean),
+    imageFocals: form.imageFocals,
     purchasePrice: Number(form.purchasePrice) || existing?.purchasePrice || 0,
     sellingPrice: parseWholeNonNeg(form.sellingPrice, 0),
     stockQuantity: parseWholeNonNeg(form.stockQuantity, 0),
@@ -163,18 +199,22 @@ function toPayload(form: ProductForm, existing?: Product | null) {
   };
 }
 
-function fromProduct(p: Product): ProductForm {
+function fromProduct(p: Product, promotions: Promotion[]): ProductForm {
   return {
     name: p.name,
     category: p.category,
     categoryIds: (p.categoryIds || []).filter((id) => id && id !== p.category),
+    promotionIds: assignedPromotionIds(p.id, promotions),
     brand: p.brand,
     frameType: p.frameType || "",
     lensType: p.lensType || "",
     barcode: p.barcode || "",
     sku: p.sku,
+    color: p.color || "",
+    frameSize: p.frameSize || "",
     description: p.description,
     images: [...(p.images || [])],
+    imageFocals: [...(p.imageFocals || [])],
     purchasePrice: String(p.purchasePrice),
     sellingPrice: String(p.sellingPrice),
     stockQuantity: String(p.stockQuantity),
@@ -206,33 +246,36 @@ function typeLabel(
 }
 
 const goldBtn: CSSProperties = {
-  height: 48,
+  height: 40,
   borderRadius: 12,
   background: GOLD,
   color: "#0B0F14",
   border: "none",
   fontWeight: 700,
-  fontSize: "0.9rem",
+  fontSize: "0.8rem",
+  padding: "0 1.05rem",
 };
 
 const outlineGoldBtn: CSSProperties = {
-  height: 48,
+  height: 40,
   borderRadius: 12,
   background: "transparent",
   color: GOLD,
   border: `1px solid ${GOLD}`,
   fontWeight: 700,
-  fontSize: "0.88rem",
+  fontSize: "0.8rem",
+  padding: "0 1.05rem",
 };
 
 const dangerOutlineBtn: CSSProperties = {
-  height: 48,
+  height: 40,
   borderRadius: 12,
   background: "transparent",
   color: "#E07A7A",
   border: "1px solid rgba(224,122,122,0.55)",
   fontWeight: 700,
-  fontSize: "0.88rem",
+  fontSize: "0.8rem",
+  padding: "0 1.05rem",
 };
 
 
@@ -259,20 +302,24 @@ export default function AdminInventoryPage() {
   const [tab, setTab] = useState<EditorTab>("details");
   const [success, setSuccess] = useState<SuccessKind | null>(null);
   const [listPage, setListPage] = useState(1);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const allocatedSkuRef = useRef("");
   const PAGE_SIZE = 16;
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     setError("");
     try {
-      const [pData, me] = await Promise.all([
+      const [pData, me, promoData] = await Promise.all([
         apiFetch<unknown>("/api/products?all=1"),
         apiFetch<{ user: AdminSession } | AdminSession>("/api/auth/me").catch(
           () => null,
         ),
+        apiFetch<unknown>("/api/promotions").catch(() => null),
       ]);
       const nextProducts = unwrapList<Product>(pData, ["products", "items", "data"]);
       setProducts(nextProducts);
+      setPromotions(unwrapList<Promotion>(promoData, ["promotions", "items", "data"]));
       if (pData && typeof pData === "object" && "catalogCategories" in pData) {
         setCatalogCategories(
           mergeCatalogCategories(
@@ -308,7 +355,9 @@ export default function AdminInventoryPage() {
         p.name.toLowerCase().includes(q) ||
         p.brand.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
-        (p.barcode || "").toLowerCase().includes(q)
+        (p.barcode || "").toLowerCase().includes(q) ||
+        (p.color || "").toLowerCase().includes(q) ||
+        (p.frameSize || "").toLowerCase().includes(q)
       );
     });
     if (sortMode === "name") {
@@ -329,8 +378,10 @@ export default function AdminInventoryPage() {
   }, [filtered, safePage]);
 
   function openCreate() {
+    const sku = allocateProductNumber(products);
+    allocatedSkuRef.current = sku;
     setEditing(null);
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), sku });
     setTab("details");
     setSuccess(null);
     setMessage("");
@@ -338,8 +389,9 @@ export default function AdminInventoryPage() {
   }
 
   function openEdit(p: Product) {
+    allocatedSkuRef.current = p.sku || "";
     setEditing(p);
-    setForm(fromProduct(p));
+    setForm(fromProduct(p, promotions));
     setTab("details");
     setSuccess(null);
     setMessage("");
@@ -354,8 +406,10 @@ export default function AdminInventoryPage() {
   }
 
   function addAnotherProduct() {
+    const sku = allocateProductNumber(products);
+    allocatedSkuRef.current = sku;
     setEditing(null);
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), sku });
     setTab("details");
     setSuccess(null);
     setMessage("");
@@ -369,10 +423,21 @@ export default function AdminInventoryPage() {
       setMessage("أدخل اسم المنتج");
       return;
     }
+    if (form.frameSize.trim() && normalizeFrameSize(form.frameSize) == null) {
+      setTab("details");
+      setMessage("مقاس الإطار غير صالح. مثال: 52-018");
+      return;
+    }
     setSaving(true);
     setMessage("");
-    const payload = toPayload(form, editing);
+    const skuManual = editing
+      ? form.sku.trim() !== (editing.sku || "").trim()
+      : Boolean(form.sku.trim()) &&
+        form.sku.trim() !== allocatedSkuRef.current;
+    const payload = toPayload(form, editing, skuManual);
     try {
+      invalidatePublicCache("products:");
+      invalidatePublicCache("product:");
       if (editing) {
         const updated = await apiFetch<Product | { product: Product }>(
           "/api/products",
@@ -387,6 +452,7 @@ export default function AdminInventoryPage() {
         );
         setEditing({ ...editing, ...row });
         notifySaved();
+        void load({ silent: true });
       } else {
         const created = await apiFetch<Product | { product: Product }>(
           "/api/products",
@@ -537,227 +603,327 @@ export default function AdminInventoryPage() {
             >
               {tab === "details" ? (
                 <>
-                  <div className="admin-pe-card">
-                    <h2 className="admin-pe-card-title">
-                      <Package size={16} strokeWidth={1.7} />
-                      بيانات المنتج
-                    </h2>
-                    <div className="admin-pe-fields">
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-name">
-                        <Tag size={13} strokeWidth={1.7} />
-                        اسم المنتج
-                      </label>
-                      <div className="admin-pe-control">
-                        <input
-                          id="p-name"
-                          className="admin-pe-input has-count"
-                          value={form.name}
-                          maxLength={100}
-                          onChange={(e) => setField("name", e.target.value)}
-                          required
-                        />
-                        <span className="admin-pe-count is-end">
-                          {form.name.length}/100
-                        </span>
+                  <div className="admin-pe-grid">
+                    <div className="admin-pe-card">
+                      <h2 className="admin-pe-card-title">
+                        <Package size={16} strokeWidth={1.7} />
+                        معلومات المنتج
+                      </h2>
+                      <div className="admin-pe-fields">
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-name">
+                            <Tag size={13} strokeWidth={1.7} />
+                            اسم المنتج
+                          </label>
+                          <div className="admin-pe-control">
+                            <input
+                              id="p-name"
+                              className="admin-pe-input has-count"
+                              value={form.name}
+                              maxLength={100}
+                              onChange={(e) => setField("name", e.target.value)}
+                              required
+                            />
+                            <span className="admin-pe-count is-end">
+                              {form.name.length}/100
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-sku">
+                            <Hash size={13} strokeWidth={1.7} />
+                            رقم المنتج
+                          </label>
+                          <input
+                            id="p-sku"
+                            className="admin-pe-input"
+                            value={form.sku}
+                            autoComplete="off"
+                            spellCheck={false}
+                            onChange={(e) => setField("sku", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-barcode">
+                            <Barcode size={13} strokeWidth={1.7} />
+                            الباركود (اختياري)
+                          </label>
+                          <input
+                            id="p-barcode"
+                            className="admin-pe-input"
+                            value={form.barcode}
+                            autoComplete="off"
+                            inputMode="text"
+                            onChange={(e) => setField("barcode", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-category">
+                            <Layers size={13} strokeWidth={1.7} />
+                            {t("admin.catalog.productType")}
+                          </label>
+                          <select
+                            id="p-category"
+                            className="admin-pe-input"
+                            value={form.category}
+                            onChange={(e) => {
+                              const next = e.target.value as ProductCategory;
+                              setForm((prev) => ({
+                                ...prev,
+                                category: next,
+                                categoryIds: prev.categoryIds.filter((id) => id !== next),
+                              }));
+                            }}
+                          >
+                            {CATEGORIES.map((c) => (
+                              <option key={c} value={c}>
+                                {typeLabel(catalogCategories, c, locale, t)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {usesLensType(form.category) ? (
+                          <div>
+                            <label className="admin-pe-label" htmlFor="p-lens">
+                              <CircleDot size={13} strokeWidth={1.7} />
+                              نوع العدسة
+                            </label>
+                            <input
+                              id="p-lens"
+                              className="admin-pe-input"
+                              value={form.lensType}
+                              onChange={(e) => setField("lensType", e.target.value)}
+                            />
+                          </div>
+                        ) : null}
+                        <div>
+                          <label className="admin-pe-label">
+                            <Layers size={13} strokeWidth={1.7} />
+                            {t("admin.catalog.extraCategories")}
+                          </label>
+                          <ProductCategoryMultiSelect
+                            categories={catalogCategories}
+                            selectedIds={form.categoryIds}
+                            excludeId={form.category}
+                            locale={locale}
+                            t={t}
+                            onChange={(ids) => setField("categoryIds", ids)}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label">
+                            <BadgePercent size={13} strokeWidth={1.7} />
+                            {t("admin.catalog.promotions")}
+                          </label>
+                          <AdminPeekMultiSelect
+                            options={promotions
+                              .filter((promo) => (promo.scope || "all") === "specific")
+                              .map((promo) => ({
+                                id: promo.id,
+                                label: promo.title,
+                                hint: promo.active ? undefined : t("admin.catalog.promoInactive"),
+                              }))}
+                            selectedIds={form.promotionIds}
+                            onChange={(ids) => setField("promotionIds", ids)}
+                            placeholder={t("admin.catalog.promotionsPlaceholder")}
+                            selectedLabel={t("admin.catalog.promotionsSelected")}
+                            emptyLabel={t("admin.catalog.promotionsEmpty")}
+                            ariaLabel={t("admin.catalog.promotions")}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-description">
+                            <FileText size={13} strokeWidth={1.7} />
+                            وصف المنتج
+                          </label>
+                          <div className="admin-pe-control">
+                            <textarea
+                              id="p-description"
+                              className="admin-pe-input admin-pe-textarea"
+                              value={form.description}
+                              maxLength={300}
+                              onChange={(e) => setField("description", e.target.value)}
+                              required
+                            />
+                            <span className="admin-pe-count is-bottom">
+                              {form.description.length}/300
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-category">
-                        <Layers size={13} strokeWidth={1.7} />
-                        {t("admin.catalog.productType")}
-                      </label>
-                      <select
-                        id="p-category"
-                        className="admin-pe-input"
-                        value={form.category}
-                        onChange={(e) => {
-                          const next = e.target.value as ProductCategory;
-                          setForm((prev) => ({
-                            ...prev,
-                            category: next,
-                            categoryIds: prev.categoryIds.filter((id) => id !== next),
-                          }));
-                        }}
-                      >
-                        {CATEGORIES.map((c) => (
-                          <option key={c} value={c}>
-                            {typeLabel(catalogCategories, c, locale, t)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="admin-pe-label">
-                        <Layers size={13} strokeWidth={1.7} />
-                        {t("admin.catalog.extraCategories")}
-                      </label>
-                      <ProductCategoryMultiSelect
-                        categories={catalogCategories}
-                        selectedIds={form.categoryIds}
-                        excludeId={form.category}
-                        locale={locale}
-                        t={t}
-                        onChange={(ids) => setField("categoryIds", ids)}
-                      />
-                    </div>
-                    {usesLensType(form.category) ? (
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-lens">
-                        <CircleDot size={13} strokeWidth={1.7} />
-                        نوع العدسة
-                      </label>
-                      <input
-                        id="p-lens"
-                        className="admin-pe-input"
-                        value={form.lensType}
-                        onChange={(e) => setField("lensType", e.target.value)}
-                      />
-                    </div>
-                    ) : null}
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-description">
-                        <FileText size={13} strokeWidth={1.7} />
-                        وصف المنتج
-                      </label>
-                      <div className="admin-pe-control">
-                        <textarea
-                          id="p-description"
-                          className="admin-pe-input admin-pe-textarea"
-                          value={form.description}
-                          maxLength={300}
-                          onChange={(e) => setField("description", e.target.value)}
-                          required
-                        />
-                        <span className="admin-pe-count is-bottom">
-                          {form.description.length}/300
-                        </span>
+
+                    <div className="admin-pe-card">
+                      <h2 className="admin-pe-card-title">
+                        <Box size={16} strokeWidth={1.7} />
+                        المواصفات والمخزون
+                      </h2>
+                      <div className="admin-pe-fields">
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-color">
+                            <Palette size={13} strokeWidth={1.7} />
+                            اللون (اختياري)
+                          </label>
+                          <input
+                            id="p-color"
+                            className="admin-pe-input"
+                            value={form.color}
+                            placeholder="أسود / Black / שחור"
+                            onChange={(e) => setField("color", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-size">
+                            <Ruler size={13} strokeWidth={1.7} />
+                            مقاس الإطار (اختياري)
+                          </label>
+                          <input
+                            id="p-size"
+                            className="admin-pe-input"
+                            value={form.frameSize}
+                            placeholder="52-018"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            onChange={(e) => {
+                              if (isFrameSizeInput(e.target.value)) {
+                                setField("frameSize", e.target.value);
+                              }
+                            }}
+                            onBlur={() => {
+                              const normalized = normalizeFrameSize(form.frameSize);
+                              if (typeof normalized === "string") {
+                                setField("frameSize", normalized);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-selling">
+                            <Wallet size={13} strokeWidth={1.7} />
+                            سعر البيع (₪)
+                          </label>
+                          <input
+                            id="p-selling"
+                            type="number"
+                            min="0"
+                            step="1"
+                            className="admin-pe-input"
+                            value={form.sellingPrice}
+                            onChange={(e) =>
+                              setField("sellingPrice", e.target.value)
+                            }
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-pe-label" htmlFor="p-stock">
+                            <Package size={13} strokeWidth={1.7} />
+                            الكمية المتوفرة
+                          </label>
+                          <div className="admin-pe-stepper">
+                            <button
+                              type="button"
+                              aria-label="إنقاص"
+                              className="admin-pe-stepper-btn"
+                              onClick={() =>
+                                setField(
+                                  "stockQuantity",
+                                  String(Math.max(0, stockQty - 1)),
+                                )
+                              }
+                            >
+                              <Minus size={15} strokeWidth={2} />
+                            </button>
+                            <input
+                              id="p-stock"
+                              type="number"
+                              min="0"
+                              step="1"
+                              inputMode="numeric"
+                              value={form.stockQuantity}
+                              onChange={(e) =>
+                                setField("stockQuantity", e.target.value)
+                              }
+                            />
+                            <button
+                              type="button"
+                              aria-label="زيادة"
+                              className="admin-pe-stepper-btn"
+                              onClick={() =>
+                                setField("stockQuantity", String(stockQty + 1))
+                              }
+                            >
+                              <Plus size={15} strokeWidth={2} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="admin-pe-compact-row">
+                          <div>
+                            <label className="admin-pe-label" htmlFor="p-min">
+                              الحد الأدنى للمخزون
+                            </label>
+                            <input
+                              id="p-min"
+                              type="number"
+                              min="0"
+                              step="1"
+                              inputMode="numeric"
+                              className="admin-pe-input"
+                              value={form.minimumStock}
+                              onChange={(e) =>
+                                setField("minimumStock", e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="admin-pe-label" htmlFor="p-status">
+                              حالة المنتج
+                            </label>
+                            <div className="admin-pe-status">
+                              <span
+                                className={
+                                  form.status === "active"
+                                    ? "admin-pe-status-dot is-active"
+                                    : "admin-pe-status-dot"
+                                }
+                              />
+                              <select
+                                id="p-status"
+                                className="admin-pe-input"
+                                value={form.status}
+                                onChange={(e) =>
+                                  setField(
+                                    "status",
+                                    e.target.value as ProductStatus,
+                                  )
+                                }
+                              >
+                                <option value="active">نشط</option>
+                                <option value="draft">غير نشط</option>
+                                <option value="archived">مؤرشف</option>
+                                <option value="out_of_stock">غير متوفر</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="admin-pe-meta">
+                          <span
+                            className={
+                              form.status === "active"
+                                ? "admin-pe-pill is-active"
+                                : "admin-pe-pill"
+                            }
+                          >
+                            {statusLabel(form.status)}
+                          </span>
+                          {updatedLabel ? (
+                            <span className="admin-pe-meta-updated">
+                              <Calendar size={13} strokeWidth={1.5} />
+                              آخر تحديث: {updatedLabel}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-selling">
-                        <Wallet size={13} strokeWidth={1.7} />
-                        سعر البيع (₪)
-                      </label>
-                      <input
-                        id="p-selling"
-                        type="number"
-                        min="0"
-                        step="1"
-                        className="admin-pe-input"
-                        value={form.sellingPrice}
-                        onChange={(e) =>
-                          setField("sellingPrice", e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-stock">
-                        <Package size={13} strokeWidth={1.7} />
-                        الكمية المتوفرة
-                      </label>
-                      <div className="admin-pe-stepper">
-                        <button
-                          type="button"
-                          aria-label="إنقاص"
-                          className="admin-pe-stepper-btn"
-                          onClick={() =>
-                            setField(
-                              "stockQuantity",
-                              String(Math.max(0, stockQty - 1)),
-                            )
-                          }
-                        >
-                          <Minus size={15} strokeWidth={2} />
-                        </button>
-                        <input
-                          id="p-stock"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="numeric"
-                          value={form.stockQuantity}
-                          onChange={(e) =>
-                            setField("stockQuantity", e.target.value)
-                          }
-                        />
-                        <button
-                          type="button"
-                          aria-label="زيادة"
-                          className="admin-pe-stepper-btn"
-                          onClick={() =>
-                            setField("stockQuantity", String(stockQty + 1))
-                          }
-                        >
-                          <Plus size={15} strokeWidth={2} />
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-min">
-                        الحد الأدنى للمخزون
-                      </label>
-                      <input
-                        id="p-min"
-                        type="number"
-                        min="0"
-                        step="1"
-                        inputMode="numeric"
-                        className="admin-pe-input"
-                        value={form.minimumStock}
-                        onChange={(e) =>
-                          setField("minimumStock", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="admin-pe-label" htmlFor="p-status">
-                        حالة المنتج
-                      </label>
-                      <div className="admin-pe-status">
-                        <span
-                          className={
-                            form.status === "active"
-                              ? "admin-pe-status-dot is-active"
-                              : "admin-pe-status-dot"
-                          }
-                        />
-                        <select
-                          id="p-status"
-                          className="admin-pe-input"
-                          value={form.status}
-                          onChange={(e) =>
-                            setField(
-                              "status",
-                              e.target.value as ProductStatus,
-                            )
-                          }
-                        >
-                          <option value="active">نشط</option>
-                          <option value="draft">غير نشط</option>
-                          <option value="archived">مؤرشف</option>
-                          <option value="out_of_stock">غير متوفر</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="admin-pe-meta">
-                      <span
-                        className={
-                          form.status === "active"
-                            ? "admin-pe-pill is-active"
-                            : "admin-pe-pill"
-                        }
-                      >
-                        {statusLabel(form.status)}
-                      </span>
-                      {updatedLabel ? (
-                        <span className="admin-pe-meta-updated">
-                          <Calendar size={13} strokeWidth={1.5} />
-                          آخر تحديث: {updatedLabel}
-                        </span>
-                      ) : null}
-                    </div>
                     </div>
                   </div>
 
@@ -767,11 +933,7 @@ export default function AdminInventoryPage() {
                         type="button"
                         onClick={() => void onDelete(editing)}
                         className="flex items-center justify-center gap-1.5"
-                        style={{
-                          ...dangerOutlineBtn,
-                          height: 42,
-                          fontSize: "0.8rem",
-                        }}
+                        style={dangerOutlineBtn}
                       >
                         <Trash2 size={14} strokeWidth={1.55} />
                         حذف المنتج
@@ -783,11 +945,7 @@ export default function AdminInventoryPage() {
                         onClick={() => void onSubmit()}
                         disabled={saving}
                         className="flex items-center justify-center gap-1.5 disabled:opacity-50"
-                        style={{
-                          ...outlineGoldBtn,
-                          height: 42,
-                          fontSize: "0.8rem",
-                        }}
+                        style={outlineGoldBtn}
                       >
                         <Save size={14} strokeWidth={1.7} />
                         {saving ? "جارٍ الحفظ…" : "حفظ التغييرات"}
@@ -798,11 +956,7 @@ export default function AdminInventoryPage() {
                       onClick={() => goTab("images")}
                       disabled={saving}
                       className="flex items-center justify-center gap-1.5 disabled:opacity-50"
-                      style={{
-                        ...goldBtn,
-                        height: 42,
-                        fontSize: "0.8rem",
-                      }}
+                      style={goldBtn}
                     >
                       التالي
                       <ChevronLeft size={15} strokeWidth={2} />
@@ -821,15 +975,22 @@ export default function AdminInventoryPage() {
                     <p className="admin-pe-lead">يمكنك إضافة حتى 6 صور</p>
                     <ProductImagesField
                       images={form.images}
-                      onChange={(images) => setField("images", images)}
+                      imageFocals={form.imageFocals}
+                      onChange={(images, focals) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          images,
+                          imageFocals: focals || prev.imageFocals,
+                        }))
+                      }
                     />
                   </div>
 
-                  <div className="flex gap-2.5">
+                  <div className="admin-pe-step1-actions">
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex flex-1 items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 disabled:opacity-50"
                       style={goldBtn}
                     >
                       <Save size={16} strokeWidth={1.7} />
@@ -842,7 +1003,7 @@ export default function AdminInventoryPage() {
                     <button
                       type="button"
                       onClick={() => goTab("details")}
-                      className="flex flex-1 items-center justify-center gap-1.5"
+                      className="flex items-center justify-center gap-1.5"
                       style={outlineGoldBtn}
                     >
                       <ChevronRight size={16} strokeWidth={2} />

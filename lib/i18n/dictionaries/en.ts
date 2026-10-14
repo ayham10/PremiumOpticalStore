@@ -103,6 +103,11 @@ export type Dictionary = {
     frame: string;
     lens: string;
     sku: string;
+    productNumber: string;
+    barcode: string;
+    frameSize: string;
+    available: string;
+    unavailable: string;
     availability: string;
     bookConsultation: string;
     whatsapp: string;
@@ -680,6 +685,11 @@ const en: Dictionary = {
     frame: "Frame",
     lens: "Lens",
     sku: "SKU",
+    productNumber: "Product number",
+    barcode: "Barcode",
+    frameSize: "Size",
+    available: "Available",
+    unavailable: "Unavailable",
     availability: "Availability",
     bookConsultation: "Book Consultation",
     whatsapp: "WhatsApp inquire",
@@ -2224,6 +2234,11 @@ const en: Dictionary = {
       productCount: "{count} products",
       productType: "Product type",
       extraCategories: "Additional categories",
+      promotions: "Promotions (optional)",
+      promotionsPlaceholder: "Select promotions",
+      promotionsSelected: "Selected promotions",
+      promotionsEmpty: "No product-specific promotions yet",
+      promoInactive: "Inactive",
       allCategories: "All categories",
       selected: "Selected categories",
       noneSelected: "No additional categories selected",

@@ -29,6 +29,7 @@ import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import SingleImageField from "@/components/admin/SingleImageField";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
+import { invalidatePublicCache } from "@/lib/public-data-cache";
 import { hasPermission } from "@/lib/admin-permissions";
 import { cn, formatPrice } from "@/lib/format";
 import type {
@@ -301,6 +302,8 @@ export default function AdminPromotionsPage() {
         setItems((prev) => [row, ...prev]);
         notifySaved();
       }
+      invalidatePublicCache("products:");
+      invalidatePublicCache("product:");
       setModalOpen(false);
     } catch (err) {
       setMessage(
@@ -324,6 +327,8 @@ export default function AdminPromotionsPage() {
         method: "DELETE",
       });
       setItems((prev) => prev.filter((x) => x.id !== p.id));
+      invalidatePublicCache("products:");
+      invalidatePublicCache("product:");
       setMessage(t("admin.promotions.deleted"));
     } catch (err) {
       setMessage(

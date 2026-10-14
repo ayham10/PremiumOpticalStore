@@ -5,14 +5,22 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice, productPublicKey } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { productPublicKey } from "@/lib/format";
 import type { Product } from "@/lib/types";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import { useCategoryDefaultImages } from "@/lib/use-category-default-images";
 
 type RelatedItem = Pick<
   Product,
-  "id" | "slug" | "name" | "images" | "sellingPrice" | "category"
+  | "id"
+  | "slug"
+  | "name"
+  | "images"
+  | "sellingPrice"
+  | "discountedPrice"
+  | "imageFocals"
+  | "category"
 >;
 
 export default function RelatedProductsCarousel({
@@ -125,6 +133,7 @@ export default function RelatedProductsCarousel({
                   className="object-cover"
                   loading="lazy"
                   quality={70}
+                  style={productImageStyle(product.imageFocals?.[0])}
                 />
               </SaveReturnLink>
               <div className="product-related-body">
@@ -136,9 +145,11 @@ export default function RelatedProductsCarousel({
                   {product.name}
                 </SaveReturnLink>
                 <strong className="product-related-price">
-                  {formatPrice(product.sellingPrice, {
-                    currencySymbol: currencySymbol || "₪",
-                  })}
+                  <CatalogPrice
+                    sellingPrice={product.sellingPrice}
+                    discountedPrice={product.discountedPrice}
+                    currencySymbol={currencySymbol || "₪"}
+                  />
                 </strong>
               </div>
             </article>

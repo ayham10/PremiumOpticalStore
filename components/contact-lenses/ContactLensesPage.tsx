@@ -5,11 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertTriangle, CalendarCheck2 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice, productPublicKey } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { productPublicKey } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
-import { productDisplayImage } from "@/lib/product-images";
+import { productDisplayImage, productImageStyle } from "@/lib/product-images";
 import {
   CONTACT_LENSES_DEFAULT_FEATURE_ICONS,
   resolveServiceFeatureIcon,
@@ -48,6 +49,7 @@ function ContactLensCard({ product }: { product: Product }) {
           sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw"
           className="object-contain"
           loading="lazy"
+          style={productImageStyle(product.imageFocals?.[0])}
         />
       </Link>
       <div className="frames-product-body">
@@ -56,9 +58,11 @@ function ContactLensCard({ product }: { product: Product }) {
           {product.name}
         </Link>
         <div className="frames-product-meta">
-          <strong className="frames-product-price">
-            {formatPrice(product.sellingPrice)}
-          </strong>
+          <CatalogPrice
+            className="frames-product-price"
+            sellingPrice={product.sellingPrice}
+            discountedPrice={product.discountedPrice}
+          />
           <Link href={href} className="frames-product-view">
             {t("shop.view")}
           </Link>
