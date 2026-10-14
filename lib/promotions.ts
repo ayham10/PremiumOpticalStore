@@ -1,4 +1,5 @@
 import { isPromotionActive } from "@/lib/appointments";
+import { withProductLocale } from "@/lib/product-i18n";
 import { storefrontProductImages } from "@/lib/product-images";
 import { computeDiscountedPrice } from "@/lib/promo-price";
 import { SEED_PROMOTION_IDS, SEED_PROMOTIONS } from "@/lib/seed";
@@ -129,15 +130,20 @@ export function buildPromoSlides(
   promotions: Promotion[],
   products: Product[],
   defaults?: CategoryDefaultImages | null,
+  locale?: string,
 ): PromoSlideData[] {
   const activePromos = publicPromotions(promotions);
 
   const activeProducts = products
     .filter((p) => p.status === "active")
-    .map((p) => ({
-      ...p,
-      images: storefrontProductImages(p, defaults),
-    }))
+    .map((p) => {
+      const localized = withProductLocale(p, locale);
+      const { locales: _locales, i18nSource: _source, ...rest } = localized;
+      return {
+        ...rest,
+        images: storefrontProductImages(p, defaults),
+      };
+    })
     .sort((a, b) => {
       const af = a.featured ? 0 : 1;
       const bf = b.featured ? 0 : 1;

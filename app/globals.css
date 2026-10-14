@@ -13626,6 +13626,14 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 }
 
 /* Admin products list — compact dark/gold cards + toolbar */
+.admin-products-langs {
+  margin: 0 0 14px;
+}
+
+.admin-pe-langs {
+  margin: 0 0 16px;
+}
+
 .admin-products-toolbar {
   display: flex;
   flex-wrap: wrap;

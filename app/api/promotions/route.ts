@@ -108,6 +108,7 @@ export async function GET(request: Request) {
         data.promotions,
         data.products,
         mergeCategoryDefaultImages(data.settings?.categoryDefaultImages),
+        searchParams.get("locale") || "",
       );
       return NextResponse.json(
         { slides },

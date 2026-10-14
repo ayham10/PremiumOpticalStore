@@ -2240,6 +2240,10 @@ const en: Dictionary = {
       promotionsEmpty: "No product-specific promotions yet",
       promoInactive: "Inactive",
       allCategories: "All categories",
+      contentLanguages: "Product languages",
+      overwriteManual:
+        "This language has a manually corrected translation. Overwrite the machine copy for the other languages?",
+      translating: "Translating…",
       selected: "Selected categories",
       noneSelected: "No additional categories selected",
       search: "Search categories…",

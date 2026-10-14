@@ -186,8 +186,8 @@ export default function CategoryCatalogue({
   heroMedia,
   heroSectionId,
 }: CategoryCatalogueProps) {
-  const { t } = useLocale();
-  const cacheKey = productsCacheKey(categories);
+  const { t, locale } = useLocale();
+  const cacheKey = productsCacheKey(categories, locale);
   const cached = peekPublicCache<{ products: Product[] }>(cacheKey);
   const [products, setProducts] = useState<Product[]>(cached?.products || []);
   const [loading, setLoading] = useState(!cached);
@@ -305,6 +305,7 @@ export default function CategoryCatalogue({
     for (const category of categories) {
       params.append("category", category);
     }
+    params.set("locale", locale);
     const url = `/api/products?${params.toString()}`;
 
     (async () => {

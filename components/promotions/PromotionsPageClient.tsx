@@ -4,30 +4,31 @@ import { useEffect, useState } from "react";
 import PromotionsExperience, {
   type PromoSlide,
 } from "@/components/promotions/PromotionsExperience";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
   cachedJsonFetch,
   peekPublicCache,
   promotionsSlidesCacheKey,
 } from "@/lib/public-data-cache";
 
-const CACHE_KEY = promotionsSlidesCacheKey();
-
 export default function PromotionsPageClient() {
-  const cached = peekPublicCache<{ slides: PromoSlide[] }>(CACHE_KEY);
+  const { locale } = useLocale();
+  const cacheKey = promotionsSlidesCacheKey(locale);
+  const cached = peekPublicCache<{ slides: PromoSlide[] }>(cacheKey);
   const [slides, setSlides] = useState<PromoSlide[]>(cached?.slides || []);
   const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
     let cancelled = false;
-    const hit = peekPublicCache<{ slides: PromoSlide[] }>(CACHE_KEY);
+    const hit = peekPublicCache<{ slides: PromoSlide[] }>(cacheKey);
     if (hit?.slides) {
       setSlides(hit.slides);
       setLoading(false);
     }
 
     cachedJsonFetch<{ slides: PromoSlide[] }>(
-      CACHE_KEY,
-      "/api/promotions?slides=1",
+      cacheKey,
+      `/api/promotions?slides=1&locale=${encodeURIComponent(locale)}`,
       { ttlMs: 60_000 },
     )
       .then((data) => {
@@ -46,7 +47,7 @@ export default function PromotionsPageClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cacheKey, locale]);
 
   if (loading && slides.length === 0) {
     return (

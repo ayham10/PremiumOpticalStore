@@ -1859,6 +1859,10 @@ const he: Dictionary = {
       promotionsEmpty: "אין מבצעים למוצרים ספציפיים",
       promoInactive: "לא פעיל",
       allCategories: "כל הקטגוריות",
+      contentLanguages: "שפות המוצר",
+      overwriteManual:
+        "קיים תרגום שעודכן ידנית. האם לדרוס את התרגומים האוטומטיים בשפות האחרות?",
+      translating: "מתרגם…",
       selected: "קטגוריות נבחרות",
       noneSelected: "לא נבחרו קטגוריות נוספות",
       search: "חיפוש קטגוריות…",

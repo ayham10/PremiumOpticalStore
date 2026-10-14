@@ -54,7 +54,7 @@ function ShopContent() {
           categoryDefaultImages?: CategoryDefaultImages;
           catalogCategories?: PublicCategory[];
         }>(
-          productsCacheKey(["__all__", locale]),
+          productsCacheKey(["__all__"], locale),
           `/api/products?locale=${encodeURIComponent(locale)}`,
           { ttlMs: 60_000 },
         );

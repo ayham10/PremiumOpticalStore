@@ -25,11 +25,20 @@ import {
 } from "@/lib/catalog-categories";
 import { sanitizeBarcode, sanitizeFrameSize, sanitizeProductColor } from "@/lib/product-fields";
 import {
+  applyProductTranslations,
+  ManualTranslationError,
+  MANUAL_TRANSLATIONS_CODE,
+  productSearchText,
+  sanitizeProductLocales,
+  withProductLocale,
+} from "@/lib/product-i18n";
+import {
   ensureProductNumbers,
   resolveProductNumber,
   uniqueProductSlug,
 } from "@/lib/product-number";
 import { productDiscountedPrice } from "@/lib/promotions";
+import { isLocale, type Locale } from "@/lib/i18n/config";
 import type {
   CatalogCategory,
   CategoryDefaultImages,
@@ -50,14 +59,21 @@ function withCatalogPrice(p: Product, promotions: Promotion[]): Product {
   return { ...p, discountedPrice };
 }
 
+function localizePublicProduct(p: Product, locale?: string): Product {
+  const localized = withProductLocale(p, locale);
+  const { locales: _locales, i18nSource: _source, ...rest } = localized;
+  return rest;
+}
+
 function toListProduct(
   p: Product,
   defaults?: CategoryDefaultImages,
   catalogCategories?: CatalogCategory[],
   promotions: Promotion[] = [],
+  locale?: string,
 ) {
   const images = storefrontProductImages(p, defaults);
-  const priced = withCatalogPrice(p, promotions);
+  const priced = withCatalogPrice(localizePublicProduct(p, locale), promotions);
   return {
     id: priced.id,
     slug: priced.slug,
@@ -92,9 +108,10 @@ function toPublicProduct(
   defaults?: CategoryDefaultImages,
   catalogCategories?: CatalogCategory[],
   promotions: Promotion[] = [],
+  locale?: string,
 ): Product {
-  const priced = withCatalogPrice(p, promotions);
-  const images = storefrontProductImages(priced, defaults);
+  const priced = withCatalogPrice(localizePublicProduct(p, locale), promotions);
+  const images = storefrontProductImages(p, defaults);
   return {
     ...priced,
     images,
@@ -104,6 +121,51 @@ function toPublicProduct(
     categoryIds: catalogCategories
       ? publicProductCategoryIds(priced, catalogCategories)
       : productCatalogIds(priced),
+  };
+}
+
+type ProductWriteBody = Partial<Product> & {
+  skuManual?: boolean;
+  promotionIds?: string[];
+  locale?: string;
+  overwriteManual?: boolean;
+  locales?: unknown;
+};
+
+function requestSourceLocale(body: ProductWriteBody): Locale {
+  return isLocale(body.locale) ? body.locale : "ar";
+}
+
+async function attachProductI18n(
+  fields: Omit<Product, "id" | "createdAt" | "updatedAt">,
+  body: ProductWriteBody,
+  existing?: Product,
+): Promise<Omit<Product, "id" | "createdAt" | "updatedAt">> {
+  if (existing && !isLocale(body.locale) && body.locales === undefined) {
+    return {
+      ...fields,
+      locales: existing.locales,
+      i18nSource: existing.i18nSource,
+    };
+  }
+  const i18n = await applyProductTranslations({
+    existing,
+    sourceLocale: requestSourceLocale(body),
+    fields: {
+      name: fields.name,
+      description: fields.description,
+      color: fields.color,
+    },
+    drafts: sanitizeProductLocales(body.locales),
+    overwriteManual: body.overwriteManual === true,
+  });
+  return {
+    ...fields,
+    name: i18n.name,
+    description: i18n.description,
+    color: i18n.color,
+    locales: i18n.locales,
+    i18nSource: i18n.i18nSource,
   };
 }
 
@@ -231,6 +293,7 @@ export async function GET(request: Request) {
     const slug = searchParams.get("slug")?.trim() || "";
     const q = searchParams.get("q")?.trim().toLowerCase() || "";
     const all = searchParams.get("all") === "1";
+    const localeParam = searchParams.get("locale") || "";
     const categoryParams = [
       ...searchParams.getAll("category"),
       ...(searchParams.get("categories")?.split(",") || []),
@@ -291,10 +354,18 @@ export async function GET(request: Request) {
                 (p.status === "active" || p.status === "out_of_stock"),
             )
             .slice(0, 8)
-            .map((p) => toListProduct(p, defaults, catalogCategories, data.promotions))
+            .map((p) =>
+              toListProduct(p, defaults, catalogCategories, data.promotions, localeParam),
+            )
         : [];
       const publicProduct = product
-        ? toPublicProduct(product, defaults, catalogCategories, data.promotions)
+        ? toPublicProduct(
+            product,
+            defaults,
+            catalogCategories,
+            data.promotions,
+            localeParam,
+          )
         : null;
       return NextResponse.json(
         {
@@ -336,13 +407,11 @@ export async function GET(request: Request) {
     if (q) {
       products = products.filter((p) =>
         [
-          p.name,
+          productSearchText(p),
           p.brand,
           p.sku,
           p.barcode,
-          p.color,
           p.frameSize,
-          p.description,
           p.category,
           ...(p.categoryIds || []),
         ]
@@ -355,7 +424,9 @@ export async function GET(request: Request) {
     const numbered = ensureProductNumbers(products);
     const payload = fullRecords
       ? numbered.map((p) => withCatalogPrice(p, data.promotions))
-      : numbered.map((p) => toListProduct(p, defaults, catalogCategories, data.promotions));
+      : numbered.map((p) =>
+          toListProduct(p, defaults, catalogCategories, data.promotions, localeParam),
+        );
 
     return NextResponse.json(
       {
@@ -383,10 +454,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await requireSession("inventory");
-    const body = (await request.json()) as Partial<Product> & {
-      skuManual?: boolean;
-      promotionIds?: string[];
-    };
+    const body = (await request.json()) as ProductWriteBody;
     const { data: current } = await getStore();
     const knownIds = new Set(
       mergeCatalogCategories(current.catalogCategories).map((item) => item.id),
@@ -395,6 +463,7 @@ export async function POST(request: Request) {
     if (!fields) {
       return jsonError("Invalid product payload", 400);
     }
+    const localized = await attachProductI18n(fields, body);
 
     const now = new Date().toISOString();
     const productId = newId("prod");
@@ -404,7 +473,7 @@ export async function POST(request: Request) {
       let finished: Omit<Product, "id" | "createdAt" | "updatedAt">;
       try {
         finished = finishProductFields(
-          fields,
+          localized,
           store.products,
           undefined,
           body.skuManual !== true,
@@ -442,6 +511,12 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof ManualTranslationError) {
+      return jsonError("تأكيد الكتابة فوق الترجمة اليدوية", 409, {
+        code: MANUAL_TRANSLATIONS_CODE,
+        fields: error.fields,
+      });
+    }
     if (error instanceof Error && error.message === "PRODUCT_NUMBER_TAKEN") {
       return jsonError("رقم المنتج مستخدم بالفعل", 409);
     }
@@ -452,15 +527,25 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const session = await requireSession("inventory");
-    const body = (await request.json()) as Partial<Product> & {
-      id?: string;
-      skuManual?: boolean;
-      promotionIds?: string[];
-    };
+    const body = (await request.json()) as ProductWriteBody & { id?: string };
 
     if (!body.id) {
       return jsonError("Product id is required", 400);
     }
+
+    const { data: current } = await getStore();
+    const existing = current.products.find((p) => p.id === body.id);
+    if (!existing) {
+      return jsonError("Product not found", 404);
+    }
+    const knownIds = new Set(
+      mergeCatalogCategories(current.catalogCategories).map((item) => item.id),
+    );
+    const fields = sanitizeProductInput(body, existing, knownIds);
+    if (!fields) {
+      return jsonError("Invalid product payload", 400);
+    }
+    const localized = await attachProductI18n(fields, body, existing);
 
     let updated: Product | null = null;
 
@@ -469,16 +554,10 @@ export async function PUT(request: Request) {
       const index = store.products.findIndex((p) => p.id === body.id);
       if (index < 0) throw new Error("NOT_FOUND");
 
-      const knownIds = new Set(
-        mergeCatalogCategories(store.catalogCategories).map((item) => item.id),
-      );
-      const fields = sanitizeProductInput(body, store.products[index], knownIds);
-      if (!fields) throw new Error("INVALID");
-
       let finished: Omit<Product, "id" | "createdAt" | "updatedAt">;
       try {
         finished = finishProductFields(
-          { ...fields, slug: store.products[index].slug },
+          { ...localized, slug: store.products[index].slug },
           store.products,
           body.id,
           body.skuManual !== true,
@@ -516,6 +595,12 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ product: updated });
   } catch (error) {
+    if (error instanceof ManualTranslationError) {
+      return jsonError("تأكيد الكتابة فوق الترجمة اليدوية", 409, {
+        code: MANUAL_TRANSLATIONS_CODE,
+        fields: error.fields,
+      });
+    }
     if (error instanceof Error) {
       if (error.message === "NOT_FOUND") return jsonError("Product not found", 404);
       if (error.message === "INVALID") return jsonError("Invalid product payload", 400);

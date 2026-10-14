@@ -93,12 +93,13 @@ export async function cachedJsonFetch<T>(
   }
 }
 
-export function productsCacheKey(categories: string[]): string {
-  return `products:${[...categories].sort().join(",")}`;
+export function productsCacheKey(categories: string[], locale?: string): string {
+  const loc = locale || "";
+  return `products:${loc}:${[...categories].sort().join(",")}`;
 }
 
-export function productSlugCacheKey(slug: string): string {
-  return `product:${slug}`;
+export function productSlugCacheKey(slug: string, locale?: string): string {
+  return `product:${locale || ""}:${slug}`;
 }
 
 export function bookingDatesCacheKey(type: string): string {
@@ -113,6 +114,6 @@ export function bookingServicesCacheKey(locale: string): string {
   return `booking-services:${locale}`;
 }
 
-export function promotionsSlidesCacheKey(): string {
-  return "promotions:slides";
+export function promotionsSlidesCacheKey(locale?: string): string {
+  return `promotions:slides:${locale || ""}`;
 }

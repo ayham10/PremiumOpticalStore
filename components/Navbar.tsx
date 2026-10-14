@@ -126,16 +126,16 @@ export default function Navbar() {
     const warm = () => {
       if (cancelled) return;
       void cachedJsonFetch(
-        productsCacheKey(["Frames", "Prescription Glasses"]),
-        "/api/products?category=Frames&category=Prescription%20Glasses",
+        productsCacheKey(["Frames", "Prescription Glasses"], locale),
+        `/api/products?category=Frames&category=Prescription%20Glasses&locale=${encodeURIComponent(locale)}`,
       ).catch(() => undefined);
       void cachedJsonFetch(
-        productsCacheKey(["Sunglasses"]),
-        "/api/products?category=Sunglasses",
+        productsCacheKey(["Sunglasses"], locale),
+        `/api/products?category=Sunglasses&locale=${encodeURIComponent(locale)}`,
       ).catch(() => undefined);
       void cachedJsonFetch(
-        promotionsSlidesCacheKey(),
-        "/api/promotions?slides=1",
+        promotionsSlidesCacheKey(locale),
+        `/api/promotions?slides=1&locale=${encodeURIComponent(locale)}`,
       ).catch(() => undefined);
     };
 
@@ -154,7 +154,7 @@ export default function Navbar() {
       }
       if (timeoutId != null) window.clearTimeout(timeoutId);
     };
-  }, [router]);
+  }, [router, locale]);
 
   useEffect(() => {
     document.body.classList.toggle("has-mobile-nav-open", open);
