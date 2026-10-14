@@ -6,7 +6,7 @@ import Link from "next/link";
 import RelatedProductsCarousel from "@/components/product/RelatedProductsCarousel";
 import ProductBackButton from "@/components/navigation/ProductBackButton";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
 import {
   cachedJsonFetch,
   peekPublicCache,
@@ -216,9 +216,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <h1 className="product-name">{product.name}</h1>
             <p className="product-category">{categoryLabel}</p>
             <p className="product-price">
-              {formatPrice(product.sellingPrice, {
-                currencySymbol: settings?.currencySymbol || "₪",
-              })}
+              <CatalogPrice
+                sellingPrice={product.sellingPrice}
+                discountedPrice={product.discountedPrice}
+                currencySymbol={settings?.currencySymbol || "₪"}
+              />
             </p>
             {product.status === "out_of_stock" ? (
               <span className="product-stock-pill">

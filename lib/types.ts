@@ -225,7 +225,17 @@ export interface Product {
   /** Lenses per box — shown for contact lenses when provided */
   packageQuantity?: number;
   barcode?: string;
+  /** Visible, editable product number (e.g. RB-24). Relationships use `id`. */
   sku: string;
+  /** Optional color, stored exactly as entered (Arabic / English / Hebrew). */
+  color?: string;
+  /** Optional frame size, normalized like 52-018. */
+  frameSize?: string;
+  /**
+   * Catalog-only discounted selling price when a promotion applies.
+   * Never persisted; original `sellingPrice` is unchanged.
+   */
+  discountedPrice?: number;
   description: string;
   images: string[];
   purchasePrice: number;

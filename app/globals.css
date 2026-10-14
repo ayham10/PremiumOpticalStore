@@ -6418,6 +6418,24 @@ html[dir="rtl"] .catalogue-sort-select {
   letter-spacing: 0.01em;
 }
 
+.catalog-price {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.catalog-price-was {
+  color: var(--muted, #8a9199);
+  font-weight: 500;
+  text-decoration: line-through;
+}
+
+.catalog-price-now {
+  color: inherit;
+  font-weight: 800;
+}
+
 @media (min-width: 768px) {
   .frames-product-price {
     font-size: 1.08rem;
@@ -15003,7 +15021,7 @@ select.admin-pe-input {
   }
 
   .admin-pe-editor {
-    max-width: 720px;
+    max-width: 1120px;
   }
 
   .admin-pe-tab {
@@ -15020,8 +15038,78 @@ select.admin-pe-input {
 
 .admin-pe-editor {
   width: 100%;
-  max-width: 430px;
+  max-width: 1120px;
   margin-inline: auto;
+}
+
+.admin-pe-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-pe-compact-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.admin-peek {
+  position: relative;
+}
+
+.admin-peek-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-border-gold, #2a2f36);
+  background: rgba(11, 14, 20, 0.72);
+  color: #f5f1e8;
+  font-size: 0.84rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.admin-peek-trigger svg {
+  flex-shrink: 0;
+  color: #d4af37;
+}
+
+.admin-peek-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-peek-menu {
+  position: absolute;
+  z-index: 30;
+  inset-inline: 0;
+  top: calc(100% + 6px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 220px;
+  overflow: auto;
+  padding: 0.45rem;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: #151a21;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 900px) {
+  .admin-pe-grid {
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  }
 }
 
 .admin-pe-header {

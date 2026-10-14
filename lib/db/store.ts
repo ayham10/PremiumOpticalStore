@@ -195,8 +195,17 @@ function mergeMissingSeedProducts(existing: AppData["products"]) {
   return missing.length ? [...existing, ...missing] : existing;
 }
 
+function stripComputedProductFields(products: AppData["products"]): AppData["products"] {
+  return products.map((product) => {
+    const { discountedPrice: _ignored, ...rest } = product;
+    return rest;
+  });
+}
+
 function normalizeData(data: AppData): AppData {
-  const products = mergeMissingSeedProducts(data.products ?? []);
+  const products = stripComputedProductFields(
+    mergeMissingSeedProducts(data.products ?? []),
+  );
   const eyeExamAppointments = (data.eyeExamAppointments ?? []).map((a) => {
     const type = a.appointmentType;
     const appointmentType =

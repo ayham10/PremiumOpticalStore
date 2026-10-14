@@ -1,7 +1,10 @@
 import { isPromotionActive } from "@/lib/appointments";
 import { storefrontProductImages } from "@/lib/product-images";
+import { computeDiscountedPrice } from "@/lib/promo-price";
 import { SEED_PROMOTION_IDS, SEED_PROMOTIONS } from "@/lib/seed";
 import type { CategoryDefaultImages, Product, Promotion } from "@/lib/types";
+
+export { computeDiscountedPrice } from "@/lib/promo-price";
 
 export type PromoSlideData = {
   promotion: Promotion;
@@ -90,6 +93,36 @@ export function productsForPromotion(
     );
   }
   return products;
+}
+
+export function productMatchesPromotion(
+  product: Product,
+  promo: Promotion,
+): boolean {
+  return productsForPromotion(promo, [product]).length > 0;
+}
+
+/** First matching public promotion by existing priority, then start date. Does not stack. */
+export function bestPromotionForProduct(
+  product: Product,
+  promotions: Promotion[],
+): Promotion | null {
+  if (product.status === "archived" || product.status === "draft") return null;
+  for (const promo of publicPromotions(promotions)) {
+    if (productMatchesPromotion(product, promo)) return promo;
+  }
+  return null;
+}
+
+export function productDiscountedPrice(
+  product: Pick<Product, "sellingPrice" | "status" | "category" | "id">,
+  promotions: Promotion[],
+): number | undefined {
+  const promo = bestPromotionForProduct(product as Product, promotions);
+  if (!promo) return undefined;
+  const next = computeDiscountedPrice(product.sellingPrice, promo);
+  if (next >= product.sellingPrice) return undefined;
+  return next;
 }
 
 export function buildPromoSlides(

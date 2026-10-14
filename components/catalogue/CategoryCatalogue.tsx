@@ -17,7 +17,8 @@ import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import SaveReturnLink from "@/components/navigation/SaveReturnLink";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice, productPublicKey } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { productPublicKey } from "@/lib/format";
 import {
   cachedJsonFetch,
   peekPublicCache,
@@ -35,12 +36,18 @@ import type { CustomPageMediaRef } from "@/lib/types";
 
 export type CatalogueSort = "newest" | "price-asc" | "price-desc";
 
+function catalogPrice(product: Product): number {
+  return product.discountedPrice != null && product.discountedPrice < product.sellingPrice
+    ? product.discountedPrice
+    : product.sellingPrice;
+}
+
 export function sortProducts(items: Product[], sort: CatalogueSort): Product[] {
   const next = [...items];
   if (sort === "price-asc") {
-    next.sort((a, b) => a.sellingPrice - b.sellingPrice);
+    next.sort((a, b) => catalogPrice(a) - catalogPrice(b));
   } else if (sort === "price-desc") {
-    next.sort((a, b) => b.sellingPrice - a.sellingPrice);
+    next.sort((a, b) => catalogPrice(b) - catalogPrice(a));
   } else {
     next.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
@@ -102,9 +109,11 @@ export function CatalogueProductCard({ product }: { product: Product }) {
           {product.name}
         </SaveReturnLink>
         <div className="frames-product-meta">
-          <strong className="frames-product-price">
-            {formatPrice(product.sellingPrice)}
-          </strong>
+          <CatalogPrice
+            className="frames-product-price"
+            sellingPrice={product.sellingPrice}
+            discountedPrice={product.discountedPrice}
+          />
           <button
             type="button"
             className={`frames-product-wish${saved ? " is-active" : ""}`}

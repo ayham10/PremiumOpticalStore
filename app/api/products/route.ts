@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { newId, requireSession } from "@/lib/auth";
 import { getStore, updateStore } from "@/lib/db/store";
-import { slugify } from "@/lib/format";
 import {
   handleRouteError,
   jsonError,
@@ -22,37 +21,59 @@ import {
   sanitizeCategoryIds,
   toPublicCategory,
 } from "@/lib/catalog-categories";
+import { sanitizeBarcode, sanitizeFrameSize, sanitizeProductColor } from "@/lib/product-fields";
+import {
+  ensureProductNumbers,
+  resolveProductNumber,
+  uniqueProductSlug,
+} from "@/lib/product-number";
+import { productDiscountedPrice } from "@/lib/promotions";
 import type {
   CatalogCategory,
   CategoryDefaultImages,
   Product,
   ProductStatus,
+  Promotion,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 /** Card/list DTO — omit gallery, costs, and inventory fields. */
+function withCatalogPrice(p: Product, promotions: Promotion[]): Product {
+  const discountedPrice = productDiscountedPrice(p, promotions);
+  if (discountedPrice == null) {
+    const { discountedPrice: _drop, ...rest } = p;
+    return rest;
+  }
+  return { ...p, discountedPrice };
+}
+
 function toListProduct(
   p: Product,
   defaults?: CategoryDefaultImages,
   catalogCategories?: CatalogCategory[],
+  promotions: Promotion[] = [],
 ) {
   const images = storefrontProductImages(p, defaults);
+  const priced = withCatalogPrice(p, promotions);
   return {
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    brand: p.brand,
-    sellingPrice: p.sellingPrice,
-    status: p.status,
-    category: p.category,
+    id: priced.id,
+    slug: priced.slug,
+    name: priced.name,
+    brand: priced.brand,
+    sellingPrice: priced.sellingPrice,
+    discountedPrice: priced.discountedPrice,
+    status: priced.status,
+    category: priced.category,
     categoryIds: catalogCategories
-      ? publicProductCategoryIds(p, catalogCategories)
-      : productCatalogIds(p),
-    createdAt: p.createdAt,
-    featured: p.featured,
+      ? publicProductCategoryIds(priced, catalogCategories)
+      : productCatalogIds(priced),
+    createdAt: priced.createdAt,
+    featured: priced.featured,
     images: images[0] ? [images[0]] : [],
-    ...(p.lensType ? { lensType: p.lensType } : {}),
+    ...(priced.lensType ? { lensType: priced.lensType } : {}),
+    ...(priced.color ? { color: priced.color } : {}),
+    ...(priced.frameSize ? { frameSize: priced.frameSize } : {}),
   };
 }
 
@@ -60,13 +81,15 @@ function toPublicProduct(
   p: Product,
   defaults?: CategoryDefaultImages,
   catalogCategories?: CatalogCategory[],
+  promotions: Promotion[] = [],
 ): Product {
+  const priced = withCatalogPrice(p, promotions);
   return {
-    ...p,
-    images: storefrontProductImages(p, defaults),
+    ...priced,
+    images: storefrontProductImages(priced, defaults),
     categoryIds: catalogCategories
-      ? publicProductCategoryIds(p, catalogCategories)
-      : productCatalogIds(p),
+      ? publicProductCategoryIds(priced, catalogCategories)
+      : productCatalogIds(priced),
   };
 }
 
@@ -79,15 +102,16 @@ function sanitizeProductInput(
   const brand = (input.brand ?? existing?.brand ?? "").trim();
   const category = input.category ?? existing?.category;
   const description = (input.description ?? existing?.description ?? "").trim();
-  const skuRaw = (input.sku ?? existing?.sku)?.trim();
+  const skuRaw = (input.sku ?? existing?.sku)?.trim() || "";
 
   if (!name || !category || !isProductType(category)) {
     return null;
   }
 
-  const sku =
-    skuRaw ||
-    `OY-${(slugify(name) || "item").slice(0, 18)}-${Date.now().toString(36)}`;
+  const frameSizeRaw = input.frameSize !== undefined ? input.frameSize : existing?.frameSize;
+  if (typeof frameSizeRaw === "string" && frameSizeRaw.trim()) {
+    if (sanitizeFrameSize(frameSizeRaw) == null) return null;
+  }
 
   const sellingPrice = Number(input.sellingPrice ?? existing?.sellingPrice ?? 0);
   const purchasePrice = Number(input.purchasePrice ?? existing?.purchasePrice ?? 0);
@@ -101,20 +125,23 @@ function sanitizeProductInput(
     : 0;
   const status = (input.status ?? existing?.status ?? "active") as ProductStatus;
 
-  const slug =
-    slugify(input.slug || existing?.slug || name) ||
-    existing?.slug ||
-    `product-${Date.now().toString(36)}`;
-
   return {
-    slug,
+    slug: existing?.slug || "",
     name,
     category,
     brand,
     frameType: input.frameType ?? existing?.frameType,
     lensType: input.lensType ?? existing?.lensType,
-    barcode: input.barcode ?? existing?.barcode,
-    sku,
+    barcode: sanitizeBarcode(
+      input.barcode !== undefined ? input.barcode : existing?.barcode,
+    ),
+    sku: skuRaw,
+    color: sanitizeProductColor(
+      input.color !== undefined ? input.color : existing?.color,
+    ),
+    frameSize: sanitizeFrameSize(
+      input.frameSize !== undefined ? input.frameSize : existing?.frameSize,
+    ),
     description,
     images: Array.isArray(input.images)
       ? input.images.filter((u): u is string => typeof u === "string")
@@ -136,6 +163,48 @@ function sanitizeProductInput(
   };
 }
 
+function syncSpecificPromotions(
+  promotions: Promotion[],
+  productId: string,
+  promotionIds: string[] | undefined,
+): Promotion[] {
+  if (!promotionIds) return promotions;
+  const wanted = new Set(promotionIds);
+  const now = new Date().toISOString();
+  return promotions.map((promo) => {
+    if ((promo.scope || "all") !== "specific") return promo;
+    const has = (promo.productIds || []).includes(productId);
+    const should = wanted.has(promo.id);
+    if (has === should) return promo;
+    const productIds = should
+      ? [...(promo.productIds || []), productId]
+      : (promo.productIds || []).filter((id) => id !== productId);
+    return { ...promo, productIds, updatedAt: now };
+  });
+}
+
+function finishProductFields(
+  fields: Omit<Product, "id" | "createdAt" | "updatedAt">,
+  products: Product[],
+  excludeId: string | undefined,
+  reallocateIfTaken: boolean,
+): Omit<Product, "id" | "createdAt" | "updatedAt"> {
+  const sku = resolveProductNumber(
+    fields.sku,
+    products,
+    excludeId,
+    reallocateIfTaken || !fields.sku.trim(),
+  );
+  const slug = uniqueProductSlug(
+    fields.name,
+    products,
+    excludeId,
+    fields.slug || undefined,
+  );
+  const { discountedPrice: _drop, ...rest } = { ...fields, sku, slug };
+  return rest;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -150,8 +219,23 @@ export async function GET(request: Request) {
       .flatMap((value) => value.split(","))
       .map((value) => value.trim())
       .filter(Boolean);
-    const { data } = await getStore();
+    let { data } = await getStore();
     const catalogCategories = mergeCatalogCategories(data.catalogCategories);
+    const needsProductNumbers = data.products.some((product) => !product.sku?.trim());
+    if (all && needsProductNumbers) {
+      try {
+        await requireSession("inventory");
+        const saved = await updateStore((store) => {
+          store.products = ensureProductNumbers(store.products);
+          return store;
+        });
+        data = saved.data;
+      } catch {
+        data.products = ensureProductNumbers(data.products);
+      }
+    } else {
+      data.products = ensureProductNumbers(data.products);
+    }
     const defaults = mergeCategoryDefaultImages(
       data.settings?.categoryDefaultImages,
     );
@@ -188,10 +272,10 @@ export async function GET(request: Request) {
                 (p.status === "active" || p.status === "out_of_stock"),
             )
             .slice(0, 8)
-            .map((p) => toListProduct(p, defaults, catalogCategories))
+            .map((p) => toListProduct(p, defaults, catalogCategories, data.promotions))
         : [];
       const publicProduct = product
-        ? toPublicProduct(product, defaults, catalogCategories)
+        ? toPublicProduct(product, defaults, catalogCategories, data.promotions)
         : null;
       return NextResponse.json(
         {
@@ -237,6 +321,8 @@ export async function GET(request: Request) {
           p.brand,
           p.sku,
           p.barcode,
+          p.color,
+          p.frameSize,
           p.description,
           p.category,
           ...(p.categoryIds || []),
@@ -247,9 +333,10 @@ export async function GET(request: Request) {
     }
 
     // Admin inventory (`all=1` + session) needs full product records; public lists get cards only.
+    const numbered = ensureProductNumbers(products);
     const payload = fullRecords
-      ? products
-      : products.map((p) => toListProduct(p, defaults, catalogCategories));
+      ? numbered.map((p) => withCatalogPrice(p, data.promotions))
+      : numbered.map((p) => toListProduct(p, defaults, catalogCategories, data.promotions));
 
     return NextResponse.json(
       {
@@ -277,7 +364,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await requireSession("inventory");
-    const body = (await request.json()) as Partial<Product>;
+    const body = (await request.json()) as Partial<Product> & {
+      skuManual?: boolean;
+      promotionIds?: string[];
+    };
     const { data: current } = await getStore();
     const knownIds = new Set(
       mergeCatalogCategories(current.catalogCategories).map((item) => item.id),
@@ -288,18 +378,36 @@ export async function POST(request: Request) {
     }
 
     const now = new Date().toISOString();
-    const product: Product = {
-      id: newId("prod"),
-      ...fields,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const productId = newId("prod");
 
     const { data } = await updateStore((store) => {
-      if (store.products.some((p) => p.sku === product.sku || p.slug === product.slug)) {
-        throw new Error("Product with this SKU or slug already exists");
+      store.products = ensureProductNumbers(store.products);
+      let finished: Omit<Product, "id" | "createdAt" | "updatedAt">;
+      try {
+        finished = finishProductFields(
+          fields,
+          store.products,
+          undefined,
+          body.skuManual !== true,
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message === "PRODUCT_NUMBER_TAKEN") {
+          throw error;
+        }
+        throw error;
       }
+      const product: Product = {
+        id: productId,
+        ...finished,
+        createdAt: now,
+        updatedAt: now,
+      };
       store.products.unshift(product);
+      store.promotions = syncSpecificPromotions(
+        store.promotions,
+        product.id,
+        body.promotionIds,
+      );
       pushActivity(store, {
         actor: session.email,
         action: "create",
@@ -311,12 +419,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { product: data.products.find((p) => p.id === product.id) },
+      { product: data.products.find((p) => p.id === productId) },
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof Error && error.message.includes("already exists")) {
-      return jsonError(error.message, 409);
+    if (error instanceof Error && error.message === "PRODUCT_NUMBER_TAKEN") {
+      return jsonError("رقم المنتج مستخدم بالفعل", 409);
     }
     return handleRouteError(error);
   }
@@ -325,7 +433,11 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const session = await requireSession("inventory");
-    const body = (await request.json()) as Partial<Product> & { id?: string };
+    const body = (await request.json()) as Partial<Product> & {
+      id?: string;
+      skuManual?: boolean;
+      promotionIds?: string[];
+    };
 
     if (!body.id) {
       return jsonError("Product id is required", 400);
@@ -334,6 +446,7 @@ export async function PUT(request: Request) {
     let updated: Product | null = null;
 
     await updateStore((store) => {
+      store.products = ensureProductNumbers(store.products);
       const index = store.products.findIndex((p) => p.id === body.id);
       if (index < 0) throw new Error("NOT_FOUND");
 
@@ -343,21 +456,34 @@ export async function PUT(request: Request) {
       const fields = sanitizeProductInput(body, store.products[index], knownIds);
       if (!fields) throw new Error("INVALID");
 
-      const conflict = store.products.some(
-        (p) =>
-          p.id !== body.id &&
-          (p.sku === fields.sku || p.slug === fields.slug)
-      );
-      if (conflict) throw new Error("CONFLICT");
+      let finished: Omit<Product, "id" | "createdAt" | "updatedAt">;
+      try {
+        finished = finishProductFields(
+          { ...fields, slug: store.products[index].slug },
+          store.products,
+          body.id,
+          body.skuManual !== true,
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message === "PRODUCT_NUMBER_TAKEN") {
+          throw new Error("CONFLICT");
+        }
+        throw error;
+      }
 
       updated = {
         ...store.products[index],
-        ...fields,
+        ...finished,
         id: store.products[index].id,
         createdAt: store.products[index].createdAt,
         updatedAt: new Date().toISOString(),
       };
       store.products[index] = updated;
+      store.promotions = syncSpecificPromotions(
+        store.promotions,
+        updated.id,
+        body.promotionIds,
+      );
 
       pushActivity(store, {
         actor: session.email,
@@ -375,7 +501,7 @@ export async function PUT(request: Request) {
       if (error.message === "NOT_FOUND") return jsonError("Product not found", 404);
       if (error.message === "INVALID") return jsonError("Invalid product payload", 400);
       if (error.message === "CONFLICT") {
-        return jsonError("Product with this SKU or slug already exists", 409);
+        return jsonError("رقم المنتج مستخدم بالفعل", 409);
       }
     }
     return handleRouteError(error);
@@ -396,6 +522,11 @@ export async function DELETE(request: Request) {
       if (index < 0) throw new Error("NOT_FOUND");
       removed = store.products[index];
       store.products.splice(index, 1);
+      store.promotions = store.promotions.map((promo) => {
+        const productIds = (promo.productIds || []).filter((item) => item !== id);
+        if (productIds.length === (promo.productIds || []).length) return promo;
+        return { ...promo, productIds, updatedAt: new Date().toISOString() };
+      });
       pushActivity(store, {
         actor: session.email,
         action: "delete",

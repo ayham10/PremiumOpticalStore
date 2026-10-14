@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertTriangle, CalendarCheck2 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
-import { formatPrice, productPublicKey } from "@/lib/format";
+import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { productPublicKey } from "@/lib/format";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
@@ -56,9 +57,11 @@ function ContactLensCard({ product }: { product: Product }) {
           {product.name}
         </Link>
         <div className="frames-product-meta">
-          <strong className="frames-product-price">
-            {formatPrice(product.sellingPrice)}
-          </strong>
+          <CatalogPrice
+            className="frames-product-price"
+            sellingPrice={product.sellingPrice}
+            discountedPrice={product.discountedPrice}
+          />
           <Link href={href} className="frames-product-view">
             {t("shop.view")}
           </Link>
