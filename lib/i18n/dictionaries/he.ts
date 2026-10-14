@@ -1667,6 +1667,11 @@ const he: Dictionary = {
       cancel: "إلغاء",
       save: "حفظ",
       saving: "جارٍ الحفظ…",
+      saveChanges: "שמירת שינויים",
+      undo: "בטל שינוי",
+      dirtyCount: "{n} שינויים שלא נשמרו",
+      conflictError:
+        "המלאי עודכן במקום אחר. ערכים חדשים יותר לא נדרסו.",
     },
     backups: {
       title: "גיבוי ושחזור",

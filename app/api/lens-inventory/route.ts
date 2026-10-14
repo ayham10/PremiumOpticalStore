@@ -7,13 +7,12 @@ import {
   pushActivity,
 } from "@/lib/api/helpers";
 import {
-  isAllowedCyl,
-  isAllowedSph,
-  isLensInventorySign,
-  parseLensQty,
-  upsertLensInventoryCell,
-} from "@/lib/lens-inventory";
-import type { LensInventoryCell } from "@/lib/types";
+  LensInventoryConflictError,
+  applyLensWrites,
+  findLensWriteConflicts,
+  parseLensInventoryWriteBody,
+} from "@/lib/lens-inventory-edit";
+import { lensCellKey } from "@/lib/lens-inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -30,49 +29,72 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const session = await requireSession("inventory");
-    const body = (await request.json()) as Partial<LensInventoryCell>;
-    if (!isLensInventorySign(body.type)) {
-      return jsonError("Invalid lens type", 400);
+    const parsed = parseLensInventoryWriteBody(await request.json());
+    if (!parsed.ok) {
+      return jsonError(parsed.error, 400);
     }
-    const sph = typeof body.sph === "string" ? body.sph.trim() : "";
-    const cyl = typeof body.cyl === "string" ? body.cyl.trim() : "";
-    if (!isAllowedSph(body.type, sph) || !isAllowedCyl(cyl)) {
-      return jsonError("Invalid SPH or CYL", 400);
-    }
-    const currentStock = parseLensQty(body.currentStock);
-    const desiredStock = parseLensQty(body.desiredStock);
-    if (currentStock == null || desiredStock == null) {
-      return jsonError("Stock values must be whole numbers of 0 or more", 400);
-    }
+    const writes = parsed.items;
 
-    const nextCell: LensInventoryCell = {
-      type: body.type,
-      sph,
-      cyl,
-      currentStock,
-      desiredStock,
-      updatedAt: new Date().toISOString(),
-    };
-
-    const { data } = await updateStore((store) => {
-      const lensInventory = upsertLensInventoryCell(
-        store.lensInventory,
-        nextCell,
-      );
-      pushActivity(store, {
-        actor: session.email,
-        action: "update",
-        entity: "lens-inventory",
-        entityId: `${nextCell.type}:${nextCell.sph}:${nextCell.cyl}`,
-        detail: `Lens ${nextCell.type} ${nextCell.sph}/${nextCell.cyl} ${nextCell.currentStock}/${nextCell.desiredStock}`,
+    try {
+      const { data } = await updateStore((store) => {
+        const conflicts = findLensWriteConflicts(store.lensInventory, writes);
+        if (conflicts.length) {
+          throw new LensInventoryConflictError(conflicts);
+        }
+        const updatedAt = new Date().toISOString();
+        const lensInventory = applyLensWrites(
+          store.lensInventory,
+          writes,
+          updatedAt,
+        );
+        const first = writes[0];
+        pushActivity(store, {
+          actor: session.email,
+          action: "update",
+          entity: "lens-inventory",
+          entityId:
+            writes.length === 1
+              ? lensCellKey(first.type, first.sph, first.cyl)
+              : `bulk:${writes.length}`,
+          detail:
+            writes.length === 1
+              ? `Lens ${first.type} ${first.sph}/${first.cyl} ${first.currentStock}/${first.desiredStock}`
+              : `Lens inventory bulk update (${writes.length} cells)`,
+        });
+        return { ...store, lensInventory };
       });
-      return { ...store, lensInventory };
-    });
 
-    return jsonOk({
-      item: nextCell,
-      items: data.lensInventory,
-    });
+      const item =
+        writes.length === 1
+          ? data.lensInventory.find(
+              (cell) =>
+                cell.type === writes[0].type &&
+                cell.sph === writes[0].sph &&
+                cell.cyl === writes[0].cyl,
+            ) ?? {
+              ...writes[0],
+              updatedAt: new Date().toISOString(),
+            }
+          : undefined;
+
+      return jsonOk({
+        item,
+        items: data.lensInventory,
+        saved: writes.length,
+      });
+    } catch (error) {
+      if (error instanceof LensInventoryConflictError) {
+        return jsonError(
+          "Lens inventory was updated by someone else. Your unsaved edits were not overwritten.",
+          409,
+          {
+            code: "LENS_INVENTORY_CONFLICT",
+            conflicts: error.conflicts,
+          },
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     return handleRouteError(error);
   }
