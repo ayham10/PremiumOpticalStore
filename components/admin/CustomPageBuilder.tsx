@@ -19,9 +19,19 @@ import {
 import ResponsiveHeroImageField from "@/components/admin/ResponsiveHeroImageField";
 import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
 import EditorSection from "@/components/admin/content-editor/EditorSection";
-import SectionIdentityFields from "@/components/admin/content-editor/SectionIdentityFields";
-import { editorSectionDisplayName } from "@/lib/page-hero-media";
+import MissingFieldsBanner from "@/components/admin/content-editor/MissingFieldsBanner";
+import SectionHelpPopover from "@/components/admin/content-editor/SectionHelpPopover";
+import { focusContentEditorField } from "@/components/admin/content-editor/focusEditorField";
 import NewPageWizardBar from "@/components/admin/content-editor/NewPageWizardBar";
+import {
+  CONTENT_FIELD_IDS,
+  customPageFieldIssues,
+  missingFieldIdSet,
+  wizardStepForSection,
+  type ContentFieldIssue,
+  type FieldRequirement,
+} from "@/lib/content-editor-validation";
+import { CUSTOM_SECTION_HELP_KIND } from "@/lib/content-editor-help";
 import {
   clampWizardStep,
   type NewPageWizardStep,
@@ -47,7 +57,6 @@ import {
   customPageLocaleIssues,
   detachProductId,
   emptyCustomPageCopy,
-  type CustomPageLocaleIssue,
   MAX_CUSTOM_SECTIONS,
   MAX_PAGE_PRODUCTS,
   pageHasVisibleButton,
@@ -97,16 +106,6 @@ const INTERNAL_PATH_I18N: Record<string, string> = {
   "/promotions": "admin.servicePages.internalPromotions",
   "/contact": "admin.servicePages.internalContact",
   "/privacy": "admin.servicePages.internalPrivacy",
-};
-
-const ISSUE_I18N: Record<CustomPageLocaleIssue, string> = {
-  title: "admin.servicePages.issueTitle",
-  description: "admin.servicePages.issueDescription",
-  bookingButtonText: "admin.servicePages.issueBooking",
-  features: "admin.servicePages.issueFeatures",
-  benefits: "admin.servicePages.issueBenefits",
-  warningText: "admin.servicePages.issueWarning",
-  values: "admin.servicePages.issueValues",
 };
 
 const SECTION_I18N: Record<CustomSectionType, string> = {
@@ -469,6 +468,46 @@ export default function CustomPageBuilder({
   const buttonVisible = pageHasVisibleButton(sections, showHeroButton);
   const localeComplete = issues.length === 0;
   const savedComplete = Boolean(page.locales[editLocale]?.complete);
+  const fieldIssues = customPageFieldIssues({
+    name,
+    slug,
+    sections,
+    copy,
+    showHeroButton,
+    ctaKind,
+    ctaHref,
+    bookingType,
+  });
+  const missing = missingFieldIdSet(fieldIssues);
+
+  function goToIssue(item: ContentFieldIssue) {
+    if (wizardMode) setWizardStep(wizardStepForSection(item.sectionId));
+    activateSection(item.sectionId);
+    window.setTimeout(
+      () => focusContentEditorField(item.fieldId, item.sectionId),
+      wizardMode ? 80 : 0,
+    );
+  }
+
+  function fieldMeta(id: string, requirement?: FieldRequirement) {
+    return {
+      id,
+      missing: missing.has(id),
+      requirement,
+      requiredHint:
+        requirement === "save"
+          ? t("admin.servicePages.requiredToSave")
+          : requirement === "display"
+            ? t("admin.servicePages.requiredToDisplay")
+            : undefined,
+    };
+  }
+
+  function sectionHelp(type: CustomSectionType) {
+    return (
+      <SectionHelpPopover kind={CUSTOM_SECTION_HELP_KIND[type]} t={t} />
+    );
+  }
 
   function updateCopy<K extends keyof CustomPageCopy>(key: K, value: CustomPageCopy[K]) {
     setCopies((prev) => ({
@@ -498,36 +537,11 @@ export default function CustomPageBuilder({
     );
   }
 
-  function setSectionAdminLabel(id: string, value: string) {
-    setSections((prev) =>
-      prev.map((section) =>
-        section.id === id
-          ? { ...section, adminLabel: value.trim() ? value : undefined }
-          : section,
-      ),
-    );
-  }
-
   function sectionTitle(section: CustomPageSection) {
-    const fallback = t(SECTION_I18N[section.type]);
-    const name = editorSectionDisplayName(section.adminLabel, fallback);
+    const name = t(SECTION_I18N[section.type]);
     return section.hidden
       ? `${name} — ${t("admin.servicePages.hiddenSection")}`
       : name;
-  }
-
-  function renderSectionAdminName(section: CustomPageSection) {
-    return (
-      <SectionIdentityFields
-        adminName={section.adminLabel || ""}
-        onAdminNameChange={(value) => setSectionAdminLabel(section.id, value)}
-        adminLabel={t("admin.servicePages.sectionAdminName")}
-        adminHint={t("admin.servicePages.sectionAdminNameHint")}
-        dir={editorDir}
-        lang={editLocale}
-        hideHeading
-      />
-    );
   }
 
   function sectionArticleCopy(section: CustomPageSection) {
@@ -937,24 +951,32 @@ export default function CustomPageBuilder({
           onChange={setName}
           dir={editorDir}
           lang={editLocale}
+          {...fieldMeta(CONTENT_FIELD_IDS.pageName, "save")}
         />
-        <label className="admin-service-field">
-          <span className="label">{t("admin.servicePages.pageSlug")}</span>
+        <label
+          className={
+            missing.has(CONTENT_FIELD_IDS.pageSlug)
+              ? "admin-service-field is-missing"
+              : "admin-service-field"
+          }
+          htmlFor={CONTENT_FIELD_IDS.pageSlug}
+        >
+          <span className="label">
+            {t("admin.servicePages.pageSlug")}
+            <span className="csp-req csp-req-save">
+              {t("admin.servicePages.requiredToSave")}
+            </span>
+          </span>
           <span className="csp-slug-prefix">/services/</span>
           <input
+            id={CONTENT_FIELD_IDS.pageSlug}
             className="input"
             dir="ltr"
             value={slug}
             onChange={(event) => setSlug(event.target.value)}
           />
         </label>
-        {!localeComplete ? (
-          <ul className="csp-issues">
-            {issues.map((issue) => (
-              <li key={issue}>{t(ISSUE_I18N[issue])}</li>
-            ))}
-          </ul>
-        ) : null}
+        <MissingFieldsBanner issues={fieldIssues} t={t} onSelect={goToIssue} />
         {savedComplete ? null : (
           <p className="admin-muted">{t("admin.servicePages.unsavedLocale")}</p>
         )}
@@ -989,6 +1011,7 @@ export default function CustomPageBuilder({
                   <span>
                     {sectionTitle(section)}
                   </span>
+                  {sectionHelp(section.type)}
                 </span>
                 <span className="csp-section-actions">
                   <button
@@ -1034,19 +1057,21 @@ export default function CustomPageBuilder({
             {missingTypes.map((type) => {
               const Icon = SECTION_ICONS[type];
               return (
-                <button
-                  key={type}
-                  type="button"
-                  className="csp-add-section"
-                  onClick={() => addSection(type)}
-                >
-                  <Icon size={18} strokeWidth={1.75} aria-hidden />
-                  <span>
-                    <strong>{t(SECTION_I18N[type])}</strong>
-                    <em>{t(SECTION_HINT_I18N[type])}</em>
-                  </span>
-                  <Plus size={14} />
-                </button>
+                <div key={type} className="csp-add-section-row">
+                  <button
+                    type="button"
+                    className="csp-add-section"
+                    onClick={() => addSection(type)}
+                  >
+                    <Icon size={18} strokeWidth={1.75} aria-hidden />
+                    <span>
+                      <strong>{t(SECTION_I18N[type])}</strong>
+                      <em>{t(SECTION_HINT_I18N[type])}</em>
+                    </span>
+                    <Plus size={14} />
+                  </button>
+                  {sectionHelp(type)}
+                </div>
               );
             })}
           </div>
@@ -1080,9 +1105,9 @@ export default function CustomPageBuilder({
               icon="gallery"
               title={sectionTitle(section)}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <p className="admin-muted">{t("admin.servicePages.sectionGalleryHint")}</p>
             </EditorSection>
@@ -1096,9 +1121,9 @@ export default function CustomPageBuilder({
               icon="hero"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <ResponsiveHeroImageField
                 value={heroMedia}
@@ -1129,6 +1154,7 @@ export default function CustomPageBuilder({
                 onChange={(value) => updateCopy("title", value)}
                 dir={editorDir}
                 lang={editLocale}
+                {...fieldMeta(CONTENT_FIELD_IDS.title, "display")}
               />
               <BuilderField
                 label={t("admin.servicePages.body")}
@@ -1137,6 +1163,7 @@ export default function CustomPageBuilder({
                 dir={editorDir}
                 lang={editLocale}
                 multiline
+                {...fieldMeta(CONTENT_FIELD_IDS.description, "display")}
               />
             </EditorSection>
           );
@@ -1148,9 +1175,9 @@ export default function CustomPageBuilder({
               icon="text"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               {copy.features.map((feature, index) => (
                 <div key={`csp-f-${index}`} className="admin-service-feature">
@@ -1179,6 +1206,10 @@ export default function CustomPageBuilder({
                     }}
                     dir={editorDir}
                     lang={editLocale}
+                    {...fieldMeta(
+                      CONTENT_FIELD_IDS.featureTitle(index + 1),
+                      index < 2 ? "display" : undefined,
+                    )}
                   />
                   <BuilderField
                     label={t("admin.servicePages.featureDescription")}
@@ -1191,6 +1222,10 @@ export default function CustomPageBuilder({
                     dir={editorDir}
                     lang={editLocale}
                     multiline
+                    {...fieldMeta(
+                      CONTENT_FIELD_IDS.featureDescription(index + 1),
+                      index < 2 ? "display" : undefined,
+                    )}
                   />
                 </div>
               ))}
@@ -1204,9 +1239,9 @@ export default function CustomPageBuilder({
               icon="text"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
@@ -1214,6 +1249,7 @@ export default function CustomPageBuilder({
                 onChange={(value) => updateCopy("benefitsTitle", value)}
                 dir={editorDir}
                 lang={editLocale}
+                {...fieldMeta(CONTENT_FIELD_IDS.benefitsTitle, "display")}
               />
               {copy.benefits.map((item, index) => (
                 <BuilderField
@@ -1228,6 +1264,10 @@ export default function CustomPageBuilder({
                   dir={editorDir}
                   lang={editLocale}
                   multiline
+                  {...fieldMeta(
+                    CONTENT_FIELD_IDS.benefit(index + 1),
+                    index < 2 ? "display" : undefined,
+                  )}
                 />
               ))}
             </EditorSection>
@@ -1240,9 +1280,9 @@ export default function CustomPageBuilder({
               icon="text"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
@@ -1258,6 +1298,7 @@ export default function CustomPageBuilder({
                 dir={editorDir}
                 lang={editLocale}
                 multiline
+                {...fieldMeta(CONTENT_FIELD_IDS.warningText, "display")}
               />
             </EditorSection>
           );
@@ -1269,9 +1310,9 @@ export default function CustomPageBuilder({
               icon="text"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <BuilderField
                 label={t("admin.servicePages.sectionHeading")}
@@ -1279,6 +1320,7 @@ export default function CustomPageBuilder({
                 onChange={(value) => updateCopy("valuesTitle", value)}
                 dir={editorDir}
                 lang={editLocale}
+                {...fieldMeta(CONTENT_FIELD_IDS.valuesTitle, "display")}
               />
               <BuilderField
                 label={t("admin.servicePages.valuesText")}
@@ -1287,6 +1329,7 @@ export default function CustomPageBuilder({
                 dir={editorDir}
                 lang={editLocale}
                 multiline
+                {...fieldMeta(CONTENT_FIELD_IDS.valuesText, "display")}
               />
               <BuilderField
                 label={t("admin.servicePages.privacyText")}
@@ -1306,9 +1349,9 @@ export default function CustomPageBuilder({
               icon="buttons"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <p className="admin-muted">{t("admin.servicePages.bookingCtaHint")}</p>
             </EditorSection>
@@ -1321,9 +1364,9 @@ export default function CustomPageBuilder({
               icon="products"
               title={title}
               defaultOpen={wizardMode}
+              help={sectionHelp(section.type)}
               {...foldProps(section.id)}
             >
-              {renderSectionAdminName(section)}
               {renderSectionArticle(section)}
               <p className="admin-muted">{t("admin.servicePages.productsHint")}</p>
               <div className="csp-inline-actions">
@@ -1387,6 +1430,7 @@ export default function CustomPageBuilder({
           icon="text"
           title={t("admin.servicePages.groupText")}
           defaultOpen={wizardMode}
+          help={<SectionHelpPopover kind="heroMedia" t={t} />}
           {...foldProps("page-copy")}
         >
           <BuilderField
@@ -1402,6 +1446,7 @@ export default function CustomPageBuilder({
             onChange={(value) => updateCopy("title", value)}
             dir={editorDir}
             lang={editLocale}
+            {...fieldMeta(CONTENT_FIELD_IDS.title, "display")}
           />
           <BuilderField
             label={t("admin.servicePages.body")}
@@ -1410,6 +1455,7 @@ export default function CustomPageBuilder({
             dir={editorDir}
             lang={editLocale}
             multiline
+            {...fieldMeta(CONTENT_FIELD_IDS.description, "display")}
           />
         </EditorSection>
       ) : null}
@@ -1417,6 +1463,7 @@ export default function CustomPageBuilder({
       <EditorSection
         icon="buttons"
         title={t("admin.servicePages.groupButtons")}
+        help={<SectionHelpPopover kind="buttons" t={t} />}
         {...foldProps(
           sections.find((section) => section.type === "bookingCta")?.id ||
             "page-buttons",
@@ -1455,6 +1502,7 @@ export default function CustomPageBuilder({
               onChange={(value) => updateCopy("bookingButtonText", value)}
               dir={editorDir}
               lang={editLocale}
+              {...fieldMeta(CONTENT_FIELD_IDS.bookingButton, "display")}
             />
             <label className="admin-service-field">
               <span className="label">{t("admin.servicePages.ctaKind")}</span>
@@ -1489,9 +1537,22 @@ export default function CustomPageBuilder({
               </label>
             ) : null}
             {ctaKind === "internal" ? (
-              <label className="admin-service-field">
-                <span className="label">{t("admin.servicePages.ctaInternal")}</span>
+              <label
+                className={
+                  missing.has(CONTENT_FIELD_IDS.ctaInternal)
+                    ? "admin-service-field is-missing"
+                    : "admin-service-field"
+                }
+                htmlFor={CONTENT_FIELD_IDS.ctaInternal}
+              >
+                <span className="label">
+                  {t("admin.servicePages.ctaInternal")}
+                  <span className="csp-req csp-req-save">
+                    {t("admin.servicePages.requiredToSave")}
+                  </span>
+                </span>
                 <select
+                  id={CONTENT_FIELD_IDS.ctaInternal}
                   className="input"
                   value={ctaHref}
                   onChange={(event) => setCtaHref(event.target.value)}
@@ -1511,6 +1572,7 @@ export default function CustomPageBuilder({
                 value={ctaHref}
                 onChange={setCtaHref}
                 dir="ltr"
+                {...fieldMeta(CONTENT_FIELD_IDS.ctaExternal, "save")}
               />
             ) : null}
             {ctaKind === "internal" && ctaHref && !sanitizeInternalPath(ctaHref) ? (
@@ -1540,14 +1602,10 @@ export default function CustomPageBuilder({
           defaultOpen
           {...foldProps("page-review")}
         >
-          {!localeComplete ? (
+          {!localeComplete || fieldIssues.length ? (
             <>
               <p className="admin-muted">{t("admin.servicePages.wizardReviewMissing")}</p>
-              <ul className="csp-issues">
-                {issues.map((issue) => (
-                  <li key={issue}>{t(ISSUE_I18N[issue])}</li>
-                ))}
-              </ul>
+              <MissingFieldsBanner issues={fieldIssues} t={t} onSelect={goToIssue} />
             </>
           ) : (
             <p className="admin-muted">{t("admin.servicePages.wizardReviewReady")}</p>
@@ -1641,6 +1699,9 @@ function BuilderField({
   multiline,
   dir,
   lang,
+  missing,
+  requirement,
+  requiredHint,
 }: {
   id?: string;
   label: string;
@@ -1649,11 +1710,24 @@ function BuilderField({
   multiline?: boolean;
   dir: "ltr" | "rtl";
   lang?: string;
+  missing?: boolean;
+  requirement?: FieldRequirement;
+  requiredHint?: string;
 }) {
   const fieldId = id || label.replace(/\s+/g, "-");
   return (
-    <label className="admin-service-field" htmlFor={fieldId}>
-      <span className="label">{label}</span>
+    <label
+      className={missing ? "admin-service-field is-missing" : "admin-service-field"}
+      htmlFor={fieldId}
+    >
+      <span className="label">
+        {label}
+        {requiredHint ? (
+          <span className={requirement === "save" ? "csp-req csp-req-save" : "csp-req csp-req-display"}>
+            {requiredHint}
+          </span>
+        ) : null}
+      </span>
       {multiline ? (
         <textarea
           id={fieldId}

@@ -22,9 +22,18 @@ import {
   Sun,
 } from "lucide-react";
 import ResponsiveHeroImageField from "@/components/admin/ResponsiveHeroImageField";
-import SectionIdentityFields from "@/components/admin/content-editor/SectionIdentityFields";
-import { editorSectionDisplayName } from "@/lib/page-hero-media";
+import MissingFieldsBanner from "@/components/admin/content-editor/MissingFieldsBanner";
+import SectionHelpPopover from "@/components/admin/content-editor/SectionHelpPopover";
+import { focusContentEditorField } from "@/components/admin/content-editor/focusEditorField";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import {
+  BUILT_IN_FIELD_IDS,
+  builtInPageFieldIssues,
+  missingFieldIdSet,
+  type ContentFieldIssue,
+  type FieldRequirement,
+} from "@/lib/content-editor-validation";
+import type { SectionHelpKind } from "@/lib/content-editor-help";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import ContentEditorToolbar from "@/components/admin/content-editor/ContentEditorToolbar";
 import ContentEditorWorkspace from "@/components/admin/content-editor/ContentEditorWorkspace";
@@ -259,16 +268,6 @@ export default function AdminServicePagesPage() {
     }));
   }
 
-  function updateAdminName(sectionId: string, value: string) {
-    setPages((prev) => {
-      const next = { ...(prev.adminSectionNames || {}) };
-      const trimmed = value.trim();
-      if (trimmed) next[sectionId] = value;
-      else delete next[sectionId];
-      return { ...prev, adminSectionNames: next };
-    });
-  }
-
   function updateFooter<K extends keyof FooterServiceContent>(
     key: K,
     value: FooterServiceContent[K],
@@ -341,25 +340,27 @@ export default function AdminServicePagesPage() {
   const footer = pages.footer ?? defaultServicePagesForLocale(editLocale).footer!;
   const editorDir = isRtl(editLocale as Locale) ? "rtl" : "ltr";
 
-  function adminTitle(sectionId: string, fallback: string) {
-    return editorSectionDisplayName(
-      pages.adminSectionNames?.[sectionId],
-      fallback,
-    );
+  const builtInIssues = builtInPageFieldIssues(tab, pages);
+  const missing = missingFieldIdSet(builtInIssues);
+
+  function goToIssue(item: ContentFieldIssue) {
+    setActiveSectionId(item.sectionId);
+    focusContentEditorField(item.fieldId, item.sectionId);
   }
 
-  function renderAdminName(sectionId: string) {
-    return (
-      <SectionIdentityFields
-        adminName={pages.adminSectionNames?.[sectionId] || ""}
-        onAdminNameChange={(value) => updateAdminName(sectionId, value)}
-        adminLabel={t("admin.servicePages.sectionAdminName")}
-        adminHint={t("admin.servicePages.sectionAdminNameHint")}
-        dir={editorDir}
-        lang={editLocale}
-        hideHeading
-      />
-    );
+  function fieldMeta(id: string, requirement: FieldRequirement | undefined = "display") {
+    return {
+      id,
+      missing: missing.has(id),
+      requirement,
+      requiredHint: requirement
+        ? t("admin.servicePages.requiredToDisplayLive")
+        : undefined,
+    };
+  }
+
+  function sectionHelp(kind: SectionHelpKind) {
+    return <SectionHelpPopover kind={kind} t={t} />;
   }
 
   function renderHeroMedia(
@@ -652,23 +653,27 @@ export default function AdminServicePagesPage() {
                       </button>
                     }
                   />
+                  <MissingFieldsBanner
+                    issues={builtInIssues}
+                    t={t}
+                    onSelect={goToIssue}
+                    saveIsLive
+                  />
                   {tab === "homepage" ? (
                     <>
                       <EditorSection
                         icon="text"
-                        title={adminTitle(
-                          PREVIEW_SECTION.homepageHero,
-                          t("admin.servicePages.groupText"),
-                        )}
+                        title={t("admin.servicePages.sectionHero")}
+                        help={sectionHelp("homepageHero")}
                         sectionId={PREVIEW_SECTION.homepageHero}
                         active={activeSectionId === PREVIEW_SECTION.homepageHero}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.homepageHero)}
                         <Field
                           label={t("admin.servicePages.sectionHeading")}
                           value={home.hero.title}
                           onChange={(value) => updateHomepageHero("title", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.homeTitle)}
                         />
                         <Field
                           label={t("admin.servicePages.subtitle")}
@@ -691,26 +696,25 @@ export default function AdminServicePagesPage() {
                       </EditorSection>
                       <EditorSection
                         icon="buttons"
-                        title={adminTitle(
-                          PREVIEW_SECTION.homepageButtons,
-                          t("admin.servicePages.groupButtons"),
-                        )}
+                        title={t("admin.servicePages.sectionButtons")}
+                        help={sectionHelp("buttons")}
                         sectionId={PREVIEW_SECTION.homepageButtons}
                         active={activeSectionId === PREVIEW_SECTION.homepageButtons}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.homepageButtons)}
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={home.hero.bookingButtonText}
                           onChange={(value) =>
                             updateHomepageHero("bookingButtonText", value)
                           }
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.homeBooking)}
                         />
                         <Field
                           label={t("admin.servicePages.shopButton")}
                           value={home.hero.shopButtonText}
                           onChange={(value) => updateHomepageHero("shopButtonText", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.homeShop)}
                         />
                       </EditorSection>
                     </>
@@ -718,15 +722,12 @@ export default function AdminServicePagesPage() {
                     <>
                       <EditorSection
                         icon="hero"
-                        title={adminTitle(
-                          PREVIEW_SECTION.eyeExamHero,
-                          t("admin.servicePages.groupHeroMedia"),
-                        )}
+                        title={t("admin.servicePages.sectionHero")}
+                        help={sectionHelp("heroMedia")}
                         sectionId={PREVIEW_SECTION.eyeExamHero}
                         active={activeSectionId === PREVIEW_SECTION.eyeExamHero}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.eyeExamHero)}
                         {renderHeroMedia(eye.heroMedia, (media) =>
                           updateEyeExam("heroMedia", media),
                         true)}
@@ -739,44 +740,41 @@ export default function AdminServicePagesPage() {
                           label={t("admin.servicePages.sectionHeading")}
                           value={eye.title}
                           onChange={(value) => updateEyeExam("title", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.eyeTitle)}
                         />
                         <Field
                           label={t("admin.servicePages.body")}
                           value={eye.description}
                           onChange={(value) => updateEyeExam("description", value)}
                           multiline
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.eyeDescription)}
                         />
                       </EditorSection>
                       <EditorSection
                         icon="buttons"
-                        title={adminTitle(
-                          PREVIEW_SECTION.eyeExamButtons,
-                          t("admin.servicePages.groupButtons"),
-                        )}
+                        title={t("admin.servicePages.sectionButtons")}
+                        help={sectionHelp("buttons")}
                         sectionId={PREVIEW_SECTION.eyeExamButtons}
                         active={activeSectionId === PREVIEW_SECTION.eyeExamButtons}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.eyeExamButtons)}
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={eye.bookingButtonText}
                           onChange={(value) => updateEyeExam("bookingButtonText", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.eyeBooking)}
                         />
                       </EditorSection>
                       <EditorSection
                         icon="text"
-                        title={adminTitle(
-                          PREVIEW_SECTION.eyeExamFeatures,
-                          t("admin.servicePages.features"),
-                        )}
+                        title={t("admin.servicePages.sectionFeatures")}
+                        help={sectionHelp("featureGrid")}
                         defaultOpen={false}
                         sectionId={PREVIEW_SECTION.eyeExamFeatures}
                         active={activeSectionId === PREVIEW_SECTION.eyeExamFeatures}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.eyeExamFeatures)}
-                        <h2>{t("admin.servicePages.features")}</h2>
+                        <h2>{t("admin.servicePages.sectionFeatures")}</h2>
                         {eye.features.map((feature, index) => (
                           <div key={`ee-f-${index}`} className="admin-service-feature">
                             <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
@@ -798,6 +796,10 @@ export default function AdminServicePagesPage() {
                                 next[index] = { ...next[index], title: value };
                                 updateEyeExam("features", next);
                               }}
+                              {...fieldMeta(
+                                BUILT_IN_FIELD_IDS.eyeFeatureTitle(index + 1),
+                                index < 2 ? "display" : undefined,
+                              )}
                             />
                             <Field
                               label={t("admin.servicePages.featureDescription")}
@@ -807,26 +809,28 @@ export default function AdminServicePagesPage() {
                                 next[index] = { ...next[index], description: value };
                                 updateEyeExam("features", next);
                               }}
+                              {...fieldMeta(
+                                BUILT_IN_FIELD_IDS.eyeFeatureDescription(index + 1),
+                                index < 2 ? "display" : undefined,
+                              )}
                             />
                           </div>
                         ))}
                       </EditorSection>
                       <EditorSection
                         icon="text"
-                        title={adminTitle(
-                          PREVIEW_SECTION.eyeExamBenefits,
-                          t("admin.servicePages.benefits"),
-                        )}
+                        title={t("admin.servicePages.sectionBenefits")}
+                        help={sectionHelp("benefitsList")}
                         defaultOpen={false}
                         sectionId={PREVIEW_SECTION.eyeExamBenefits}
                         active={activeSectionId === PREVIEW_SECTION.eyeExamBenefits}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.eyeExamBenefits)}
                         <Field
                           label={t("admin.servicePages.sectionHeading")}
                           value={eye.benefitsTitle}
                           onChange={(value) => updateEyeExam("benefitsTitle", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.eyeBenefitsTitle)}
                         />
                         {eye.benefits.map((item, index) => (
                           <Field
@@ -839,6 +843,10 @@ export default function AdminServicePagesPage() {
                               updateEyeExam("benefits", next);
                             }}
                             multiline
+                            {...fieldMeta(
+                              BUILT_IN_FIELD_IDS.eyeBenefit(index + 1),
+                              index < 2 ? "display" : undefined,
+                            )}
                           />
                         ))}
                       </EditorSection>
@@ -847,15 +855,12 @@ export default function AdminServicePagesPage() {
                     <>
                       <EditorSection
                         icon="hero"
-                        title={adminTitle(
-                          PREVIEW_SECTION.contactLensesHero,
-                          t("admin.servicePages.groupHeroMedia"),
-                        )}
+                        title={t("admin.servicePages.sectionHero")}
+                        help={sectionHelp("heroMedia")}
                         sectionId={PREVIEW_SECTION.contactLensesHero}
                         active={activeSectionId === PREVIEW_SECTION.contactLensesHero}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.contactLensesHero)}
                         {renderHeroMedia(lenses.heroMedia, (media) =>
                           updateLenses("heroMedia", media),
                         true)}
@@ -868,44 +873,41 @@ export default function AdminServicePagesPage() {
                           label={t("admin.servicePages.sectionHeading")}
                           value={lenses.title}
                           onChange={(value) => updateLenses("title", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.lensesTitle)}
                         />
                         <Field
                           label={t("admin.servicePages.body")}
                           value={lenses.description}
                           onChange={(value) => updateLenses("description", value)}
                           multiline
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.lensesDescription)}
                         />
                       </EditorSection>
                       <EditorSection
                         icon="buttons"
-                        title={adminTitle(
-                          PREVIEW_SECTION.contactLensesButtons,
-                          t("admin.servicePages.groupButtons"),
-                        )}
+                        title={t("admin.servicePages.sectionButtons")}
+                        help={sectionHelp("buttons")}
                         sectionId={PREVIEW_SECTION.contactLensesButtons}
                         active={activeSectionId === PREVIEW_SECTION.contactLensesButtons}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.contactLensesButtons)}
                         <Field
                           label={t("admin.servicePages.bookingButton")}
                           value={lenses.bookingButtonText}
                           onChange={(value) => updateLenses("bookingButtonText", value)}
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.lensesBooking)}
                         />
                       </EditorSection>
                       <EditorSection
                         icon="text"
-                        title={adminTitle(
-                          PREVIEW_SECTION.contactLensesFeatures,
-                          t("admin.servicePages.features"),
-                        )}
+                        title={t("admin.servicePages.sectionFeatures")}
+                        help={sectionHelp("featureGrid")}
                         defaultOpen={false}
                         sectionId={PREVIEW_SECTION.contactLensesFeatures}
                         active={activeSectionId === PREVIEW_SECTION.contactLensesFeatures}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.contactLensesFeatures)}
-                        <h2>{t("admin.servicePages.features")}</h2>
+                        <h2>{t("admin.servicePages.sectionFeatures")}</h2>
                         {lenses.features.map((feature, index) => (
                           <div key={`cl-f-${index}`} className="admin-service-feature">
                             <p>{t("admin.servicePages.featureN", { n: index + 1 })}</p>
@@ -929,6 +931,10 @@ export default function AdminServicePagesPage() {
                                 next[index] = { ...next[index], title: value };
                                 updateLenses("features", next);
                               }}
+                              {...fieldMeta(
+                                BUILT_IN_FIELD_IDS.lensesFeatureTitle(index + 1),
+                                index < 2 ? "display" : undefined,
+                              )}
                             />
                             <Field
                               label={t("admin.servicePages.featureDescription")}
@@ -939,42 +945,41 @@ export default function AdminServicePagesPage() {
                                 updateLenses("features", next);
                               }}
                               multiline
+                              {...fieldMeta(
+                                BUILT_IN_FIELD_IDS.lensesFeatureDescription(index + 1),
+                                index < 2 ? "display" : undefined,
+                              )}
                             />
                           </div>
                         ))}
                       </EditorSection>
                       <EditorSection
                         icon="text"
-                        title={adminTitle(
-                          PREVIEW_SECTION.contactLensesNotice,
-                          t("admin.servicePages.warning"),
-                        )}
+                        title={t("admin.servicePages.sectionNotice")}
+                        help={sectionHelp("notice")}
                         defaultOpen={false}
                         sectionId={PREVIEW_SECTION.contactLensesNotice}
                         active={activeSectionId === PREVIEW_SECTION.contactLensesNotice}
                         onActivate={setActiveSectionId}
                       >
-                        {renderAdminName(PREVIEW_SECTION.contactLensesNotice)}
                         <Field
                           label={t("admin.servicePages.warningText")}
                           value={lenses.warningText}
                           onChange={(value) => updateLenses("warningText", value)}
                           multiline
+                          {...fieldMeta(BUILT_IN_FIELD_IDS.lensesWarning)}
                         />
                       </EditorSection>
                     </>
                   ) : tab === "catalog" ? (
                     <EditorSection
                       icon="hero"
-                      title={adminTitle(
-                        PREVIEW_SECTION.catalogHero,
-                        t("admin.servicePages.sectionHero"),
-                      )}
+                      title={t("admin.servicePages.sectionHero")}
+                      help={sectionHelp("catalogHero")}
                       sectionId={PREVIEW_SECTION.catalogHero}
                       active={activeSectionId === PREVIEW_SECTION.catalogHero}
                       onActivate={setActiveSectionId}
                     >
-                      {renderAdminName(PREVIEW_SECTION.catalogHero)}
                       {renderHeroMedia(catalog.heroMedia, (media) =>
                         updateCatalog("heroMedia", media),
                       false)}
@@ -982,6 +987,7 @@ export default function AdminServicePagesPage() {
                         label={t("admin.servicePages.sectionHeading")}
                         value={catalog.title || ""}
                         onChange={(value) => updateCatalog("title", value)}
+                        {...fieldMeta(BUILT_IN_FIELD_IDS.catalogTitle)}
                       />
                       <Field
                         label={t("admin.servicePages.catalogLead")}
@@ -993,15 +999,12 @@ export default function AdminServicePagesPage() {
                   ) : tab === "sunglasses" ? (
                     <EditorSection
                       icon="hero"
-                      title={adminTitle(
-                        PREVIEW_SECTION.sunglassesHero,
-                        t("admin.servicePages.sectionHero"),
-                      )}
+                      title={t("admin.servicePages.sectionHero")}
+                      help={sectionHelp("catalogHero")}
                       sectionId={PREVIEW_SECTION.sunglassesHero}
                       active={activeSectionId === PREVIEW_SECTION.sunglassesHero}
                       onActivate={setActiveSectionId}
                     >
-                      {renderAdminName(PREVIEW_SECTION.sunglassesHero)}
                       {renderHeroMedia(sunglasses.heroMedia, (media) =>
                         updateSunglasses("heroMedia", media),
                       true)}
@@ -1009,6 +1012,7 @@ export default function AdminServicePagesPage() {
                         label={t("admin.servicePages.sectionHeading")}
                         value={sunglasses.title || ""}
                         onChange={(value) => updateSunglasses("title", value)}
+                        {...fieldMeta(BUILT_IN_FIELD_IDS.sunglassesTitle)}
                       />
                       <Field
                         label={t("admin.servicePages.catalogLead")}
@@ -1020,15 +1024,12 @@ export default function AdminServicePagesPage() {
                   ) : tab === "frames" ? (
                     <EditorSection
                       icon="hero"
-                      title={adminTitle(
-                        PREVIEW_SECTION.framesHero,
-                        t("admin.servicePages.sectionHero"),
-                      )}
+                      title={t("admin.servicePages.sectionHero")}
+                      help={sectionHelp("catalogHero")}
                       sectionId={PREVIEW_SECTION.framesHero}
                       active={activeSectionId === PREVIEW_SECTION.framesHero}
                       onActivate={setActiveSectionId}
                     >
-                      {renderAdminName(PREVIEW_SECTION.framesHero)}
                       {renderHeroMedia(frames.heroMedia, (media) =>
                         updateFrames("heroMedia", media),
                       true)}
@@ -1036,6 +1037,7 @@ export default function AdminServicePagesPage() {
                         label={t("admin.servicePages.sectionHeading")}
                         value={frames.title || ""}
                         onChange={(value) => updateFrames("title", value)}
+                        {...fieldMeta(BUILT_IN_FIELD_IDS.framesTitle)}
                       />
                       <Field
                         label={t("admin.servicePages.catalogLead")}
@@ -1047,20 +1049,18 @@ export default function AdminServicePagesPage() {
                   ) : (
                     <EditorSection
                       icon="text"
-                      title={adminTitle(
-                        PREVIEW_SECTION.footerContent,
-                        t("admin.servicePages.groupText"),
-                      )}
+                      title={t("admin.servicePages.sectionFooter")}
+                      help={sectionHelp("footer")}
                       sectionId={PREVIEW_SECTION.footerContent}
                       active={activeSectionId === PREVIEW_SECTION.footerContent}
                       onActivate={setActiveSectionId}
                     >
-                      {renderAdminName(PREVIEW_SECTION.footerContent)}
                       <Field
                         label={t("admin.servicePages.tagline")}
                         value={footer.tagline}
                         onChange={(value) => updateFooter("tagline", value)}
                         multiline
+                        {...fieldMeta(BUILT_IN_FIELD_IDS.footerTagline)}
                       />
                       <Field
                         label={t("admin.servicePages.hoursLabel")}
@@ -1146,24 +1146,42 @@ function FeatureIconPicker({
 }
 
 function Field({
+  id,
   label,
   value,
   onChange,
   multiline,
+  missing,
+  requirement,
+  requiredHint,
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   multiline?: boolean;
+  missing?: boolean;
+  requirement?: FieldRequirement;
+  requiredHint?: string;
 }) {
   const { dir, lang } = useContext(ContentFieldLocaleContext);
-  const id = label.replace(/\s+/g, "-");
+  const fieldId = id || label.replace(/\s+/g, "-");
   return (
-    <label className="admin-service-field" htmlFor={id}>
-      <span className="label">{label}</span>
+    <label
+      className={missing ? "admin-service-field is-missing" : "admin-service-field"}
+      htmlFor={fieldId}
+    >
+      <span className="label">
+        {label}
+        {requiredHint ? (
+          <span className={requirement === "save" ? "csp-req csp-req-save" : "csp-req csp-req-display"}>
+            {requiredHint}
+          </span>
+        ) : null}
+      </span>
       {multiline ? (
         <textarea
-          id={id}
+          id={fieldId}
           className="textarea"
           rows={3}
           dir={dir}
@@ -1173,7 +1191,7 @@ function Field({
         />
       ) : (
         <input
-          id={id}
+          id={fieldId}
           className="input"
           dir={dir}
           lang={lang}

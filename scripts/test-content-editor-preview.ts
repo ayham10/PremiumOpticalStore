@@ -436,7 +436,7 @@ assert.match(editorPage, /PREVIEW_SECTION\.contactLensesNotice/);
 assert.match(editorPage, /PREVIEW_SECTION\.catalogHero/);
 assert.match(editorPage, /PREVIEW_SECTION\.sunglassesHero/);
 assert.match(editorPage, /PREVIEW_SECTION\.framesHero/);
-assert.match(editorPage, /sectionAdminName/);
+assert.doesNotMatch(editorPage, /sectionAdminName/);
 assert.match(editorPage, /restoreDefaultMedia/);
 assert.match(editorPage, /onPointerDownCapture|onActivate=\{setActiveSectionId\}/);
 assert.match(editorPage, /renderHeroMedia\(catalog\.heroMedia/);
@@ -454,7 +454,7 @@ assert.doesNotMatch(
   canvasSrc,
   /kind === "sunglasses"[\s\S]*StoreCatalogHero/,
 );
-assert.match(createModal, /sectionAdminName/);
+assert.doesNotMatch(createModal, /sectionAdminName/);
 assert.equal(
   editorSectionDisplayName("تنظيم الفحص", "ما يميز الفحص"),
   "تنظيم الفحص",

@@ -32,6 +32,7 @@ export type EditorSectionIcon = keyof typeof EDITOR_SECTION_ICONS;
 export default function EditorSection({
   title,
   icon,
+  help,
   defaultOpen = false,
   children,
   sectionId,
@@ -40,6 +41,7 @@ export default function EditorSection({
 }: {
   title: string;
   icon: EditorSectionIcon;
+  help?: ReactNode;
   defaultOpen?: boolean;
   children: ReactNode;
   sectionId?: string;
@@ -63,27 +65,41 @@ export default function EditorSection({
       onPointerDownCapture={activate}
       onFocusCapture={activate}
     >
-      <button
-        type="button"
-        className="csp-fold-toggle"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => {
-          setOpen((value) => !value);
-          activate();
-        }}
-      >
-        <span className="csp-fold-heading">
-          <Icon size={18} strokeWidth={1.75} className="csp-fold-icon" aria-hidden />
-          <span>{title}</span>
-        </span>
-        <ChevronDown
-          size={16}
-          strokeWidth={1.8}
-          className={open ? "csp-fold-chevron is-open" : "csp-fold-chevron"}
+      <div className="csp-fold-bar">
+        <button
+          type="button"
+          className="csp-fold-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => {
+            setOpen((value) => !value);
+            activate();
+          }}
+        >
+          <span className="csp-fold-heading">
+            <Icon size={18} strokeWidth={1.75} className="csp-fold-icon" aria-hidden />
+            <span>{title}</span>
+          </span>
+        </button>
+        {help}
+        <button
+          type="button"
+          className="csp-fold-chevron-btn"
+          tabIndex={-1}
           aria-hidden
-        />
-      </button>
+          onClick={() => {
+            setOpen((value) => !value);
+            activate();
+          }}
+        >
+          <ChevronDown
+            size={16}
+            strokeWidth={1.8}
+            className={open ? "csp-fold-chevron is-open" : "csp-fold-chevron"}
+            aria-hidden
+          />
+        </button>
+      </div>
       {open ? (
         <div id={panelId} className="csp-fold-body">
           {children}
