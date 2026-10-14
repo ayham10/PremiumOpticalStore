@@ -268,7 +268,6 @@ export function buildLensOrderDocumentHtml(
       (row, index) => `
         <tr>
           <td class="num">${index + 1}</td>
-          <td>${escapeLensOrderText(lensSignLabel(row.type))}</td>
           <td class="ltr">${escapeLensOrderText(row.sph)}</td>
           <td class="ltr">${escapeLensOrderText(formatLensCylDisplay(row.cyl))}</td>
           <td class="qty">${row.quantityToOrder}</td>
@@ -339,15 +338,23 @@ export function buildLensOrderDocumentHtml(
       font-size: 11.5px;
       color: #2a3138;
     }
+    .order-table-wrap {
+      display: flex;
+      justify-content: flex-end;
+      direction: ltr;
+    }
     table {
-      width: 100%;
+      width: 78mm;
+      max-width: 78mm;
+      margin-left: auto;
       border-collapse: collapse;
       table-layout: fixed;
+      direction: ltr;
+      unicode-bidi: isolate;
     }
-    col.idx { width: 8%; }
-    col.kind { width: 18%; }
-    col.sph { width: 16%; }
-    col.cyl { width: 16%; }
+    col.idx { width: 14%; }
+    col.sph { width: 22%; }
+    col.cyl { width: 22%; }
     col.order { width: 42%; }
     thead { display: table-header-group; }
     tr { break-inside: avoid; page-break-inside: avoid; }
@@ -405,10 +412,10 @@ export function buildLensOrderDocumentHtml(
     </header>
     <div class="rule"></div>
     <p class="summary">סה״כ שורות: ${totals.combinations} | סה״כ להזמנה: ${totals.quantity}</p>
+    <div class="order-table-wrap">
     <table>
       <colgroup>
         <col class="idx" />
-        <col class="kind" />
         <col class="sph" />
         <col class="cyl" />
         <col class="order" />
@@ -416,14 +423,14 @@ export function buildLensOrderDocumentHtml(
       <thead>
         <tr>
           <th>#</th>
-          <th>סוג עדשה</th>
           <th>SPH</th>
           <th>CYL</th>
-          <th>כמות להזמנה</th>
+          <th dir="rtl">כמות להזמנה</th>
         </tr>
       </thead>
-      <tbody>${body || `<tr><td colspan="5">אין פריטים להזמנה</td></tr>`}</tbody>
+      <tbody>${body || `<tr><td colspan="4">אין פריטים להזמנה</td></tr>`}</tbody>
     </table>
+    </div>
     <p class="total">סה״כ כמות להזמנה: ${totals.quantity}</p>
     <p class="footer">OYON OPTICS</p>
   </div>

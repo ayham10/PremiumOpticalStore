@@ -13,6 +13,7 @@ import {
   applyLensWrites,
   draftsToWriteItems,
   findLensWriteConflicts,
+  lensArrowFieldSwitch,
   lensCyls,
   lensDraftCount,
   moveLensCoord,
@@ -92,6 +93,13 @@ const lastPlus = {
 };
 assert.equal(tabLensCoord(lastPlus), null);
 assert.deepEqual(tabLensCoord({ type: "plus", row: 0, col: 0 }, true), lastMinus);
+
+assert.equal(lensArrowFieldSwitch("current", "ArrowRight", 1, 1, 1), "desired");
+assert.equal(lensArrowFieldSwitch("current", "ArrowRight", 0, 0, 1), null);
+assert.equal(lensArrowFieldSwitch("current", "ArrowLeft", 0, 0, 1), null);
+assert.equal(lensArrowFieldSwitch("desired", "ArrowLeft", 0, 0, 2), "current");
+assert.equal(lensArrowFieldSwitch("desired", "ArrowRight", 2, 2, 2), null);
+assert.equal(lensArrowFieldSwitch("current", "ArrowRight", 0, 1, 1), null);
 
 const saved: LensInventoryCell[] = [
   {
@@ -259,6 +267,18 @@ assert.match(page, /onClick=\{\(\) => onActivate\(type, sph, cyl, "current"\)\}/
 assert.match(page, /onDoubleClick=\{\(\) => onActivate\(type, sph, cyl, "desired"\)\}/);
 assert.match(page, /undoChanges/);
 assert.match(page, /cancelAll/);
+assert.match(page, /lensArrowFieldSwitch/);
+assert.match(page, /orderOpen/);
+assert.match(page, /ChevronDown/);
+assert.match(page, /dir="ltr"/);
+assert.match(page, /admin-lens-order-toggle/);
+assert.match(page, /colType/);
+assert.doesNotMatch(page, /ArrowLeft" \|\| event\.key === "ArrowRight" \|\| event\.key === "ArrowUp"/);
+
+const css = readFileSync("app/globals.css", "utf8");
+assert.match(css, /max-height: 17\.2rem/);
+assert.match(css, /\.admin-lens-order th \{\s*position: sticky;/);
+assert.match(css, /padding: 0\.35rem 0\.55rem/);
 
 const route = readFileSync("app/api/lens-inventory/route.ts", "utf8");
 assert.match(route, /parseLensInventoryWriteBody/);

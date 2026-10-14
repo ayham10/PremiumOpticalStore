@@ -9,7 +9,7 @@ import {
   type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
-import { Contact, Download, Printer } from "lucide-react";
+import { ChevronDown, Contact, Download, Printer } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
 import { useLocale } from "@/components/i18n/LocaleProvider";
@@ -31,6 +31,7 @@ import {
 import {
   applyLensPaste,
   draftsToWriteItems,
+  lensArrowFieldSwitch,
   lensCellToCoord,
   lensCoordToCell,
   lensDraftCount,
@@ -125,6 +126,7 @@ export default function AdminLensInventoryPage() {
   const [error, setError] = useState("");
   const [active, setActive] = useState<ActiveCell | null>(null);
   const [editText, setEditText] = useState("");
+  const [orderOpen, setOrderOpen] = useState(false);
   const draftsRef = useRef(drafts);
   const itemsRef = useRef(items);
   const activeRef = useRef(active);
@@ -545,7 +547,18 @@ export default function AdminLensInventoryPage() {
           <section className="admin-card admin-lens-order">
             <div className="admin-lens-order-head">
               <div>
-                <h2>{t("admin.lensInventory.orderTitle")}</h2>
+                <h2>
+                  <button
+                    type="button"
+                    className={`admin-lens-order-toggle${orderOpen ? " is-open" : ""}`}
+                    aria-expanded={orderOpen}
+                    aria-controls="admin-lens-order-table"
+                    onClick={() => setOrderOpen((open) => !open)}
+                  >
+                    <ChevronDown size={16} strokeWidth={2.2} aria-hidden />
+                    <span>{t("admin.lensInventory.orderTitle")}</span>
+                  </button>
+                </h2>
                 <p>
                   {t("admin.lensInventory.totalItems")}: <strong>{totals.combinations}</strong>
                   <span className="admin-lens-order-sep">·</span>
@@ -572,34 +585,36 @@ export default function AdminLensInventoryPage() {
               </div>
             </div>
 
-            {orderRows.length === 0 ? (
-              <p className="admin-muted">{t("admin.lensInventory.orderEmpty")}</p>
-            ) : (
-              <div className="admin-lens-order-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>{t("admin.lensInventory.colType")}</th>
-                      <th>SPH</th>
-                      <th>CYL</th>
-                      <th>{t("admin.lensInventory.colCurrent")}</th>
-                      <th>{t("admin.lensInventory.colDesired")}</th>
-                      <th>{t("admin.lensInventory.colOrder")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderRows.map((row, index) => (
-                      <OrderRowView
-                        key={`${row.type}-${row.sph}-${row.cyl}`}
-                        row={row}
-                        index={index + 1}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {orderOpen ? (
+              orderRows.length === 0 ? (
+                <p className="admin-muted">{t("admin.lensInventory.orderEmpty")}</p>
+              ) : (
+                <div className="admin-lens-order-wrap" id="admin-lens-order-table" dir="ltr">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th dir="rtl">{t("admin.lensInventory.colType")}</th>
+                        <th>SPH</th>
+                        <th>CYL</th>
+                        <th dir="rtl">{t("admin.lensInventory.colCurrent")}</th>
+                        <th dir="rtl">{t("admin.lensInventory.colDesired")}</th>
+                        <th dir="rtl">{t("admin.lensInventory.colOrder")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderRows.map((row, index) => (
+                        <OrderRowView
+                          key={`${row.type}-${row.sph}-${row.cyl}`}
+                          row={row}
+                          index={index + 1}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : null}
           </section>
         </>
       )}
@@ -612,8 +627,8 @@ function OrderRowView({ row, index }: { row: LensOrderRow; index: number }) {
     <tr>
       <td>{index}</td>
       <td>{lensSignLabel(row.type)}</td>
-      <td>{row.sph}</td>
-      <td>{formatLensCylDisplay(row.cyl)}</td>
+      <td className="admin-lens-ltr">{row.sph}</td>
+      <td className="admin-lens-ltr">{formatLensCylDisplay(row.cyl)}</td>
       <td>{row.currentStock}</td>
       <td>{row.desiredStock}</td>
       <td className="admin-lens-qty">{row.quantityToOrder}</td>
@@ -697,20 +712,19 @@ function LensStockCell({
       onActivate(type, sph, cyl, active?.field === "desired" ? "current" : "desired");
       return;
     }
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown") {
-      const dCol = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-      const dRow = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        const input = event.currentTarget;
-        const start = input.selectionStart ?? 0;
-        const end = input.selectionEnd ?? 0;
-        const len = input.value.length;
-        const allSelected = start !== end && start === 0 && end === len;
-        const atEdge = event.key === "ArrowLeft" ? start === 0 : end === len;
-        if (!allSelected && !atEdge) return;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      const input = event.currentTarget;
+      const nextField = lensArrowFieldSwitch(
+        active?.field ?? "current",
+        event.key,
+        input.selectionStart ?? 0,
+        input.selectionEnd ?? 0,
+        input.value.length,
+      );
+      if (nextField) {
+        event.preventDefault();
+        onActivate(type, sph, cyl, nextField);
       }
-      event.preventDefault();
-      onMove(coord ? moveLensCoord(coord, dRow, dCol) : null, active?.field);
     }
   }
 

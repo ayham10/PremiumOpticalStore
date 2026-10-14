@@ -208,11 +208,15 @@ assert.match(html, /רשימת הזמנה לעדשות/);
 assert.match(html, /סה״כ שורות: 4/);
 assert.match(html, /סה״כ להזמנה: 10/);
 assert.match(html, /סה״כ כמות להזמנה: 10/);
-assert.match(html, /סוג עדשה/);
+assert.doesNotMatch(html, /סוג עדשה/);
 assert.match(html, /כמות להזמנה/);
 assert.match(html, /thead \{ display: table-header-group; \}/);
 assert.match(html, /page-break-inside: avoid/);
 assert.match(html, /A4 portrait/);
+assert.match(html, /order-table-wrap/);
+assert.match(html, /width: 78mm/);
+assert.match(html, /justify-content: flex-end/);
+assert.match(html, /<th>#<\/th>\s*<th>SPH<\/th>\s*<th>CYL<\/th>\s*<th dir="rtl">כמות להזמנה<\/th>/);
 
 assert.doesNotMatch(html, /طلبية/);
 assert.doesNotMatch(html, /المخزون الحالي/);
@@ -228,9 +232,11 @@ assert.match(html, /<td class="ltr">PLANO<\/td>/);
 assert.match(html, /<td class="ltr">-1\.00<\/td>/);
 assert.match(html, /<td class="ltr">\+0\.25<\/td>/);
 assert.match(html, /<td class="ltr">—<\/td>/);
-assert.match(html, /<td>\(-\)<\/td>/);
-assert.match(html, /<td>\(\+\)<\/td>/);
+assert.doesNotMatch(html, /<td>\(-\)<\/td>/);
+assert.doesNotMatch(html, /<td>\(\+\)<\/td>/);
 assert.match(html, /<td class="qty">3<\/td>/);
+assert.doesNotMatch(html, /col\.kind/);
+assert.match(html, /<td class="num">1<\/td>\s*<td class="ltr">PLANO<\/td>/);
 
 const htmlCylCells = [...html.matchAll(/<td class="ltr">([^<]*)<\/td>/g)].map(
   (match) => match[1],
@@ -247,5 +253,6 @@ const emptyHtml = buildLensOrderDocumentHtml([]);
 assert.match(emptyHtml, /סה״כ שורות: 0/);
 assert.match(emptyHtml, /סה״כ כמות להזמנה: 0/);
 assert.match(emptyHtml, /אין פריטים להזמנה/);
+assert.match(emptyHtml, /colspan="4"/);
 
 console.log("lens-inventory tests passed");

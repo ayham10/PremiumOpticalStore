@@ -91,6 +91,23 @@ export function moveLensCoord(
   return next;
 }
 
+export function lensArrowFieldSwitch(
+  field: LensEditField,
+  key: "ArrowLeft" | "ArrowRight",
+  selectionStart: number,
+  selectionEnd: number,
+  valueLength: number,
+): LensEditField | null {
+  if (selectionStart !== selectionEnd) return null;
+  if (key === "ArrowRight" && field === "current" && selectionStart === valueLength) {
+    return "desired";
+  }
+  if (key === "ArrowLeft" && field === "desired" && selectionStart === 0) {
+    return "current";
+  }
+  return null;
+}
+
 export function tabLensCoord(
   coord: LensGridCoord,
   reverse = false,
