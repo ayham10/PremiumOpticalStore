@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  formatFrameSizePublic,
   isFrameSizeInput,
   normalizeFrameSize,
   sanitizeBarcode,
@@ -134,6 +135,12 @@ assert.equal(normalizeFrameSize(""), undefined);
 assert.equal(normalizeFrameSize("abc"), null);
 assert.equal(sanitizeFrameSize("052-018"), "52-018");
 assert.equal(sanitizeFrameSize("bad"), undefined);
+assert.equal(formatFrameSizePublic("018-052"), "18*52");
+assert.equal(formatFrameSizePublic("052-018"), "52*18");
+assert.equal(formatFrameSizePublic("050-020"), "50*20");
+assert.equal(formatFrameSizePublic("52-018"), "52*18");
+assert.equal(formatFrameSizePublic(""), undefined);
+assert.equal(normalizeFrameSize("018-052"), "18-052");
 assert.equal(isFrameSizeInput("052"), true);
 assert.equal(isFrameSizeInput("052-018"), true);
 assert.equal(isFrameSizeInput("red"), false);

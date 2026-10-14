@@ -246,33 +246,36 @@ function typeLabel(
 }
 
 const goldBtn: CSSProperties = {
-  height: 48,
+  height: 40,
   borderRadius: 12,
   background: GOLD,
   color: "#0B0F14",
   border: "none",
   fontWeight: 700,
-  fontSize: "0.9rem",
+  fontSize: "0.8rem",
+  padding: "0 1.05rem",
 };
 
 const outlineGoldBtn: CSSProperties = {
-  height: 48,
+  height: 40,
   borderRadius: 12,
   background: "transparent",
   color: GOLD,
   border: `1px solid ${GOLD}`,
   fontWeight: 700,
-  fontSize: "0.88rem",
+  fontSize: "0.8rem",
+  padding: "0 1.05rem",
 };
 
 const dangerOutlineBtn: CSSProperties = {
-  height: 48,
+  height: 40,
   borderRadius: 12,
   background: "transparent",
   color: "#E07A7A",
   border: "1px solid rgba(224,122,122,0.55)",
   fontWeight: 700,
-  fontSize: "0.88rem",
+  fontSize: "0.8rem",
+  padding: "0 1.05rem",
 };
 
 
@@ -930,11 +933,7 @@ export default function AdminInventoryPage() {
                         type="button"
                         onClick={() => void onDelete(editing)}
                         className="flex items-center justify-center gap-1.5"
-                        style={{
-                          ...dangerOutlineBtn,
-                          height: 42,
-                          fontSize: "0.8rem",
-                        }}
+                        style={dangerOutlineBtn}
                       >
                         <Trash2 size={14} strokeWidth={1.55} />
                         حذف المنتج
@@ -946,11 +945,7 @@ export default function AdminInventoryPage() {
                         onClick={() => void onSubmit()}
                         disabled={saving}
                         className="flex items-center justify-center gap-1.5 disabled:opacity-50"
-                        style={{
-                          ...outlineGoldBtn,
-                          height: 42,
-                          fontSize: "0.8rem",
-                        }}
+                        style={outlineGoldBtn}
                       >
                         <Save size={14} strokeWidth={1.7} />
                         {saving ? "جارٍ الحفظ…" : "حفظ التغييرات"}
@@ -961,11 +956,7 @@ export default function AdminInventoryPage() {
                       onClick={() => goTab("images")}
                       disabled={saving}
                       className="flex items-center justify-center gap-1.5 disabled:opacity-50"
-                      style={{
-                        ...goldBtn,
-                        height: 42,
-                        fontSize: "0.8rem",
-                      }}
+                      style={goldBtn}
                     >
                       التالي
                       <ChevronLeft size={15} strokeWidth={2} />
@@ -995,11 +986,11 @@ export default function AdminInventoryPage() {
                     />
                   </div>
 
-                  <div className="flex gap-2.5">
+                  <div className="admin-pe-step1-actions">
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex flex-1 items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 disabled:opacity-50"
                       style={goldBtn}
                     >
                       <Save size={16} strokeWidth={1.7} />
@@ -1012,7 +1003,7 @@ export default function AdminInventoryPage() {
                     <button
                       type="button"
                       onClick={() => goTab("details")}
-                      className="flex flex-1 items-center justify-center gap-1.5"
+                      className="flex items-center justify-center gap-1.5"
                       style={outlineGoldBtn}
                     >
                       <ChevronRight size={16} strokeWidth={2} />

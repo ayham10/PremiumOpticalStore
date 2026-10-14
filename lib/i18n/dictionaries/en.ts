@@ -103,6 +103,11 @@ export type Dictionary = {
     frame: string;
     lens: string;
     sku: string;
+    productNumber: string;
+    barcode: string;
+    frameSize: string;
+    available: string;
+    unavailable: string;
     availability: string;
     bookConsultation: string;
     whatsapp: string;
@@ -680,6 +685,11 @@ const en: Dictionary = {
     frame: "Frame",
     lens: "Lens",
     sku: "SKU",
+    productNumber: "Product number",
+    barcode: "Barcode",
+    frameSize: "Size",
+    available: "Available",
+    unavailable: "Unavailable",
     availability: "Availability",
     bookConsultation: "Book Consultation",
     whatsapp: "WhatsApp inquire",

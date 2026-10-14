@@ -13,6 +13,7 @@ import {
   productSlugCacheKey,
 } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
+import { formatFrameSizePublic } from "@/lib/product-fields";
 import { productDisplayGallery, productImageStyle } from "@/lib/product-images";
 import { storeWhatsAppHref } from "@/lib/store-whatsapp";
 import {
@@ -136,12 +137,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const images = productDisplayGallery(product, defaults);
 
-  const availabilityLabel =
-    product.status === "out_of_stock"
-      ? t("product.outOfStock")
-      : product.stockQuantity > 0
-        ? t("product.inStore")
-        : t("product.availability");
+  const isAvailable =
+    product.status === "active" && Number(product.stockQuantity) > 0;
+  const availabilityLabel = isAvailable
+    ? t("product.available")
+    : t("product.unavailable");
+  const frameSizeLabel = formatFrameSizePublic(product.frameSize);
 
   const categoryLabel =
     dict.shop.categories[product.category as keyof typeof dict.shop.categories] ||
@@ -224,14 +225,36 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 currencySymbol={settings?.currencySymbol || "₪"}
               />
             </p>
-            {product.status === "out_of_stock" ? (
+            {!isAvailable ? (
               <span className="product-stock-pill">
-                {t("product.outOfStock")}
+                {t("product.unavailable")}
               </span>
             ) : null}
             <p className="product-description">{description}</p>
 
             <dl className="product-meta">
+              <div>
+                <dt>{t("product.productNumber")}</dt>
+                <dd>{product.sku || "—"}</dd>
+              </div>
+              {product.barcode ? (
+                <div>
+                  <dt>{t("product.barcode")}</dt>
+                  <dd>{product.barcode}</dd>
+                </div>
+              ) : null}
+              {product.color ? (
+                <div>
+                  <dt>{t("product.colour")}</dt>
+                  <dd>{product.color}</dd>
+                </div>
+              ) : null}
+              {frameSizeLabel ? (
+                <div>
+                  <dt>{t("product.frameSize")}</dt>
+                  <dd>{frameSizeLabel}</dd>
+                </div>
+              ) : null}
               {lensLabel ? (
                 <div>
                   <dt>
