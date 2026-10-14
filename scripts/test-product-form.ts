@@ -264,7 +264,8 @@ assert.match(focalEditor, /admin-pe-focal-preview/);
 const peCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 assert.match(peCss, /\.admin-pe-focal-preview\s*\{[\s\S]*width:\s*240px/);
 assert.match(peCss, /\.admin-pe-focal-layout\s*\{[\s\S]*grid-template-columns:\s*240px/);
-assert.match(peCss, /\.admin-pe-thumb\s*\{[\s\S]*width:\s*72px/);
+assert.match(peCss, /\.admin-pe-thumb\s*\{[\s\S]*width:\s*110px/);
+assert.match(peCss, /\.admin-pe-focal-sliders\s*\{[\s\S]*width:\s*350px/);
 assert.match(imagesField, /setSelectedIndex\(index\)/);
 
 console.log("test-product-form: ok");

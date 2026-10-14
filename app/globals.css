@@ -14624,9 +14624,9 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-pe-thumb {
   position: relative;
   overflow: hidden;
-  flex: 0 0 72px;
-  width: 72px;
-  height: 72px;
+  flex: 0 0 110px;
+  width: 110px;
+  height: 110px;
   aspect-ratio: 1 / 1;
   border-radius: 10px;
   border: 1px solid rgba(212, 175, 55, 0.2);
@@ -14702,7 +14702,10 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 .admin-pe-focal-sliders {
   display: grid;
   gap: 12px;
+  width: 350px;
+  max-width: 350px;
   min-width: 0;
+  justify-self: start;
 }
 
 @media (max-width: 699px) {
@@ -14724,6 +14727,7 @@ html[dir="rtl"] .admin-wh-period-toggle input:checked + .admin-wh-period-switch:
 
   .admin-pe-focal-sliders {
     width: 100%;
+    max-width: 350px;
   }
 }
 
