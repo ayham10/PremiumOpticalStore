@@ -300,7 +300,10 @@ export default function AdminServicePagesPage() {
       const servicePages = localePatchPayload(editLocale, pages, {
         includeHomepage,
       });
-      const saved = await apiFetch<{ settings: StoreSettings }>(
+      const saved = await apiFetch<{
+        settings: StoreSettings;
+        translationFailures?: Array<unknown>;
+      }>(
         "/api/settings",
         {
           method: "PUT",
@@ -309,15 +312,15 @@ export default function AdminServicePagesPage() {
       );
       const next = saved.settings?.servicePages;
       setDocument(next);
-      const nextDrafts = {
-        ...drafts,
-        [editLocale]: cloneLocaleBundle(pages),
-      };
-      delete nextDrafts[editLocale];
-      setDrafts(nextDrafts);
-      applyLocale(next ?? document, editLocale, nextDrafts);
+      setDrafts({});
+      applyLocale(next ?? document, editLocale, {});
       invalidatePublicCache("settings:");
       window.dispatchEvent(new Event("oyon:branding-saved"));
+      setMessage(
+        saved.translationFailures?.length
+          ? t("admin.servicePages.translationPartial")
+          : t("admin.servicePages.saved"),
+      );
       notifySaved();
     } catch (err) {
       setError(

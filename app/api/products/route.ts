@@ -38,7 +38,12 @@ import {
   uniqueProductSlug,
 } from "@/lib/product-number";
 import { productDiscountedPrice } from "@/lib/promotions";
+import {
+  PUBLIC_JSON_CACHE_CONTROL,
+  PRIVATE_NO_STORE_CACHE_CONTROL,
+} from "@/lib/http-cache";
 import { isLocale, type Locale } from "@/lib/i18n/config";
+import type { TranslationFailure } from "@/lib/translate-text";
 import type {
   CatalogCategory,
   CategoryDefaultImages,
@@ -48,6 +53,7 @@ import type {
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Card/list DTO — omit gallery, costs, and inventory fields. */
 function withCatalogPrice(p: Product, promotions: Promotion[]): Product {
@@ -140,12 +146,18 @@ async function attachProductI18n(
   fields: Omit<Product, "id" | "createdAt" | "updatedAt">,
   body: ProductWriteBody,
   existing?: Product,
-): Promise<Omit<Product, "id" | "createdAt" | "updatedAt">> {
+): Promise<{
+  fields: Omit<Product, "id" | "createdAt" | "updatedAt">;
+  failures: TranslationFailure[];
+}> {
   if (existing && !isLocale(body.locale) && body.locales === undefined) {
     return {
-      ...fields,
-      locales: existing.locales,
-      i18nSource: existing.i18nSource,
+      fields: {
+        ...fields,
+        locales: existing.locales,
+        i18nSource: existing.i18nSource,
+      },
+      failures: [],
     };
   }
   const i18n = await applyProductTranslations({
@@ -160,13 +172,27 @@ async function attachProductI18n(
     overwriteManual: body.overwriteManual === true,
   });
   return {
-    ...fields,
-    name: i18n.name,
-    description: i18n.description,
-    color: i18n.color,
-    locales: i18n.locales,
-    i18nSource: i18n.i18nSource,
+    fields: {
+      ...fields,
+      name: i18n.name,
+      description: i18n.description,
+      color: i18n.color,
+      locales: i18n.locales,
+      i18nSource: i18n.i18nSource,
+    },
+    failures: i18n.failures,
   };
+}
+
+function translationSavePayload(
+  product: Product | undefined,
+  failures: TranslationFailure[],
+  status?: number,
+) {
+  return NextResponse.json(
+    { product, translationFailures: failures },
+    status ? { status } : undefined,
+  );
 }
 
 function sanitizeProductInput(
@@ -382,7 +408,9 @@ export async function GET(request: Request) {
         },
         {
           headers: {
-            "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+            "Cache-Control": fullRecords
+              ? PRIVATE_NO_STORE_CACHE_CONTROL
+              : PUBLIC_JSON_CACHE_CONTROL,
           },
         },
       );
@@ -442,7 +470,9 @@ export async function GET(request: Request) {
       },
       {
         headers: {
-          "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+          "Cache-Control": fullRecords
+            ? PRIVATE_NO_STORE_CACHE_CONTROL
+            : PUBLIC_JSON_CACHE_CONTROL,
         },
       },
     );
@@ -473,7 +503,7 @@ export async function POST(request: Request) {
       let finished: Omit<Product, "id" | "createdAt" | "updatedAt">;
       try {
         finished = finishProductFields(
-          localized,
+          localized.fields,
           store.products,
           undefined,
           body.skuManual !== true,
@@ -506,9 +536,10 @@ export async function POST(request: Request) {
       return store;
     });
 
-    return NextResponse.json(
-      { product: data.products.find((p) => p.id === productId) },
-      { status: 201 }
+    return translationSavePayload(
+      data.products.find((p) => p.id === productId),
+      localized.failures,
+      201,
     );
   } catch (error) {
     if (error instanceof ManualTranslationError) {
@@ -557,7 +588,7 @@ export async function PUT(request: Request) {
       let finished: Omit<Product, "id" | "createdAt" | "updatedAt">;
       try {
         finished = finishProductFields(
-          { ...localized, slug: store.products[index].slug },
+          { ...localized.fields, slug: store.products[index].slug },
           store.products,
           body.id,
           body.skuManual !== true,
@@ -593,7 +624,7 @@ export async function PUT(request: Request) {
       return store;
     });
 
-    return NextResponse.json({ product: updated });
+    return translationSavePayload(updated ?? undefined, localized.failures);
   } catch (error) {
     if (error instanceof ManualTranslationError) {
       return jsonError("تأكيد الكتابة فوق الترجمة اليدوية", 409, {

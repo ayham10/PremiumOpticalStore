@@ -145,6 +145,77 @@ const updatedMachine = await applyProductTranslations({
 assert.equal(updatedMachine.name, "Aurelia Acetate");
 assert.equal(updatedMachine.locales.he?.name, "[he]Aurelia Gold");
 assert.equal(updatedMachine.locales.he?.origins?.name, "machine");
+assert.deepEqual(updatedMachine.failures, []);
+
+let inflight = 0;
+let maxInflight = 0;
+const parallelTranslate = async (text: string, _from: string, to: string) => {
+  inflight += 1;
+  maxInflight = Math.max(maxInflight, inflight);
+  await new Promise((resolve) => setTimeout(resolve, 8));
+  inflight -= 1;
+  return `[${to}]${text}`;
+};
+await applyProductTranslations({
+  sourceLocale: "ar",
+  fields: { name: "إطار", description: "وصف", color: "أسود" },
+  translate: parallelTranslate,
+});
+assert.ok(maxInflight > 1, "product translations run in parallel");
+
+const failingTranslate = async (text: string, _from: string, to: string) => {
+  if (to === "he") throw new Error("quota exceeded");
+  return `[${to}]${text}`;
+};
+const partial = await applyProductTranslations({
+  sourceLocale: "ar",
+  fields: { name: "إطار ذهبي", description: "وصف عربي", color: "أسود" },
+  translate: failingTranslate,
+});
+assert.equal(partial.locales.en?.name, "[en]إطار ذهبي");
+assert.equal(partial.locales.he?.name || "", "", "failed locale is not stored as source echo");
+assert.ok(partial.failures.some((item) => item.locale === "he" && item.path === "name"));
+
+const retried = await applyProductTranslations({
+  existing: {
+    name: "إطار ذهبي",
+    description: "وصف عربي",
+    color: "أسود",
+    i18nSource: "ar",
+    locales: partial.locales,
+  },
+  sourceLocale: "ar",
+  fields: { name: "إطار ذهبي", description: "وصف عربي", color: "أسود" },
+  translate: fakeTranslate,
+});
+assert.equal(retried.locales.he?.name, "[he]إطار ذهبي");
+assert.equal(retried.locales.en?.name, "[en]إطار ذهبي");
+assert.deepEqual(retried.failures, []);
+
+const echoed: ProductI18nFields = {
+  name: "إطار ذهبي",
+  description: "وصف عربي",
+  i18nSource: "ar",
+  locales: {
+    ar: {
+      name: "إطار ذهبي",
+      description: "وصف عربي",
+      origins: { name: "manual", description: "manual" },
+    },
+    he: {
+      name: "إطار ذهبي",
+      description: "وصف عربي",
+      origins: { name: "machine", description: "machine" },
+    },
+  },
+};
+const repaired = await applyProductTranslations({
+  existing: echoed,
+  sourceLocale: "ar",
+  fields: { name: "إطار ذهبي", description: "وصف عربي" },
+  translate: fakeTranslate,
+});
+assert.equal(repaired.locales.he?.name, "[he]إطار ذهبي");
 
 const sanitized = sanitizeProductLocales({
   he: { name: "  x  ", origins: { name: "manual", bogus: "nope" } },

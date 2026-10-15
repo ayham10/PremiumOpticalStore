@@ -21,10 +21,17 @@ import {
   CustomPageError,
   publicCustomPages,
 } from "@/lib/custom-service-pages";
+import { expandServicePagesTranslations } from "@/lib/content-i18n";
+import {
+  PUBLIC_JSON_CACHE_CONTROL,
+  PRIVATE_NO_STORE_CACHE_CONTROL,
+} from "@/lib/http-cache";
 import { persistServicePages, publicServicePages } from "@/lib/service-pages";
+import type { TranslationFailure } from "@/lib/translate-text";
 import type { StoreSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export type PublicSettings = Omit<StoreSettings, "smtp" | "bookingMessages"> & {
   sms: {
@@ -83,18 +90,23 @@ export async function GET(request: Request) {
 
     if (admin) {
       await requireSession("settings");
-      return NextResponse.json({
-        settings: data.settings,
-        bookingWhatsAppTemplates: getApprovedWhatsAppTemplates(),
-        twilioWhatsApp: getTwilioWhatsAppPublicStatus(),
-      });
+      return NextResponse.json(
+        {
+          settings: data.settings,
+          bookingWhatsAppTemplates: getApprovedWhatsAppTemplates(),
+          twilioWhatsApp: getTwilioWhatsAppPublicStatus(),
+        },
+        {
+          headers: { "Cache-Control": PRIVATE_NO_STORE_CACHE_CONTROL },
+        },
+      );
     }
 
     return NextResponse.json(
       { settings: toPublicSettings(data.settings) },
       {
         headers: {
-          "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+          "Cache-Control": PUBLIC_JSON_CACHE_CONTROL,
         },
       },
     );
@@ -114,6 +126,17 @@ export async function PUT(request: Request) {
     }
 
     let settings: StoreSettings | null = null;
+    let translationFailures: TranslationFailure[] = [];
+    let servicePagesPatch = patch.servicePages;
+    if (patch.servicePages) {
+      const { data: current } = await getStore();
+      const expanded = await expandServicePagesTranslations({
+        stored: current.settings.servicePages,
+        patch: patch.servicePages,
+      });
+      servicePagesPatch = expanded.patch as typeof patch.servicePages;
+      translationFailures = expanded.failures;
+    }
 
     await updateStore((store) => {
       const next: StoreSettings = {
@@ -171,8 +194,8 @@ export async function PUT(request: Request) {
           ...store.settings.categoryDefaultImages,
           ...patch.categoryDefaultImages,
         }),
-        servicePages: patch.servicePages
-          ? persistServicePages(store.settings.servicePages, patch.servicePages)
+        servicePages: servicePagesPatch
+          ? persistServicePages(store.settings.servicePages, servicePagesPatch)
           : store.settings.servicePages,
         branding: mergeBranding({
           ...store.settings.branding,
@@ -236,7 +259,7 @@ export async function PUT(request: Request) {
       return store;
     });
 
-    return NextResponse.json({ settings });
+    return NextResponse.json({ settings, translationFailures });
   } catch (error) {
     if (error instanceof CustomPageConflictError) {
       return jsonError("This page was updated by someone else. Reload and try again.", 409, {

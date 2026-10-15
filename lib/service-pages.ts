@@ -274,6 +274,18 @@ function hasOptionalPageSettings(
   });
 }
 
+function sparseI18nOrigins(
+  saved: unknown,
+): Record<string, "machine" | "manual"> | undefined {
+  const raw = asRecord(saved);
+  const origins: Record<string, "machine" | "manual"> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!key.trim()) continue;
+    if (value === "machine" || value === "manual") origins[key] = value;
+  }
+  return Object.keys(origins).length ? origins : undefined;
+}
+
 function sparseAdminSectionNames(
   saved: unknown,
 ): Record<string, string> | undefined {
@@ -352,6 +364,8 @@ function sparseBundle(
   }
   const adminSectionNames = sparseAdminSectionNames(raw.adminSectionNames);
   if (adminSectionNames) bundle.adminSectionNames = adminSectionNames;
+  const i18nOrigins = sparseI18nOrigins(raw.i18nOrigins);
+  if (i18nOrigins) bundle.i18nOrigins = i18nOrigins;
   return bundle;
 }
 
@@ -703,6 +717,11 @@ function persistBundle(
     ...asRecord(patchRaw.adminSectionNames),
   });
   if (adminSectionNames) next.adminSectionNames = adminSectionNames;
+  const i18nOrigins = sparseI18nOrigins({
+    ...asRecord(storedRaw.i18nOrigins),
+    ...asRecord(patchRaw.i18nOrigins),
+  });
+  if (i18nOrigins) next.i18nOrigins = i18nOrigins;
 
   return next;
 }
@@ -945,7 +964,11 @@ export function persistServicePages(
 function stripAdminEditorMeta(
   bundle: ServicePagesLocaleBundle,
 ): ServicePagesLocaleBundle {
-  const { adminSectionNames: _adminSectionNames, ...rest } = bundle;
+  const {
+    adminSectionNames: _adminSectionNames,
+    i18nOrigins: _i18nOrigins,
+    ...rest
+  } = bundle;
   return rest;
 }
 

@@ -706,10 +706,11 @@ export default function CustomPageBuilder({
     setHeroMedia(saved.heroMedia);
     setGallery(saved.gallery || []);
     setProductIds(saved.productIds || []);
-    setCopies((prev) => ({
-      ...prev,
-      [editLocale]: copyForCustomPageEditor(saved, editLocale),
-    }));
+    setCopies({
+      ar: copyForCustomPageEditor(saved, "ar"),
+      he: copyForCustomPageEditor(saved, "he"),
+      en: copyForCustomPageEditor(saved, "en"),
+    });
   }
 
   async function submit(statusOverride?: CustomServicePage["status"]) {
@@ -740,7 +741,10 @@ export default function CustomPageBuilder({
         locale: editLocale,
         copy,
       };
-      const saved = await apiFetch<{ settings: StoreSettings }>("/api/settings", {
+      const saved = await apiFetch<{
+        settings: StoreSettings;
+        translationFailures?: Array<unknown>;
+      }>("/api/settings", {
         method: "PUT",
         body: JSON.stringify({ settings: { servicePages: { customPageOp: op } } }),
       });
@@ -748,7 +752,11 @@ export default function CustomPageBuilder({
       const nextPage = nextDoc?.customPages?.find((item) => item.id === page.id);
       if (nextPage) applySaved(nextPage);
       onDocument(nextDoc);
-      setMessage(t("admin.servicePages.saved"));
+      setMessage(
+        saved.translationFailures?.length
+          ? t("admin.servicePages.translationPartial")
+          : t("admin.servicePages.saved"),
+      );
     } catch (err) {
       setError(customPageErrorMessage(err, t));
     } finally {

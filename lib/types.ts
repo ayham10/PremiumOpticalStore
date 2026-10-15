@@ -588,6 +588,8 @@ export interface ServicePagesLocaleBundle {
    * Never rendered on the public website.
    */
   adminSectionNames?: Record<string, string>;
+  /** Per-path machine/manual flags for auto-translate. Never shown publicly. */
+  i18nOrigins?: Record<string, "machine" | "manual">;
 }
 
 export const CUSTOM_SECTION_TYPES = [
@@ -683,6 +685,8 @@ export interface CustomPageCopy {
   privacyText: string;
   homeTitle: string;
   homeSubtitle: string;
+  /** Per-path machine/manual flags for auto-translate. Never shown publicly. */
+  origins?: Record<string, "machine" | "manual">;
 }
 
 export interface CustomServicePage {
@@ -742,6 +746,8 @@ export type CustomPageOp =
       productIds?: string[];
       locale?: ServicePagesLocale;
       copy?: CustomPageCopy;
+      /** Server-generated sibling locales persisted in the same save. */
+      locales?: Partial<Record<ServicePagesLocale, CustomPageCopy>>;
     }
   | {
       op: "delete";

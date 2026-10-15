@@ -437,8 +437,21 @@ function sparseBenefits(saved: unknown): string[] {
   );
 }
 
+function sparseCopyOrigins(
+  saved: unknown,
+): Record<string, "machine" | "manual"> | undefined {
+  const raw = asRecord(saved);
+  const origins: Record<string, "machine" | "manual"> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!key.trim()) continue;
+    if (value === "machine" || value === "manual") origins[key] = value;
+  }
+  return Object.keys(origins).length ? origins : undefined;
+}
+
 export function sparseCustomPageCopy(saved: unknown): CustomPageCopy {
   const raw = asRecord(saved);
+  const origins = sparseCopyOrigins(raw.origins);
   return {
     complete: false,
     eyebrow: cleanText(raw.eyebrow),
@@ -455,6 +468,7 @@ export function sparseCustomPageCopy(saved: unknown): CustomPageCopy {
     privacyText: cleanText(raw.privacyText),
     homeTitle: cleanText(raw.homeTitle),
     homeSubtitle: cleanText(raw.homeSubtitle),
+    ...(origins ? { origins } : {}),
   };
 }
 
@@ -756,7 +770,10 @@ function publicLocales(
   const locales: CustomServicePage["locales"] = {};
   for (const locale of ["ar", "he", "en"] as const) {
     const copy = page.locales[locale];
-    if (copy?.complete) locales[locale] = copy;
+    if (copy?.complete) {
+      const { origins: _origins, ...publicCopy } = copy;
+      locales[locale] = publicCopy;
+    }
   }
   return locales;
 }
@@ -944,7 +961,24 @@ function applyUpdate(
       next.showHeroButton,
     );
     next.locales = { ...next.locales, [op.locale]: copy };
-  } else if (op.sections || op.showHeroButton != null) {
+  }
+  if (op.locales) {
+    const extra: CustomServicePage["locales"] = { ...next.locales };
+    for (const locale of ["ar", "he", "en"] as const) {
+      if (locale === op.locale) continue;
+      const incoming = op.locales[locale];
+      if (!incoming) continue;
+      const copy = sparseCustomPageCopy(incoming);
+      copy.complete = isCustomPageLocaleComplete(
+        next.sections,
+        copy,
+        next.showHeroButton,
+      );
+      extra[locale] = copy;
+    }
+    next.locales = extra;
+  }
+  if (!op.locale && !op.locales && (op.sections || op.showHeroButton != null)) {
     const locales: CustomServicePage["locales"] = {};
     for (const locale of ["ar", "he", "en"] as const) {
       const copy = next.locales[locale];

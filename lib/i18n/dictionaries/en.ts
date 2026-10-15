@@ -1809,6 +1809,8 @@ const en: Dictionary = {
       save: "Save Changes",
       saving: "Saving…",
       saved: "Changes saved. The live pages will use this text.",
+      translationPartial:
+        "Saved. Some automatic translations failed. Click Save again to retry — your content was not lost.",
       saveError: "Could not save service pages",
       loadError: "Could not load service pages",
       loading: "Loading service pages…",
@@ -2293,6 +2295,8 @@ const en: Dictionary = {
       overwriteManual:
         "This language has a manually corrected translation. Overwrite the machine copy for the other languages?",
       translating: "Translating…",
+      translationPartial:
+        "Saved. Some automatic translations failed. Click Save again to retry — your content was not lost.",
       selected: "Selected categories",
       noneSelected: "No additional categories selected",
       search: "Search categories…",

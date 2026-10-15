@@ -7,6 +7,7 @@ import { AlertTriangle, CalendarCheck2 } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import CatalogPrice from "@/components/catalog/CatalogPrice";
 import { productPublicKey } from "@/lib/format";
+import { PUBLIC_CLIENT_TTL_MS } from "@/lib/http-cache";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
 import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
@@ -128,7 +129,7 @@ export default function ContactLensesPage() {
         }>(
           productsCacheKey(["Contact Lenses"], locale),
           `/api/products?category=Contact%20Lenses&locale=${encodeURIComponent(locale)}`,
-          { ttlMs: 60_000 },
+          { ttlMs: PUBLIC_CLIENT_TTL_MS },
         );
         rememberCategoryDefaultImages(data.categoryDefaultImages);
         if (!cancelled) setProducts(data.products || []);

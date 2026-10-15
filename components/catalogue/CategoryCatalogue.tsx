@@ -19,6 +19,7 @@ import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import CatalogPrice from "@/components/catalog/CatalogPrice";
 import { productPublicKey } from "@/lib/format";
+import { PUBLIC_CLIENT_TTL_MS } from "@/lib/http-cache";
 import {
   cachedJsonFetch,
   peekPublicCache,
@@ -316,7 +317,7 @@ export default function CategoryCatalogue({
         }>(
           cacheKey,
           url,
-          { ttlMs: 60_000 },
+          { ttlMs: PUBLIC_CLIENT_TTL_MS },
         );
         rememberCategoryDefaultImages(data.categoryDefaultImages);
         if (!cancelled) setProducts(data.products || []);

@@ -63,6 +63,7 @@ import {
   type ProductLocaleCopy,
   type ProductLocales,
 } from "@/lib/product-i18n";
+import type { TranslationFailure } from "@/lib/translate-text";
 import { allocateProductNumber } from "@/lib/product-number";
 import type {
   AdminSession,
@@ -327,6 +328,7 @@ export default function AdminInventoryPage() {
   const [contentLocale, setContentLocale] = useState<Locale>("ar");
   const [draftLocales, setDraftLocales] = useState<ProductLocales>({});
   const [translating, setTranslating] = useState(false);
+  const [translationNotice, setTranslationNotice] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogCategories, setCatalogCategories] = useState<CatalogCategory[]>(
     () => mergeCatalogCategories(undefined),
@@ -572,6 +574,7 @@ export default function AdminInventoryPage() {
     }
     setSaving(true);
     setMessage("");
+    setTranslationNotice("");
     const skuManual = editing
       ? form.sku.trim() !== (editing.sku || "").trim()
       : Boolean(form.sku.trim()) &&
@@ -592,32 +595,54 @@ export default function AdminInventoryPage() {
       );
       invalidatePublicCache("products:");
       invalidatePublicCache("product:");
+      type ProductSaveResponse = {
+        product?: Product;
+        translationFailures?: TranslationFailure[];
+      };
+      const noteFor = (failures?: TranslationFailure[]) => {
+        if (failures?.length) {
+          setTranslationNotice(t("admin.catalog.translationPartial"));
+        } else {
+          setTranslationNotice("");
+        }
+      };
       if (editing) {
-        const updated = await apiFetch<Product | { product: Product }>(
+        const updated = await apiFetch<Product | ProductSaveResponse>(
           "/api/products",
           { method: "PUT", body: JSON.stringify({ id: editing.id, ...payload }) },
         );
         const row =
-          updated && typeof updated === "object" && "product" in updated
+          updated && typeof updated === "object" && "product" in updated && updated.product
             ? updated.product
             : (updated as Product);
+        const failures =
+          updated && typeof updated === "object" && "translationFailures" in updated
+            ? updated.translationFailures
+            : [];
         setProducts((prev) =>
           prev.map((p) => (p.id === editing.id ? { ...p, ...row } : p)),
         );
         setEditing({ ...editing, ...row });
         setDraftLocales(sanitizeProductLocales(row.locales));
+        noteFor(failures);
         notifySaved();
         void load({ silent: true });
       } else {
-        const created = await apiFetch<Product | { product: Product }>(
+        const created = await apiFetch<Product | ProductSaveResponse>(
           "/api/products",
           { method: "POST", body: JSON.stringify(payload) },
         );
         const row =
-          created && typeof created === "object" && "product" in created
+          created && typeof created === "object" && "product" in created && created.product
             ? created.product
             : (created as Product);
+        const failures =
+          created && typeof created === "object" && "translationFailures" in created
+            ? created.translationFailures
+            : [];
         setProducts((prev) => [row, ...prev]);
+        setDraftLocales(sanitizeProductLocales(row.locales));
+        noteFor(failures);
         setSuccess("add");
       }
     };
@@ -757,6 +782,19 @@ export default function AdminInventoryPage() {
         {translating ? (
           <p className="mb-3 text-sm" style={{ color: MUTED }}>
             {t("admin.catalog.translating")}
+          </p>
+        ) : null}
+
+        {translationNotice ? (
+          <p
+            className="mb-4 rounded-[12px] px-3 py-2 text-sm"
+            style={{
+              border: "1px solid rgba(212,175,55,0.45)",
+              background: "rgba(212,175,55,0.12)",
+              color: GOLD,
+            }}
+          >
+            {translationNotice}
           </p>
         ) : null}
 

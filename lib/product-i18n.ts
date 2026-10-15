@@ -1,5 +1,11 @@
 import { isLocale, type Locale } from "@/lib/i18n/config";
-import { translateText, type TranslateTextFn } from "@/lib/translate-text";
+import {
+  looksUntranslated,
+  mapPool,
+  translateText,
+  type TranslateTextFn,
+  type TranslationFailure,
+} from "@/lib/translate-text";
 
 export const PRODUCT_CONTENT_LOCALES: readonly Locale[] = ["ar", "he", "en"];
 
@@ -202,6 +208,7 @@ export async function applyProductTranslations(opts: {
   description: string;
   color?: string;
   i18nSource: Locale;
+  failures: TranslationFailure[];
 }> {
   const translate = opts.translate || translateText;
   const existingLocales = sanitizeProductLocales(opts.existing?.locales);
@@ -244,6 +251,9 @@ export async function applyProductTranslations(opts: {
     ? "auto"
     : sourceLocale;
 
+  type Job = { locale: Locale; field: ProductI18nField; sourceValue: string };
+  const jobs: Job[] = [];
+
   for (const locale of PRODUCT_CONTENT_LOCALES) {
     if (locale === sourceLocale) continue;
     const current = locales[locale] || emptyProductCopy();
@@ -269,15 +279,46 @@ export async function applyProductTranslations(opts: {
         : field === "color"
           ? trimCopy(opts.existing?.color)
           : trimCopy(opts.existing?.[field]);
+      const currentValue = fieldValue(current, field);
       const unchanged = Boolean(opts.existing) && sourceValue === previousSource;
-      if (unchanged && fieldValue(current, field) && origin) continue;
-
-      const translated = await translate(sourceValue, fromLang, locale);
-      if (field === "color") next.color = translated || undefined;
-      else next[field] = translated;
-      next.origins = { ...next.origins, [field]: "machine" };
+      const echoed =
+        Boolean(currentValue) && looksUntranslated(currentValue, locale);
+      if (unchanged && currentValue && origin && !echoed) continue;
+      jobs.push({ locale, field, sourceValue });
     }
     locales[locale] = next;
+  }
+
+  const failures: TranslationFailure[] = [];
+  const outcomes = await mapPool(jobs, 4, async (job) => {
+    try {
+      const text = (await translate(job.sourceValue, fromLang, job.locale)).trim();
+      if (!text) throw new Error("empty translation");
+      return { ...job, ok: true as const, text };
+    } catch (error) {
+      return {
+        ...job,
+        ok: false as const,
+        error: error instanceof Error ? error.message : "translate failed",
+      };
+    }
+  });
+
+  for (const outcome of outcomes) {
+    const next = locales[outcome.locale] || emptyProductCopy();
+    next.origins = { ...next.origins };
+    if (outcome.ok) {
+      if (outcome.field === "color") next.color = outcome.text || undefined;
+      else next[outcome.field] = outcome.text;
+      next.origins[outcome.field] = "machine";
+    } else {
+      failures.push({
+        locale: outcome.locale,
+        path: outcome.field,
+        error: outcome.error,
+      });
+    }
+    locales[outcome.locale] = next;
   }
 
   const keepRoot = Boolean(opts.existing);
@@ -295,6 +336,7 @@ export async function applyProductTranslations(opts: {
     description,
     color,
     i18nSource,
+    failures,
   };
 }
 
@@ -303,18 +345,43 @@ export async function fillMissingLocaleCopy(opts: {
   from: Locale | "auto";
   to: Locale;
   translate?: TranslateTextFn;
-}): Promise<ProductLocaleCopy> {
+}): Promise<{ copy: ProductLocaleCopy; failures: TranslationFailure[] }> {
   const translate = opts.translate || translateText;
   const next = emptyProductCopy();
   next.origins = {};
-  for (const field of PRODUCT_I18N_FIELDS) {
+  const failures: TranslationFailure[] = [];
+  const fields = PRODUCT_I18N_FIELDS.filter((field) => {
     const value =
       field === "color" ? trimCopy(opts.source.color) : trimCopy(opts.source[field]);
-    if (!value) continue;
-    const translated = await translate(value, opts.from, opts.to);
-    if (field === "color") next.color = translated || undefined;
-    else next[field] = translated;
-    next.origins![field] = "machine";
+    return Boolean(value);
+  });
+  const outcomes = await mapPool(fields, 3, async (field) => {
+    const value =
+      field === "color" ? trimCopy(opts.source.color) : trimCopy(opts.source[field]);
+    try {
+      const translated = (await translate(value, opts.from, opts.to)).trim();
+      if (!translated) throw new Error("empty translation");
+      return { field, ok: true as const, text: translated };
+    } catch (error) {
+      return {
+        field,
+        ok: false as const,
+        error: error instanceof Error ? error.message : "translate failed",
+      };
+    }
+  });
+  for (const outcome of outcomes) {
+    if (outcome.ok) {
+      if (outcome.field === "color") next.color = outcome.text || undefined;
+      else next[outcome.field] = outcome.text;
+      next.origins![outcome.field] = "machine";
+    } else {
+      failures.push({
+        locale: opts.to,
+        path: outcome.field,
+        error: outcome.error,
+      });
+    }
   }
-  return next;
+  return { copy: next, failures };
 }

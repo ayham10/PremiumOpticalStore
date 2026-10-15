@@ -13,6 +13,7 @@ import { CataloguePagedList } from "@/components/catalogue/CataloguePagination";
 import { DynamicCatalogueFilterChips } from "@/components/catalogue/CatalogueFilters";
 import ScrollRestore from "@/components/navigation/ScrollRestore";
 import { useLocale } from "@/components/i18n/LocaleProvider";
+import { PUBLIC_CLIENT_TTL_MS } from "@/lib/http-cache";
 import { cachedJsonFetch, productsCacheKey } from "@/lib/public-data-cache";
 import {
   productBelongsToCategory,
@@ -56,7 +57,7 @@ function ShopContent() {
         }>(
           productsCacheKey(["__all__"], locale),
           `/api/products?locale=${encodeURIComponent(locale)}`,
-          { ttlMs: 60_000 },
+          { ttlMs: PUBLIC_CLIENT_TTL_MS },
         );
         rememberCategoryDefaultImages(data.categoryDefaultImages);
         if (!cancelled) {

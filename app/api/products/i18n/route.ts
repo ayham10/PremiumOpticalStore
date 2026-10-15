@@ -22,12 +22,12 @@ export async function POST(request: Request) {
       return jsonError("Invalid translation payload", 400);
     }
     const from: Locale | "auto" = isLocale(body.from) ? body.from : "auto";
-    const copy = await fillMissingLocaleCopy({
+    const { copy, failures } = await fillMissingLocaleCopy({
       source: body.copy,
       from,
       to,
     });
-    return NextResponse.json({ copy });
+    return NextResponse.json({ copy, translationFailures: failures });
   } catch (error) {
     return handleRouteError(error);
   }

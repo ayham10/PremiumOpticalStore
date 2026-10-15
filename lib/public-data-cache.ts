@@ -3,6 +3,8 @@
  * Safe for client components only — never stores secrets.
  */
 
+import { PUBLIC_CLIENT_TTL_MS } from "@/lib/http-cache";
+
 type CacheEntry<T> = {
   at: number;
   data: T;
@@ -11,7 +13,7 @@ type CacheEntry<T> = {
 
 const memory = new Map<string, CacheEntry<unknown>>();
 
-const DEFAULT_TTL_MS = 90_000;
+const DEFAULT_TTL_MS = PUBLIC_CLIENT_TTL_MS;
 
 export function peekPublicCache<T>(
   key: string,

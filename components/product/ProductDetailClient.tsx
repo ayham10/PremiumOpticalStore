@@ -7,6 +7,7 @@ import RelatedProductsCarousel from "@/components/product/RelatedProductsCarouse
 import ProductBackButton from "@/components/navigation/ProductBackButton";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import CatalogPrice from "@/components/catalog/CatalogPrice";
+import { PUBLIC_CLIENT_TTL_MS } from "@/lib/http-cache";
 import {
   cachedJsonFetch,
   peekPublicCache,
@@ -83,7 +84,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     cachedJsonFetch<ProductPayload>(
       cacheKey,
       `/api/products?slug=${encodeURIComponent(slug)}&locale=${encodeURIComponent(locale)}`,
-      { ttlMs: 60_000 },
+      { ttlMs: PUBLIC_CLIENT_TTL_MS },
     )
       .then((data) => {
         if (cancelled) return;
