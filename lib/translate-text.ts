@@ -40,9 +40,11 @@ export function shouldTranslateField(opts: {
   targetLocale: Locale;
   fillMissing: boolean;
   targetOrigin?: "machine" | "manual";
+  overwriteManual?: boolean;
 }): boolean {
   const source = (opts.source || "").trim();
   if (!source) return false;
+  if (opts.overwriteManual) return true;
   if (opts.targetOrigin === "manual") return false;
   const target = (opts.target || "").trim();
   const previous = (opts.previous || "").trim();

@@ -2,6 +2,7 @@ import { isLocale, type Locale } from "@/lib/i18n/config";
 import {
   emptyCustomPageCopy,
   isCustomPageLocaleComplete,
+  resolveCustomPageLayout,
   sparseCustomPageCopy,
 } from "@/lib/custom-service-pages";
 import { SERVICE_CONTENT_LOCALES } from "@/lib/service-pages";
@@ -237,6 +238,7 @@ function collectCopyJobs(
   target: CustomPageCopy | undefined,
   locale: Locale,
   fillMissing: boolean,
+  overwriteManual = false,
 ): TranslateJob[] {
   const jobs: TranslateJob[] = [];
   for (const key of COPY_SCALARS) {
@@ -250,6 +252,7 @@ function collectCopyJobs(
         targetLocale: locale,
         fillMissing,
         targetOrigin: originOf(target?.origins, path),
+        overwriteManual,
       })
     ) {
       continue;
@@ -269,6 +272,7 @@ function collectCopyJobs(
           targetLocale: locale,
           fillMissing,
           targetOrigin: originOf(target?.origins, path),
+          overwriteManual,
         })
       ) {
         continue;
@@ -288,6 +292,7 @@ function collectCopyJobs(
         targetLocale: locale,
         fillMissing,
         targetOrigin: originOf(target?.origins, path),
+        overwriteManual,
       })
     ) {
       return;
@@ -321,6 +326,7 @@ async function translateCustomPageCopy(opts: {
   sections: CustomPageSection[];
   showHeroButton: boolean;
   translate: TranslateTextFn;
+  overwriteManual?: boolean;
 }): Promise<{
   locales: Partial<Record<ServicePagesLocale, CustomPageCopy>>;
   failures: TranslationFailure[];
@@ -338,6 +344,7 @@ async function translateCustomPageCopy(opts: {
         existing,
         locale,
         true,
+        opts.overwriteManual,
       ),
     );
   }
@@ -373,6 +380,7 @@ async function translateSectionArticles(opts: {
   storedSections?: CustomPageSection[];
   sourceLocale: ServicePagesLocale;
   translate: TranslateTextFn;
+  overwriteManual?: boolean;
 }): Promise<{ sections: CustomPageSection[]; failures: TranslationFailure[] }> {
   const sections = structuredClone(opts.sections);
   const storedById = new Map(
@@ -398,6 +406,7 @@ async function translateSectionArticles(opts: {
             target: trim(target?.[field]),
             targetLocale: locale,
             fillMissing: true,
+            overwriteManual: opts.overwriteManual,
           })
         ) {
           continue;
@@ -567,28 +576,35 @@ export async function expandServicePagesTranslations(opts: {
     }
     sourceCopy.origins = sourceOrigins;
     op.copy = sourceCopy;
-    const copies = await translateCustomPageCopy({
-      source: sourceCopy,
-      previous,
-      existing: page?.locales,
-      sourceLocale: op.locale,
-      sections,
-      showHeroButton,
-      translate,
-    });
-    failures.push(...copies.failures);
-    if (Object.keys(copies.locales).length) {
-      (op as Extract<CustomPageOp, { op: "update" }>).locales = copies.locales;
-    }
-    if (op.sections?.length) {
-      const articles = await translateSectionArticles({
-        sections: op.sections,
-        storedSections: page?.sections,
+    const syncCurrent = op.syncLocales === "current";
+    if (!syncCurrent) {
+      const copies = await translateCustomPageCopy({
+        source: sourceCopy,
+        previous,
+        existing: page?.locales,
         sourceLocale: op.locale,
+        sections,
+        showHeroButton,
         translate,
+        overwriteManual: op.overwriteManual === true,
       });
-      op.sections = articles.sections;
-      failures.push(...articles.failures);
+      failures.push(...copies.failures);
+      if (Object.keys(copies.locales).length) {
+        (op as Extract<CustomPageOp, { op: "update" }>).locales = copies.locales;
+      }
+      if (op.sections?.length) {
+        const articles = await translateSectionArticles({
+          sections: op.sections,
+          storedSections: page
+            ? resolveCustomPageLayout(page, op.locale).sections
+            : undefined,
+          sourceLocale: op.locale,
+          translate,
+          overwriteManual: op.overwriteManual === true,
+        });
+        op.sections = articles.sections;
+        failures.push(...articles.failures);
+      }
     }
     nextPatch.customPageOp = op;
   }

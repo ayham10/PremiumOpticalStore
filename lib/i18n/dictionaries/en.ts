@@ -1810,7 +1810,27 @@ const en: Dictionary = {
       saving: "Saving…",
       saved: "Changes saved. The live pages will use this text.",
       translationPartial:
-        "Saved. Some automatic translations failed. Click Save again to retry — your content was not lost.",
+        "Saved. Some automatic translations failed. Click Save again to retry — those fields were left unchanged, not stored as a successful translation.",
+      saveScopeTitle: "Save page changes",
+      saveScopeLead:
+        "Choose whether this update applies to every language or only {language}.",
+      saveAllLanguages: "Save to All Languages",
+      saveAllLanguagesHint:
+        "Use this layout, section order, images, products, and styling for Arabic, Hebrew, and English. Translatable text is translated and saved automatically.",
+      saveCurrentLanguage: "Save Current Language Only",
+      saveCurrentLanguageHint:
+        "Save these changes only to {language}. The other two languages keep their current layout and text.",
+      saveScopeOverwriteTitle: "Replace other language versions?",
+      saveScopeOverwriteHint:
+        "{languages} already have language-specific layout or manual translations. Saving to all languages will replace them.",
+      saveScopeOverwriteLead:
+        "{languages} already have language-specific customizations. Saving to all languages replaces them with this {language} version, including layout and manual translations.",
+      saveScopeOverwriteConfirm: "Replace other languages",
+      saveScopeBack: "Back",
+      savedAllLanguages:
+        "Saved to Arabic, Hebrew, and English. Live pages will use this layout.",
+      savedCurrentLanguage:
+        "Saved to {language} only. The other languages were not changed.",
       saveError: "Could not save service pages",
       loadError: "Could not load service pages",
       loading: "Loading service pages…",
