@@ -711,10 +711,27 @@ export interface CustomServicePage {
   gallery?: CustomPageMediaRef[];
   /** Catalog product ids shown on this page. Removing an id does not delete the product. */
   productIds?: string[];
+  /**
+   * Optional per-language layout. Public pages use `layouts[locale]`, then the
+   * shared root fields. Absent on pages saved before language-scoped layouts.
+   */
+  layouts?: Partial<Record<ServicePagesLocale, CustomPageLayout>>;
   locales: Partial<Record<ServicePagesLocale, CustomPageCopy>>;
   createdAt: string;
   updatedAt: string;
   revision: number;
+}
+
+/** Structure shown for one language. Copy stays in `locales` / section articles. */
+export interface CustomPageLayout {
+  sections: CustomPageSection[];
+  showHeroButton: boolean;
+  ctaKind: CustomPageCtaKind;
+  bookingType?: string | null;
+  ctaHref?: string;
+  heroMedia?: CustomPageMediaRef;
+  gallery?: CustomPageMediaRef[];
+  productIds?: string[];
 }
 
 export type CustomPageOp =
@@ -748,6 +765,14 @@ export type CustomPageOp =
       copy?: CustomPageCopy;
       /** Server-generated sibling locales persisted in the same save. */
       locales?: Partial<Record<ServicePagesLocale, CustomPageCopy>>;
+      /**
+       * `all` — write shared layout + every language, then auto-translate.
+       * `current` — write only `layouts[locale]` + `locales[locale]`.
+       * Omitted — legacy shared-root update (PR #84 still expands siblings).
+       */
+      syncLocales?: "all" | "current";
+      /** When true, Save to All Languages replaces manual sibling copy. */
+      overwriteManual?: boolean;
     }
   | {
       op: "delete";

@@ -8,7 +8,9 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
+  Globe2,
   Image as ImageIcon,
+  Languages,
   LayoutGrid,
   ListChecks,
   Package,
@@ -42,7 +44,8 @@ import AdminProductPicker from "@/components/admin/AdminProductPicker";
 import type { CustomPageProductCard } from "@/components/services/CustomPageProductsCarousel";
 import { ApiError, apiFetch } from "@/lib/admin-api";
 import { formatPrice } from "@/lib/format";
-import { isRtl, type Locale } from "@/lib/i18n/config";
+import { isRtl, localeLabels, type Locale } from "@/lib/i18n/config";
+import { invalidatePublicCache } from "@/lib/public-data-cache";
 import {
   customPageEditorSnapshot,
   snapshotForDirty,
@@ -51,8 +54,10 @@ import {
 import {
   ADDABLE_CUSTOM_SECTION_TYPES,
   attachProductIds,
+  captureCustomPageLayout,
   copyForCustomPageEditor,
   createCustomSection,
+  customPageSiblingCustomizations,
   emptySectionArticleCopy,
   customPageLocaleIssues,
   detachProductId,
@@ -62,6 +67,7 @@ import {
   pageHasVisibleButton,
   parseCtaKind,
   PUBLIC_INTERNAL_PATHS,
+  resolveCustomPageLayout,
   resolveCustomPageProducts,
   sanitizeExternalUrl,
   sanitizeInternalPath,
@@ -81,6 +87,7 @@ import type {
   CustomArticlePosition,
   CustomPageCopy,
   CustomPageCtaKind,
+  CustomPageLayout,
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
@@ -337,16 +344,23 @@ export default function CustomPageBuilder({
   const [homeMedia, setHomeMedia] = useState<CustomPageMediaRef | undefined>(
     page.homeMedia || (page.homeImage ? { kind: "image", url: page.homeImage } : undefined),
   );
-  const [showHeroButton, setShowHeroButton] = useState(page.showHeroButton);
-  const [ctaKind, setCtaKind] = useState<CustomPageCtaKind>(page.ctaKind || "book");
-  const [ctaHref, setCtaHref] = useState(page.ctaHref || "");
-  const [bookingType, setBookingType] = useState(page.bookingType || "");
-  const [sections, setSections] = useState(page.sections);
-  const [heroMedia, setHeroMedia] = useState<CustomPageMediaRef | undefined>(
-    page.heroMedia,
+  const initialLayout = resolveCustomPageLayout(page, editLocale);
+  const [showHeroButton, setShowHeroButton] = useState(initialLayout.showHeroButton);
+  const [ctaKind, setCtaKind] = useState<CustomPageCtaKind>(
+    initialLayout.ctaKind || "book",
   );
-  const [gallery, setGallery] = useState<CustomPageMediaRef[]>(page.gallery || []);
-  const [productIds, setProductIds] = useState<string[]>(page.productIds || []);
+  const [ctaHref, setCtaHref] = useState(initialLayout.ctaHref || "");
+  const [bookingType, setBookingType] = useState(initialLayout.bookingType || "");
+  const [sections, setSections] = useState(initialLayout.sections);
+  const [heroMedia, setHeroMedia] = useState<CustomPageMediaRef | undefined>(
+    initialLayout.heroMedia,
+  );
+  const [gallery, setGallery] = useState<CustomPageMediaRef[]>(
+    initialLayout.gallery || [],
+  );
+  const [productIds, setProductIds] = useState<string[]>(
+    initialLayout.productIds || [],
+  );
   const [catalog, setCatalog] = useState<CustomPageProductCard[]>([]);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [productCreateOpen, setProductCreateOpen] = useState(false);
@@ -362,7 +376,20 @@ export default function CustomPageBuilder({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [wizardStep, setWizardStep] = useState<NewPageWizardStep>(1);
+  const [saveScopeOpen, setSaveScopeOpen] = useState(false);
+  const [saveScopeStep, setSaveScopeStep] = useState<"choose" | "overwrite">(
+    "choose",
+  );
+  const [pendingStatus, setPendingStatus] = useState<
+    CustomServicePage["status"] | undefined
+  >();
   const skipRevisionReset = useRef(false);
+  const editLocaleRef = useRef(editLocale);
+  const layoutDraftsRef = useRef<Partial<Record<ServicePagesLocale, CustomPageLayout>>>({
+    ar: resolveCustomPageLayout(page, "ar"),
+    he: resolveCustomPageLayout(page, "he"),
+    en: resolveCustomPageLayout(page, "en"),
+  });
 
   useEffect(() => {
     setWizardStep(1);
@@ -384,7 +411,31 @@ export default function CustomPageBuilder({
     };
   }
 
-  function hydrateFrom(next: CustomServicePage) {
+  function applyLayoutState(layout: CustomPageLayout) {
+    setShowHeroButton(layout.showHeroButton);
+    setCtaKind(layout.ctaKind || "book");
+    setCtaHref(layout.ctaHref || "");
+    setBookingType(layout.bookingType || "");
+    setSections(layout.sections);
+    setHeroMedia(layout.heroMedia);
+    setGallery(layout.gallery || []);
+    setProductIds(layout.productIds || []);
+  }
+
+  function currentEditorLayout(): CustomPageLayout {
+    return captureCustomPageLayout({
+      sections,
+      showHeroButton,
+      ctaKind,
+      bookingType: bookingType || null,
+      ctaHref: ctaHref || undefined,
+      heroMedia,
+      gallery,
+      productIds,
+    });
+  }
+
+  function hydrateFrom(next: CustomServicePage, locale = editLocale) {
     setName(next.name);
     setSlug(next.slug);
     setRevision(next.revision);
@@ -396,20 +447,39 @@ export default function CustomPageBuilder({
       next.homeMedia ||
         (next.homeImage ? { kind: "image", url: next.homeImage } : undefined),
     );
-    setShowHeroButton(next.showHeroButton);
-    setCtaKind(next.ctaKind || "book");
-    setCtaHref(next.ctaHref || "");
-    setBookingType(next.bookingType || "");
-    setSections(next.sections);
-    setHeroMedia(next.heroMedia);
-    setGallery(next.gallery || []);
-    setProductIds(next.productIds || []);
+    layoutDraftsRef.current = {
+      ar: resolveCustomPageLayout(next, "ar"),
+      he: resolveCustomPageLayout(next, "he"),
+      en: resolveCustomPageLayout(next, "en"),
+    };
+    applyLayoutState(layoutDraftsRef.current[locale] || captureCustomPageLayout(next));
     setCopies({
       ar: copyForCustomPageEditor(next, "ar"),
       he: copyForCustomPageEditor(next, "he"),
       en: copyForCustomPageEditor(next, "en"),
     });
   }
+
+  const layoutStateRef = useRef({
+    sections,
+    showHeroButton,
+    ctaKind,
+    ctaHref,
+    bookingType,
+    heroMedia,
+    gallery,
+    productIds,
+  });
+  layoutStateRef.current = {
+    sections,
+    showHeroButton,
+    ctaKind,
+    ctaHref,
+    bookingType,
+    heroMedia,
+    gallery,
+    productIds,
+  };
 
   useEffect(() => {
     hydrateFrom(page);
@@ -426,6 +496,27 @@ export default function CustomPageBuilder({
       hydrateFrom(page);
     }
   }, [page.revision, page.id]);
+
+  useEffect(() => {
+    const previous = editLocaleRef.current;
+    if (previous === editLocale) return;
+    const snapshot = layoutStateRef.current;
+    layoutDraftsRef.current[previous] = captureCustomPageLayout({
+      sections: snapshot.sections,
+      showHeroButton: snapshot.showHeroButton,
+      ctaKind: snapshot.ctaKind,
+      bookingType: snapshot.bookingType || null,
+      ctaHref: snapshot.ctaHref || undefined,
+      heroMedia: snapshot.heroMedia,
+      gallery: snapshot.gallery,
+      productIds: snapshot.productIds,
+    });
+    const nextLayout =
+      layoutDraftsRef.current[editLocale] ||
+      resolveCustomPageLayout(page, editLocale);
+    applyLayoutState(nextLayout);
+    editLocaleRef.current = editLocale;
+  }, [editLocale, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -687,33 +778,27 @@ export default function CustomPageBuilder({
 
   function applySaved(saved: CustomServicePage) {
     skipRevisionReset.current = true;
-    setName(saved.name);
-    setSlug(saved.slug);
-    setRevision(saved.revision);
-    setStatus(saved.status);
-    setShowOnHome(saved.showOnHome);
-    setHomeSort(saved.homeSort);
-    setHomeImage(saved.homeImage || "");
-    setHomeMedia(
-      saved.homeMedia ||
-        (saved.homeImage ? { kind: "image", url: saved.homeImage } : undefined),
-    );
-    setShowHeroButton(saved.showHeroButton);
-    setCtaKind(saved.ctaKind || "book");
-    setCtaHref(saved.ctaHref || "");
-    setBookingType(saved.bookingType || "");
-    setSections(saved.sections);
-    setHeroMedia(saved.heroMedia);
-    setGallery(saved.gallery || []);
-    setProductIds(saved.productIds || []);
-    setCopies({
-      ar: copyForCustomPageEditor(saved, "ar"),
-      he: copyForCustomPageEditor(saved, "he"),
-      en: copyForCustomPageEditor(saved, "en"),
-    });
+    hydrateFrom(saved, editLocale);
   }
 
-  async function submit(statusOverride?: CustomServicePage["status"]) {
+  function closeSaveScope() {
+    if (saving) return;
+    setSaveScopeOpen(false);
+    setSaveScopeStep("choose");
+    setPendingStatus(undefined);
+  }
+
+  function openSaveScope(statusOverride?: CustomServicePage["status"]) {
+    setPendingStatus(statusOverride);
+    setSaveScopeStep("choose");
+    setSaveScopeOpen(true);
+  }
+
+  async function submit(
+    syncLocales: "all" | "current",
+    statusOverride?: CustomServicePage["status"],
+    overwriteManual = false,
+  ) {
     setSaving(true);
     setMessage("");
     setError("");
@@ -740,6 +825,8 @@ export default function CustomPageBuilder({
         productIds,
         locale: editLocale,
         copy,
+        syncLocales,
+        ...(overwriteManual ? { overwriteManual: true } : {}),
       };
       const saved = await apiFetch<{
         settings: StoreSettings;
@@ -751,17 +838,74 @@ export default function CustomPageBuilder({
       const nextDoc = saved.settings?.servicePages;
       const nextPage = nextDoc?.customPages?.find((item) => item.id === page.id);
       if (nextPage) applySaved(nextPage);
+      invalidatePublicCache("settings:");
+      window.dispatchEvent(new Event("oyon:branding-saved"));
       onDocument(nextDoc);
+      setSaveScopeOpen(false);
+      setSaveScopeStep("choose");
+      setPendingStatus(undefined);
+      const language = localeLabels[editLocale];
       setMessage(
         saved.translationFailures?.length
           ? t("admin.servicePages.translationPartial")
-          : t("admin.servicePages.saved"),
+          : syncLocales === "current"
+            ? t("admin.servicePages.savedCurrentLanguage", { language })
+            : t("admin.servicePages.savedAllLanguages"),
       );
     } catch (err) {
       setError(customPageErrorMessage(err, t));
     } finally {
       setSaving(false);
     }
+  }
+
+  async function submitStatusOnly(nextStatus: CustomServicePage["status"]) {
+    setSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      const op: Extract<CustomPageOp, { op: "update" }> = {
+        op: "update",
+        id: page.id,
+        expectedRevision: revision,
+        status: nextStatus,
+      };
+      const saved = await apiFetch<{ settings: StoreSettings }>(
+        "/api/settings",
+        {
+          method: "PUT",
+          body: JSON.stringify({ settings: { servicePages: { customPageOp: op } } }),
+        },
+      );
+      const nextDoc = saved.settings?.servicePages;
+      const nextPage = nextDoc?.customPages?.find((item) => item.id === page.id);
+      if (nextPage) applySaved(nextPage);
+      invalidatePublicCache("settings:");
+      window.dispatchEvent(new Event("oyon:branding-saved"));
+      onDocument(nextDoc);
+      setMessage(t("admin.servicePages.saved"));
+    } catch (err) {
+      setError(customPageErrorMessage(err, t));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function requestSave(statusOverride?: CustomServicePage["status"]) {
+    openSaveScope(statusOverride);
+  }
+
+  function chooseSaveAll() {
+    const overwritten = customPageSiblingCustomizations(
+      page,
+      editLocale,
+      currentEditorLayout(),
+    );
+    if (overwritten.length) {
+      setSaveScopeStep("overwrite");
+      return;
+    }
+    void submit("all", pendingStatus);
   }
 
   async function removePage() {
@@ -791,6 +935,7 @@ export default function CustomPageBuilder({
     }
   }
 
+  const editorLayout = currentEditorLayout();
   const previewPage: CustomServicePage = {
     ...page,
     name,
@@ -809,6 +954,11 @@ export default function CustomPageBuilder({
     heroMedia,
     gallery,
     productIds,
+    layouts: {
+      ...(page.layouts || {}),
+      ...layoutDraftsRef.current,
+      [editLocale]: editorLayout,
+    },
     locales: {
       [editLocale]: {
         ...copy,
@@ -820,6 +970,7 @@ export default function CustomPageBuilder({
   const attachedProducts = resolveCustomPageProducts(catalog, productIds, {
     includeDrafts: true,
   });
+  const savedLayout = resolveCustomPageLayout(page, editLocale);
   const dirty =
     customPageEditorSnapshot({
       name,
@@ -847,16 +998,25 @@ export default function CustomPageBuilder({
       homeSort: page.homeSort,
       homeImage: page.homeImage,
       homeMedia: page.homeMedia,
-      showHeroButton: page.showHeroButton,
-      ctaKind: page.ctaKind,
-      ctaHref: page.ctaHref,
-      bookingType: page.bookingType,
-      sections: page.sections,
-      heroMedia: page.heroMedia,
-      gallery: page.gallery,
-      productIds: page.productIds,
+      showHeroButton: savedLayout.showHeroButton,
+      ctaKind: savedLayout.ctaKind,
+      ctaHref: savedLayout.ctaHref,
+      bookingType: savedLayout.bookingType,
+      sections: savedLayout.sections,
+      heroMedia: savedLayout.heroMedia,
+      gallery: savedLayout.gallery,
+      productIds: savedLayout.productIds,
       copy: copyForCustomPageEditor(page, editLocale),
     });
+  const overwriteLocales = customPageSiblingCustomizations(
+    page,
+    editLocale,
+    editorLayout,
+  );
+  const languageName = localeLabels[editLocale];
+  const overwriteNames = overwriteLocales
+    .map((locale) => localeLabels[locale])
+    .join(", ");
 
   const draftKey = snapshotForDirty({
     page: previewPage,
@@ -891,7 +1051,7 @@ export default function CustomPageBuilder({
         status={status}
         localeComplete={localeComplete}
         viewHref={viewHrefForEditor("custom", slug)}
-        onSave={() => void submit()}
+        onSave={() => requestSave()}
         extra={
           <>
             <button
@@ -907,7 +1067,9 @@ export default function CustomPageBuilder({
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => void submit("draft")}
+                onClick={() =>
+                  dirty ? requestSave("draft") : void submitStatusOnly("draft")
+                }
                 disabled={saving}
               >
                 {t("admin.servicePages.unpublish")}
@@ -916,7 +1078,11 @@ export default function CustomPageBuilder({
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => void submit("published")}
+                onClick={() =>
+                  dirty
+                    ? requestSave("published")
+                    : void submitStatusOnly("published")
+                }
                 disabled={saving}
               >
                 <Eye size={15} />
@@ -1694,6 +1860,110 @@ export default function CustomPageBuilder({
         onClose={() => setProductCreateOpen(false)}
         onCreated={(product) => attachProducts([product])}
       />
+      <AdminModal
+        open={saveScopeOpen}
+        title={
+          saveScopeStep === "overwrite"
+            ? t("admin.servicePages.saveScopeOverwriteTitle")
+            : t("admin.servicePages.saveScopeTitle")
+        }
+        onClose={closeSaveScope}
+        icon={
+          saveScopeStep === "overwrite" ? (
+            <AlertTriangle size={18} />
+          ) : (
+            <Languages size={18} />
+          )
+        }
+      >
+        {saveScopeStep === "overwrite" ? (
+          <div className="csp-save-scope">
+            <p className="csp-save-scope-lead">
+              {t("admin.servicePages.saveScopeOverwriteLead", {
+                language: languageName,
+                languages: overwriteNames,
+              })}
+            </p>
+            <div className="admin-service-actions" style={{ marginTop: 18 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setSaveScopeStep("choose")}
+                disabled={saving}
+              >
+                {t("admin.servicePages.saveScopeBack")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={() => void submit("all", pendingStatus, true)}
+                disabled={saving}
+              >
+                {saving
+                  ? t("admin.servicePages.saving")
+                  : t("admin.servicePages.saveScopeOverwriteConfirm")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="csp-save-scope">
+            <p className="csp-save-scope-lead">
+              {t("admin.servicePages.saveScopeLead", { language: languageName })}
+            </p>
+            {overwriteLocales.length ? (
+              <p className="csp-save-scope-warn" role="status">
+                {t("admin.servicePages.saveScopeOverwriteHint", {
+                  languages: overwriteNames,
+                })}
+              </p>
+            ) : null}
+            <div className="csp-save-scope-options">
+              <button
+                type="button"
+                className="csp-save-scope-option"
+                onClick={chooseSaveAll}
+                disabled={saving}
+              >
+                <span className="csp-save-scope-option-icon" aria-hidden>
+                  <Globe2 size={18} />
+                </span>
+                <span className="csp-save-scope-option-copy">
+                  <strong>{t("admin.servicePages.saveAllLanguages")}</strong>
+                  <span>{t("admin.servicePages.saveAllLanguagesHint")}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="csp-save-scope-option"
+                onClick={() => void submit("current", pendingStatus)}
+                disabled={saving}
+              >
+                <span className="csp-save-scope-option-icon" aria-hidden>
+                  <Languages size={18} />
+                </span>
+                <span className="csp-save-scope-option-copy">
+                  <strong>{t("admin.servicePages.saveCurrentLanguage")}</strong>
+                  <span>
+                    {t("admin.servicePages.saveCurrentLanguageHint", {
+                      language: languageName,
+                    })}
+                  </span>
+                </span>
+              </button>
+            </div>
+            <div className="admin-service-actions" style={{ marginTop: 4 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={closeSaveScope}
+                disabled={saving}
+              >
+                {t("admin.servicePages.cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
     </div>
   );
 }

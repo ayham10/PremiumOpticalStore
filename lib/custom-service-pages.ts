@@ -10,6 +10,7 @@ import type {
   CustomArticlePosition,
   CustomPageCopy,
   CustomPageCtaKind,
+  CustomPageLayout,
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
@@ -77,6 +78,7 @@ export const RESERVED_SERVICE_SLUGS = new Set([
 ]);
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const CONTENT_LOCALES: readonly ServicePagesLocale[] = ["ar", "he", "en"];
 
 export class CustomPageConflictError extends Error {
   pageId: string;
@@ -583,6 +585,191 @@ function sparseGallery(saved: unknown): CustomPageMediaRef[] {
     .slice(0, MAX_GALLERY_ITEMS);
 }
 
+export function captureCustomPageLayout(page: {
+  sections: CustomPageSection[];
+  showHeroButton: boolean;
+  ctaKind?: CustomPageCtaKind;
+  bookingType?: string | null;
+  ctaHref?: string;
+  heroMedia?: CustomPageMediaRef;
+  gallery?: CustomPageMediaRef[];
+  productIds?: string[];
+}): CustomPageLayout {
+  const ctaKind = page.ctaKind || "book";
+  return {
+    sections: page.sections,
+    showHeroButton: Boolean(page.showHeroButton),
+    ctaKind,
+    bookingType: page.bookingType ?? null,
+    ctaHref: page.ctaHref,
+    heroMedia: page.heroMedia,
+    gallery: page.gallery || [],
+    productIds: page.productIds || [],
+  };
+}
+
+function layoutCtaHref(
+  ctaKind: CustomPageCtaKind,
+  value: unknown,
+): string | undefined {
+  if (ctaKind === "external") return sanitizeExternalUrl(value);
+  if (ctaKind === "internal") return sanitizeInternalPath(value);
+  return undefined;
+}
+
+export function sparseCustomPageLayout(
+  saved: unknown,
+  template: CustomPageTemplate,
+): CustomPageLayout | undefined {
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) {
+    return undefined;
+  }
+  const raw = asRecord(saved);
+  const bookingRaw = cleanText(raw.bookingType);
+  const bookingType =
+    bookingRaw && isBookingServiceKey(bookingRaw) ? bookingRaw : null;
+  const parsedKind = parseCtaKind(raw.ctaKind);
+  const ctaKind: CustomPageCtaKind = parsedKind || (bookingType ? "booking" : "book");
+  return {
+    sections: sparseSections(raw.sections, template),
+    showHeroButton: Boolean(raw.showHeroButton),
+    ctaKind,
+    bookingType,
+    ctaHref: layoutCtaHref(ctaKind, raw.ctaHref),
+    heroMedia: sparseMedia(raw.heroMedia),
+    gallery: sparseGallery(raw.gallery),
+    productIds: uniqueProductIds(raw.productIds),
+  };
+}
+
+function sparseLayouts(
+  saved: unknown,
+  template: CustomPageTemplate,
+): CustomServicePage["layouts"] | undefined {
+  const raw = asRecord(saved);
+  const layouts: NonNullable<CustomServicePage["layouts"]> = {};
+  for (const locale of CONTENT_LOCALES) {
+    const layout = sparseCustomPageLayout(raw[locale], template);
+    if (layout) layouts[locale] = layout;
+  }
+  return Object.keys(layouts).length ? layouts : undefined;
+}
+
+export function resolveCustomPageLayout(
+  page: CustomServicePage,
+  locale: ServicePagesLocale | Locale,
+): CustomPageLayout {
+  const key: ServicePagesLocale = isServicePagesLocale(locale) ? locale : "ar";
+  return page.layouts?.[key]
+    ? sparseCustomPageLayout(page.layouts[key], page.template) ||
+        captureCustomPageLayout(page)
+    : captureCustomPageLayout(page);
+}
+
+export function applyCustomPageLayout<T extends CustomServicePage>(
+  page: T,
+  layout: CustomPageLayout,
+): T {
+  return {
+    ...page,
+    sections: layout.sections,
+    showHeroButton: layout.showHeroButton,
+    ctaKind: layout.ctaKind,
+    bookingType: layout.bookingType ?? null,
+    ctaHref: layout.ctaHref,
+    heroMedia: layout.heroMedia,
+    gallery: layout.gallery || [],
+    productIds: layout.productIds || [],
+  };
+}
+
+export function customPageLayoutFingerprint(layout: CustomPageLayout): string {
+  return JSON.stringify({
+    sections: layout.sections.map((section) => ({
+      id: section.id,
+      type: section.type,
+      hidden: Boolean(section.hidden),
+      adminLabel: section.adminLabel || "",
+      article: section.article
+        ? {
+            align: parseArticleAlign(section.article.align),
+            position: parseArticlePosition(section.article.position),
+          }
+        : null,
+    })),
+    showHeroButton: Boolean(layout.showHeroButton),
+    ctaKind: layout.ctaKind || "book",
+    bookingType: layout.bookingType || null,
+    ctaHref: layout.ctaHref || "",
+    heroMedia: layout.heroMedia || null,
+    gallery: layout.gallery || [],
+    productIds: layout.productIds || [],
+  });
+}
+
+function copyHasManualOrigins(copy: CustomPageCopy | undefined): boolean {
+  if (!copy?.origins) return false;
+  return Object.values(copy.origins).some((origin) => origin === "manual");
+}
+
+/** Sibling languages whose layout or manual copy would be replaced by Save to All. */
+export function customPageSiblingCustomizations(
+  page: CustomServicePage,
+  sourceLocale: ServicePagesLocale,
+  incoming?: CustomPageLayout | null,
+): ServicePagesLocale[] {
+  const incomingFingerprint = incoming
+    ? customPageLayoutFingerprint(incoming)
+    : customPageLayoutFingerprint(resolveCustomPageLayout(page, sourceLocale));
+  const found: ServicePagesLocale[] = [];
+  for (const locale of CONTENT_LOCALES) {
+    if (locale === sourceLocale) continue;
+    if (copyHasManualOrigins(page.locales[locale])) {
+      found.push(locale);
+      continue;
+    }
+    if (!page.layouts?.[locale]) continue;
+    const sibling = resolveCustomPageLayout(page, locale);
+    if (customPageLayoutFingerprint(sibling) !== incomingFingerprint) {
+      found.push(locale);
+    }
+  }
+  return found;
+}
+
+function isolateLayoutArticles(
+  layout: CustomPageLayout,
+  locale: ServicePagesLocale,
+): CustomPageLayout {
+  const sections = layout.sections.map((section) => {
+    const article = section.article;
+    if (!article?.locales) return section;
+    const copy = article.locales[locale];
+    const heading = sanitizeArticleHeading(copy?.heading);
+    const body = sanitizeArticleBody(copy?.body);
+    if (!heading && !body) {
+      const { article: _article, ...rest } = section;
+      return rest;
+    }
+    return {
+      ...section,
+      article: {
+        align: parseArticleAlign(article.align),
+        position: parseArticlePosition(article.position),
+        locales: { [locale]: { heading, body } },
+      },
+    };
+  });
+  return { ...layout, sections };
+}
+
+function publicLayout(layout: CustomPageLayout): CustomPageLayout {
+  return {
+    ...layout,
+    sections: publicCustomSections(layout.sections),
+  };
+}
+
 export function uniqueProductIds(
   saved: unknown,
   max = MAX_PAGE_PRODUCTS,
@@ -668,17 +855,30 @@ function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPag
   return next;
 }
 
+function localeCompletenessLayout(
+  layouts: CustomServicePage["layouts"] | undefined,
+  fallback: CustomPageLayout,
+  locale: ServicePagesLocale,
+): CustomPageLayout {
+  return layouts?.[locale] || fallback;
+}
+
 function sparseLocales(
   saved: unknown,
-  sections: CustomPageSection[],
-  showHeroButton: boolean,
+  fallback: CustomPageLayout,
+  layouts: CustomServicePage["layouts"] | undefined,
 ): CustomServicePage["locales"] {
   const raw = asRecord(saved);
   const locales: CustomServicePage["locales"] = {};
-  for (const locale of ["ar", "he", "en"] as const) {
+  for (const locale of CONTENT_LOCALES) {
     if (!(locale in raw)) continue;
     const copy = sparseCustomPageCopy(raw[locale]);
-    copy.complete = isCustomPageLocaleComplete(sections, copy, showHeroButton);
+    const layout = localeCompletenessLayout(layouts, fallback, locale);
+    copy.complete = isCustomPageLocaleComplete(
+      layout.sections,
+      copy,
+      layout.showHeroButton,
+    );
     locales[locale] = copy;
   }
   return locales;
@@ -705,6 +905,17 @@ export function normalizeCustomServicePage(saved: unknown): CustomServicePage | 
       : ctaKind === "internal"
         ? sanitizeInternalPath(raw.ctaHref)
         : undefined;
+  const layouts = sparseLayouts(raw.layouts, template);
+  const rootLayout = captureCustomPageLayout({
+    sections,
+    showHeroButton,
+    ctaKind,
+    bookingType,
+    ctaHref,
+    heroMedia: sparseMedia(raw.heroMedia),
+    gallery: sparseGallery(raw.gallery),
+    productIds: uniqueProductIds(raw.productIds),
+  });
   return {
     id,
     slug,
@@ -722,10 +933,11 @@ export function normalizeCustomServicePage(saved: unknown): CustomServicePage | 
     bookingType,
     ctaHref,
     sections,
-    heroMedia: sparseMedia(raw.heroMedia),
-    gallery: sparseGallery(raw.gallery),
-    productIds: uniqueProductIds(raw.productIds),
-    locales: sparseLocales(raw.locales, sections, showHeroButton),
+    heroMedia: rootLayout.heroMedia,
+    gallery: rootLayout.gallery,
+    productIds: rootLayout.productIds,
+    ...(layouts ? { layouts } : {}),
+    locales: sparseLocales(raw.locales, rootLayout, layouts),
     createdAt: cleanText(raw.createdAt) || new Date().toISOString(),
     updatedAt: cleanText(raw.updatedAt) || new Date().toISOString(),
     revision: Number.isFinite(Number(raw.revision)) ? Number(raw.revision) : 1,
@@ -787,14 +999,31 @@ function publicCustomSections(
   });
 }
 
+function publicLayouts(
+  page: CustomServicePage,
+): CustomServicePage["layouts"] | undefined {
+  if (!page.layouts) return undefined;
+  const layouts: NonNullable<CustomServicePage["layouts"]> = {};
+  for (const locale of CONTENT_LOCALES) {
+    const layout = page.layouts[locale];
+    if (!layout) continue;
+    layouts[locale] = publicLayout(layout);
+  }
+  return Object.keys(layouts).length ? layouts : undefined;
+}
+
 export function publicCustomPages(saved: unknown): CustomServicePage[] {
   return normalizeCustomPages(saved)
     .filter((page) => page.status === "published")
-    .map((page) => ({
-      ...page,
-      sections: publicCustomSections(page.sections),
-      locales: publicLocales(page),
-    }))
+    .map((page) => {
+      const layouts = publicLayouts(page);
+      return {
+        ...page,
+        sections: publicCustomSections(page.sections),
+        ...(layouts ? { layouts } : { layouts: undefined }),
+        locales: publicLocales(page),
+      };
+    })
     .filter((page) => Object.keys(page.locales).length > 0);
 }
 
@@ -819,10 +1048,13 @@ export function resolvePublishedCustomPage(
   );
   const copy = page?.locales[key];
   if (!page || !copy?.complete) return undefined;
+  const resolved = applyCustomPageLayout(page, resolveCustomPageLayout(page, key));
+  const layouts = publicLayouts(resolved);
   return {
     page: {
-      ...page,
-      sections: publicCustomSections(page.sections),
+      ...resolved,
+      sections: publicCustomSections(resolved.sections),
+      ...(layouts ? { layouts } : { layouts: undefined }),
       locales: { [key]: copy },
     },
     copy,
@@ -861,6 +1093,81 @@ function requireRevision(page: CustomServicePage, expected: unknown): void {
   }
 }
 
+function incomingLayoutFromOp(
+  page: CustomServicePage,
+  op: Extract<CustomPageOp, { op: "update" }>,
+): CustomPageLayout | undefined {
+  const hasLayoutField =
+    op.sections != null ||
+    op.showHeroButton != null ||
+    op.ctaKind != null ||
+    op.bookingType !== undefined ||
+    op.ctaHref !== undefined ||
+    op.heroMedia !== undefined ||
+    op.gallery != null ||
+    op.productIds != null;
+  if (!hasLayoutField) return undefined;
+  const base =
+    op.syncLocales === "current" && op.locale
+      ? resolveCustomPageLayout(page, op.locale)
+      : captureCustomPageLayout(page);
+  const bookingType =
+    op.bookingType === null
+      ? null
+      : op.bookingType != null
+        ? cleanText(op.bookingType) && isBookingServiceKey(op.bookingType)
+          ? op.bookingType
+          : base.bookingType
+        : base.bookingType;
+  let ctaKind: CustomPageCtaKind = base.ctaKind || "book";
+  if (op.ctaKind != null) {
+    ctaKind = parseCtaKind(op.ctaKind) || ctaKind;
+  } else if (op.bookingType != null && bookingType) {
+    ctaKind = "booking";
+  } else if (op.bookingType === null && ctaKind === "booking") {
+    ctaKind = "book";
+  }
+  const ctaHrefRaw =
+    op.ctaHref === null ? undefined : op.ctaHref != null ? op.ctaHref : base.ctaHref;
+  return {
+    sections: op.sections
+      ? sparseSections(op.sections, page.template)
+      : base.sections,
+    showHeroButton:
+      op.showHeroButton != null ? Boolean(op.showHeroButton) : base.showHeroButton,
+    ctaKind,
+    bookingType,
+    ctaHref: layoutCtaHref(ctaKind, ctaHrefRaw),
+    heroMedia:
+      op.heroMedia === null
+        ? undefined
+        : op.heroMedia != null
+          ? sparseMedia(op.heroMedia)
+          : base.heroMedia,
+    gallery: op.gallery ? sparseGallery(op.gallery) : base.gallery || [],
+    productIds:
+      op.productIds != null ? uniqueProductIds(op.productIds) : base.productIds || [],
+  };
+}
+
+function stampLocaleCompleteness(page: CustomServicePage): void {
+  const locales: CustomServicePage["locales"] = {};
+  for (const locale of CONTENT_LOCALES) {
+    const copy = page.locales[locale];
+    if (!copy) continue;
+    const layout = resolveCustomPageLayout(page, locale);
+    locales[locale] = {
+      ...copy,
+      complete: isCustomPageLocaleComplete(
+        layout.sections,
+        copy,
+        layout.showHeroButton,
+      ),
+    };
+  }
+  page.locales = locales;
+}
+
 function applyUpdate(
   page: CustomServicePage,
   op: Extract<CustomPageOp, { op: "update" }>,
@@ -875,40 +1182,32 @@ function applyUpdate(
       throw new CustomPageError("CUSTOM_PAGE_SLUG_TAKEN");
     }
   }
-  const sections = op.sections
-    ? sparseSections(op.sections, page.template)
-    : page.sections;
-  const showHeroButton =
-    op.showHeroButton != null ? Boolean(op.showHeroButton) : page.showHeroButton;
-  const bookingType =
-    op.bookingType === null
-      ? null
-      : op.bookingType != null
-        ? cleanText(op.bookingType) && isBookingServiceKey(op.bookingType)
-          ? op.bookingType
-          : page.bookingType
-        : page.bookingType;
-  let ctaKind: CustomPageCtaKind = page.ctaKind || "book";
-  if (op.ctaKind != null) {
-    ctaKind = parseCtaKind(op.ctaKind) || ctaKind;
-  } else if (op.bookingType != null && bookingType) {
-    ctaKind = "booking";
-  } else if (op.bookingType === null && ctaKind === "booking") {
-    ctaKind = "book";
-  }
-  const ctaHrefRaw =
-    op.ctaHref === null ? undefined : op.ctaHref != null ? op.ctaHref : page.ctaHref;
-  const ctaHref =
-    ctaKind === "external"
-      ? sanitizeExternalUrl(ctaHrefRaw)
-      : ctaKind === "internal"
-        ? sanitizeInternalPath(ctaHrefRaw)
-        : undefined;
+  const sync =
+    op.syncLocales === "current" && op.locale
+      ? "current"
+      : op.syncLocales === "all"
+        ? "all"
+        : "legacy";
+  const incomingLayout = incomingLayoutFromOp(page, op);
+  const rootLayout =
+    sync === "current"
+      ? captureCustomPageLayout(page)
+      : incomingLayout || captureCustomPageLayout(page);
+  const sections = rootLayout.sections;
+  const showHeroButton = rootLayout.showHeroButton;
+  const bookingType = rootLayout.bookingType;
+  const ctaKind = rootLayout.ctaKind;
+  const ctaHref = rootLayout.ctaHref;
   if (op.status === "published") {
     const locales = { ...page.locales };
     if (op.locale && op.copy) {
       const copy = sparseCustomPageCopy(op.copy);
-      copy.complete = isCustomPageLocaleComplete(sections, copy, showHeroButton);
+      const layout = incomingLayout || rootLayout;
+      copy.complete = isCustomPageLocaleComplete(
+        layout.sections,
+        copy,
+        layout.showHeroButton,
+      );
       locales[op.locale] = copy;
     }
     const anyComplete = Object.values(locales).some((copy) => copy?.complete);
@@ -938,73 +1237,57 @@ function applyUpdate(
     bookingType,
     ctaHref,
     sections,
-    heroMedia:
-      op.heroMedia === null
-        ? undefined
-        : op.heroMedia != null
-          ? sparseMedia(op.heroMedia)
-          : page.heroMedia,
-    gallery: op.gallery ? sparseGallery(op.gallery) : page.gallery,
-    productIds:
-      op.productIds != null ? uniqueProductIds(op.productIds) : page.productIds || [],
+    heroMedia: rootLayout.heroMedia,
+    gallery: rootLayout.gallery,
+    productIds: rootLayout.productIds || [],
     locales: { ...page.locales },
     updatedAt: new Date().toISOString(),
     revision: page.revision + 1,
   };
+  if (sync === "current" && incomingLayout && op.locale) {
+    next.layouts = {
+      ...(page.layouts || {}),
+      [op.locale]: isolateLayoutArticles(incomingLayout, op.locale),
+    };
+  } else if (sync === "all" && incomingLayout) {
+    next.layouts = {
+      ar: structuredClone(incomingLayout),
+      he: structuredClone(incomingLayout),
+      en: structuredClone(incomingLayout),
+    };
+  }
   if (next.homeMedia?.url) next.homeImage = next.homeMedia.url;
   else if (op.homeMedia === null) next.homeImage = undefined;
   if (op.locale && op.copy) {
     const copy = sparseCustomPageCopy(op.copy);
-    copy.complete = isCustomPageLocaleComplete(
-      next.sections,
-      copy,
-      next.showHeroButton,
-    );
     next.locales = { ...next.locales, [op.locale]: copy };
   }
-  if (op.locales) {
+  if (sync !== "current" && op.locales) {
     const extra: CustomServicePage["locales"] = { ...next.locales };
-    for (const locale of ["ar", "he", "en"] as const) {
+    for (const locale of CONTENT_LOCALES) {
       if (locale === op.locale) continue;
       const incoming = op.locales[locale];
       if (!incoming) continue;
-      const copy = sparseCustomPageCopy(incoming);
-      copy.complete = isCustomPageLocaleComplete(
-        next.sections,
-        copy,
-        next.showHeroButton,
-      );
-      extra[locale] = copy;
+      extra[locale] = sparseCustomPageCopy(incoming);
     }
     next.locales = extra;
   }
-  if (!op.locale && !op.locales && (op.sections || op.showHeroButton != null)) {
-    const locales: CustomServicePage["locales"] = {};
-    for (const locale of ["ar", "he", "en"] as const) {
-      const copy = next.locales[locale];
-      if (!copy) continue;
-      locales[locale] = {
-        ...copy,
-        complete: isCustomPageLocaleComplete(
-          next.sections,
-          copy,
-          next.showHeroButton,
-        ),
-      };
-    }
-    next.locales = locales;
-  }
+  stampLocaleCompleteness(next);
   if (next.status === "published") {
     const anyComplete = Object.values(next.locales).some((copy) => copy?.complete);
     if (!anyComplete) throw new CustomPageError("CUSTOM_PAGE_PUBLISH_INCOMPLETE");
   }
-  assertSafeCta(next);
+  const ctaPage =
+    sync === "current" && incomingLayout
+      ? applyCustomPageLayout(next, incomingLayout)
+      : next;
+  assertSafeCta(ctaPage);
   if (
-    pageHasVisibleButton(next.sections, next.showHeroButton) &&
+    pageHasVisibleButton(ctaPage.sections, ctaPage.showHeroButton) &&
     (ctaKind === "internal" || ctaKind === "external") &&
     op.ctaHref != null &&
     op.ctaHref !== "" &&
-    !next.ctaHref
+    !ctaPage.ctaHref
   ) {
     throw new CustomPageError("CUSTOM_PAGE_INVALID_CTA");
   }

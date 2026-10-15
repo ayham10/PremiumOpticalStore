@@ -275,6 +275,27 @@ const preservedCustom = persistCustomPages(manualHePage, expandedAfterManual.pat
 assert.equal(preservedCustom[0]?.locales.he?.title, "בדיקת ילדים");
 assert.equal(preservedCustom[0]?.locales.en?.title, "[en]عنوان جديد للصفحة");
 
+const currentOnlyExpand = await expandServicePagesTranslations({
+  stored: { ...customStored, customPages: preservedCustom },
+  patch: {
+    customPageOp: {
+      op: "update" as const,
+      id: preservedCustom[0]!.id,
+      expectedRevision: preservedCustom[0]!.revision,
+      syncLocales: "current" as const,
+      locale: "ar" as const,
+      copy: completeCopy({ title: "عربي فقط" }),
+      sections: preservedCustom[0]!.sections,
+    },
+  },
+  translate: fakeTranslate,
+});
+assert.equal(
+  (currentOnlyExpand.patch as { customPageOp: { locales?: unknown } }).customPageOp
+    .locales,
+  undefined,
+);
+
 const productsRoute = readFileSync(join(process.cwd(), "app/api/products/route.ts"), "utf8");
 assert.match(productsRoute, /PUBLIC_JSON_CACHE_CONTROL/);
 assert.match(productsRoute, /maxDuration = 60/);
