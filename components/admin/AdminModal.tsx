@@ -14,6 +14,7 @@ export default function AdminModal({
   stacked,
   className,
   icon,
+  preventClose,
 }: {
   open: boolean;
   title: string;
@@ -24,15 +25,16 @@ export default function AdminModal({
   stacked?: boolean;
   className?: string;
   icon?: ReactNode;
+  preventClose?: boolean;
 }) {
   useEffect(() => {
-    if (!open) return;
+    if (!open || preventClose) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, preventClose]);
 
   if (!open) return null;
 
@@ -44,7 +46,7 @@ export default function AdminModal({
           : `${stacked ? "z-[140]" : "z-[100]"} fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4`
       }
       style={{ background: "rgba(11, 15, 20, 0.72)" }}
-      onClick={onClose}
+      onClick={preventClose ? undefined : onClose}
       role="presentation"
     >
       <div
@@ -79,6 +81,7 @@ export default function AdminModal({
                 : "admin-modal-close grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]"
             }
             onClick={onClose}
+            disabled={preventClose}
             aria-label="Close"
           >
             <X size={compact ? 16 : 18} />

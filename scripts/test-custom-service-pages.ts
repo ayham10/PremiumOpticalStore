@@ -112,7 +112,7 @@ assert.equal(created.length, 1);
 assert.equal(created[0]?.slug, "kids-exam");
 assert.equal(created[0]?.status, "draft");
 assert.equal(created[0]?.template, "eye-exam");
-assert.equal(created[0]?.showHeroButton, true);
+assert.equal(created[0]?.showHeroButton, false);
 assert.equal(created[0]?.ctaKind, "book");
 assert.deepEqual(created[0]?.productIds, []);
 assert.deepEqual(created[0]?.sections, []);
@@ -291,7 +291,7 @@ assert.equal(publicCustomPages(unpublished).length, 0);
 assert.equal(resolvePublishedCustomPage(unpublished, "kids-exam", "ar"), undefined);
 assert.equal(homepageCustomCards(unpublished, "ar").length, 0);
 
-assert.equal(created[0]?.showHeroButton, true);
+assert.equal(created[0]?.showHeroButton, false);
 assert.equal(
   isCustomPageLocaleComplete(
     created[0]!.sections,
@@ -424,7 +424,7 @@ const lenses = persistCustomPages([], {
   },
 });
 assert.deepEqual(lenses[0]?.sections, []);
-assert.equal(lenses[0]?.showHeroButton, true);
+assert.equal(lenses[0]?.showHeroButton, false);
 const lensesCopy = completeCopy();
 assert.equal(
   isCustomPageLocaleComplete(
@@ -700,7 +700,10 @@ assert.equal(afterSecond.length, 2);
 assert.ok(listCustomPagesForEditor(afterSecond).some((page) => page.slug === "night-clinic"));
 
 assert.ok(!ADDABLE_CUSTOM_SECTION_TYPES.includes("gallery" as never));
+assert.ok(!ADDABLE_CUSTOM_SECTION_TYPES.includes("bookingCta" as never));
 assert.ok(ADDABLE_CUSTOM_SECTION_TYPES.includes("heroMedia"));
+assert.ok(ADDABLE_CUSTOM_SECTION_TYPES.includes("primaryButton"));
+assert.ok(ADDABLE_CUSTOM_SECTION_TYPES.includes("secondaryButton"));
 const legacyPage = normalizeCustomServicePage({
   id: "csp_legacy",
   slug: "legacy-page",

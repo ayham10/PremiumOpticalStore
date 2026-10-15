@@ -368,6 +368,7 @@ async function translateCustomPageCopy(opts: {
       opts.sections,
       copy,
       opts.showHeroButton,
+      locale,
     );
     locales[locale] = sparseCustomPageCopy(copy);
     locales[locale]!.complete = copy.complete;
@@ -389,21 +390,51 @@ async function translateSectionArticles(opts: {
   const jobs: TranslateJob[] = [];
   sections.forEach((section, sectionIndex) => {
     const article = section.article;
-    if (!article?.locales) return;
-    const source = article.locales[opts.sourceLocale];
-    if (!source) return;
-    const previousCopy =
-      storedById.get(section.id)?.article?.locales?.[opts.sourceLocale];
-    for (const locale of SERVICE_CONTENT_LOCALES) {
-      if (locale === opts.sourceLocale) continue;
-      const target = article.locales[locale];
-      for (const field of ["heading", "body"] as const) {
-        const src = trim(source[field]);
+    if (article?.locales) {
+      const source = article.locales[opts.sourceLocale];
+      if (source) {
+        const previousCopy =
+          storedById.get(section.id)?.article?.locales?.[opts.sourceLocale];
+        for (const locale of SERVICE_CONTENT_LOCALES) {
+          if (locale === opts.sourceLocale) continue;
+          const target = article.locales[locale];
+          for (const field of ["heading", "body"] as const) {
+            const src = trim(source[field]);
+            if (
+              !shouldTranslateField({
+                source: src,
+                previous: trim(previousCopy?.[field]),
+                target: trim(target?.[field]),
+                targetLocale: locale,
+                fillMissing: true,
+                overwriteManual: opts.overwriteManual,
+              })
+            ) {
+              continue;
+            }
+            jobs.push({
+              locale,
+              path: [sectionIndex, field],
+              sourceValue: src,
+            });
+          }
+        }
+      }
+    }
+    const button = section.button;
+    const buttonSource = trim(button?.locales?.[opts.sourceLocale]?.label);
+    if (button && buttonSource) {
+      const previousLabel = trim(
+        storedById.get(section.id)?.button?.locales?.[opts.sourceLocale]?.label,
+      );
+      for (const locale of SERVICE_CONTENT_LOCALES) {
+        if (locale === opts.sourceLocale) continue;
+        const target = trim(button.locales?.[locale]?.label);
         if (
           !shouldTranslateField({
-            source: src,
-            previous: trim(previousCopy?.[field]),
-            target: trim(target?.[field]),
+            source: buttonSource,
+            previous: previousLabel,
+            target,
             targetLocale: locale,
             fillMissing: true,
             overwriteManual: opts.overwriteManual,
@@ -413,8 +444,8 @@ async function translateSectionArticles(opts: {
         }
         jobs.push({
           locale,
-          path: [sectionIndex, field],
-          sourceValue: src,
+          path: [sectionIndex, "buttonLabel"],
+          sourceValue: buttonSource,
         });
       }
     }
@@ -428,6 +459,14 @@ async function translateSectionArticles(opts: {
     const sectionIndex = item.path[0];
     const field = item.path[1];
     if (typeof sectionIndex !== "number" || typeof field !== "string") continue;
+    if (field === "buttonLabel") {
+      const button = sections[sectionIndex]?.button;
+      if (!button) continue;
+      const locales = { ...(button.locales || {}) };
+      locales[item.locale as ServicePagesLocale] = { label: item.text };
+      button.locales = locales;
+      continue;
+    }
     const article = sections[sectionIndex]?.article;
     if (!article) continue;
     const locales = { ...(article.locales || {}) };
@@ -443,7 +482,9 @@ async function translateSectionArticles(opts: {
   }
   const mappedFailures = failures.map((failure) => ({
     ...failure,
-    path: `article.${failure.path}`,
+    path: failure.path.includes("buttonLabel")
+      ? `button.${failure.path}`
+      : `article.${failure.path}`,
   }));
   return { sections, failures: mappedFailures };
 }

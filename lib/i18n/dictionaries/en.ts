@@ -1827,6 +1827,10 @@ const en: Dictionary = {
         "{languages} already have language-specific customizations. Saving to all languages replaces them with this {language} version, including layout and manual translations.",
       saveScopeOverwriteConfirm: "Replace other languages",
       saveScopeBack: "Back",
+      saveCurrentLanguageWait: "جارٍ حفظ التغييرات، يرجى الانتظار...",
+      saveAllLanguagesWait:
+        "جارٍ حفظ التغييرات وترجمة المحتوى إلى جميع اللغات...",
+      saveRetry: "Retry",
       savedAllLanguages:
         "Saved to Arabic, Hebrew, and English. Live pages will use this layout.",
       savedCurrentLanguage:
@@ -1874,6 +1878,8 @@ const en: Dictionary = {
       sectionBooking: "Bottom Banner",
       sectionGallery: "Image Gallery",
       sectionProducts: "Products",
+      sectionPrimaryButton: "Primary Button",
+      sectionSecondaryButton: "Secondary Button",
       sectionButtons: "Action Buttons",
       sectionFooter: "Footer",
       sectionHeroHint: "A large photo or video at the top of the page.",
@@ -1882,6 +1888,9 @@ const en: Dictionary = {
       sectionNoticeHint: "An important warning or information box.",
       sectionValuesHint: "A short clinic rating and values strip.",
       sectionBookingHint: "A gold call-to-action banner lower on the page.",
+      sectionPrimaryButtonHint: "A gold button you can place anywhere on the page.",
+      sectionSecondaryButtonHint:
+        "An outlined gold button you can place anywhere on the page.",
       sectionProductsHint: "Show catalog products on this page.",
       sectionGalleryHint: "A row of photos from this service page.",
       sectionHelp: "How this section looks on the website",
@@ -1903,6 +1912,10 @@ const en: Dictionary = {
         "A gold call-to-action block lower on the page — the same destination as the page button.",
       helpButtons:
         "Gold action buttons (book, shop, or the page CTA) sitting with the hero or on their own.",
+      helpPrimaryButton:
+        "An optional gold button. Add it from Sections, then move, hide, or remove it. It appears only if you add it.",
+      helpSecondaryButton:
+        "An optional outlined gold button. Add it with or without the primary button, in any position.",
       helpGallery: "A compact row of photos from the service page gallery.",
       helpProducts:
         "A horizontal row of catalog product cards attached to this page.",
@@ -1961,6 +1974,12 @@ const en: Dictionary = {
       pageButton: "Page button",
       pageButtonHint:
         "The same gold button is used in the hero and/or the lower CTA. Edit this language’s label here.",
+      buttonText: "Button text",
+      buttonStyle: "Button style",
+      buttonStylePrimary: "Primary gold",
+      buttonStyleSecondary: "Secondary outlined",
+      buttonAlign: "Button alignment",
+      buttonFullWidthMobile: "Full width on mobile",
       bookingCtaHint:
         "This lower CTA uses the same label and destination as the page button above. Remove the section to hide it.",
       ctaKind: "Button destination",

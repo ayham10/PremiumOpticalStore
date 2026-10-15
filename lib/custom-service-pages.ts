@@ -8,6 +8,7 @@ import {
 import type {
   CustomArticleAlign,
   CustomArticlePosition,
+  CustomButtonStyle,
   CustomPageCopy,
   CustomPageCtaKind,
   CustomPageLayout,
@@ -17,6 +18,8 @@ import type {
   CustomPageTemplate,
   CustomSectionArticle,
   CustomSectionArticleCopy,
+  CustomSectionButton,
+  CustomSectionButtonCopy,
   CustomSectionType,
   CustomServicePage,
   Product,
@@ -28,6 +31,8 @@ import {
   ADDABLE_CUSTOM_SECTION_TYPES,
   CUSTOM_ARTICLE_ALIGNS,
   CUSTOM_ARTICLE_POSITIONS,
+  CUSTOM_BUTTON_SECTION_TYPES,
+  CUSTOM_BUTTON_STYLES,
   CUSTOM_CTA_KINDS,
   CUSTOM_SECTION_TYPES,
 } from "@/lib/types";
@@ -42,6 +47,8 @@ export {
   ADDABLE_CUSTOM_SECTION_TYPES,
   CUSTOM_ARTICLE_ALIGNS,
   CUSTOM_ARTICLE_POSITIONS,
+  CUSTOM_BUTTON_SECTION_TYPES,
+  CUSTOM_BUTTON_STYLES,
   CUSTOM_CTA_KINDS,
   CUSTOM_SECTION_TYPES,
 };
@@ -234,8 +241,143 @@ export function assertValidCustomSlug(slug: string): void {
   }
 }
 
+export function parseButtonStyle(value: unknown): CustomButtonStyle {
+  return (CUSTOM_BUTTON_STYLES as readonly string[]).includes(String(value))
+    ? (value as CustomButtonStyle)
+    : "primary";
+}
+
+export function isButtonSectionType(
+  type: string | undefined,
+): type is (typeof CUSTOM_BUTTON_SECTION_TYPES)[number] {
+  return (CUSTOM_BUTTON_SECTION_TYPES as readonly string[]).includes(String(type));
+}
+
+export function pageUsesSectionButtons(
+  sections: CustomPageSection[] | undefined,
+): boolean {
+  return (sections || []).some((section) => isButtonSectionType(section.type));
+}
+
+export function visibleButtonSections(
+  sections: CustomPageSection[] | undefined,
+): CustomPageSection[] {
+  return visibleCustomSections(sections).filter((section) =>
+    isButtonSectionType(section.type),
+  );
+}
+
+export function emptySectionButtonCopy(): CustomSectionButtonCopy {
+  return { label: "" };
+}
+
+export function defaultSectionButton(
+  type: CustomSectionType,
+): CustomSectionButton | undefined {
+  if (type === "primaryButton") {
+    return {
+      style: "primary",
+      align: "center",
+      ctaKind: "book",
+    };
+  }
+  if (type === "secondaryButton") {
+    return {
+      style: "secondary",
+      align: "center",
+      ctaKind: "book",
+    };
+  }
+  return undefined;
+}
+
+/** Seed a new button section from the legacy page-level CTA without duplicating it. */
+export function seedSectionButtonFromLegacy(
+  type: CustomSectionType,
+  legacy: {
+    ctaKind?: CustomPageCtaKind;
+    bookingType?: string | null;
+    ctaHref?: string;
+    labels?: Partial<Record<ServicePagesLocale, string>>;
+  },
+): CustomSectionButton {
+  const base = defaultSectionButton(type) || {
+    style: "primary" as const,
+    align: "center" as const,
+    ctaKind: "book" as const,
+  };
+  const ctaKind = parseCtaKind(legacy.ctaKind) || base.ctaKind;
+  const locales: NonNullable<CustomSectionButton["locales"]> = {};
+  for (const locale of CONTENT_LOCALES) {
+    const label = filledText(legacy.labels?.[locale]);
+    if (label) locales[locale] = { label };
+  }
+  return {
+    ...base,
+    ctaKind,
+    bookingType: legacy.bookingType ?? null,
+    ctaHref: layoutCtaHref(ctaKind, legacy.ctaHref),
+    ...(Object.keys(locales).length ? { locales } : {}),
+  };
+}
+
+export function sparseSectionButton(saved: unknown): CustomSectionButton | undefined {
+  const raw = asRecord(saved);
+  if (!Object.keys(raw).length) return undefined;
+  const localeRaw = asRecord(raw.locales);
+  const locales: NonNullable<CustomSectionButton["locales"]> = {};
+  for (const locale of CONTENT_LOCALES) {
+    const copyRaw = asRecord(localeRaw[locale]);
+    const label = cleanText(copyRaw.label);
+    if (!label) continue;
+    locales[locale] = { label };
+  }
+  const bookingRaw = cleanText(raw.bookingType);
+  const bookingType =
+    bookingRaw && isBookingServiceKey(bookingRaw) ? bookingRaw : null;
+  const parsedKind = parseCtaKind(raw.ctaKind);
+  const ctaKind: CustomPageCtaKind =
+    parsedKind || (bookingType ? "booking" : "book");
+  const ctaHref = layoutCtaHref(ctaKind, raw.ctaHref);
+  return {
+    style: parseButtonStyle(raw.style),
+    align: parseArticleAlign(raw.align),
+    fullWidthMobile: raw.fullWidthMobile === true ? true : undefined,
+    ctaKind,
+    bookingType,
+    ctaHref,
+    ...(Object.keys(locales).length ? { locales } : {}),
+  };
+}
+
+export function resolveSectionButtonLabel(
+  section: CustomPageSection | undefined,
+  locale: ServicePagesLocale | Locale,
+): string {
+  if (!section?.button) return "";
+  const key: ServicePagesLocale = isServicePagesLocale(locale) ? locale : "ar";
+  return filledText(section.button.locales?.[key]?.label);
+}
+
+export function resolveSectionButtonHref(
+  section: CustomPageSection | undefined,
+): string | null {
+  const button = section?.button;
+  if (!button) return null;
+  return resolveCtaHref({
+    ctaKind: button.ctaKind,
+    bookingType: button.bookingType,
+    ctaHref: button.ctaHref,
+  });
+}
+
 export function createCustomSection(type: CustomSectionType): CustomPageSection {
-  return { id: makeId("sec"), type };
+  const button = defaultSectionButton(type);
+  return {
+    id: makeId("sec"),
+    type,
+    ...(button ? { button } : {}),
+  };
 }
 
 export function legacyTemplateSections(
@@ -361,6 +503,9 @@ export function pageHasVisibleButton(
   sections: CustomPageSection[],
   showHeroButton: boolean,
 ): boolean {
+  if (pageUsesSectionButtons(sections)) {
+    return visibleButtonSections(sections).length > 0;
+  }
   return showHeroButton || hasSection(sections, "bookingCta");
 }
 
@@ -491,12 +636,18 @@ export function customPageLocaleIssues(
   sections: CustomPageSection[],
   copy: CustomPageCopy | undefined,
   showHeroButton = false,
+  locale: ServicePagesLocale = "ar",
 ): CustomPageLocaleIssue[] {
   if (!copy) return ["title", "description"];
   const issues: CustomPageLocaleIssue[] = [];
   if (!filledText(copy.title)) issues.push("title");
   if (!filledText(copy.description)) issues.push("description");
-  if (
+  if (pageUsesSectionButtons(sections)) {
+    const missingLabel = visibleButtonSections(sections).some(
+      (section) => !resolveSectionButtonLabel(section, locale),
+    );
+    if (missingLabel) issues.push("bookingButtonText");
+  } else if (
     pageHasVisibleButton(sections, showHeroButton) &&
     !filledText(copy.bookingButtonText)
   ) {
@@ -527,8 +678,9 @@ export function isCustomPageLocaleComplete(
   sections: CustomPageSection[],
   copy: CustomPageCopy | undefined,
   showHeroButton = false,
+  locale: ServicePagesLocale = "ar",
 ): boolean {
-  return customPageLocaleIssues(sections, copy, showHeroButton).length === 0;
+  return customPageLocaleIssues(sections, copy, showHeroButton, locale).length === 0;
 }
 
 export function copyForCustomPageEditor(
@@ -696,6 +848,16 @@ export function customPageLayoutFingerprint(layout: CustomPageLayout): string {
             position: parseArticlePosition(section.article.position),
           }
         : null,
+      button: section.button
+        ? {
+            style: parseButtonStyle(section.button.style),
+            align: parseArticleAlign(section.button.align),
+            fullWidthMobile: Boolean(section.button.fullWidthMobile),
+            ctaKind: section.button.ctaKind || "book",
+            bookingType: section.button.bookingType || null,
+            ctaHref: section.button.ctaHref || "",
+          }
+        : null,
     })),
     showHeroButton: Boolean(layout.showHeroButton),
     ctaKind: layout.ctaKind || "book",
@@ -742,23 +904,38 @@ function isolateLayoutArticles(
   locale: ServicePagesLocale,
 ): CustomPageLayout {
   const sections = layout.sections.map((section) => {
+    let next = section;
     const article = section.article;
-    if (!article?.locales) return section;
-    const copy = article.locales[locale];
-    const heading = sanitizeArticleHeading(copy?.heading);
-    const body = sanitizeArticleBody(copy?.body);
-    if (!heading && !body) {
-      const { article: _article, ...rest } = section;
-      return rest;
+    if (article?.locales) {
+      const copy = article.locales[locale];
+      const heading = sanitizeArticleHeading(copy?.heading);
+      const body = sanitizeArticleBody(copy?.body);
+      if (!heading && !body) {
+        const { article: _article, ...rest } = next;
+        next = rest;
+      } else {
+        next = {
+          ...next,
+          article: {
+            align: parseArticleAlign(article.align),
+            position: parseArticlePosition(article.position),
+            locales: { [locale]: { heading, body } },
+          },
+        };
+      }
     }
-    return {
-      ...section,
-      article: {
-        align: parseArticleAlign(article.align),
-        position: parseArticlePosition(article.position),
-        locales: { [locale]: { heading, body } },
-      },
-    };
+    const button = next.button;
+    if (button?.locales) {
+      const label = filledText(button.locales[locale]?.label);
+      next = {
+        ...next,
+        button: {
+          ...button,
+          locales: label ? { [locale]: { label } } : undefined,
+        },
+      };
+    }
+    return next;
   });
   return { ...layout, sections };
 }
@@ -843,12 +1020,17 @@ function sparseSections(saved: unknown, template: CustomPageTemplate): CustomPag
     }
     const adminLabel = cleanText(raw.adminLabel);
     const article = sparseSectionArticle(raw.article);
+    const sectionType = type as CustomSectionType;
+    const button = isButtonSectionType(sectionType)
+      ? sparseSectionButton(raw.button) || defaultSectionButton(sectionType)
+      : undefined;
     next.push({
       id: cleanText(raw.id) || makeId("sec"),
-      type: type as CustomSectionType,
+      type: sectionType,
       hidden: raw.hidden === true ? true : undefined,
       adminLabel: adminLabel || undefined,
       ...(article ? { article } : {}),
+      ...(button ? { button } : {}),
     });
     if (next.length >= MAX_CUSTOM_SECTIONS) break;
   }
@@ -878,6 +1060,7 @@ function sparseLocales(
       layout.sections,
       copy,
       layout.showHeroButton,
+      locale,
     );
     locales[locale] = copy;
   }
@@ -1082,6 +1265,15 @@ export function bookingHrefForPage(page: CustomServicePage): string {
 }
 
 function assertSafeCta(page: CustomServicePage): void {
+  if (pageUsesSectionButtons(page.sections)) {
+    for (const section of visibleButtonSections(page.sections)) {
+      const kind = section.button?.ctaKind || "book";
+      if (kind !== "internal" && kind !== "external") continue;
+      if (resolveSectionButtonHref(section)) continue;
+      throw new CustomPageError("CUSTOM_PAGE_INVALID_CTA");
+    }
+    return;
+  }
   if (!pageHasVisibleButton(page.sections, page.showHeroButton)) return;
   if (resolveCtaHref(page)) return;
   throw new CustomPageError("CUSTOM_PAGE_INVALID_CTA");
@@ -1162,6 +1354,7 @@ function stampLocaleCompleteness(page: CustomServicePage): void {
         layout.sections,
         copy,
         layout.showHeroButton,
+        locale,
       ),
     };
   }
@@ -1207,6 +1400,7 @@ function applyUpdate(
         layout.sections,
         copy,
         layout.showHeroButton,
+        op.locale,
       );
       locales[op.locale] = copy;
     }
@@ -1283,6 +1477,7 @@ function applyUpdate(
       : next;
   assertSafeCta(ctaPage);
   if (
+    !pageUsesSectionButtons(ctaPage.sections) &&
     pageHasVisibleButton(ctaPage.sections, ctaPage.showHeroButton) &&
     (ctaKind === "internal" || ctaKind === "external") &&
     op.ctaHref != null &&
@@ -1323,7 +1518,7 @@ export function persistCustomPages(
       template,
       showOnHome: false,
       homeSort: current.length,
-      showHeroButton: true,
+      showHeroButton: false,
       ctaKind: "book",
       bookingType: null,
       sections: defaultCustomSections(template),

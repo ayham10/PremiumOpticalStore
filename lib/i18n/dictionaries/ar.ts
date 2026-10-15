@@ -1446,6 +1446,10 @@ const ar: Dictionary = {
         "لدى {languages} تخصيصات حسب اللغة. الحفظ لكل اللغات يستبدلها بهذه النسخة من {language}، بما في ذلك التخطيط والترجمات اليدوية.",
       saveScopeOverwriteConfirm: "استبدال اللغات الأخرى",
       saveScopeBack: "رجوع",
+      saveCurrentLanguageWait: "جارٍ حفظ التغييرات، يرجى الانتظار...",
+      saveAllLanguagesWait:
+        "جارٍ حفظ التغييرات وترجمة المحتوى إلى جميع اللغات...",
+      saveRetry: "إعادة المحاولة",
       savedAllLanguages:
         "تم الحفظ للعربية والعبرية والإنجليزية. الصفحات العامة ستستخدم هذا التخطيط.",
       savedCurrentLanguage:
@@ -1493,6 +1497,8 @@ const ar: Dictionary = {
       sectionBooking: "الشريط السفلي",
       sectionGallery: "معرض الصور",
       sectionProducts: "المنتجات",
+      sectionPrimaryButton: "زر رئيسي",
+      sectionSecondaryButton: "زر ثانوي",
       sectionButtons: "أزرار الإجراءات",
       sectionFooter: "التذييل",
       sectionHeroHint: "صورة أو فيديو كبير أعلى الصفحة.",
@@ -1501,6 +1507,8 @@ const ar: Dictionary = {
       sectionNoticeHint: "تنبيه مهم أو معلومة احترازية.",
       sectionValuesHint: "شريط قصير عن تقييم العيادة وقيمها.",
       sectionBookingHint: "شريط ذهبي للدعوة إلى إجراء أسفل الصفحة.",
+      sectionPrimaryButtonHint: "زر ذهبي يمكن وضعه في أي مكان في الصفحة.",
+      sectionSecondaryButtonHint: "زر بإطار ذهبي يمكن وضعه في أي مكان في الصفحة.",
       sectionProductsHint: "عرض منتجات من الكتالوج.",
       sectionGalleryHint: "صف من صور صفحة الخدمة.",
       sectionHelp: "كيف يظهر هذا القسم في الموقع",
@@ -1522,6 +1530,10 @@ const ar: Dictionary = {
         "كتلة ذهبية للدعوة إلى إجراء أسفل الصفحة — نفس وجهة زر الصفحة.",
       helpButtons:
         "أزرار ذهبية (حجز، تسوق، أو زر الصفحة) مع القسم الرئيسي أو بشكل مستقل.",
+      helpPrimaryButton:
+        "زر ذهبي اختياري. أضيفوه من الأقسام، حرّكوه، أخفوه أو احذفوه. يظهر فقط إذا أضفتموه.",
+      helpSecondaryButton:
+        "زر بإطار ذهبي اختياري. يمكن إضافته مع الزر الرئيسي أو بدونه، وفي أي موضع.",
       helpGallery: "صف مضغوط من صور معرض صفحة الخدمة.",
       helpProducts: "صف أفقي من بطاقات منتجات الكتالوج المرفقة بهذه الصفحة.",
       helpFooter: "تذييل الموقع: الوصف، عنوان ساعات العمل، تسمية الموقع، والعنوان.",
@@ -1578,6 +1590,12 @@ const ar: Dictionary = {
       pageButton: "زر الصفحة",
       pageButtonHint:
         "يُستخدم الزر الذهبي نفسه في القسم الرئيسي و/أو أسفل الصفحة. عدّل نص هذه اللغة هنا.",
+      buttonText: "نص الزر",
+      buttonStyle: "شكل الزر",
+      buttonStylePrimary: "ذهبي رئيسي",
+      buttonStyleSecondary: "إطار ثانوي",
+      buttonAlign: "محاذاة الزر",
+      buttonFullWidthMobile: "عرض كامل على الجوال",
       bookingCtaHint:
         "هذا الزر السفلي يستخدم نفس النص والوجهة. أزل القسم لإخفائه.",
       ctaKind: "وجهة الزر",

@@ -1446,6 +1446,10 @@ const he: Dictionary = {
         "ל{languages} כבר יש התאמות לפי שפה. שמירה לכל השפות תחליף אותן בגרסת {language} הזו, כולל פריסה ותרגומים ידניים.",
       saveScopeOverwriteConfirm: "החלפת השפות האחרות",
       saveScopeBack: "חזרה",
+      saveCurrentLanguageWait: "جارٍ حفظ التغييرات، يرجى الانتظار...",
+      saveAllLanguagesWait:
+        "جارٍ حفظ التغييرات وترجمة المحتوى إلى جميع اللغات...",
+      saveRetry: "נסה שוב",
       savedAllLanguages:
         "נשמר לערבית, עברית ואנגלית. הדפים הציבוריים ישתמשו בפריסה הזו.",
       savedCurrentLanguage:
@@ -1492,6 +1496,8 @@ const he: Dictionary = {
       sectionBooking: "באנר תחתון",
       sectionGallery: "גלריית תמונות",
       sectionProducts: "מוצרים",
+      sectionPrimaryButton: "כפתור ראשי",
+      sectionSecondaryButton: "כפתור משני",
       sectionButtons: "כפתורי פעולה",
       sectionFooter: "כותרת תחתונה",
       sectionHeroHint: "תמונה או וידאו גדול בראש הדף.",
@@ -1500,6 +1506,8 @@ const he: Dictionary = {
       sectionNoticeHint: "אזהרה או מידע חשוב.",
       sectionValuesHint: "פס קצר על דירוג המרפאה וערכיה.",
       sectionBookingHint: "באנר זהוב לקריאה לפעולה בתחתית הדף.",
+      sectionPrimaryButtonHint: "כפתור זהוב שאפשר למקם בכל מקום בדף.",
+      sectionSecondaryButtonHint: "כפתור עם מסגרת זהובה שאפשר למקם בכל מקום בדף.",
       sectionProductsHint: "הצגת מוצרים מהקטלוג.",
       sectionGalleryHint: "שורה של תמונות מדף השירות.",
       sectionHelp: "איך הקטע נראה באתר",
@@ -1521,6 +1529,10 @@ const he: Dictionary = {
         "בלוק זהוב לקריאה לפעולה בתחתית הדף — אותה יעד כמו כפתור הדף.",
       helpButtons:
         "כפתורי פעולה זהובים (הזמנה, חנות או CTA של הדף) ליד ההירו או בנפרד.",
+      helpPrimaryButton:
+        "כפתור זהוב אופציונלי. הוסיפו אותו מהקטעים, הזיזו, הסתירו או הסירו. הוא מופיע רק אם הוספתם אותו.",
+      helpSecondaryButton:
+        "כפתור עם מסגרת זהובה אופציונלי. אפשר להוסיף אותו עם הכפתור הראשי או בלעדיו, בכל מיקום.",
       helpGallery: "שורה קומפקטית של תמונות מגלריית דף השירות.",
       helpProducts: "שורה אופקית של כרטיסי מוצרים מהקטלוג המצורפים לדף.",
       helpFooter: "כותרת התחתונה: תיאור, כותרת שעות, תווית מיקום וכתובת.",
@@ -1577,6 +1589,12 @@ const he: Dictionary = {
       pageButton: "כפתור הדף",
       pageButtonHint:
         "אותו כפתור זהוב משמש באזור הראשי ו/או בתחתית הדף. ערכו כאן את הטקסט לשפה הזו.",
+      buttonText: "טקסט הכפתור",
+      buttonStyle: "סגנון הכפתור",
+      buttonStylePrimary: "זהוב ראשי",
+      buttonStyleSecondary: "מסגרת משנית",
+      buttonAlign: "יישור הכפתור",
+      buttonFullWidthMobile: "רוחב מלא במובייל",
       bookingCtaHint:
         "הכפתור התחתון משתמש באותו טקסט ויעד. הסירו את הקטע כדי להסתיר אותו.",
       ctaKind: "יעד הכפתור",

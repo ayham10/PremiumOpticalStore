@@ -601,6 +601,8 @@ export const CUSTOM_SECTION_TYPES = [
   "bookingCta",
   "gallery",
   "products",
+  "primaryButton",
+  "secondaryButton",
 ] as const;
 
 export const CUSTOM_CTA_KINDS = [
@@ -632,10 +634,34 @@ export interface CustomSectionArticle {
   locales?: Partial<Record<ServicePagesLocale, CustomSectionArticleCopy>>;
 }
 
-/** Gallery stays in CUSTOM_SECTION_TYPES for existing pages but cannot be added. */
+export const CUSTOM_BUTTON_STYLES = ["primary", "secondary"] as const;
+export type CustomButtonStyle = (typeof CUSTOM_BUTTON_STYLES)[number];
+
+export const CUSTOM_BUTTON_SECTION_TYPES = [
+  "primaryButton",
+  "secondaryButton",
+] as const;
+export type CustomButtonSectionType = (typeof CUSTOM_BUTTON_SECTION_TYPES)[number];
+
+export interface CustomSectionButtonCopy {
+  label: string;
+}
+
+/** Per-section CTA. Placement lives in the sections list; label is per-locale. */
+export interface CustomSectionButton {
+  style: CustomButtonStyle;
+  align: CustomArticleAlign;
+  fullWidthMobile?: boolean;
+  ctaKind: CustomPageCtaKind;
+  bookingType?: string | null;
+  ctaHref?: string;
+  locales?: Partial<Record<ServicePagesLocale, CustomSectionButtonCopy>>;
+}
+
+/** Gallery and legacy bottom banners stay stored but cannot be added. */
 export const ADDABLE_CUSTOM_SECTION_TYPES = CUSTOM_SECTION_TYPES.filter(
-  (type) => type !== "gallery",
-) as Exclude<CustomSectionType, "gallery">[];
+  (type) => type !== "gallery" && type !== "bookingCta",
+) as Exclude<CustomSectionType, "gallery" | "bookingCta">[];
 
 export type CustomPageTemplate = "eye-exam" | "contact-lenses";
 
@@ -649,6 +675,8 @@ export interface CustomPageSection {
   adminLabel?: string;
   /** Optional per-section article. Absent on existing pages. */
   article?: CustomSectionArticle;
+  /** Optional CTA for primaryButton / secondaryButton sections. */
+  button?: CustomSectionButton;
 }
 
 export interface ImageFocalPoint {

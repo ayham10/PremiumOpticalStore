@@ -91,6 +91,20 @@ function HelpDemo({ kind }: { kind: SectionHelpKind }) {
       </div>
     );
   }
+  if (kind === "primaryButton") {
+    return (
+      <div className="csp-mini csp-mini-buttons">
+        <span className="csp-mini-btn" />
+      </div>
+    );
+  }
+  if (kind === "secondaryButton") {
+    return (
+      <div className="csp-mini csp-mini-buttons">
+        <span className="csp-mini-btn is-ghost" />
+      </div>
+    );
+  }
   if (kind === "gallery") {
     return (
       <div className="csp-mini csp-mini-gallery">

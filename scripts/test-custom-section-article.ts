@@ -103,6 +103,8 @@ assert.match(builder, /notice[\s\S]*renderSectionArticle/);
 assert.match(builder, /valuesStrip[\s\S]*renderSectionArticle/);
 assert.match(builder, /bookingCta[\s\S]*renderSectionArticle/);
 assert.match(builder, /products[\s\S]*renderSectionArticle/);
+assert.match(builder, /renderButtonSection/);
+assert.match(builder, /renderButtonSection[\s\S]*renderSectionArticle/);
 assert.match(builder, /gallery[\s\S]*renderSectionArticle/);
 
 const arDict = readFileSync(join(root, "lib/i18n/dictionaries/ar.ts"), "utf8");

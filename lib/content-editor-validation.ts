@@ -4,7 +4,11 @@ import {
   filledText,
   normalizeCustomSlug,
   pageHasVisibleButton,
+  pageUsesSectionButtons,
   resolveCtaHref,
+  resolveSectionButtonHref,
+  resolveSectionButtonLabel,
+  visibleButtonSections,
   visibleCustomBenefits,
   visibleCustomSections,
 } from "@/lib/custom-service-pages";
@@ -17,6 +21,7 @@ import type {
   EyeExamServicePage,
   FooterServiceContent,
   HomepageServicePage,
+  ServicePagesLocale,
   ServicePagesLocaleBundle,
 } from "@/lib/types";
 
@@ -39,6 +44,9 @@ export const CONTENT_FIELD_IDS = {
   bookingButton: "csp-booking-button",
   ctaInternal: "csp-cta-internal",
   ctaExternal: "csp-cta-external",
+  buttonLabel: (id: string) => `csp-btn-${id}-label`,
+  buttonInternal: (id: string) => `csp-btn-${id}-internal`,
+  buttonExternal: (id: string) => `csp-btn-${id}-external`,
   featureTitle: (n: number) => `csp-feature-${n}-title`,
   featureDescription: (n: number) => `csp-feature-${n}-description`,
   benefitsTitle: "csp-benefits-title",
@@ -191,9 +199,11 @@ export function customPageFieldIssues(input: {
   ctaKind: CustomPageCtaKind;
   ctaHref: string;
   bookingType?: string | null;
+  locale?: ServicePagesLocale;
 }): ContentFieldIssue[] {
   const issues: ContentFieldIssue[] = [];
   const copy = input.copy;
+  const locale = input.locale || "ar";
   const heroSectionId = sectionIdForType(input.sections, "heroMedia", "page-copy");
   const buttonSectionId =
     sectionIdForType(input.sections, "bookingCta", "page-buttons") || "page-buttons";
@@ -227,7 +237,59 @@ export function customPageFieldIssues(input: {
     );
   }
 
-  if (pageHasVisibleButton(input.sections, input.showHeroButton)) {
+  if (pageUsesSectionButtons(input.sections)) {
+    for (const section of visibleButtonSections(input.sections)) {
+      const kind = section.button?.ctaKind || "book";
+      const href = resolveSectionButtonHref(section);
+      if (kind === "internal" && !href) {
+        issues.push(
+          issue({
+            fieldId: CONTENT_FIELD_IDS.buttonInternal(section.id),
+            sectionId: section.id,
+            requirement: "save",
+            messageKey: "admin.servicePages.missingCtaInternal",
+          }),
+        );
+      }
+      if (kind === "external" && !href) {
+        issues.push(
+          issue({
+            fieldId: CONTENT_FIELD_IDS.buttonExternal(section.id),
+            sectionId: section.id,
+            requirement: "save",
+            messageKey: "admin.servicePages.missingCtaExternal",
+          }),
+        );
+      }
+    }
+    if (hasVisibleType(input.sections, "bookingCta")) {
+      const href = resolveCtaHref({
+        ctaKind: input.ctaKind,
+        bookingType: input.bookingType,
+        ctaHref: input.ctaHref,
+      });
+      if (!href && input.ctaKind === "internal") {
+        issues.push(
+          issue({
+            fieldId: CONTENT_FIELD_IDS.ctaInternal,
+            sectionId: buttonSectionId,
+            requirement: "save",
+            messageKey: "admin.servicePages.missingCtaInternal",
+          }),
+        );
+      }
+      if (!href && input.ctaKind === "external") {
+        issues.push(
+          issue({
+            fieldId: CONTENT_FIELD_IDS.ctaExternal,
+            sectionId: buttonSectionId,
+            requirement: "save",
+            messageKey: "admin.servicePages.missingCtaExternal",
+          }),
+        );
+      }
+    }
+  } else if (pageHasVisibleButton(input.sections, input.showHeroButton)) {
     const href = resolveCtaHref({
       ctaKind: input.ctaKind,
       bookingType: input.bookingType,
@@ -275,7 +337,32 @@ export function customPageFieldIssues(input: {
       }),
     );
   }
-  if (
+  if (pageUsesSectionButtons(input.sections)) {
+    for (const section of visibleButtonSections(input.sections)) {
+      if (resolveSectionButtonLabel(section, locale)) continue;
+      issues.push(
+        issue({
+          fieldId: CONTENT_FIELD_IDS.buttonLabel(section.id),
+          sectionId: section.id,
+          requirement: "display",
+          messageKey: "admin.servicePages.missingBookingButton",
+        }),
+      );
+    }
+    if (
+      hasVisibleType(input.sections, "bookingCta") &&
+      (!copy || !filledText(copy.bookingButtonText))
+    ) {
+      issues.push(
+        issue({
+          fieldId: CONTENT_FIELD_IDS.bookingButton,
+          sectionId: buttonSectionId,
+          requirement: "display",
+          messageKey: "admin.servicePages.missingBookingButton",
+        }),
+      );
+    }
+  } else if (
     pageHasVisibleButton(input.sections, input.showHeroButton) &&
     (!copy || !filledText(copy.bookingButtonText))
   ) {

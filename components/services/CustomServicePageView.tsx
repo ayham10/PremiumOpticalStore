@@ -7,9 +7,13 @@ import { Check, Lock, Target } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
   filledText,
+  isButtonSectionType,
   isExternalCta,
+  pageUsesSectionButtons,
   resolveCtaHref,
   resolveSectionArticle,
+  resolveSectionButtonHref,
+  resolveSectionButtonLabel,
   visibleCustomBenefits,
   visibleCustomFeatures,
   visibleCustomSections,
@@ -143,6 +147,49 @@ function PageCta({
       </Link>
     </div>
   );
+}
+
+function SectionCta({
+  section,
+  locale,
+}: {
+  section: CustomPageSection;
+  locale: ServicePagesLocale;
+}) {
+  const href = resolveSectionButtonHref(section);
+  const label = resolveSectionButtonLabel(section, locale);
+  if (!href || !label) return null;
+  const button = section.button;
+  const align = button?.align || "center";
+  const style = button?.style === "secondary" ? "secondary" : "primary";
+  const wrapClass = [
+    "csp-page-btn-wrap",
+    `is-${align}`,
+    button?.fullWidthMobile ? "is-full-mobile" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const className = [
+    "btn",
+    "csp-page-btn",
+    style === "secondary" ? "is-secondary" : "is-primary",
+  ].join(" ");
+  const node =
+    button?.ctaKind === "external" ? (
+      <a
+        href={href}
+        className={className}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        {label}
+      </a>
+    ) : (
+      <Link href={href} className={className}>
+        {label}
+      </Link>
+    );
+  return <div className={wrapClass}>{node}</div>;
 }
 
 function sectionClass(
@@ -382,6 +429,20 @@ function BodySection({
   }
 
   if (section.type === "bookingCta") {
+    const legacyCta = pageUsesSectionButtons(page.sections) ? null : (
+      <PageCta page={page} copy={copy} isCl={isCl} />
+    );
+    return (
+      <div
+        className={sectionClass(section.id, activeSectionId)}
+        data-csp-section={section.id}
+      >
+        {withSectionArticle(section, locale, legacyCta)}
+      </div>
+    );
+  }
+
+  if (isButtonSectionType(section.type)) {
     return (
       <div
         className={sectionClass(section.id, activeSectionId)}
@@ -390,7 +451,7 @@ function BodySection({
         {withSectionArticle(
           section,
           locale,
-          <PageCta page={page} copy={copy} isCl={isCl} />,
+          <SectionCta section={section} locale={locale} />,
         )}
       </div>
     );
@@ -482,7 +543,7 @@ export default function CustomServicePageView({
           {copy.description}
         </p>
       ) : null}
-      {page.showHeroButton ? (
+      {page.showHeroButton && !pageUsesSectionButtons(page.sections) ? (
         <PageCta page={page} copy={copy} isCl={isCl} />
       ) : null}
     </>

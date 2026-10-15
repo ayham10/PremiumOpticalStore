@@ -47,6 +47,14 @@ export const SECTION_HELP_I18N: Record<
     title: "admin.servicePages.sectionButtons",
     body: "admin.servicePages.helpButtons",
   },
+  primaryButton: {
+    title: "admin.servicePages.sectionPrimaryButton",
+    body: "admin.servicePages.helpPrimaryButton",
+  },
+  secondaryButton: {
+    title: "admin.servicePages.sectionSecondaryButton",
+    body: "admin.servicePages.helpSecondaryButton",
+  },
   gallery: {
     title: "admin.servicePages.sectionGallery",
     body: "admin.servicePages.helpGallery",
@@ -71,4 +79,6 @@ export const CUSTOM_SECTION_HELP_KIND: Record<CustomSectionType, SectionHelpKind
     bookingCta: "bookingCta",
     gallery: "gallery",
     products: "products",
+    primaryButton: "primaryButton",
+    secondaryButton: "secondaryButton",
   };

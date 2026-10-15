@@ -13,6 +13,8 @@ import {
   Languages,
   LayoutGrid,
   ListChecks,
+  Loader2,
+  MousePointerClick,
   Package,
   Plus,
   Sparkles,
@@ -62,15 +64,20 @@ import {
   customPageLocaleIssues,
   detachProductId,
   emptyCustomPageCopy,
+  isButtonSectionType,
   MAX_CUSTOM_SECTIONS,
   MAX_PAGE_PRODUCTS,
   pageHasVisibleButton,
+  pageUsesSectionButtons,
+  parseButtonStyle,
   parseCtaKind,
   PUBLIC_INTERNAL_PATHS,
   resolveCustomPageLayout,
   resolveCustomPageProducts,
+  resolveSectionButtonLabel,
   sanitizeExternalUrl,
   sanitizeInternalPath,
+  seedSectionButtonFromLegacy,
   normalizeCustomSlug,
   RESERVED_SERVICE_SLUGS,
 } from "@/lib/custom-service-pages";
@@ -85,12 +92,14 @@ import {
 import type {
   CustomArticleAlign,
   CustomArticlePosition,
+  CustomButtonStyle,
   CustomPageCopy,
   CustomPageCtaKind,
   CustomPageLayout,
   CustomPageMediaRef,
   CustomPageOp,
   CustomPageSection,
+  CustomSectionButton,
   CustomSectionType,
   CustomServicePage,
   Product,
@@ -124,6 +133,8 @@ const SECTION_I18N: Record<CustomSectionType, string> = {
   bookingCta: "admin.servicePages.sectionBooking",
   gallery: "admin.servicePages.sectionGallery",
   products: "admin.servicePages.sectionProducts",
+  primaryButton: "admin.servicePages.sectionPrimaryButton",
+  secondaryButton: "admin.servicePages.sectionSecondaryButton",
 };
 
 const SECTION_HINT_I18N: Record<Exclude<CustomSectionType, "gallery">, string> = {
@@ -134,6 +145,8 @@ const SECTION_HINT_I18N: Record<Exclude<CustomSectionType, "gallery">, string> =
   valuesStrip: "admin.servicePages.sectionValuesHint",
   bookingCta: "admin.servicePages.sectionBookingHint",
   products: "admin.servicePages.sectionProductsHint",
+  primaryButton: "admin.servicePages.sectionPrimaryButtonHint",
+  secondaryButton: "admin.servicePages.sectionSecondaryButtonHint",
 };
 
 const SECTION_ICONS = {
@@ -145,6 +158,8 @@ const SECTION_ICONS = {
   bookingCta: CalendarDays,
   products: Package,
   gallery: ImageIcon,
+  primaryButton: MousePointerClick,
+  secondaryButton: MousePointerClick,
 } as const;
 
 function customPageErrorMessage(error: unknown, t: Translate): string {
@@ -380,6 +395,12 @@ export default function CustomPageBuilder({
   const [saveScopeStep, setSaveScopeStep] = useState<"choose" | "overwrite">(
     "choose",
   );
+  const [saveBusy, setSaveBusy] = useState<"all" | "current" | null>(null);
+  const [saveModalError, setSaveModalError] = useState("");
+  const lastSaveRef = useRef<{
+    sync: "all" | "current";
+    overwrite: boolean;
+  } | null>(null);
   const [pendingStatus, setPendingStatus] = useState<
     CustomServicePage["status"] | undefined
   >();
@@ -555,7 +576,13 @@ export default function CustomPageBuilder({
   }, [editLocale]);
 
   const copy = copies[editLocale] || emptyCustomPageCopy();
-  const issues = customPageLocaleIssues(sections, copy, showHeroButton);
+  const usesSectionButtons = pageUsesSectionButtons(sections);
+  const issues = customPageLocaleIssues(
+    sections,
+    copy,
+    showHeroButton,
+    editLocale,
+  );
   const buttonVisible = pageHasVisibleButton(sections, showHeroButton);
   const localeComplete = issues.length === 0;
   const savedComplete = Boolean(page.locales[editLocale]?.complete);
@@ -568,6 +595,7 @@ export default function CustomPageBuilder({
     ctaKind,
     ctaHref,
     bookingType,
+    locale: editLocale,
   });
   const missing = missingFieldIdSet(fieldIssues);
 
@@ -738,13 +766,251 @@ export default function CustomPageBuilder({
     );
   }
 
+  function updateSectionButton(
+    id: string,
+    patch: Partial<
+      Pick<
+        CustomSectionButton,
+        "style" | "align" | "fullWidthMobile" | "ctaKind" | "bookingType" | "ctaHref"
+      >
+    > & { label?: string },
+  ) {
+    setSections((prev) =>
+      prev.map((section) => {
+        if (section.id !== id) return section;
+        const current =
+          section.button ||
+          seedSectionButtonFromLegacy(section.type, {
+            ctaKind,
+            bookingType,
+            ctaHref,
+          });
+        const locales = { ...(current.locales || {}) };
+        if (patch.label != null) {
+          locales[editLocale] = { label: patch.label };
+        }
+        return {
+          ...section,
+          button: {
+            ...current,
+            style: patch.style || current.style,
+            align: patch.align || current.align,
+            fullWidthMobile:
+              patch.fullWidthMobile != null
+                ? patch.fullWidthMobile || undefined
+                : current.fullWidthMobile,
+            ctaKind: patch.ctaKind || current.ctaKind,
+            bookingType:
+              patch.bookingType !== undefined
+                ? patch.bookingType
+                : current.bookingType,
+            ctaHref: patch.ctaHref !== undefined ? patch.ctaHref : current.ctaHref,
+            locales,
+          },
+        };
+      }),
+    );
+  }
+
+  function renderButtonSection(section: CustomPageSection) {
+    const button =
+      section.button ||
+      seedSectionButtonFromLegacy(section.type, {
+        ctaKind,
+        bookingType,
+        ctaHref,
+      });
+    const style: CustomButtonStyle = parseButtonStyle(button.style);
+    const align = button.align || "center";
+    const kind = button.ctaKind || "book";
+    const href = button.ctaHref || "";
+    const label = resolveSectionButtonLabel(section, editLocale);
+    return (
+      <EditorSection
+        key={section.id}
+        icon="buttons"
+        title={sectionTitle(section)}
+        defaultOpen={wizardMode}
+        help={sectionHelp(section.type)}
+        {...foldProps(section.id)}
+      >
+        {renderSectionArticle(section)}
+        <BuilderField
+          label={t("admin.servicePages.buttonText")}
+          value={label}
+          onChange={(value) => updateSectionButton(section.id, { label: value })}
+          dir={editorDir}
+          lang={editLocale}
+          {...fieldMeta(CONTENT_FIELD_IDS.buttonLabel(section.id), "display")}
+        />
+        <fieldset className="csp-article-choices">
+          <legend>{t("admin.servicePages.buttonStyle")}</legend>
+          {(
+            [
+              ["primary", "buttonStylePrimary"],
+              ["secondary", "buttonStyleSecondary"],
+            ] as const
+          ).map(([value, key]) => (
+            <button
+              key={value}
+              type="button"
+              className={`csp-article-choice${style === value ? " is-on" : ""}`}
+              onClick={() => updateSectionButton(section.id, { style: value })}
+            >
+              {t(`admin.servicePages.${key}`)}
+            </button>
+          ))}
+        </fieldset>
+        <fieldset className="csp-article-choices">
+          <legend>{t("admin.servicePages.buttonAlign")}</legend>
+          {(
+            [
+              ["right", "articleAlignRight"],
+              ["center", "articleAlignCenter"],
+              ["left", "articleAlignLeft"],
+            ] as const
+          ).map(([value, key]) => (
+            <button
+              key={value}
+              type="button"
+              className={`csp-article-choice${align === value ? " is-on" : ""}`}
+              onClick={() => updateSectionButton(section.id, { align: value })}
+            >
+              {t(`admin.servicePages.${key}`)}
+            </button>
+          ))}
+        </fieldset>
+        <label className="csp-check">
+          <input
+            type="checkbox"
+            checked={Boolean(button.fullWidthMobile)}
+            onChange={(event) =>
+              updateSectionButton(section.id, {
+                fullWidthMobile: event.target.checked,
+              })
+            }
+          />
+          {t("admin.servicePages.buttonFullWidthMobile")}
+        </label>
+        <label className="admin-service-field">
+          <span className="label">{t("admin.servicePages.ctaKind")}</span>
+          <select
+            className="input"
+            value={kind}
+            onChange={(event) =>
+              updateSectionButton(section.id, {
+                ctaKind: parseCtaKind(event.target.value) || "book",
+              })
+            }
+          >
+            <option value="booking">{t("admin.servicePages.ctaKindBooking")}</option>
+            <option value="book">{t("admin.servicePages.ctaKindBook")}</option>
+            <option value="internal">{t("admin.servicePages.ctaKindInternal")}</option>
+            <option value="external">{t("admin.servicePages.ctaKindExternal")}</option>
+          </select>
+        </label>
+        {kind === "booking" ? (
+          <label className="admin-service-field">
+            <span className="label">{t("admin.servicePages.bookingType")}</span>
+            <select
+              className="input"
+              value={button.bookingType || ""}
+              onChange={(event) =>
+                updateSectionButton(section.id, {
+                  bookingType: event.target.value || null,
+                })
+              }
+            >
+              <option value="">{t("admin.servicePages.bookingTypeNone")}</option>
+              {bookingOptions.map((service) => (
+                <option key={service.key} value={service.key}>
+                  {service.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {kind === "internal" ? (
+          <label
+            className={
+              missing.has(CONTENT_FIELD_IDS.buttonInternal(section.id))
+                ? "admin-service-field is-missing"
+                : "admin-service-field"
+            }
+            htmlFor={CONTENT_FIELD_IDS.buttonInternal(section.id)}
+          >
+            <span className="label">
+              {t("admin.servicePages.ctaInternal")}
+              <span className="csp-req csp-req-save">
+                {t("admin.servicePages.requiredToSave")}
+              </span>
+            </span>
+            <select
+              id={CONTENT_FIELD_IDS.buttonInternal(section.id)}
+              className="input"
+              value={href}
+              onChange={(event) =>
+                updateSectionButton(section.id, { ctaHref: event.target.value })
+              }
+            >
+              <option value="">{t("admin.servicePages.ctaInternalChoose")}</option>
+              {PUBLIC_INTERNAL_PATHS.map((path) => (
+                <option key={path} value={path}>
+                  {t(INTERNAL_PATH_I18N[path] || path)} ({path})
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {kind === "external" ? (
+          <BuilderField
+            label={t("admin.servicePages.ctaExternal")}
+            value={href}
+            onChange={(value) => updateSectionButton(section.id, { ctaHref: value })}
+            dir="ltr"
+            {...fieldMeta(CONTENT_FIELD_IDS.buttonExternal(section.id), "save")}
+          />
+        ) : null}
+        {kind === "internal" && href && !sanitizeInternalPath(href) ? (
+          <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+        ) : null}
+        {kind === "external" && href && !sanitizeExternalUrl(href) ? (
+          <p className="csp-issues">{t("admin.servicePages.ctaInvalid")}</p>
+        ) : null}
+      </EditorSection>
+    );
+  }
+
   function addSection(type: CustomSectionType) {
     if (sections.some((section) => section.type === type)) return;
     if (sections.length >= MAX_CUSTOM_SECTIONS) return;
-    const section = createCustomSection(type);
-    setSections((prev) =>
-      type === "heroMedia" ? [section, ...prev] : [...prev, section],
-    );
+    const migrating = isButtonSectionType(type) && !pageUsesSectionButtons(sections);
+    let section = createCustomSection(type);
+    if (migrating) {
+      section = {
+        ...section,
+        button: seedSectionButtonFromLegacy(type, {
+          ctaKind,
+          bookingType,
+          ctaHref,
+          labels: {
+            ar: copies.ar.bookingButtonText,
+            he: copies.he.bookingButtonText,
+            en: copies.en.bookingButtonText,
+          },
+        }),
+      };
+      setShowHeroButton(false);
+    }
+    setSections((prev) => {
+      const next = type === "heroMedia" ? [section, ...prev] : [...prev, section];
+      if (!migrating) return next;
+      return next.map((item) =>
+        item.type === "bookingCta" && !item.hidden
+          ? { ...item, hidden: true }
+          : item,
+      );
+    });
     activateSection(section.id);
   }
 
@@ -786,11 +1052,15 @@ export default function CustomPageBuilder({
     setSaveScopeOpen(false);
     setSaveScopeStep("choose");
     setPendingStatus(undefined);
+    setSaveBusy(null);
+    setSaveModalError("");
   }
 
   function openSaveScope(statusOverride?: CustomServicePage["status"]) {
     setPendingStatus(statusOverride);
     setSaveScopeStep("choose");
+    setSaveModalError("");
+    setSaveBusy(null);
     setSaveScopeOpen(true);
   }
 
@@ -799,7 +1069,11 @@ export default function CustomPageBuilder({
     statusOverride?: CustomServicePage["status"],
     overwriteManual = false,
   ) {
+    if (saving) return;
+    lastSaveRef.current = { sync: syncLocales, overwrite: overwriteManual };
     setSaving(true);
+    setSaveBusy(syncLocales);
+    setSaveModalError("");
     setMessage("");
     setError("");
     try {
@@ -844,6 +1118,8 @@ export default function CustomPageBuilder({
       setSaveScopeOpen(false);
       setSaveScopeStep("choose");
       setPendingStatus(undefined);
+      setSaveBusy(null);
+      setSaveModalError("");
       const language = localeLabels[editLocale];
       setMessage(
         saved.translationFailures?.length
@@ -853,9 +1129,12 @@ export default function CustomPageBuilder({
             : t("admin.servicePages.savedAllLanguages"),
       );
     } catch (err) {
-      setError(customPageErrorMessage(err, t));
+      const nextError = customPageErrorMessage(err, t);
+      setError(nextError);
+      setSaveModalError(nextError);
     } finally {
       setSaving(false);
+      setSaveBusy(null);
     }
   }
 
@@ -906,6 +1185,12 @@ export default function CustomPageBuilder({
       return;
     }
     void submit("all", pendingStatus);
+  }
+
+  function retrySave() {
+    const last = lastSaveRef.current;
+    if (!last) return;
+    void submit(last.sync, pendingStatus, last.overwrite);
   }
 
   async function removePage() {
@@ -1531,6 +1816,9 @@ export default function CustomPageBuilder({
             </EditorSection>
           );
         }
+        if (isButtonSectionType(section.type)) {
+          return renderButtonSection(section);
+        }
         if (section.type === "products") {
           return (
             <EditorSection
@@ -1634,6 +1922,7 @@ export default function CustomPageBuilder({
         </EditorSection>
       ) : null}
 
+      {usesSectionButtons ? null : (
       <EditorSection
         icon="buttons"
         title={t("admin.servicePages.groupButtons")}
@@ -1764,6 +2053,7 @@ export default function CustomPageBuilder({
           </>
         ) : null}
       </EditorSection>
+      )}
       </>
       ) : null}
 
@@ -1868,6 +2158,7 @@ export default function CustomPageBuilder({
             : t("admin.servicePages.saveScopeTitle")
         }
         onClose={closeSaveScope}
+        preventClose={saving}
         icon={
           saveScopeStep === "overwrite" ? (
             <AlertTriangle size={18} />
@@ -1876,19 +2167,63 @@ export default function CustomPageBuilder({
           )
         }
       >
-        {saveScopeStep === "overwrite" ? (
+        {saveBusy ? (
           <div className="csp-save-scope">
-            <p className="csp-save-scope-lead">
-              {t("admin.servicePages.saveScopeOverwriteLead", {
-                language: languageName,
-                languages: overwriteNames,
-              })}
-            </p>
+            <div className="csp-save-scope-loading" role="status" aria-live="polite">
+              <Loader2 className="csp-save-scope-spinner" size={34} aria-hidden />
+              <p>
+                {saveBusy === "all"
+                  ? t("admin.servicePages.saveAllLanguagesWait")
+                  : t("admin.servicePages.saveCurrentLanguageWait")}
+              </p>
+            </div>
+            <div className="csp-save-scope-options">
+              <button type="button" className="csp-save-scope-option" disabled>
+                <span className="csp-save-scope-option-icon" aria-hidden>
+                  <Globe2 size={18} />
+                </span>
+                <span className="csp-save-scope-option-copy">
+                  <strong>{t("admin.servicePages.saveAllLanguages")}</strong>
+                  <span>{t("admin.servicePages.saveAllLanguagesHint")}</span>
+                </span>
+              </button>
+              <button type="button" className="csp-save-scope-option" disabled>
+                <span className="csp-save-scope-option-icon" aria-hidden>
+                  <Languages size={18} />
+                </span>
+                <span className="csp-save-scope-option-copy">
+                  <strong>{t("admin.servicePages.saveCurrentLanguage")}</strong>
+                  <span>
+                    {t("admin.servicePages.saveCurrentLanguageHint", {
+                      language: languageName,
+                    })}
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        ) : saveScopeStep === "overwrite" ? (
+          <div className="csp-save-scope">
+            {saveModalError ? (
+              <p className="csp-save-scope-error" role="alert">
+                {saveModalError}
+              </p>
+            ) : (
+              <p className="csp-save-scope-lead">
+                {t("admin.servicePages.saveScopeOverwriteLead", {
+                  language: languageName,
+                  languages: overwriteNames,
+                })}
+              </p>
+            )}
             <div className="admin-service-actions" style={{ marginTop: 18 }}>
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => setSaveScopeStep("choose")}
+                onClick={() => {
+                  setSaveScopeStep("choose");
+                  setSaveModalError("");
+                }}
                 disabled={saving}
               >
                 {t("admin.servicePages.saveScopeBack")}
@@ -1899,18 +2234,24 @@ export default function CustomPageBuilder({
                 onClick={() => void submit("all", pendingStatus, true)}
                 disabled={saving}
               >
-                {saving
-                  ? t("admin.servicePages.saving")
+                {saveModalError
+                  ? t("admin.servicePages.saveRetry")
                   : t("admin.servicePages.saveScopeOverwriteConfirm")}
               </button>
             </div>
           </div>
         ) : (
           <div className="csp-save-scope">
-            <p className="csp-save-scope-lead">
-              {t("admin.servicePages.saveScopeLead", { language: languageName })}
-            </p>
-            {overwriteLocales.length ? (
+            {saveModalError ? (
+              <p className="csp-save-scope-error" role="alert">
+                {saveModalError}
+              </p>
+            ) : (
+              <p className="csp-save-scope-lead">
+                {t("admin.servicePages.saveScopeLead", { language: languageName })}
+              </p>
+            )}
+            {overwriteLocales.length && !saveModalError ? (
               <p className="csp-save-scope-warn" role="status">
                 {t("admin.servicePages.saveScopeOverwriteHint", {
                   languages: overwriteNames,
@@ -1952,6 +2293,16 @@ export default function CustomPageBuilder({
               </button>
             </div>
             <div className="admin-service-actions" style={{ marginTop: 4 }}>
+              {saveModalError ? (
+                <button
+                  type="button"
+                  className="btn btn-accent"
+                  onClick={retrySave}
+                  disabled={saving}
+                >
+                  {t("admin.servicePages.saveRetry")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="btn btn-ghost"
