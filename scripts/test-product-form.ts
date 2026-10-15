@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   formatFrameSizePublic,
+  formatProductColorPublic,
   isFrameSizeInput,
   normalizeFrameSize,
   sanitizeBarcode,
@@ -148,8 +149,40 @@ assert.equal(isFrameSizeInput("red"), false);
 assert.equal(sanitizeProductColor("أسود"), "أسود");
 assert.equal(sanitizeProductColor("  Black  "), "Black");
 assert.equal(sanitizeProductColor("שחור"), "שחור");
+assert.equal(formatProductColorPublic("Black", "ar"), "أسود");
+assert.equal(formatProductColorPublic("أسود", "en"), "Black");
+assert.equal(formatProductColorPublic("שחור", "he"), "שחור");
+assert.equal(formatProductColorPublic("Grey", "ar"), "رمادي");
+assert.equal(formatProductColorPublic("  ", "ar"), undefined);
+assert.equal(formatProductColorPublic("Champagne matte", "ar"), "Champagne matte");
 assert.equal(sanitizeBarcode("  1234567890123  "), "1234567890123");
 assert.equal(sanitizeBarcode(""), undefined);
+
+const detailSrc = readFileSync(
+  join(process.cwd(), "components/product/ProductDetailClient.tsx"),
+  "utf8",
+);
+assert.match(detailSrc, /formatProductColorPublic\(product\.color, locale\)/);
+assert.match(detailSrc, /formatFrameSizePublic\(product\.frameSize\)/);
+assert.match(detailSrc, /colorLabel \?/);
+assert.match(detailSrc, /frameSizeLabel \?/);
+assert.doesNotMatch(detailSrc, /product\.color \?/);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/en.ts"), "utf8"),
+  /frameSize: "Frame Size"/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/ar.ts"), "utf8"),
+  /frameSize: "مقاس الإطار"/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/he.ts"), "utf8"),
+  /frameSize: "מידת מסגרת"/,
+);
+assert.match(
+  readFileSync(join(process.cwd(), "lib/i18n/dictionaries/en.ts"), "utf8"),
+  /colour: "Color"/,
+);
 
 const frame = product({
   id: "frame-1",

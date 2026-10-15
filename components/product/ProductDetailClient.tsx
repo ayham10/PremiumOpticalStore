@@ -13,7 +13,10 @@ import {
   productSlugCacheKey,
 } from "@/lib/public-data-cache";
 import type { CategoryDefaultImages, Product } from "@/lib/types";
-import { formatFrameSizePublic } from "@/lib/product-fields";
+import {
+  formatFrameSizePublic,
+  formatProductColorPublic,
+} from "@/lib/product-fields";
 import { productDisplayGallery, productImageStyle } from "@/lib/product-images";
 import { storeWhatsAppHref } from "@/lib/store-whatsapp";
 import {
@@ -143,6 +146,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     ? t("product.available")
     : t("product.unavailable");
   const frameSizeLabel = formatFrameSizePublic(product.frameSize);
+  const colorLabel = formatProductColorPublic(product.color, locale);
 
   const categoryLabel =
     dict.shop.categories[product.category as keyof typeof dict.shop.categories] ||
@@ -243,10 +247,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   <dd>{product.barcode}</dd>
                 </div>
               ) : null}
-              {product.color ? (
+              {colorLabel ? (
                 <div>
                   <dt>{t("product.colour")}</dt>
-                  <dd>{product.color}</dd>
+                  <dd>{colorLabel}</dd>
                 </div>
               ) : null}
               {frameSizeLabel ? (

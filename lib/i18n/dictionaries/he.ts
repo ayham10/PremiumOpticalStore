@@ -312,7 +312,7 @@ const he: Dictionary = {
     sku: "מק״ט",
     productNumber: "מספר מוצר",
     barcode: "ברקוד",
-    frameSize: "מידה",
+    frameSize: "מידת מסגרת",
     available: "זמין",
     unavailable: "לא זמין",
     availability: "זמינות",

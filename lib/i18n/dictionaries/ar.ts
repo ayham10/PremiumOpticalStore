@@ -312,7 +312,7 @@ const ar: Dictionary = {
     sku: "رمز المنتج",
     productNumber: "رقم المنتج",
     barcode: "الباركود",
-    frameSize: "المقاس",
+    frameSize: "مقاس الإطار",
     available: "متوفر",
     unavailable: "غير متوفر",
     availability: "التوفر",
