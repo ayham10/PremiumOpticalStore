@@ -20263,6 +20263,14 @@ html.admin-dark .admin-backups-page .admin-backups-card,
   font-weight: 700;
 }
 
+.admin-backups-last-note {
+  margin: 0.45rem 0 0;
+  color: var(--bk-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
 .admin-backups-status-divider {
   display: none;
   width: 1px;

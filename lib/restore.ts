@@ -250,7 +250,7 @@ export async function executeRestoreRequest(
   try {
     const resolved = await resolveRequestSnapshot(request, deps);
     const pre = await deps.createPreRestore();
-    if (!pre.complete || !pre.ok) {
+    if (!pre.ok) {
       throw new Error("RESTORE_PRE_SNAPSHOT_FAILED");
     }
 

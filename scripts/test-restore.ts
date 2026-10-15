@@ -127,7 +127,12 @@ const backup = sampleApp({
   ],
   media: [{ ...live.media[0], id: "m-old" }],
   holidays: [{ ...live.holidays[0], id: "h-old" }],
-  eyeExamAppointments: [{ ...live.eyeExamAppointments[0], id: "b-old" }],
+  availability: [{ ...live.availability[0], id: "av-old" }],
+  eyeExamAvailability: [{ ...live.eyeExamAvailability[0], id: "eea-old" }],
+  bookingServices: [{ ...live.bookingServices[0], id: "svc-old" }],
+  eyeExamAppointments: [
+    { ...live.eyeExamAppointments[0], id: "b-old", manageTokenHash: "hash-old" },
+  ],
   lensInventory: [
     {
       type: "plus",
@@ -187,7 +192,11 @@ assert.equal(restoredBookings.promotions[0].id, "pr1");
 assert.equal(restoredBookings.customers[0].id, "c1");
 assert.equal(restoredBookings.media[0].id, "m1");
 assert.equal(restoredBookings.holidays[0].id, "h1");
-assert.equal(restoredBookings.bookingServices[0].id, "svc1");
+assert.equal(restoredBookings.bookingServices[0].id, "svc-old");
+assert.equal(restoredBookings.availability[0].id, "av-old");
+assert.equal(restoredBookings.eyeExamAvailability[0].id, "eea-old");
+assert.equal(restoredBookings.appointments[0].manageToken, "t");
+assert.equal(restoredBookings.eyeExamAppointments[0].manageTokenHash, "hash-old");
 assert.ok(unselectedFieldsMatch(live, restoredBookings, ["bookings"]));
 
 const restoredProducts = applyRestoreCategories(live, backup, ["products"]);
@@ -335,6 +344,24 @@ await assert.rejects(
   /RESTORE_PRE_SNAPSHOT_FAILED/,
 );
 assert.equal(wrote, 0);
+
+const preMediaIncomplete = await executeRestore(
+  "manual:2026-09-26T19:00:10.289Z",
+  ["lenses"],
+  true,
+  {
+    ...goodDeps,
+    createPreRestore: async () => {
+      preRestore += 1;
+      return { ok: true, complete: false } as never;
+    },
+  },
+);
+assert.equal(preMediaIncomplete.ok, true);
+assert.equal(wrote, 1);
+wrote = 0;
+preRestore = 0;
+resetRestoreInFlightForTests();
 
 await assert.rejects(
   () =>

@@ -1,14 +1,22 @@
 /** Client-safe backup summary types. No storage paths, URLs, or secrets. */
 
-/**
- * `failed` is reserved for a confirmed unsuccessful backup attempt.
- * The current read-only API only sees completed daily JSON snapshots, so it
- * cannot distinguish a failed cron run from a late/missing snapshot and
- * never emits `failed`.
- */
 export type BackupHealthStatus = "healthy" | "warning" | "failed" | "none";
 export type BackupRowStatus = "success" | "warning" | "failed";
 export type BackupHistoryKind = "daily" | "manual";
+export type BackupRunPurpose = "daily" | "manual" | "pre-restore";
+
+/** Client-safe last backup attempt. No storage paths, URLs, or error text. */
+export type BackupLastRun = {
+  createdAt: string;
+  date: string;
+  purpose: BackupRunPurpose;
+  ok: boolean;
+  complete: boolean;
+  timedOut: boolean;
+  remainingMedia: number;
+  failedMedia: number;
+  snapshotWritten: boolean;
+};
 
 export type BackupHistoryItem = {
   id: string;
@@ -23,7 +31,9 @@ export type BackupHistoryItem = {
   promotions: number | null;
   settingsIncluded: boolean;
   mediaObjectCount: number | null;
+  /** Store JSON is restorable. `warning` means media copy was incomplete. */
   status: BackupRowStatus;
+  complete: boolean;
 };
 
 /** Client-safe POST /api/admin/backups result. No paths, URLs, or secrets. */
@@ -55,6 +65,7 @@ export type BackupStatusSummary = {
   };
   latest: BackupHistoryItem | null;
   lastSuccessful: BackupHistoryItem | null;
+  lastRun: BackupLastRun | null;
   history: BackupHistoryItem[];
   media: {
     protectedCount: number | null;
@@ -89,6 +100,53 @@ export function formatBackupTime(iso: string): string {
     minute: "2-digit",
     hourCycle: "h23",
   }).format(date);
+}
+
+export function shiftIsoDate(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day));
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+/**
+ * Automatic backup health from completed daily JSON + last-run receipt.
+ * `failed` = last run crashed, or no complete daily for 3+ Israel calendar days.
+ * `warning` = complete daily is two days old, or today's run wrote JSON but media timed out.
+ * `healthy` = complete daily today or yesterday, and today's run (if any) finished media.
+ */
+export function computeBackupHealthStatus(input: {
+  today: string;
+  latestCompleteDailyDate: string | null;
+  lastRun: Pick<BackupLastRun, "ok" | "complete" | "date"> | null;
+}): BackupHealthStatus {
+  const yesterday = shiftIsoDate(input.today, -1);
+  const failedCutoff = shiftIsoDate(input.today, -2);
+  const lastRun = input.lastRun;
+
+  if (lastRun && lastRun.ok === false) return "failed";
+
+  if (!input.latestCompleteDailyDate) {
+    if (lastRun?.complete === false) return "warning";
+    return "none";
+  }
+
+  if (input.latestCompleteDailyDate < failedCutoff) return "failed";
+  if (input.latestCompleteDailyDate < yesterday) return "warning";
+  if (lastRun && lastRun.date === input.today && lastRun.complete === false) {
+    return "warning";
+  }
+  return "healthy";
+}
+
+export function snapshotHistoryStatus(complete: boolean | undefined): BackupRowStatus {
+  return complete === false ? "warning" : "success";
+}
+
+export function lastSuccessfulHistoryItem(
+  history: BackupHistoryItem[],
+): BackupHistoryItem | null {
+  return history.find((item) => item.status === "success") ?? null;
 }
 
 export function formatBackupDateTime(iso: string): string {

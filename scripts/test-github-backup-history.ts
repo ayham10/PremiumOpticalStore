@@ -51,7 +51,12 @@ function sampleApp(overrides: Partial<AppData> = {}): AppData {
       },
     ],
     catalogCategories: [],
-    appointments: [],
+    appointments: [
+      {
+        id: "legacy-1",
+        manageToken: "legacy-plaintext-token",
+      } as AppData["appointments"][number],
+    ],
     customers: [],
     staff: [],
     suppliers: [],
@@ -64,7 +69,13 @@ function sampleApp(overrides: Partial<AppData> = {}): AppData {
     holidays: [],
     availability: [],
     eyeExamAvailability: [],
-    eyeExamAppointments: [{ id: "b1" } as AppData["eyeExamAppointments"][number]],
+    eyeExamAppointments: [
+      {
+        id: "b1",
+        manageTokenHash: "abc123hash",
+        manageTokenExpiresAt: "2026-10-20T00:00:00.000Z",
+      } as AppData["eyeExamAppointments"][number],
+    ],
     bookingServices: [],
     lensInventory: [],
     settings: {
@@ -151,6 +162,12 @@ assert.equal(
 const redacted = redactBackupSecrets(sampleApp());
 assert.equal((redacted.settings.smtp as { password?: string }).password, "");
 assert.equal(redacted.settings.storeName, "Live");
+assert.equal((redacted.appointments[0] as { manageToken?: string }).manageToken, "");
+assert.equal(redacted.eyeExamAppointments[0].manageTokenHash, "abc123hash");
+assert.equal(
+  redacted.eyeExamAppointments[0].manageTokenExpiresAt,
+  "2026-10-20T00:00:00.000Z",
+);
 assert.deepEqual(collectExternalMediaUrls(sampleApp()), [
   "https://cdn.example.com/external.png",
 ]);

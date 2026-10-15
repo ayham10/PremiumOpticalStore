@@ -12,12 +12,18 @@ export type RestoreCategory = (typeof RESTORE_CATEGORIES)[number];
 
 /**
  * Inspected AppData keys for each Admin restore category.
- * Bookings = clinic booking records (`eyeExamAppointments`) plus the
- * still-stored legacy `appointments` array. Stock lives on `products`.
- * Site content lives on `settings` (`servicePages`, branding, hours, …).
+ * Bookings = clinic records plus the slot grid and service list they depend
+ * on, so restored appointments keep working manage links and bookable times.
+ * Stock lives on `products`. Site content lives on `settings`.
  */
 export const RESTORE_CATEGORY_FIELDS = {
-  bookings: ["eyeExamAppointments", "appointments"],
+  bookings: [
+    "eyeExamAppointments",
+    "appointments",
+    "eyeExamAvailability",
+    "bookingServices",
+    "availability",
+  ],
   products: ["products", "catalogCategories"],
   lenses: ["lensInventory"],
   settings: ["settings"],
@@ -119,12 +125,30 @@ export function applyRestoreCategories(
         next.catalogCategories = [];
         continue;
       }
+      if (field === "availability") {
+        next.availability = [];
+        continue;
+      }
+      if (field === "eyeExamAvailability") {
+        next.eyeExamAvailability = [];
+        continue;
+      }
+      if (field === "bookingServices") {
+        next.bookingServices = [];
+        continue;
+      }
       throw new Error(`RESTORE_FIELD_MISSING:${String(field)}`);
     }
     if (field === "eyeExamAppointments") {
       next.eyeExamAppointments = structuredClone(backup.eyeExamAppointments);
     } else if (field === "appointments") {
       next.appointments = structuredClone(backup.appointments);
+    } else if (field === "eyeExamAvailability") {
+      next.eyeExamAvailability = structuredClone(backup.eyeExamAvailability || []);
+    } else if (field === "bookingServices") {
+      next.bookingServices = structuredClone(backup.bookingServices || []);
+    } else if (field === "availability") {
+      next.availability = structuredClone(backup.availability || []);
     } else if (field === "products") {
       next.products = structuredClone(backup.products);
     } else if (field === "catalogCategories") {

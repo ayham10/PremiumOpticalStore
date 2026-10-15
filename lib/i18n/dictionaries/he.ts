@@ -1777,6 +1777,9 @@ const he: Dictionary = {
       status_failed: "הגיבוי נכשל",
       status_none: "אין גיבוי",
       lastSuccess: "גיבוי אחרון שהצליח",
+      lastRunIncomplete:
+        "ההרצה האוטומטית האחרונה שמרה את נתוני החנות, אך העתקת המדיה לא הושלמה. נסו שוב «יצירת גיבוי עכשיו».",
+      lastRunFailed: "ניסיון הגיבוי האוטומטי האחרון נכשל.",
       noneYet: "עדיין אין גיבוי",
       createNow: "יצירת גיבוי עכשיו",
       creatingNow: "יוצר גיבוי…",
@@ -1844,7 +1847,7 @@ const he: Dictionary = {
       colProducts: "מוצרים",
       colStatus: "סטטוס",
       rowSuccess: "הצליח",
-      rowWarning: "אזהרה",
+      rowWarning: "לא הושלם",
       rowFailed: "נכשל",
       showAll: "הצג הכל",
       showLess: "הצג פחות",
@@ -1856,7 +1859,7 @@ const he: Dictionary = {
       autoLocalNote: "בערך {time} בבוקר שעון ישראל.",
       restoreTitle: "שחזור נתונים",
       restoreLead:
-        "בחרו גיבוי שהצליח מההיסטוריה, ואז את החלקים לשחזור. תוצג תצוגה מקדימה לפני כל שינוי.",
+        "בחרו גיבוי מההיסטוריה, ואז את החלקים לשחזור. תוצג תצוגה מקדימה לפני כל שינוי.",
       restore_bookings: "הזמנות",
       restore_products: "מוצרים ומלאי",
       restore_lenses: "מלאי עדשות",

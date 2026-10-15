@@ -2162,6 +2162,9 @@ const en: Dictionary = {
       status_failed: "Backup failed",
       status_none: "No backup",
       lastSuccess: "Last successful backup",
+      lastRunIncomplete:
+        "The last automatic run saved the store data, but media copy did not finish. Retry Create a backup now.",
+      lastRunFailed: "The last automatic backup attempt failed.",
       noneYet: "No backup yet",
       createNow: "Create a backup now",
       creatingNow: "Creating backup…",
@@ -2229,7 +2232,7 @@ const en: Dictionary = {
       colProducts: "Products",
       colStatus: "Status",
       rowSuccess: "Successful",
-      rowWarning: "Warning",
+      rowWarning: "Incomplete",
       rowFailed: "Failed",
       showAll: "Show all",
       showLess: "Show less",
@@ -2241,7 +2244,7 @@ const en: Dictionary = {
       autoLocalNote: "About {time} AM Israel time.",
       restoreTitle: "Restore data",
       restoreLead:
-        "Select a successful backup from history, then choose the sections to restore. A preview appears before any change.",
+        "Select a backup from history, then choose the sections to restore. A preview appears before any change.",
       restore_bookings: "Bookings",
       restore_products: "Products & stock",
       restore_lenses: "Lens inventory",

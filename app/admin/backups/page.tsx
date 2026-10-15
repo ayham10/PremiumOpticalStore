@@ -89,7 +89,7 @@ function countLabel(value: number | null | undefined): string {
 }
 
 function lastSuccessfulOf(data: BackupStatusSummary | null): BackupHistoryItem | null {
-  return data?.lastSuccessful ?? data?.latest ?? null;
+  return data?.lastSuccessful ?? null;
 }
 
 function asGithubBackupResult(value: unknown): GithubBackupClientResult | null {
@@ -583,6 +583,13 @@ export default function AdminBackupsPage() {
                 ? formatBackupDateTime(lastSuccessful.createdAt)
                 : t("admin.backups.noneYet")}
           </p>
+          {data?.lastRun && !data.lastRun.ok ? (
+            <p className="admin-backups-last-note">{t("admin.backups.lastRunFailed")}</p>
+          ) : data?.lastRun && !data.lastRun.complete ? (
+            <p className="admin-backups-last-note">
+              {t("admin.backups.lastRunIncomplete")}
+            </p>
+          ) : null}
         </div>
         <div className="admin-backups-status-divider" aria-hidden />
         <div className="admin-backups-status-action">
@@ -1083,7 +1090,7 @@ function HistoryRow({
       className={[current ? "is-current" : "", selected ? "is-selected" : ""]
         .filter(Boolean)
         .join(" ") || undefined}
-      onClick={row.status === "success" ? onSelect : undefined}
+      onClick={row.status === "failed" ? undefined : onSelect}
     >
       <td>
         <span className="admin-backups-date-cell">
@@ -1116,7 +1123,7 @@ function HistoryMobileRow({
   return (
     <article
       className={`admin-backups-history-item${selected ? " is-selected" : ""}`}
-      onClick={row.status === "success" ? onSelect : undefined}
+      onClick={row.status === "failed" ? undefined : onSelect}
     >
       <div>
         <strong>

@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
-import { runDailyBackup } from "@/lib/backup";
+import { recordBackupFailure, runDailyBackup } from "@/lib/backup";
 import { serverEnv } from "@/lib/twilio/config";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +31,12 @@ export async function GET(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Daily backup failed", error);
+    await recordBackupFailure("daily").catch(() => undefined);
     return NextResponse.json(
       {
         ok: false,
         complete: false,
-        error: error instanceof Error ? error.message : "Backup failed",
+        error: "Backup failed",
       },
       { status: 500 },
     );

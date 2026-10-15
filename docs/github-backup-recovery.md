@@ -26,10 +26,11 @@ A dated file is a valid recovery point only when its manifest has
 `backup-info.json` and `history.json.lastRun` without replacing a valid daily
 snapshot.
 
-Secrets such as SMTP passwords and API tokens are redacted from snapshots.
-Twilio/WhatsApp **environment** credentials stay in Vercel and are never written
-to GitHub. Booking manage **hashes** stay in the store document; raw tokens do
-not.
+Secrets such as SMTP passwords, API tokens, and legacy plaintext
+`manageToken` values are redacted from snapshots. Twilio/WhatsApp
+**environment** credentials stay in Vercel and are never written to GitHub.
+Booking manage **hashes** (`manageTokenHash`) stay in the store document so
+existing manage links can be restored; raw tokens do not.
 
 ## 1. Select a dated snapshot
 

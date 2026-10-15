@@ -1,6 +1,10 @@
 import {
-  type BackupHealthStatus,
+  computeBackupHealthStatus,
+  lastSuccessfulHistoryItem,
+  shiftIsoDate,
+  snapshotHistoryStatus,
   type BackupHistoryItem,
+  type BackupLastRun,
   type BackupStatusSummary,
   type ManualBackupClientResult,
 } from "@/lib/backup-status";
@@ -61,10 +65,16 @@ export type OyonStoreSnapshot = {
   /** Complete AppData. Future selective restore reads `appData[section]`. */
   appData: AppData;
   sections: Record<RestorableSection, SectionSummary>;
+  /** False when the store JSON was written but media copy did not finish. */
+  complete?: boolean;
   media: {
     liveObjectCount: number;
     liveBytes: number;
     referencedPaths: string[];
+    complete?: boolean;
+    timedOut?: boolean;
+    remaining?: number;
+    failed?: number;
   };
 };
 
@@ -119,6 +129,7 @@ const STORE_ID = process.env.SUPABASE_STORE_ID || "default";
 const DAILY_PREFIX = "store/daily/";
 const MANUAL_PREFIX = "store/manual/";
 const PRE_RESTORE_PREFIX = "store/pre-restore/";
+const LAST_RUN_PATH = "store/last-run.json";
 const MEDIA_OBJECT_PREFIX = "media/objects/";
 const MEDIA_INDEX_PATH = "media/index.json";
 /** Stop starting new copies before Vercel kills the function (maxDuration 60s). */
@@ -487,6 +498,12 @@ function buildSnapshot(
   purpose: BackupPurpose,
   live: { payload: AppData; updatedAt: string | null; payloadBytes: number },
   mediaObjects: StorageObject[],
+  mediaCopy: {
+    complete: boolean;
+    timedOut: boolean;
+    remaining: number;
+    failed: number;
+  },
 ): OyonStoreSnapshot {
   const referenced = new Set(referencedMediaPaths(live.payload));
   for (const object of mediaObjects) referenced.add(object.path);
@@ -503,10 +520,15 @@ function buildSnapshot(
     },
     appData: live.payload,
     sections: summarizeSections(live.payload),
+    complete: mediaCopy.complete,
     media: {
       liveObjectCount: mediaObjects.length,
       liveBytes: mediaObjects.reduce((sum, item) => sum + item.size, 0),
       referencedPaths: [...referenced].sort(),
+      complete: mediaCopy.complete,
+      timedOut: mediaCopy.timedOut,
+      remaining: mediaCopy.remaining,
+      failed: mediaCopy.failed,
     },
   };
 }
@@ -676,13 +698,6 @@ async function uploadUniqueManualSnapshot(
   throw new Error("Could not allocate a unique manual snapshot name");
 }
 
-function shiftIsoDate(isoDate: string, days: number): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  const next = new Date(Date.UTC(year, month - 1, day));
-  next.setUTCDate(next.getUTCDate() + days);
-  return next.toISOString().slice(0, 10);
-}
-
 async function pruneDailySnapshots(keepDays: number): Promise<string[]> {
   const objects = await listPrefix(BACKUP_BUCKET, DAILY_PREFIX.replace(/\/$/, ""));
   const cutoffStamp = shiftIsoDate(jerusalemDate(), -keepDays);
@@ -744,25 +759,104 @@ async function estimateBackupBytes(): Promise<number> {
   return objects.reduce((sum, item) => sum + item.size, 0);
 }
 
+function lastRunFromResult(result: BackupRunResult): BackupLastRun {
+  return {
+    createdAt: result.createdAt,
+    date: jerusalemDate(new Date(result.createdAt)),
+    purpose: result.purpose,
+    ok: result.ok,
+    complete: result.complete,
+    timedOut: result.timedOut,
+    remainingMedia: result.remainingMedia,
+    failedMedia: result.media.failed,
+    snapshotWritten: Boolean(result.snapshotPath),
+  };
+}
+
+async function writeLastRun(run: BackupLastRun): Promise<void> {
+  await uploadObject(
+    BACKUP_BUCKET,
+    LAST_RUN_PATH,
+    JSON.stringify(run),
+    "application/json",
+  );
+}
+
+function parseLastRun(value: unknown): BackupLastRun | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Partial<BackupLastRun>;
+  if (
+    (raw.purpose !== "daily" &&
+      raw.purpose !== "manual" &&
+      raw.purpose !== "pre-restore") ||
+    typeof raw.createdAt !== "string" ||
+    typeof raw.date !== "string" ||
+    typeof raw.ok !== "boolean" ||
+    typeof raw.complete !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    createdAt: raw.createdAt,
+    date: raw.date,
+    purpose: raw.purpose,
+    ok: raw.ok,
+    complete: raw.complete,
+    timedOut: raw.timedOut === true,
+    remainingMedia:
+      typeof raw.remainingMedia === "number" ? raw.remainingMedia : 0,
+    failedMedia: typeof raw.failedMedia === "number" ? raw.failedMedia : 0,
+    snapshotWritten: raw.snapshotWritten === true,
+  };
+}
+
+async function readLastRunSafe(): Promise<BackupLastRun | null> {
+  try {
+    const { bytes } = await downloadObject(BACKUP_BUCKET, LAST_RUN_PATH);
+    return parseLastRun(JSON.parse(Buffer.from(bytes).toString("utf8")));
+  } catch {
+    return null;
+  }
+}
+
+/** Persist a failed-run receipt without AppData or error text. */
+export async function recordBackupFailure(
+  purpose: BackupPurpose,
+): Promise<void> {
+  const createdAt = new Date().toISOString();
+  await writeLastRun({
+    createdAt,
+    date: jerusalemDate(new Date(createdAt)),
+    purpose,
+    ok: false,
+    complete: false,
+    timedOut: false,
+    remainingMedia: 0,
+    failedMedia: 0,
+    snapshotWritten: false,
+  });
+}
+
 async function writeSnapshot(
   purpose: BackupPurpose,
   pruneDaily: boolean,
 ): Promise<BackupRunResult> {
   const startedAt = Date.now();
   const deadlineMs = startedAt + BACKUP_TIME_BUDGET_MS;
-  await ensureBackupBucket();
+  let result: BackupRunResult | null = null;
+  try {
+    await ensureBackupBucket();
 
-  const live = await readLiveStoreRow();
-  const liveMedia = await listPrefix(MEDIA_BUCKET, "");
-  const media = await copyMediaIncrementally(liveMedia, deadlineMs);
+    const live = await readLiveStoreRow();
+    const liveMedia = await listPrefix(MEDIA_BUCKET, "");
+    const media = await copyMediaIncrementally(liveMedia, deadlineMs);
 
-  const snapshot = buildSnapshot(purpose, live, liveMedia);
+    const snapshot = buildSnapshot(purpose, live, liveMedia, media);
 
-  let snapshotPath: string | null = null;
-  let prunedDailySnapshots: string[] = [];
-  let prunedMediaObjects = 0;
+    let snapshotPath: string | null = null;
+    let prunedDailySnapshots: string[] = [];
+    let prunedMediaObjects = 0;
 
-  if (media.complete) {
     if (purpose === "manual") {
       const intendedPath = await allocateManualSnapshotPath();
       snapshotPath = await uploadUniqueManualSnapshot(
@@ -782,49 +876,62 @@ async function writeSnapshot(
       );
       snapshotPath = intendedPath;
     }
-    if (pruneDaily) {
+    if (pruneDaily && media.complete) {
       prunedDailySnapshots = await pruneDailySnapshots(BACKUP_RETENTION_DAYS);
       prunedMediaObjects = await pruneUnreferencedMedia(media.index);
     }
+
+    const liveBytes = liveMedia.reduce((sum, item) => sum + item.size, 0);
+    let estimatedBackupBytes = 0;
+    try {
+      estimatedBackupBytes = await estimateBackupBytes();
+    } catch (error) {
+      console.error("Backup size estimate skipped", error);
+    }
+
+    result = {
+      ok: Boolean(snapshotPath),
+      complete: media.complete,
+      timedOut: media.timedOut,
+      remainingMedia: media.remaining,
+      purpose,
+      snapshotPath,
+      createdAt: snapshot.createdAt,
+      store: {
+        table: STORE_TABLE,
+        id: STORE_ID,
+        payloadBytes: live.payloadBytes,
+        updatedAt: live.updatedAt,
+      },
+      media: {
+        liveObjectCount: liveMedia.length,
+        liveBytes,
+        copied: media.copied,
+        alreadyPresent: media.alreadyPresent,
+        skippedUnchanged: media.skippedUnchanged,
+        failed: media.failed,
+      },
+      prunedDailySnapshots,
+      prunedMediaObjects,
+      estimatedBackupBytes,
+      sizes: {
+        luminaStorePayloadBytes: live.payloadBytes,
+        luminaMediaBytes: liveBytes,
+        estimatedBackupStorageBytes: estimatedBackupBytes,
+      },
+    };
+    return result;
+  } finally {
+    try {
+      if (result) await writeLastRun(lastRunFromResult(result));
+      else await recordBackupFailure(purpose);
+    } catch (error) {
+      console.error("Backup last-run receipt was not written", error);
+    }
   }
-
-  const estimatedBackupBytes = await estimateBackupBytes();
-  const liveBytes = liveMedia.reduce((sum, item) => sum + item.size, 0);
-
-  return {
-    ok: media.complete,
-    complete: media.complete,
-    timedOut: media.timedOut,
-    remainingMedia: media.remaining,
-    purpose,
-    snapshotPath,
-    createdAt: snapshot.createdAt,
-    store: {
-      table: STORE_TABLE,
-      id: STORE_ID,
-      payloadBytes: live.payloadBytes,
-      updatedAt: live.updatedAt,
-    },
-    media: {
-      liveObjectCount: liveMedia.length,
-      liveBytes,
-      copied: media.copied,
-      alreadyPresent: media.alreadyPresent,
-      skippedUnchanged: media.skippedUnchanged,
-      failed: media.failed,
-    },
-    prunedDailySnapshots,
-    prunedMediaObjects,
-    estimatedBackupBytes,
-    sizes: {
-      luminaStorePayloadBytes: live.payloadBytes,
-      luminaMediaBytes: liveBytes,
-      estimatedBackupStorageBytes: estimatedBackupBytes,
-    },
-  };
 }
 
-/** Daily complete snapshot. Read-only against production business data. */
+/** Daily store snapshot. Media may still be catching up; complete reflects media. */
 export async function runDailyBackup(): Promise<BackupRunResult> {
   return writeSnapshot("daily", true);
 }
@@ -911,12 +1018,20 @@ function isPreRestoreSnapshot(value: unknown): value is OyonStoreSnapshot {
   );
 }
 
+function snapshotIsComplete(snapshot: OyonStoreSnapshot): boolean {
+  if (snapshot.complete === false || snapshot.media?.complete === false) {
+    return false;
+  }
+  return true;
+}
+
 function toHistoryItem(
   date: string,
   sizeBytes: number,
   snapshot: OyonStoreSnapshot,
 ): BackupHistoryItem {
   const kind = snapshot.purpose === "manual" ? "manual" : "daily";
+  const complete = snapshotIsComplete(snapshot);
   return {
     id: `${kind}:${snapshot.createdAt}`,
     kind,
@@ -933,7 +1048,8 @@ function toHistoryItem(
       typeof snapshot.media?.liveObjectCount === "number"
         ? snapshot.media.liveObjectCount
         : null,
-    status: "success",
+    status: snapshotHistoryStatus(complete),
+    complete,
   };
 }
 
@@ -1029,14 +1145,16 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
   });
 
   const latestDaily = history.find((item) => item.kind === "daily") ?? null;
-  const lastSuccessful = history[0] ?? null;
-  const today = jerusalemDate();
-  const yesterday = shiftIsoDate(today, -1);
-  const status: BackupHealthStatus = !latestDaily
-    ? "none"
-    : latestDaily.date >= yesterday
-      ? "healthy"
-      : "warning";
+  const lastSuccessful = lastSuccessfulHistoryItem(history);
+  const lastRun = await readLastRunSafe();
+  const latestCompleteDaily =
+    history.find((item) => item.kind === "daily" && item.status === "success") ??
+    null;
+  const status = computeBackupHealthStatus({
+    today: jerusalemDate(),
+    latestCompleteDailyDate: latestCompleteDaily?.date ?? null,
+    lastRun,
+  });
 
   const media = await readMediaStatusSafe();
   if (media.protectedCount == null && lastSuccessful?.mediaObjectCount != null) {
@@ -1055,6 +1173,7 @@ export async function getBackupStatusSummary(): Promise<BackupStatusSummary> {
     },
     latest: latestDaily,
     lastSuccessful,
+    lastRun,
     history,
     media,
     rollback: await readLatestRollbackSafe(),

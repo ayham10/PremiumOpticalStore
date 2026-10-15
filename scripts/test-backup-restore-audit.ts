@@ -7,6 +7,7 @@ import {
   parseRestoreCategories,
   unselectedFieldsMatch,
 } from "../lib/restore-apply";
+import { applyCustomPageRestore } from "../lib/restore-plan";
 import type { AppData, CustomServicePage, Product } from "../lib/types";
 
 /**
@@ -26,6 +27,9 @@ assert.ok(
 assert.deepEqual([...RESTORE_CATEGORY_FIELDS.bookings], [
   "eyeExamAppointments",
   "appointments",
+  "eyeExamAvailability",
+  "bookingServices",
+  "availability",
 ]);
 assert.deepEqual([...RESTORE_CATEGORY_FIELDS.products], [
   "products",
@@ -48,6 +52,14 @@ function sampleProduct(
     sku: partial.id,
     description: "",
     images: partial.images || ["https://example.supabase.co/storage/v1/object/public/lumina-media/products/live.jpg"],
+    imageFocals: partial.imageFocals || [{ x: 0.4, y: 0.3, zoom: 1.2 }],
+    locales: partial.locales || {
+      ar: { name: "إطار", description: "وصف", color: "أسود" },
+      he: { name: "מסגרת", description: "תיאור", color: "שחור" },
+      en: { name: "Frame", description: "Description", color: "Black" },
+    },
+    barcode: partial.barcode || "7290001112223",
+    frameSize: partial.frameSize || "52-018",
     purchasePrice: 1,
     sellingPrice: 10,
     stockQuantity: 2,
@@ -85,8 +97,43 @@ function yesterdayPage(): CustomServicePage {
           },
         },
       },
+      {
+        id: "sec_primary",
+        type: "primaryButton",
+        button: {
+          style: "primary",
+          align: "center",
+          fullWidthMobile: true,
+          ctaKind: "booking",
+          locales: {
+            ar: { label: "احجز الآن" },
+            he: { label: "קבעו תור" },
+            en: { label: "Book now" },
+          },
+        },
+      },
       { id: "sec_products", type: "products" },
     ],
+    layouts: {
+      ar: {
+        showHeroButton: false,
+        ctaKind: "booking",
+        sections: [
+          { id: "sec_hero", type: "heroMedia" },
+          {
+            id: "sec_primary",
+            type: "primaryButton",
+            button: {
+              style: "primary",
+              align: "center",
+              ctaKind: "booking",
+              locales: { ar: { label: "احجز الآن" } },
+            },
+          },
+        ],
+        productIds: ["p-old", "p-shared"],
+      },
+    },
     heroMedia: {
       kind: "image",
       url: "https://example.supabase.co/storage/v1/object/public/lumina-media/hero/source.jpg",
@@ -289,7 +336,9 @@ const backup = sampleApp({
       createdAt: "2026-10-09T00:00:00.000Z",
     },
   ],
+  availability: [{ id: "slot-old" } as AppData["availability"][number]],
   eyeExamAvailability: [{ id: "avail-old" } as AppData["eyeExamAvailability"][number]],
+  bookingServices: [{ id: "svc-old" } as AppData["bookingServices"][number]],
   eyeExamAppointments: [
     {
       id: "b-old",
@@ -344,6 +393,9 @@ assert.equal(page?.heroMedia?.desktopFocal?.zoom, 1.2);
 assert.equal(page?.heroMedia?.mobileFocal?.y, 0.6);
 assert.deepEqual(page?.productIds, ["p-old", "p-shared"]);
 assert.equal(page?.status, "published");
+assert.equal(page?.sections[1]?.type, "primaryButton");
+assert.equal(page?.sections[1]?.button?.locales?.ar?.label, "احجز الآن");
+assert.equal(page?.layouts?.ar?.sections[1]?.type, "primaryButton");
 assert.equal(restoredSettings.eyeExamAppointments[0].id, "b-live");
 assert.equal(restoredSettings.products[0].id, "p-live");
 assert.equal(restoredSettings.catalogCategories?.[0]?.id, "cat_live");
@@ -357,6 +409,10 @@ assert.deepEqual(restoredProducts.products[0].categoryIds, ["cat_old", "Sunglass
 assert.equal(restoredProducts.catalogCategories?.[0]?.id, "cat_old");
 assert.equal(restoredProducts.catalogCategories?.[0]?.showInMainCatalog, false);
 assert.equal(restoredProducts.catalogCategories?.[0]?.names.ar, "أمس");
+assert.equal(restoredProducts.products[0].locales?.he?.name, "מסגרת");
+assert.equal(restoredProducts.products[0].imageFocals?.[0]?.zoom, 1.2);
+assert.equal(restoredProducts.products[0].barcode, "7290001112223");
+assert.equal(restoredProducts.products[0].frameSize, "52-018");
 assert.equal(restoredProducts.settings.servicePages?.customPages?.length, 2);
 assert.equal(restoredProducts.eyeExamAppointments[0].id, "b-live");
 assert.ok(unselectedFieldsMatch(live, restoredProducts, ["products"]));
@@ -373,12 +429,24 @@ assert.deepEqual(restoredLegacyProducts.catalogCategories, []);
 const restoredBookings = applyRestoreCategories(live, backup, ["bookings"]);
 assert.equal(restoredBookings.eyeExamAppointments[0].id, "b-old");
 assert.equal(restoredBookings.eyeExamAppointments[0].manageTokenHash, "hash-old");
-assert.equal(restoredBookings.eyeExamAvailability[0].id, "avail-live");
-assert.equal(restoredBookings.bookingServices[0].id, "svc-live");
+assert.equal(restoredBookings.eyeExamAvailability[0].id, "avail-old");
+assert.equal(restoredBookings.bookingServices[0].id, "svc-old");
+assert.equal(restoredBookings.availability[0].id, "slot-old");
 assert.equal(restoredBookings.settings.servicePages?.customPages?.length, 2);
 assert.equal(restoredBookings.products[0].id, "p-live");
 assert.equal(restoredBookings.media[0].id, "m-live");
 assert.ok(unselectedFieldsMatch(live, restoredBookings, ["bookings"]));
+
+const pageOnly = applyCustomPageRestore(live, backup, "csp_yesterday");
+const restoredSingle = pageOnly.next.settings.servicePages?.customPages?.find(
+  (item) => item.id === "csp_yesterday",
+);
+assert.equal(restoredSingle?.sections[1]?.type, "primaryButton");
+assert.equal(restoredSingle?.sections[1]?.button?.fullWidthMobile, true);
+assert.equal(restoredSingle?.layouts?.ar?.sections[1]?.button?.ctaKind, "booking");
+assert.ok(
+  pageOnly.next.settings.servicePages?.customPages?.some((item) => item.id === "csp_today"),
+);
 
 const restoredLenses = applyRestoreCategories(live, backup, ["lenses"]);
 assert.equal(restoredLenses.lensInventory[0].sph, "+2.00");
@@ -394,7 +462,7 @@ console.log(
       productsRestoreIncludesCatalogCategories: true,
       mediaLibraryNotRestored: true,
       mediaFilesNotCopiedByApplyRestore: true,
-      bookingsLeaveAvailabilityAndPages: true,
+      bookingsRestoreAvailabilityAndServices: true,
     },
     null,
     2,

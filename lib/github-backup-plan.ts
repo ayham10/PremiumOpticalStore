@@ -15,6 +15,19 @@ export const DEFAULT_GITHUB_RETENTION_DAYS = 30;
 const SECRET_KEY =
   /password|secret|api[_-]?key|auth[_-]?token|access[_-]?token|private[_-]?key|client[_-]?secret|session[_-]?data/i;
 
+const SECRET_EXACT = new Set(["manageToken", "token", "password", "secret"]);
+const SECRET_KEEP = new Set([
+  "manageTokenHash",
+  "manageTokenExpiresAt",
+  "manageTokenRevokedAt",
+]);
+
+export function isRedactedBackupSecretKey(key: string): boolean {
+  if (SECRET_KEEP.has(key)) return false;
+  if (SECRET_EXACT.has(key)) return true;
+  return SECRET_KEY.test(key);
+}
+
 export type GithubDailyManifest = {
   kind: "oyon-github-daily-manifest";
   version: typeof GITHUB_SNAPSHOT_FORMAT;
@@ -136,7 +149,7 @@ function redactValue(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
   const out: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-    if (SECRET_KEY.test(key) && typeof item === "string") {
+    if (isRedactedBackupSecretKey(key) && typeof item === "string") {
       out[key] = "";
       continue;
     }

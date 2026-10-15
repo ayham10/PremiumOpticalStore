@@ -1778,6 +1778,9 @@ const ar: Dictionary = {
       status_failed: "فشل النسخ الاحتياطي",
       status_none: "لا توجد نسخة احتياطية",
       lastSuccess: "آخر نسخة ناجحة",
+      lastRunIncomplete:
+        "آخر تشغيل تلقائي حفظ بيانات المتجر، لكن نسخ الوسائط لم يكتمل. أعد «إنشاء نسخة احتياطية الآن».",
+      lastRunFailed: "فشل آخر محاولة للنسخ الاحتياطي التلقائي.",
       noneYet: "لا توجد نسخة بعد",
       createNow: "إنشاء نسخة احتياطية الآن",
       creatingNow: "جاري إنشاء النسخة...",
@@ -1845,7 +1848,7 @@ const ar: Dictionary = {
       colProducts: "المنتجات",
       colStatus: "الحالة",
       rowSuccess: "ناجحة",
-      rowWarning: "تحذير",
+      rowWarning: "غير مكتملة",
       rowFailed: "فشلت",
       showAll: "عرض الكل",
       showLess: "عرض أقل",
@@ -1857,7 +1860,7 @@ const ar: Dictionary = {
       autoLocalNote: "يعادل تقريباً {time} صباحاً بتوقيت إسرائيل.",
       restoreTitle: "استعادة البيانات",
       restoreLead:
-        "اختر نسخة ناجحة من السجل، ثم حدد الأقسام التي تريد استعادتها. ستظهر معاينة قبل أي تغيير.",
+        "اختر نسخة من السجل، ثم حدد الأقسام التي تريد استعادتها. ستظهر معاينة قبل أي تغيير.",
       restore_bookings: "الحجوزات",
       restore_products: "المنتجات والمخزون",
       restore_lenses: "مخزون العدسات",
