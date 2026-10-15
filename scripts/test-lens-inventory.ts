@@ -181,9 +181,9 @@ const orderRows = buildLensOrderRows([
 assert.deepEqual(
   orderRows.map((row) => `${row.type}:${row.sph}:${row.cyl}:${row.quantityToOrder}`),
   [
-    "minus:PLANO:-1.00:2",
     "minus:-1.00:0.00:3",
     "minus:-1.00:-0.25:2",
+    "minus:PLANO:-1.00:2",
     "plus:+0.25:0.00:3",
   ],
 );
@@ -191,6 +191,7 @@ assert.deepEqual(
 const totals = lensOrderTotals(orderRows);
 assert.equal(totals.combinations, 4);
 assert.equal(totals.quantity, 10);
+assert.equal(totals.requiredQuantity, 17);
 
 const generatedAt = new Date("2026-10-08T12:00:00.000Z");
 const html = buildLensOrderDocumentHtml(orderRows, generatedAt);
@@ -205,18 +206,19 @@ assert.match(
   /class="brand-en">OYON OPTICS<\/span><span class="brand-sep">\|<\/span><span class="brand-he">עיון אופטיקה<\/span>/,
 );
 assert.match(html, /רשימת הזמנה לעדשות/);
-assert.match(html, /סה״כ שורות: 4/);
-assert.match(html, /סה״כ להזמנה: 10/);
+assert.match(html, /סה״כ כמות נדרשת: 17/);
 assert.match(html, /סה״כ כמות להזמנה: 10/);
 assert.doesNotMatch(html, /סוג עדשה/);
+assert.match(html, /כמות נדרשת/);
+assert.match(html, /מלאי נוכחי/);
 assert.match(html, /כמות להזמנה/);
+assert.match(html, /SPH שלילי \+ PLANO/);
+assert.match(html, /SPH חיובי/);
 assert.match(html, /thead \{ display: table-header-group; \}/);
 assert.match(html, /page-break-inside: avoid/);
 assert.match(html, /A4 portrait/);
 assert.match(html, /order-table-wrap/);
-assert.match(html, /width: 78mm/);
-assert.match(html, /justify-content: flex-end/);
-assert.match(html, /<th>#<\/th>\s*<th>SPH<\/th>\s*<th>CYL<\/th>\s*<th dir="rtl">כמות להזמנה<\/th>/);
+assert.match(html, /<th>#<\/th>\s*<th>SPH<\/th>\s*<th>CYL<\/th>\s*<th dir="rtl">כמות נדרשת<\/th>\s*<th dir="rtl">מלאי נוכחי<\/th>\s*<th dir="rtl">כמות להזמנה<\/th>/);
 
 assert.doesNotMatch(html, /طلبية/);
 assert.doesNotMatch(html, /المخزون الحالي/);
@@ -224,35 +226,34 @@ assert.doesNotMatch(html, /المخزون المطلوب/);
 assert.doesNotMatch(html, /كمية الطلب/);
 assert.doesNotMatch(html, /نوع العدسة/);
 assert.doesNotMatch(html, /lang="ar"/);
-assert.doesNotMatch(html, />4<\/td>\s*<td class="num">6</);
 assert.doesNotMatch(html, /currentStock/);
 assert.doesNotMatch(html, /desiredStock/);
 
 assert.match(html, /<td class="ltr">PLANO<\/td>/);
 assert.match(html, /<td class="ltr">-1\.00<\/td>/);
 assert.match(html, /<td class="ltr">\+0\.25<\/td>/);
-assert.match(html, /<td class="ltr">—<\/td>/);
+assert.match(html, /<td class="ltr">0\.00<\/td>/);
 assert.doesNotMatch(html, /<td>\(-\)<\/td>/);
 assert.doesNotMatch(html, /<td>\(\+\)<\/td>/);
 assert.match(html, /<td class="qty">3<\/td>/);
 assert.doesNotMatch(html, /col\.kind/);
-assert.match(html, /<td class="num">1<\/td>\s*<td class="ltr">PLANO<\/td>/);
+assert.match(html, /<td class="num">1<\/td>\s*<td class="ltr">-1\.00<\/td>/);
 
 const htmlCylCells = [...html.matchAll(/<td class="ltr">([^<]*)<\/td>/g)].map(
   (match) => match[1],
 );
-assert.ok(htmlCylCells.includes("—"));
+assert.ok(htmlCylCells.includes("0.00"));
 assert.ok(htmlCylCells.includes("-0.25"));
 assert.ok(htmlCylCells.includes("-1.00"));
-assert.equal(html.includes("0.00"), false);
+assert.equal(htmlCylCells.includes("—"), false);
 
 const hebrewDate = formatLensOrderDate(generatedAt);
 assert.match(hebrewDate, /[\u0590-\u05FF]/);
 
 const emptyHtml = buildLensOrderDocumentHtml([]);
-assert.match(emptyHtml, /סה״כ שורות: 0/);
+assert.match(emptyHtml, /סה״כ כמות נדרשת: 0/);
 assert.match(emptyHtml, /סה״כ כמות להזמנה: 0/);
 assert.match(emptyHtml, /אין פריטים להזמנה/);
-assert.match(emptyHtml, /colspan="4"/);
+assert.match(emptyHtml, /colspan="6"/);
 
 console.log("lens-inventory tests passed");

@@ -19,9 +19,10 @@ import {
   LENS_MINUS_SPH,
   LENS_PLUS_SPH,
   LENS_SPH_ONLY_CYL,
+  buildLensOrderDisplayItems,
   buildLensOrderDocumentHtml,
   buildLensOrderRows,
-  formatLensCylDisplay,
+  formatLensOrderCyl,
   lensCellKey,
   lensOrderTotals,
   lensSignLabel,
@@ -98,18 +99,6 @@ function openOrderDocument(html: string, print: boolean) {
   setTimeout(() => iframe.remove(), 4000);
 }
 
-function downloadOrderDocument(html: string) {
-  const stamp = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `oyon-lens-order-${stamp}.html`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
 
 function inputSelector(cell: ActiveCell): string {
   return `input[data-lens-input="${cell.type}:${cell.sph}:${cell.cyl}:${cell.field}"]`;
@@ -127,6 +116,7 @@ export default function AdminLensInventoryPage() {
   const [active, setActive] = useState<ActiveCell | null>(null);
   const [editText, setEditText] = useState("");
   const [orderOpen, setOrderOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const draftsRef = useRef(drafts);
   const itemsRef = useRef(items);
   const activeRef = useRef(active);
@@ -179,6 +169,10 @@ export default function AdminLensInventoryPage() {
     [items, drafts],
   );
   const orderRows = useMemo(() => buildLensOrderRows(viewedItems), [viewedItems]);
+  const orderDisplayItems = useMemo(
+    () => buildLensOrderDisplayItems(orderRows),
+    [orderRows],
+  );
   const totals = useMemo(() => lensOrderTotals(orderRows), [orderRows]);
   const dirtyCount = lensDraftCount(drafts);
 
@@ -431,10 +425,24 @@ export default function AdminLensInventoryPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  function exportOrder(print: boolean) {
-    const html = buildLensOrderDocumentHtml(orderRows);
-    if (print) openOrderDocument(html, true);
-    else downloadOrderDocument(html);
+  function printOrder() {
+    openOrderDocument(buildLensOrderDocumentHtml(orderRows), true);
+  }
+
+  async function downloadOrderPdf() {
+    if (downloadingPdf) return;
+    setDownloadingPdf(true);
+    setError("");
+    try {
+      const { downloadLensOrderPdf } = await import("@/lib/lens-order-pdf-download");
+      await downloadLensOrderPdf(orderRows);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("admin.lensInventory.downloadError"),
+      );
+    } finally {
+      setDownloadingPdf(false);
+    }
   }
 
   return (
@@ -560,7 +568,8 @@ export default function AdminLensInventoryPage() {
                   </button>
                 </h2>
                 <p>
-                  {t("admin.lensInventory.totalItems")}: <strong>{totals.combinations}</strong>
+                  {t("admin.lensInventory.totalRequired")}:{" "}
+                  <strong>{totals.requiredQuantity}</strong>
                   <span className="admin-lens-order-sep">·</span>
                   {t("admin.lensInventory.totalQty")}: <strong>{totals.quantity}</strong>
                 </p>
@@ -569,15 +578,18 @@ export default function AdminLensInventoryPage() {
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => exportOrder(false)}
+                  onClick={() => void downloadOrderPdf()}
+                  disabled={downloadingPdf}
                 >
                   <Download size={15} />
-                  {t("admin.lensInventory.download")}
+                  {downloadingPdf
+                    ? t("admin.lensInventory.downloading")
+                    : t("admin.lensInventory.download")}
                 </button>
                 <button
                   type="button"
                   className="btn btn-accent"
-                  onClick={() => exportOrder(true)}
+                  onClick={printOrder}
                 >
                   <Printer size={15} />
                   {t("admin.lensInventory.print")}
@@ -596,19 +608,32 @@ export default function AdminLensInventoryPage() {
                         <th>#</th>
                         <th>SPH</th>
                         <th>CYL</th>
-                        <th dir="rtl">{t("admin.lensInventory.colCurrent")}</th>
                         <th dir="rtl">{t("admin.lensInventory.colDesired")}</th>
+                        <th dir="rtl">{t("admin.lensInventory.colCurrent")}</th>
                         <th dir="rtl">{t("admin.lensInventory.colOrder")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orderRows.map((row, index) => (
-                        <OrderRowView
-                          key={`${row.type}-${row.sph}-${row.cyl}`}
-                          row={row}
-                          index={index + 1}
-                        />
-                      ))}
+                      {orderDisplayItems.map((item) =>
+                        item.kind === "section" ? (
+                          <tr
+                            key={`section-${item.id}`}
+                            className="admin-lens-order-section"
+                          >
+                            <th colSpan={6} scope="colgroup">
+                              {item.id === "negative"
+                                ? t("admin.lensInventory.orderSectionNegative")
+                                : t("admin.lensInventory.orderSectionPositive")}
+                            </th>
+                          </tr>
+                        ) : (
+                          <OrderRowView
+                            key={`${item.row.type}-${item.row.sph}-${item.row.cyl}`}
+                            row={item.row}
+                            index={item.index}
+                          />
+                        ),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -626,9 +651,9 @@ function OrderRowView({ row, index }: { row: LensOrderRow; index: number }) {
     <tr>
       <td>{index}</td>
       <td className="admin-lens-ltr">{row.sph}</td>
-      <td className="admin-lens-ltr">{formatLensCylDisplay(row.cyl)}</td>
-      <td>{row.currentStock}</td>
+      <td className="admin-lens-ltr">{formatLensOrderCyl(row.cyl)}</td>
       <td>{row.desiredStock}</td>
+      <td>{row.currentStock}</td>
       <td className="admin-lens-qty">{row.quantityToOrder}</td>
     </tr>
   );

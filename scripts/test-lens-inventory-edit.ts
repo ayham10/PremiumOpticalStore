@@ -311,6 +311,15 @@ assert.match(page, /orderOpen/);
 assert.match(page, /ChevronDown/);
 assert.match(page, /dir="ltr"/);
 assert.match(page, /admin-lens-order-toggle/);
+assert.match(page, /downloadLensOrderPdf/);
+assert.doesNotMatch(page, /oyon-lens-order-\$\{stamp\}\.html/);
+assert.doesNotMatch(page, /text\/html;charset=utf-8/);
+assert.match(page, /admin-lens-order-section/);
+assert.match(page, /buildLensOrderDisplayItems/);
+
+const pdfDownload = readFileSync("lib/lens-order-pdf-download.ts", "utf8");
+assert.match(pdfDownload, /application\/pdf/);
+assert.match(pdfDownload, /filename/);
 assert.doesNotMatch(page, /admin\.lensInventory\.colType/);
 assert.match(page, /event\.preventDefault\(\);\s*if \(!coord\) return;/);
 

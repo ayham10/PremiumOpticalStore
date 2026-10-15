@@ -20012,6 +20012,20 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   unicode-bidi: isolate;
 }
 
+.admin-lens-order tr.admin-lens-order-section th {
+  position: sticky;
+  top: 1.7rem;
+  z-index: 1;
+  padding: 0.45rem 0.5rem;
+  background: rgba(212, 175, 106, 0.14);
+  color: #f2e3c4;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+}
+
 .admin-lens-ltr {
   direction: ltr;
   unicode-bidi: isolate;

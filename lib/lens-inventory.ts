@@ -103,6 +103,86 @@ export function formatLensCylDisplay(cyl: string): string {
   return isSphOnlyCyl(cyl) ? "—" : cyl;
 }
 
+/** Order list / PDF / print show SPH-only as 0.00, matching the CYL sequence. */
+export function formatLensOrderCyl(cyl: string): string {
+  return isSphOnlyCyl(cyl) ? LENS_SPH_ONLY_CYL : cyl;
+}
+
+export const LENS_ORDER_CYL_SEQUENCE = [LENS_SPH_ONLY_CYL, ...LENS_CYL] as const;
+
+export type LensOrderSectionId = "negative" | "positive";
+
+export type LensOrderDisplayItem =
+  | { kind: "section"; id: LensOrderSectionId }
+  | { kind: "row"; row: LensOrderRow; index: number };
+
+const CYL_ORDER = new Map<string, number>(
+  LENS_ORDER_CYL_SEQUENCE.map((cyl, index) => [cyl, index]),
+);
+const MINUS_SPH_ORDER = new Map<string, number>(
+  LENS_MINUS_SPH.map((sph, index) => [sph, index]),
+);
+const PLUS_SPH_ORDER = new Map<string, number>(
+  LENS_PLUS_SPH.map((sph, index) => [sph, index]),
+);
+
+export function lensOrderSection(
+  row: Pick<LensOrderRow, "type">,
+): LensOrderSectionId {
+  return row.type === "plus" ? "positive" : "negative";
+}
+
+/**
+ * Shared order-list sort: negative SPH + PLANO, then positive SPH.
+ * Within each section, CYL is 0.00 → -0.25 → …; SPH is PLANO → more minus,
+ * or smallest plus → largest plus.
+ */
+export function compareLensOrderRows(
+  a: Pick<LensOrderRow, "type" | "sph" | "cyl">,
+  b: Pick<LensOrderRow, "type" | "sph" | "cyl">,
+): number {
+  const sectionA = lensOrderSection(a) === "negative" ? 0 : 1;
+  const sectionB = lensOrderSection(b) === "negative" ? 0 : 1;
+  if (sectionA !== sectionB) return sectionA - sectionB;
+  const cylA = CYL_ORDER.get(a.cyl) ?? 999;
+  const cylB = CYL_ORDER.get(b.cyl) ?? 999;
+  if (cylA !== cylB) return cylA - cylB;
+  if (sectionA === 0) {
+    return (
+      (MINUS_SPH_ORDER.get(a.sph) ?? 999) - (MINUS_SPH_ORDER.get(b.sph) ?? 999)
+    );
+  }
+  return (PLUS_SPH_ORDER.get(a.sph) ?? 999) - (PLUS_SPH_ORDER.get(b.sph) ?? 999);
+}
+
+export function sortLensOrderRows<T extends Pick<LensOrderRow, "type" | "sph" | "cyl">>(
+  rows: T[],
+): T[] {
+  return [...rows].sort(compareLensOrderRows);
+}
+
+export function buildLensOrderDisplayItems(
+  rows: LensOrderRow[],
+): LensOrderDisplayItem[] {
+  const items: LensOrderDisplayItem[] = [];
+  let index = 0;
+  let last: LensOrderSectionId | null = null;
+  for (const row of rows) {
+    const id = lensOrderSection(row);
+    if (id !== last) {
+      items.push({ kind: "section", id });
+      last = id;
+    }
+    index += 1;
+    items.push({ kind: "row", row, index });
+  }
+  return items;
+}
+
+export function lensOrderPdfFilename(date = new Date()): string {
+  return `OYON-Lens-Order-${date.toISOString().slice(0, 10)}.pdf`;
+}
+
 export function parseLensQty(value: unknown): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
     return value;
@@ -208,7 +288,7 @@ export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
   ];
   for (const table of tables) {
     for (const sph of table.sphs) {
-      for (const cyl of [LENS_SPH_ONLY_CYL, ...LENS_CYL]) {
+      for (const cyl of LENS_ORDER_CYL_SEQUENCE) {
         const { currentStock, desiredStock } = getLensCell(
           items,
           table.type,
@@ -229,16 +309,18 @@ export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
       }
     }
   }
-  return rows;
+  return sortLensOrderRows(rows);
 }
 
 export function lensOrderTotals(rows: LensOrderRow[]): {
   combinations: number;
   quantity: number;
+  requiredQuantity: number;
 } {
   return {
     combinations: rows.length,
     quantity: rows.reduce((sum, row) => sum + row.quantityToOrder, 0),
+    requiredQuantity: rows.reduce((sum, row) => sum + row.desiredStock, 0),
   };
 }
 
@@ -258,21 +340,47 @@ function escapeLensOrderText(value: string | number): string {
     .replace(/"/g, "&quot;");
 }
 
+export function lensOrderSectionTitle(
+  id: LensOrderSectionId,
+  locale: "en" | "he" | "ar" = "en",
+): string {
+  if (id === "negative") {
+    if (locale === "he") return "SPH שלילי + PLANO";
+    if (locale === "ar") return "SPH سالب + PLANO";
+    return "Negative SPH + PLANO";
+  }
+  if (locale === "he") return "SPH חיובי";
+  if (locale === "ar") return "SPH موجب";
+  return "Positive SPH";
+}
+
 export function buildLensOrderDocumentHtml(
   rows: LensOrderRow[],
   generatedAt = new Date(),
 ): string {
   const totals = lensOrderTotals(rows);
-  const body = rows
-    .map(
-      (row, index) => `
+  const items = buildLensOrderDisplayItems(rows);
+  const body = items
+    .map((item) => {
+      if (item.kind === "section") {
+        return `
+        <tr class="section">
+          <td class="section-cell" colspan="6">${escapeLensOrderText(
+            lensOrderSectionTitle(item.id, "he"),
+          )}</td>
+        </tr>`;
+      }
+      const { row, index } = item;
+      return `
         <tr>
-          <td class="num">${index + 1}</td>
+          <td class="num">${index}</td>
           <td class="ltr">${escapeLensOrderText(row.sph)}</td>
-          <td class="ltr">${escapeLensOrderText(formatLensCylDisplay(row.cyl))}</td>
+          <td class="ltr">${escapeLensOrderText(formatLensOrderCyl(row.cyl))}</td>
+          <td class="num">${row.desiredStock}</td>
+          <td class="num">${row.currentStock}</td>
           <td class="qty">${row.quantityToOrder}</td>
-        </tr>`,
-    )
+        </tr>`;
+    })
     .join("");
 
   return `<!DOCTYPE html>
@@ -339,23 +447,22 @@ export function buildLensOrderDocumentHtml(
       color: #2a3138;
     }
     .order-table-wrap {
-      display: flex;
-      justify-content: flex-end;
       direction: ltr;
     }
     table {
-      width: 78mm;
-      max-width: 78mm;
-      margin-left: auto;
+      width: 100%;
+      max-width: 190mm;
       border-collapse: collapse;
       table-layout: fixed;
       direction: ltr;
       unicode-bidi: isolate;
     }
-    col.idx { width: 14%; }
-    col.sph { width: 22%; }
-    col.cyl { width: 22%; }
-    col.order { width: 42%; }
+    col.idx { width: 8%; }
+    col.sph { width: 14%; }
+    col.cyl { width: 14%; }
+    col.required { width: 22%; }
+    col.current { width: 20%; }
+    col.order { width: 22%; }
     thead { display: table-header-group; }
     tr { break-inside: avoid; page-break-inside: avoid; }
     th, td {
@@ -371,8 +478,16 @@ export function buildLensOrderDocumentHtml(
       color: #f4f7fa;
       font-weight: 700;
     }
-    tbody tr:nth-child(even) td { background: #f4f6f8; }
-    tbody tr:nth-child(odd) td { background: #fff; }
+    tr.section td {
+      background: #eef2f6;
+      color: #0b1722;
+      font-weight: 800;
+      text-align: right;
+      direction: rtl;
+      unicode-bidi: isolate;
+    }
+    tbody tr:nth-child(even):not(.section) td { background: #f4f6f8; }
+    tbody tr:nth-child(odd):not(.section) td { background: #fff; }
     td.ltr {
       direction: ltr;
       unicode-bidi: isolate;
@@ -411,13 +526,15 @@ export function buildLensOrderDocumentHtml(
       <p class="date">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
     </header>
     <div class="rule"></div>
-    <p class="summary">סה״כ שורות: ${totals.combinations} | סה״כ להזמנה: ${totals.quantity}</p>
+    <p class="summary">סה״כ כמות נדרשת: ${totals.requiredQuantity} | סה״כ כמות להזמנה: ${totals.quantity}</p>
     <div class="order-table-wrap">
     <table>
       <colgroup>
         <col class="idx" />
         <col class="sph" />
         <col class="cyl" />
+        <col class="required" />
+        <col class="current" />
         <col class="order" />
       </colgroup>
       <thead>
@@ -425,10 +542,12 @@ export function buildLensOrderDocumentHtml(
           <th>#</th>
           <th>SPH</th>
           <th>CYL</th>
+          <th dir="rtl">כמות נדרשת</th>
+          <th dir="rtl">מלאי נוכחי</th>
           <th dir="rtl">כמות להזמנה</th>
         </tr>
       </thead>
-      <tbody>${body || `<tr><td colspan="4">אין פריטים להזמנה</td></tr>`}</tbody>
+      <tbody>${body || `<tr><td colspan="6">אין פריטים להזמנה</td></tr>`}</tbody>
     </table>
     </div>
     <p class="total">סה״כ כמות להזמנה: ${totals.quantity}</p>
