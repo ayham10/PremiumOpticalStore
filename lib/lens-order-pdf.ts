@@ -1,12 +1,15 @@
 import { jsPDF } from "jspdf";
 import autoTable, { type RowInput } from "jspdf-autotable";
 import {
+  LENS_ORDER_BRAND_EN,
+  LENS_ORDER_BRAND_HE,
+  LENS_ORDER_LOCATION_EN,
   LENS_ORDER_LOCATION_HE,
   LENS_ORDER_PDF_FILENAME,
   LENS_ORDER_WEBSITE,
   buildLensOrderDisplayItems,
   formatLensOrderCyl,
-  formatLensOrderDate,
+  formatLensOrderNumericDate,
   lensOrderPdfFilename,
   lensOrderTotals,
   type LensOrderRow,
@@ -29,11 +32,14 @@ const FONT_LATIN = "NotoSans";
 const FONT_HEBREW = "NotoSansHebrew";
 const FONT_ARABIC = "NotoNaskhArabic";
 const PAGE_W = 210;
-const MARGIN = 10;
-const TABLE_TOP = 42;
+const PAGE_H = 297;
+const OUTER = 7;
+const INNER = 8.4;
+const TABLE_TOP = 52;
 const INK = [17, 17, 17] as const;
-const GRID = [102, 102, 102] as const;
-const HEAD_BG = [26, 26, 26] as const;
+const GOLD = [184, 144, 73] as const;
+const GRID = [208, 208, 208] as const;
+const HEAD_BG = [17, 17, 17] as const;
 const ALT_ROW = [243, 243, 243] as const;
 const SECTION_BG = [236, 236, 236] as const;
 
@@ -59,11 +65,6 @@ function registerFont(
   }
 }
 
-function pdfSectionMark(id: "negative" | "positive"): string {
-  // Noto Sans lacks U+2212; en-dash is the closest embedded minus.
-  return id === "negative" ? "–" : "+";
-}
-
 function drawRtlMixed(
   doc: jsPDF,
   logical: string,
@@ -72,7 +73,10 @@ function drawRtlMixed(
   size: number,
   hebrewStyle: "normal" | "bold" = "normal",
 ) {
-  const tokens = logical.match(/[\u0590-\u05FF״׳]+|\d+(?:[.,]\d+)?|[A-Za-z]+|\s+|[^\s]/g) || [];
+  const tokens =
+    logical.match(
+      /[\u0590-\u05FF״׳]+|\d{1,2}\.\d{1,2}\.\d{4}|\d+(?:[.,]\d+)?|[A-Za-z]+(?:\.[a-z]+)+|\s+|[^\s]/g,
+    ) || [];
   let x = xRight;
   doc.setFontSize(size);
   doc.setTextColor(...INK);
@@ -93,18 +97,38 @@ function drawRtlMixed(
   }
 }
 
-function drawOyonLogo(doc: jsPDF, cx: number, top: number) {
-  doc.setTextColor(...INK);
-  doc.setFont(FONT_LATIN, "bold");
-  doc.setFontSize(10.4);
-  doc.text("OYON", cx, top + 4.2, { align: "center", charSpace: 1.15 });
-  doc.setDrawColor(...INK);
-  doc.setLineWidth(0.22);
-  doc.line(cx - 10, top + 5.6, cx - 3.6, top + 5.6);
-  doc.line(cx + 3.6, top + 5.6, cx + 10, top + 5.6);
-  doc.setFont(FONT_ARABIC, "normal");
-  doc.setFontSize(7.2);
-  doc.text(pdfRtlText("عيون"), cx, top + 9.4, { align: "center" });
+function drawEye(doc: jsPDF, cx: number, cy: number) {
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.55);
+  doc.ellipse(cx, cy, 8.2, 4.1, "S");
+  doc.setFillColor(...INK);
+  doc.circle(cx, cy, 2.35, "F");
+  doc.setFillColor(255, 255, 255);
+  doc.circle(cx, cy, 0.85, "F");
+}
+
+function drawPhoneIcon(doc: jsPDF, x: number, y: number) {
+  doc.setFillColor(...INK);
+  doc.roundedRect(x, y - 2.6, 2.6, 3.6, 0.5, 0.5, "F");
+  doc.circle(x + 1.3, y + 1.5, 0.45, "F");
+}
+
+function drawPin(doc: jsPDF, x: number, y: number) {
+  doc.setFillColor(...GOLD);
+  doc.circle(x, y - 1.1, 2.15, "F");
+  doc.triangle(x - 1.7, y - 0.4, x + 1.7, y - 0.4, x, y + 3.4, "F");
+  doc.setFillColor(255, 255, 255);
+  doc.circle(x, y - 1.2, 0.85, "F");
+}
+
+function drawGlobe(doc: jsPDF, x: number, y: number) {
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.38);
+  doc.circle(x, y, 2.5, "S");
+  doc.ellipse(x, y, 1.1, 2.5, "S");
+  doc.line(x - 2.5, y, x + 2.5, y);
+  doc.line(x - 2.1, y - 1.2, x + 2.1, y - 1.2);
+  doc.line(x - 2.1, y + 1.2, x + 2.1, y + 1.2);
 }
 
 function drawPageChrome(
@@ -113,42 +137,79 @@ function drawPageChrome(
   totals: { requiredQuantity: number; quantity: number },
   phone: string,
 ) {
-  drawOyonLogo(doc, PAGE_W / 2, 8);
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(0.85);
+  doc.rect(OUTER, OUTER, PAGE_W - OUTER * 2, PAGE_H - OUTER * 2, "S");
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.32);
+  doc.rect(INNER, INNER, PAGE_W - INNER * 2, PAGE_H - INNER * 2, "S");
 
-  drawRtlMixed(doc, "רשימת הזמנה לעדשות", PAGE_W - MARGIN, 24, 13, "bold");
-  drawRtlMixed(doc, formatLensOrderDate(generatedAt), PAGE_W - MARGIN, 30, 9);
+  const brandX = 28;
+  drawEye(doc, brandX, 16.2);
+  doc.setFont("times", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...INK);
+  doc.text(LENS_ORDER_BRAND_EN, brandX, 23.4, {
+    align: "center",
+    charSpace: 0.45,
+  });
+  doc.setFont(FONT_HEBREW, "bold");
+  doc.setFontSize(7.4);
+  doc.text(pdfRtlText(LENS_ORDER_BRAND_HE), brandX, 27.4, { align: "center" });
+
+  const right = PAGE_W - INNER - 2;
+  drawRtlMixed(doc, "רשימת הזמנה לעדשות", right, 16.8, 13.5, "bold");
+  doc.setFillColor(...GOLD);
+  doc.rect(right - 32, 18.6, 32, 0.85, "F");
   drawRtlMixed(
     doc,
-    `סה״כ כמות נדרשת: ${totals.requiredQuantity}   סה״כ כמות להזמנה: ${totals.quantity}`,
-    PAGE_W - MARGIN,
-    35.5,
-    9,
+    `תאריך הזמנה: ${formatLensOrderNumericDate(generatedAt)}`,
+    right,
+    24.8,
+    8.4,
+    "bold",
   );
 
-  doc.setDrawColor(...INK);
-  doc.setLineWidth(0.35);
-  doc.line(MARGIN, 38.5, PAGE_W - MARGIN, 38.5);
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.32);
+  doc.line(INNER + 1.5, 31.5, PAGE_W - INNER - 1.5, 31.5);
 
-  const footerY = phone ? 285.5 : 287.5;
-  doc.setFont(FONT_HEBREW, "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...INK);
-  const location = pdfRtlText(LENS_ORDER_LOCATION_HE);
-  const locationWidth = doc.getTextWidth(location);
-  doc.setFont(FONT_LATIN, "normal");
-  const separator = "  ·  ";
-  const separatorWidth = doc.getTextWidth(separator);
-  const websiteWidth = doc.getTextWidth(LENS_ORDER_WEBSITE);
-  const footerWidth = locationWidth + separatorWidth + websiteWidth;
-  const footerX = (PAGE_W - footerWidth) / 2;
-  doc.setFont(FONT_HEBREW, "normal");
-  doc.text(location, footerX, footerY);
-  doc.setFont(FONT_LATIN, "normal");
-  doc.text(separator, footerX + locationWidth, footerY);
-  doc.text(LENS_ORDER_WEBSITE, footerX + locationWidth + separatorWidth, footerY);
+  drawRtlMixed(
+    doc,
+    `סה״כ כמות נדרשת: ${totals.requiredQuantity} | סה״כ כמות להזמנה: ${totals.quantity}`,
+    right,
+    37.4,
+    8.2,
+    "bold",
+  );
   if (phone) {
-    doc.text(phone, PAGE_W / 2, 291.2, { align: "center" });
+    drawPhoneIcon(doc, INNER + 3.2, 37.2);
+    drawRtlMixed(doc, `טלפון: ${phone}`, INNER + 38, 37.4, 8.2, "bold");
   }
+
+  doc.setDrawColor(...GOLD);
+  doc.line(INNER + 1.5, 41.2, PAGE_W - INNER - 1.5, 41.2);
+
+  const footY = 286;
+  doc.setDrawColor(...GOLD);
+  doc.line(INNER + 1.5, 278.5, PAGE_W - INNER - 1.5, 278.5);
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.32);
+  doc.line(PAGE_W / 2, 280.4, PAGE_W / 2, 290.2);
+
+  drawPin(doc, INNER + 6.5, footY);
+  doc.setFont(FONT_HEBREW, "bold");
+  doc.setFontSize(8.2);
+  doc.setTextColor(...INK);
+  doc.text(pdfRtlText(LENS_ORDER_LOCATION_HE), INNER + 11.2, footY - 0.6);
+  doc.setFont(FONT_LATIN, "normal");
+  doc.setFontSize(7.4);
+  doc.text(LENS_ORDER_LOCATION_EN, INNER + 11.2, footY + 3.2);
+
+  drawGlobe(doc, PAGE_W - INNER - 42, footY + 0.6);
+  doc.setFont(FONT_LATIN, "normal");
+  doc.setFontSize(8);
+  doc.text(LENS_ORDER_WEBSITE, PAGE_W - INNER - 37.5, footY + 1.4);
 }
 
 function tableBody(rows: LensOrderRow[]): RowInput[] {
@@ -158,7 +219,7 @@ function tableBody(rows: LensOrderRow[]): RowInput[] {
       [
         {
           content: pdfRtlText("אין פריטים להזמנה"),
-          colSpan: 6,
+          colSpan: 4,
           styles: {
             halign: "center",
             font: FONT_HEBREW,
@@ -172,27 +233,22 @@ function tableBody(rows: LensOrderRow[]): RowInput[] {
     if (item.kind === "section") {
       return [
         {
-          content: pdfSectionMark(item.id),
-          colSpan: 6,
+          content: "",
+          colSpan: 4,
           styles: {
             fillColor: [...SECTION_BG],
             textColor: [...INK],
-            fontStyle: "bold",
-            halign: "center",
-            font: FONT_LATIN,
-            fontSize: 11,
+            minCellHeight: 6.8,
           },
         },
       ];
     }
     const { row, index } = item;
     return [
-      String(index),
       row.sph,
       formatLensOrderCyl(row.cyl),
-      String(row.desiredStock),
-      String(row.currentStock),
       String(row.quantityToOrder),
+      String(index),
     ];
   });
 }
@@ -204,6 +260,8 @@ export function buildLensOrderPdf(
   const generatedAt = options.generatedAt ?? new Date();
   const phone = options.phone?.trim() || "";
   const totals = lensOrderTotals(rows);
+  const display = buildLensOrderDisplayItems(rows);
+
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -229,31 +287,30 @@ export function buildLensOrderPdf(
   );
   doc.setFont(FONT_LATIN, "normal");
 
+  const tableW = PAGE_W - (INNER + 2) * 2;
   autoTable(doc, {
     startY: TABLE_TOP,
-    margin: { top: TABLE_TOP, left: MARGIN, right: MARGIN, bottom: 18 },
+    margin: { top: TABLE_TOP, left: INNER + 2, right: INNER + 2, bottom: 24 },
     theme: "grid",
     showHead: "everyPage",
     pageBreak: "auto",
     rowPageBreak: "avoid",
-    tableWidth: PAGE_W - MARGIN * 2,
+    tableWidth: tableW,
     head: [
       [
-        "#",
-        "SPH",
-        "CYL",
         {
-          content: pdfRtlText("כמות נדרשת"),
-          styles: { font: FONT_HEBREW, fontStyle: "bold" },
+          content: "SPH",
+          styles: { font: FONT_LATIN, fontStyle: "bold" },
         },
         {
-          content: pdfRtlText("מלאי נוכחי"),
-          styles: { font: FONT_HEBREW, fontStyle: "bold" },
+          content: "CYL",
+          styles: { font: FONT_LATIN, fontStyle: "bold" },
         },
         {
           content: pdfRtlText("כמות להזמנה"),
           styles: { font: FONT_HEBREW, fontStyle: "bold" },
         },
+        "#",
       ],
     ],
     body: tableBody(rows),
@@ -262,31 +319,48 @@ export function buildLensOrderPdf(
       fontSize: 9,
       halign: "center",
       valign: "middle",
-      cellPadding: { top: 1.8, bottom: 1.8, left: 2, right: 2 },
+      cellPadding: { top: 1.7, bottom: 1.7, left: 2, right: 2 },
       textColor: [...INK],
       lineColor: [...GRID],
-      lineWidth: 0.18,
+      lineWidth: 0.16,
       overflow: "linebreak",
-      minCellHeight: 6.4,
+      minCellHeight: 6.2,
     },
     headStyles: {
       fillColor: [...HEAD_BG],
-      textColor: [255, 255, 255],
+      textColor: [...GOLD],
       fontStyle: "bold",
       font: FONT_LATIN,
-      fontSize: 8.5,
+      fontSize: 8.4,
+      lineColor: [255, 255, 255],
+      lineWidth: 0.18,
     },
     alternateRowStyles: { fillColor: [...ALT_ROW] },
     columnStyles: {
-      0: { cellWidth: 14 },
-      1: { cellWidth: 28 },
-      2: { cellWidth: 28 },
-      3: { cellWidth: 40 },
-      4: { cellWidth: 40 },
-      5: { cellWidth: 40, fontStyle: "bold" },
+      0: { cellWidth: tableW * 0.32 },
+      1: { cellWidth: tableW * 0.32 },
+      2: { cellWidth: tableW * 0.26, fontStyle: "bold" },
+      3: { cellWidth: tableW * 0.1 },
     },
     didDrawPage: () => {
       drawPageChrome(doc, generatedAt, totals, phone);
+    },
+    didDrawCell: (data) => {
+      if (data.section !== "body") return;
+      if (data.column.index !== 0) return;
+      const item = display[data.row.index];
+      if (item?.kind !== "section") return;
+      const mark = item.id === "negative" ? "–" : "+";
+      const { x, y, height } = data.cell;
+      const cx = x + 5.2;
+      const cy = y + height / 2;
+      doc.setFillColor(...INK);
+      doc.circle(cx, cy, 2.05, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(FONT_LATIN, "bold");
+      doc.setFontSize(8);
+      doc.text(mark, cx, cy + 0.75, { align: "center" });
+      doc.setTextColor(...INK);
     },
   });
 

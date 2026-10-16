@@ -316,8 +316,8 @@ assert.match(page, /admin-lens-order-toggle/);
 assert.match(page, /downloadLensOrderPdf/);
 assert.doesNotMatch(page, /oyon-lens-order-\$\{stamp\}\.html/);
 assert.doesNotMatch(page, /text\/html;charset=utf-8/);
-assert.match(page, /admin-lens-order-section/);
-assert.match(page, /buildLensOrderDisplayItems/);
+assert.match(page, /lens-order-badge|buildLensOrderSheetHtml/);
+assert.match(page, /LENS_ORDER_SHEET_CSS/);
 
 const pdfDownload = readFileSync("lib/lens-order-pdf-download.ts", "utf8");
 assert.match(pdfDownload, /application\/pdf/);
@@ -326,11 +326,9 @@ assert.doesNotMatch(page, /admin\.lensInventory\.colType/);
 assert.match(page, /event\.preventDefault\(\);\s*if \(!coord\) return;/);
 
 const css = readFileSync("app/globals.css", "utf8");
-assert.match(css, /max-height: 17\.2rem/);
-assert.match(css, /\.admin-lens-order th \{\s*position: sticky;/);
-assert.match(css, /padding: 0\.45rem 0\.7rem/);
-assert.match(css, /\.admin-lens-order table \{\s*width: 100%;/);
-assert.match(css, /width: calc\(100% \/ 6\)/);
+assert.match(css, /max-height: 42rem/);
+assert.match(css, /admin-lens-order-preview/);
+assert.match(page, /buildLensOrderSheetHtml/);
 assert.match(page, /exportPhone/);
 assert.doesNotMatch(page, /settings\?\.phone\s*=/);
 

@@ -90,8 +90,9 @@ function reverseRtlPreservingLtr(text: string): string {
   return [...text]
     .reverse()
     .join("")
-    .replace(/[0-9]+(?:[.,][0-9]+)?|[A-Za-z]+/g, (match) =>
-      [...match].reverse().join(""),
+    .replace(
+      /\d{1,2}\.\d{1,2}\.\d{4}|[0-9]+(?:[.,][0-9]+)?|[A-Za-z]+(?:\.[A-Za-z]+)*/g,
+      (match) => [...match].reverse().join(""),
     );
 }
 

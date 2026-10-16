@@ -22,16 +22,17 @@ import {
   LENS_MINUS_SPH,
   LENS_PLUS_SPH,
   LENS_SPH_ONLY_CYL,
-  buildLensOrderDisplayItems,
-  buildLensOrderDocumentHtml,
   buildLensOrderRows,
-  formatLensOrderCyl,
   lensCellKey,
   lensOrderTotals,
   lensSignLabel,
   lensStockTone,
-  type LensOrderRow,
 } from "@/lib/lens-inventory";
+import {
+  LENS_ORDER_SHEET_CSS,
+  buildLensOrderDocumentHtml,
+  buildLensOrderSheetHtml,
+} from "@/lib/lens-order-sheet";
 import {
   applyLensPaste,
   draftsToWriteItems,
@@ -176,10 +177,6 @@ export default function AdminLensInventoryPage() {
     [items, drafts],
   );
   const orderRows = useMemo(() => buildLensOrderRows(viewedItems), [viewedItems]);
-  const orderDisplayItems = useMemo(
-    () => buildLensOrderDisplayItems(orderRows),
-    [orderRows],
-  );
   const totals = useMemo(() => lensOrderTotals(orderRows), [orderRows]);
   const dirtyCount = lensDraftCount(drafts);
 
@@ -630,47 +627,14 @@ export default function AdminLensInventoryPage() {
               orderRows.length === 0 ? (
                 <p className="admin-muted">{t("admin.lensInventory.orderEmpty")}</p>
               ) : (
-                <div className="admin-lens-order-wrap" id="admin-lens-order-table" dir="ltr">
-                  <table>
-                    <colgroup>
-                      <col />
-                      <col />
-                      <col />
-                      <col />
-                      <col />
-                      <col />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>SPH</th>
-                        <th>CYL</th>
-                        <th dir="rtl">{t("admin.lensInventory.colDesired")}</th>
-                        <th dir="rtl">{t("admin.lensInventory.colCurrent")}</th>
-                        <th dir="rtl">{t("admin.lensInventory.colOrder")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orderDisplayItems.map((item) =>
-                        item.kind === "section" ? (
-                          <tr
-                            key={`section-${item.id}`}
-                            className="admin-lens-order-section"
-                          >
-                            <th colSpan={6} scope="colgroup">
-                              {item.id === "negative" ? "−" : "+"}
-                            </th>
-                          </tr>
-                        ) : (
-                          <OrderRowView
-                            key={`${item.row.type}-${item.row.sph}-${item.row.cyl}`}
-                            row={item.row}
-                            index={item.index}
-                          />
-                        ),
-                      )}
-                    </tbody>
-                  </table>
+                <div className="admin-lens-order-wrap" id="admin-lens-order-table">
+                  <style>{LENS_ORDER_SHEET_CSS}</style>
+                  <div
+                    className="admin-lens-order-preview"
+                    dangerouslySetInnerHTML={{
+                      __html: buildLensOrderSheetHtml(orderRows),
+                    }}
+                  />
                 </div>
               )
             ) : null}
@@ -737,19 +701,6 @@ export default function AdminLensInventoryPage() {
         </div>
       </AdminModal>
     </div>
-  );
-}
-
-function OrderRowView({ row, index }: { row: LensOrderRow; index: number }) {
-  return (
-    <tr>
-      <td>{index}</td>
-      <td className="admin-lens-ltr">{row.sph}</td>
-      <td className="admin-lens-ltr">{formatLensOrderCyl(row.cyl)}</td>
-      <td>{row.desiredStock}</td>
-      <td>{row.currentStock}</td>
-      <td className="admin-lens-qty">{row.quantityToOrder}</td>
-    </tr>
   );
 }
 

@@ -8,7 +8,6 @@ import {
   LENS_PLUS_SPH,
   LENS_SPH_ONLY_CYL,
   buildLensOrderDisplayItems,
-  buildLensOrderDocumentHtml,
   buildLensOrderRows,
   compareLensOrderRows,
   formatLensOrderCyl,
@@ -20,6 +19,7 @@ import {
   sortLensOrderRows,
 } from "../lib/lens-inventory";
 import { buildLensOrderPdf } from "../lib/lens-order-pdf";
+import { buildLensOrderDocumentHtml } from "../lib/lens-order-sheet";
 import { pdfRtlText } from "../lib/rtl-pdf-text";
 import type { LensInventoryCell } from "../lib/types";
 import type { LensOrderRow } from "../lib/lens-inventory";
@@ -134,13 +134,17 @@ assert.deepEqual(
 const html = buildLensOrderDocumentHtml(orderRows);
 const htmlKeys = [
   ...html.matchAll(
-    /<td class="num">(\d+)<\/td>\s*<td class="ltr">([^<]*)<\/td>\s*<td class="ltr">([^<]*)<\/td>/g,
+    /<td class="num">(\d+)<\/td>\s*<td class="qty">(\d+)<\/td>\s*<td class="ltr">([^<]*)<\/td>\s*<td class="ltr">([^<]*)<\/td>/g,
   ),
-].map((match) => `${match[2]}/${match[3]}`);
+].map((match) => `${match[4]}/${match[3]}`);
 assert.deepEqual(
   htmlKeys,
   orderRows.map((row) => `${row.sph}/${formatLensOrderCyl(row.cyl)}`),
 );
+assert.doesNotMatch(html, /מלאי נוכחי/);
+assert.doesNotMatch(html, /<th[^>]*>כמות נדרשת/);
+assert.match(html, /OYON OPTICS/);
+assert.match(html, /עיניים אופטיקה/);
 
 assert.equal(pdfRtlText("עיון אופטיקה"), [... "עיון אופטיקה"].reverse().join(""));
 assert.match(pdfRtlText("قائمة الطلبية"), /[\uFE70-\uFEFF]|[\u0600-\u06FF]/);
