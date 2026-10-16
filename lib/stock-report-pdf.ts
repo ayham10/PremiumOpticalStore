@@ -92,21 +92,44 @@ function setTextFont(doc: jsPDF, text: string, bold = false) {
   doc.setFont(FONT_LATIN, bold ? "bold" : "normal");
 }
 
+const WHITE: [number, number, number] = [255, 255, 255];
+
 function drawVisualText(
   doc: jsPDF,
   text: string,
   x: number,
   y: number,
-  opts: { align?: "left" | "center" | "right"; size?: number; bold?: boolean } = {},
+  opts: {
+    align?: "left" | "center" | "right";
+    size?: number;
+    bold?: boolean;
+    color?: readonly [number, number, number];
+  } = {},
 ) {
   const size = opts.size ?? 9;
   const bold = opts.bold ?? false;
+  const color = opts.color ?? INK;
   doc.setFontSize(size);
-  doc.setTextColor(...INK);
+  doc.setTextColor(...color);
   setTextFont(doc, text, bold);
   const visual =
     hasArabic(text) || hasHebrew(text) ? pdfRtlText(text) : text;
   doc.text(visual, x, y, { align: opts.align ?? "left" });
+}
+
+function drawTableHeadLabel(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+) {
+  doc.setFontSize(7.2);
+  doc.setTextColor(...WHITE);
+  setTextFont(doc, text, true);
+  const visual =
+    hasArabic(text) || hasHebrew(text) ? pdfRtlText(text) : text;
+  doc.text(visual, x + width / 2, y, { align: "center" });
 }
 
 function pngMime(bytes: Uint8Array): "PNG" | "JPEG" | null {
@@ -338,7 +361,16 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
       drawHeader();
       drawFooter();
     },
+    willDrawCell: (data) => {
+      if (data.section === "head") {
+        data.cell.text = [];
+      }
+    },
     didParseCell: (data) => {
+      if (data.section === "head") {
+        data.cell.text = [];
+        return;
+      }
       if (data.section !== "body") return;
       const statusCol = rtl ? 0 : orderedHeaders.length - 1;
       if (data.column.index !== statusCol) return;
@@ -356,12 +388,7 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
         const { x, y, width, height } = data.cell;
         doc.setFillColor(...HEAD_BG);
         doc.rect(x, y, width, height, "F");
-        drawVisualText(doc, label, x + width / 2, y + height / 2 + 1.1, {
-          align: "center",
-          size: 7,
-          bold: true,
-        });
-        doc.setTextColor(255, 255, 255);
+        drawTableHeadLabel(doc, label, x, y + height / 2 + 1.05, width);
         return;
       }
       if (data.section !== "body") return;

@@ -180,6 +180,11 @@ async function main() {
   assert.doesNotMatch(page, /exportCsv\(/);
   assert.match(page, /admin\.stock\.exportPdf/);
   assert.match(page, /admin\.stock\.exportExcel/);
+  assert.doesNotMatch(
+    readFileSync("lib/stock-report-xlsx.ts", "utf8"),
+    /autoFilter/,
+  );
+  assert.match(readFileSync("lib/stock-report-pdf.ts", "utf8"), /drawTableHeadLabel/);
 
   console.log(
     JSON.stringify({

@@ -220,11 +220,6 @@ export async function buildStockReportXlsx(
     sheet.mergeCells(headerRowIndex + 1, 1, headerRowIndex + 1, 11);
   }
 
-  sheet.autoFilter = {
-    from: { row: headerRowIndex, column: 1 },
-    to: { row: headerRowIndex + Math.max(options.rows.length, 1), column: 11 },
-  };
-
   const buffer = await workbook.xlsx.writeBuffer();
   const bytes =
     buffer instanceof ArrayBuffer
