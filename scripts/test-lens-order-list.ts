@@ -212,6 +212,8 @@ assert.match(downloadSrc, /NotoSansHebrew-Bold\.ttf/);
 assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /containSize/);
 assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /NotoSansHebrew-Bold\.ttf/);
 assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /footerRuleYForPage/);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /drawPageHeaderPageLabel/);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /דף \$\{pageNumber\}/);
 assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /drawPageFrame/);
 
 const pdfWithPhone = buildLensOrderPdf(orderRows, {

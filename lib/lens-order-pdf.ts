@@ -256,6 +256,12 @@ function drawLogo(doc: jsPDF, logo?: Uint8Array) {
   doc.circle(x + 10, y + 7.2, 2.2, "F");
 }
 
+function drawPageHeaderPageLabel(doc: jsPDF, pageNumber: number) {
+  const label = `דף ${pageNumber}`;
+  const xRight = PAGE_W / 2 - 8;
+  drawRtlMixed(doc, label, xRight, 17.6, 11, "bold");
+}
+
 function drawPageHeader(
   doc: jsPDF,
   generatedAt: Date,
@@ -546,6 +552,9 @@ export function buildLensOrderPdf(
   const pageCount = doc.getNumberOfPages();
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
+    if (pageCount > 1) {
+      drawPageHeaderPageLabel(doc, page);
+    }
     const ruleY = footerRuleYForPage(page, pageCount, tableEndY);
     drawPageFooter(doc, ruleY);
     drawPageFrame(doc, frameBottomY(ruleY));
