@@ -200,7 +200,12 @@ assert.match(html, /lang="he"/);
 assert.match(html, /dir="rtl"/);
 assert.match(html, /Heebo/);
 assert.match(html, /OYON OPTICS/);
-assert.match(html, /עיניים אופטיקה/);
+assert.match(html, /עיון אופטיקה/);
+assert.match(html, /שם העסק:/);
+assert.match(html, />SPH<\/span> \(ספירה\)/);
+assert.match(html, />CYL<\/span> \(צילינדר\)/);
+assert.match(html, /oyon-order-logo\.png/);
+assert.doesNotMatch(html, /עיניים אופטיקה/);
 assert.match(html, /רשימת הזמנה לעדשות/);
 assert.match(html, /תאריך הזמנה:/);
 assert.match(html, /סה״כ כמות נדרשת: 17/);
@@ -234,19 +239,24 @@ assert.doesNotMatch(html, /desiredStock/);
 assert.match(html, /<td class="ltr">PLANO<\/td>/);
 assert.match(html, /<td class="ltr">-1\.00<\/td>/);
 assert.match(html, /<td class="ltr">\+0\.25<\/td>/);
-assert.match(html, /<td class="ltr">0\.00<\/td>/);
+assert.match(html, /<td class="ltr">-<\/td>/);
+assert.doesNotMatch(html, /<td class="ltr">0\.00<\/td>/);
 assert.doesNotMatch(html, /<td>\(-\)<\/td>/);
 assert.doesNotMatch(html, /<td>\(\+\)<\/td>/);
 assert.match(html, /<td class="qty">3<\/td>/);
 assert.doesNotMatch(html, /col\.kind/);
-assert.match(html, /<td class="num">1<\/td>\s*<td class="qty">3<\/td>/);
+assert.match(
+  html,
+  /<td class="num">1<\/td>\s*<td class="ltr">-1\.00<\/td>\s*<td class="ltr">-<\/td>\s*<td class="qty">3<\/td>/,
+);
 
 const htmlCylCells = [...html.matchAll(/<td class="ltr">([^<]*)<\/td>/g)].map(
   (match) => match[1],
 );
-assert.ok(htmlCylCells.includes("0.00"));
+assert.ok(htmlCylCells.includes("-"));
 assert.ok(htmlCylCells.includes("-0.25"));
 assert.ok(htmlCylCells.includes("-1.00"));
+assert.equal(htmlCylCells.includes("0.00"), false);
 assert.equal(htmlCylCells.includes("—"), false);
 
 const hebrewDate = formatLensOrderDate(generatedAt);

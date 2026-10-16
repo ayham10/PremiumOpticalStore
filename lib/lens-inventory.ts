@@ -103,9 +103,9 @@ export function formatLensCylDisplay(cyl: string): string {
   return isSphOnlyCyl(cyl) ? "—" : cyl;
 }
 
-/** Order list / PDF / print show SPH-only as 0.00, matching the CYL sequence. */
+/** Order list / PDF / print show SPH-only CYL as a dash, not 0.00. */
 export function formatLensOrderCyl(cyl: string): string {
-  return isSphOnlyCyl(cyl) ? LENS_SPH_ONLY_CYL : cyl;
+  return isSphOnlyCyl(cyl) ? "-" : cyl;
 }
 
 export const LENS_ORDER_CYL_SEQUENCE = [LENS_SPH_ONLY_CYL, ...LENS_CYL] as const;
@@ -182,9 +182,15 @@ export function buildLensOrderDisplayItems(
 export const LENS_ORDER_PDF_FILENAME = "רשימת הזמנות.pdf";
 export const LENS_ORDER_WEBSITE = "www.oyonoptics.com";
 export const LENS_ORDER_BRAND_EN = "OYON OPTICS";
-export const LENS_ORDER_BRAND_HE = "עיניים אופטיקה";
+export const LENS_ORDER_BRAND_HE = "עיון אופטיקה";
+export const LENS_ORDER_TITLE = "רשימת הזמנה לעדשות";
 export const LENS_ORDER_LOCATION_HE = "דייר חנא";
 export const LENS_ORDER_LOCATION_EN = "Dir Hanna, Israel";
+export const LENS_ORDER_COL_INDEX = "#";
+export const LENS_ORDER_COL_SPH = "SPH (ספירה)";
+export const LENS_ORDER_COL_CYL = "CYL (צילינדר)";
+export const LENS_ORDER_COL_QTY = "כמות להזמנה";
+export const LENS_ORDER_LOGO_SRC = "/images/oyon-order-logo.png";
 
 export function lensOrderPdfFilename(_date = new Date()): string {
   return LENS_ORDER_PDF_FILENAME;

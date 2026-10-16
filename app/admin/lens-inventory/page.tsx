@@ -30,7 +30,6 @@ import {
 } from "@/lib/lens-inventory";
 import {
   LENS_ORDER_SHEET_CSS,
-  buildLensOrderDocumentHtml,
   buildLensOrderSheetHtml,
 } from "@/lib/lens-order-sheet";
 import {
@@ -59,50 +58,6 @@ type ActiveCell = {
   cyl: string;
   field: LensEditField;
 };
-
-function printWhenFontsReady(win: Window | null) {
-  if (!win) return;
-  let printed = false;
-  const go = () => {
-    if (printed) return;
-    printed = true;
-    win.focus();
-    win.print();
-  };
-  const fonts = win.document.fonts;
-  if (fonts?.ready) {
-    void fonts.ready.then(go, go);
-  }
-  setTimeout(go, 1200);
-}
-
-function openOrderDocument(html: string, print: boolean) {
-  const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
-  if (popup) {
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
-    if (print) printWhenFontsReady(popup);
-    return;
-  }
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("aria-hidden", "true");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-  const doc = iframe.contentDocument;
-  if (!doc) return;
-  doc.open();
-  doc.write(html);
-  doc.close();
-  if (print) printWhenFontsReady(iframe.contentWindow);
-  setTimeout(() => iframe.remove(), 4000);
-}
-
 
 function inputSelector(cell: ActiveCell): string {
   return `input[data-lens-input="${cell.type}:${cell.sph}:${cell.cyl}:${cell.field}"]`;
@@ -446,23 +401,19 @@ export default function AdminLensInventoryPage() {
     setExportOpen(true);
   }
 
-  function printOrder() {
-    openOrderDocument(
-      buildLensOrderDocumentHtml(orderRows, {
-        phone: exportPhone(),
-      }),
-      true,
-    );
-    setExportOpen(false);
-  }
-
-  async function downloadOrderPdf() {
+  async function exportOrderPdf(mode: "download" | "print") {
     if (downloadingPdf) return;
     setDownloadingPdf(true);
     setError("");
     try {
-      const { downloadLensOrderPdf } = await import("@/lib/lens-order-pdf-download");
-      await downloadLensOrderPdf(orderRows, { phone: exportPhone() });
+      const { downloadLensOrderPdf, printLensOrderPdf } = await import(
+        "@/lib/lens-order-pdf-download"
+      );
+      if (mode === "print") {
+        await printLensOrderPdf(orderRows, { phone: exportPhone() });
+      } else {
+        await downloadLensOrderPdf(orderRows, { phone: exportPhone() });
+      }
       setExportOpen(false);
     } catch (err) {
       setError(
@@ -681,7 +632,7 @@ export default function AdminLensInventoryPage() {
           <button
             type="button"
             className="btn btn-accent"
-            onClick={() => void downloadOrderPdf()}
+            onClick={() => void exportOrderPdf("download")}
             disabled={downloadingPdf}
           >
             <Download size={15} />
@@ -692,7 +643,7 @@ export default function AdminLensInventoryPage() {
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={printOrder}
+            onClick={() => void exportOrderPdf("print")}
             disabled={downloadingPdf}
           >
             <Printer size={15} />

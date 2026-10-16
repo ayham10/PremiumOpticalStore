@@ -314,8 +314,11 @@ assert.match(page, /ChevronDown/);
 assert.match(page, /dir="ltr"/);
 assert.match(page, /admin-lens-order-toggle/);
 assert.match(page, /downloadLensOrderPdf/);
+assert.match(page, /printLensOrderPdf/);
 assert.doesNotMatch(page, /oyon-lens-order-\$\{stamp\}\.html/);
 assert.doesNotMatch(page, /text\/html;charset=utf-8/);
+assert.doesNotMatch(page, /openOrderDocument/);
+assert.doesNotMatch(page, /buildLensOrderDocumentHtml/);
 assert.match(page, /lens-order-badge|buildLensOrderSheetHtml/);
 assert.match(page, /LENS_ORDER_SHEET_CSS/);
 

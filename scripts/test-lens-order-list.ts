@@ -40,7 +40,7 @@ assert.deepEqual([...LENS_ORDER_CYL_SEQUENCE], [
   "0.00",
   ...LENS_CYL,
 ]);
-assert.equal(formatLensOrderCyl("0.00"), "0.00");
+assert.equal(formatLensOrderCyl("0.00"), "-");
 assert.equal(formatLensOrderCyl("-0.75"), "-0.75");
 assert.equal(lensOrderPdfFilename(new Date("2026-10-15T12:00:00.000Z")), "רשימת הזמנות.pdf");
 assert.equal(LENS_ORDER_PDF_FILENAME, "רשימת הזמנות.pdf");
@@ -75,13 +75,13 @@ const orderRows = buildLensOrderRows(shuffled);
 assert.deepEqual(
   orderRows.map((row) => `${row.sph}/${formatLensOrderCyl(row.cyl)}:${row.quantityToOrder}`),
   [
-    "PLANO/0.00:7",
-    "-1.00/0.00:3",
-    "-4.50/0.00:2",
+    "PLANO/-:7",
+    "-1.00/-:3",
+    "-4.50/-:2",
     "PLANO/-0.25:3",
     "-0.25/-0.25:2",
-    "+0.25/0.00:3",
-    "+1.00/0.00:1",
+    "+0.25/-:3",
+    "+1.00/-:1",
     "+4.75/-2.00:3",
   ],
 );
@@ -134,9 +134,9 @@ assert.deepEqual(
 const html = buildLensOrderDocumentHtml(orderRows);
 const htmlKeys = [
   ...html.matchAll(
-    /<td class="num">(\d+)<\/td>\s*<td class="qty">(\d+)<\/td>\s*<td class="ltr">([^<]*)<\/td>\s*<td class="ltr">([^<]*)<\/td>/g,
+    /<td class="num">(\d+)<\/td>\s*<td class="ltr">([^<]*)<\/td>\s*<td class="ltr">([^<]*)<\/td>\s*<td class="qty">(\d+)<\/td>/g,
   ),
-].map((match) => `${match[4]}/${match[3]}`);
+].map((match) => `${match[2]}/${match[3]}`);
 assert.deepEqual(
   htmlKeys,
   orderRows.map((row) => `${row.sph}/${formatLensOrderCyl(row.cyl)}`),
@@ -144,7 +144,12 @@ assert.deepEqual(
 assert.doesNotMatch(html, /מלאי נוכחי/);
 assert.doesNotMatch(html, /<th[^>]*>כמות נדרשת/);
 assert.match(html, /OYON OPTICS/);
-assert.match(html, /עיניים אופטיקה/);
+assert.match(html, /עיון אופטיקה/);
+assert.match(html, /שם העסק:/);
+assert.match(html, />SPH<\/span> \(ספירה\)/);
+assert.match(html, />CYL<\/span> \(צילינדר\)/);
+assert.match(html, /oyon-order-logo\.png/);
+assert.doesNotMatch(html, /עיניים אופטיקה/);
 
 assert.equal(pdfRtlText("עיון אופטיקה"), [... "עיון אופטיקה"].reverse().join(""));
 assert.match(pdfRtlText("قائمة الطلبية"), /[\uFE70-\uFEFF]|[\u0600-\u06FF]/);
@@ -158,9 +163,10 @@ const fonts = {
   hebrew: new Uint8Array(readFileSync(join("public/fonts/NotoSansHebrew-Regular.ttf"))),
   arabic: new Uint8Array(readFileSync(join("public/fonts/NotoNaskhArabic-Regular.ttf"))),
 };
+const logo = new Uint8Array(readFileSync(join("public/images/oyon-order-logo.png")));
 
 const generatedAt = new Date("2026-10-15T09:00:00.000Z");
-const pdf = buildLensOrderPdf(orderRows, { generatedAt, fonts });
+const pdf = buildLensOrderPdf(orderRows, { generatedAt, fonts, logo });
 const header = Buffer.from(pdf.bytes.subarray(0, 8)).toString("latin1");
 assert.equal(header.startsWith("%PDF-"), true, header);
 assert.equal(pdf.filename, "רשימת הזמנות.pdf");
@@ -170,12 +176,26 @@ assert.notEqual(Buffer.from(pdf.bytes.subarray(0, 15)).toString("utf8").includes
 const latin1 = Buffer.from(pdf.bytes).toString("latin1");
 assert.match(latin1, /%PDF-/);
 assert.match(latin1, /%%EOF/);
+assert.match(latin1, /\/Subtype\s*\/Image/);
 assert.doesNotMatch(latin1, /<!DOCTYPE html>/);
 assert.doesNotMatch(latin1, /instagram/i);
+
+const page = readFileSync("app/admin/lens-inventory/page.tsx", "utf8");
+assert.match(page, /printLensOrderPdf/);
+assert.match(page, /downloadLensOrderPdf/);
+assert.doesNotMatch(page, /buildLensOrderDocumentHtml/);
+assert.doesNotMatch(page, /openOrderDocument/);
+const downloadSrc = readFileSync("lib/lens-order-pdf-download.ts", "utf8");
+assert.match(downloadSrc, /createLensOrderPdf/);
+assert.match(downloadSrc, /printLensOrderPdf/);
+assert.match(downloadSrc, /downloadLensOrderPdf/);
+assert.match(downloadSrc, /application\/pdf/);
+assert.match(downloadSrc, /oyon-order-logo\.png/);
 
 const pdfWithPhone = buildLensOrderPdf(orderRows, {
   generatedAt,
   fonts,
+  logo,
   phone: "052-123-4567",
 });
 assert.equal(pdfWithPhone.filename, "רשימת הזמנות.pdf");
@@ -235,7 +255,7 @@ assert.equal(
   2,
 );
 
-const multi = buildLensOrderPdf(manyRows, { generatedAt, fonts });
+const multi = buildLensOrderPdf(manyRows, { generatedAt, fonts, logo });
 assert.equal(Buffer.from(multi.bytes.subarray(0, 5)).toString("latin1"), "%PDF-");
 assert.ok(multi.pageCount >= 2, `expected multi-page PDF, got ${multi.pageCount}`);
 assert.ok(multi.bytes.byteLength > 5000);
@@ -255,6 +275,7 @@ assert.doesNotMatch(printWithPhone, /instagram/i);
 const multiWithPhone = buildLensOrderPdf(manyRows, {
   generatedAt,
   fonts,
+  logo,
   phone: "052-123-4567",
 });
 assert.equal(multiWithPhone.filename, "רשימת הזמנות.pdf");
