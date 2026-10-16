@@ -103,6 +103,103 @@ export function formatLensCylDisplay(cyl: string): string {
   return isSphOnlyCyl(cyl) ? "—" : cyl;
 }
 
+/** Order list / PDF / print show SPH-only CYL as a dash, not 0.00. */
+export function formatLensOrderCyl(cyl: string): string {
+  return isSphOnlyCyl(cyl) ? "-" : cyl;
+}
+
+export const LENS_ORDER_CYL_SEQUENCE = [LENS_SPH_ONLY_CYL, ...LENS_CYL] as const;
+
+export type LensOrderSectionId = "negative" | "positive";
+
+export type LensOrderDisplayItem =
+  | { kind: "section"; id: LensOrderSectionId }
+  | { kind: "row"; row: LensOrderRow; index: number };
+
+const CYL_ORDER = new Map<string, number>(
+  LENS_ORDER_CYL_SEQUENCE.map((cyl, index) => [cyl, index]),
+);
+const MINUS_SPH_ORDER = new Map<string, number>(
+  LENS_MINUS_SPH.map((sph, index) => [sph, index]),
+);
+const PLUS_SPH_ORDER = new Map<string, number>(
+  LENS_PLUS_SPH.map((sph, index) => [sph, index]),
+);
+
+export function lensOrderSection(
+  row: Pick<LensOrderRow, "type">,
+): LensOrderSectionId {
+  return row.type === "plus" ? "positive" : "negative";
+}
+
+/**
+ * Shared order-list sort: negative SPH + PLANO, then positive SPH.
+ * Within each section, CYL is 0.00 → -0.25 → …; SPH is PLANO → more minus,
+ * or smallest plus → largest plus.
+ */
+export function compareLensOrderRows(
+  a: Pick<LensOrderRow, "type" | "sph" | "cyl">,
+  b: Pick<LensOrderRow, "type" | "sph" | "cyl">,
+): number {
+  const sectionA = lensOrderSection(a) === "negative" ? 0 : 1;
+  const sectionB = lensOrderSection(b) === "negative" ? 0 : 1;
+  if (sectionA !== sectionB) return sectionA - sectionB;
+  const cylA = CYL_ORDER.get(a.cyl) ?? 999;
+  const cylB = CYL_ORDER.get(b.cyl) ?? 999;
+  if (cylA !== cylB) return cylA - cylB;
+  if (sectionA === 0) {
+    return (
+      (MINUS_SPH_ORDER.get(a.sph) ?? 999) - (MINUS_SPH_ORDER.get(b.sph) ?? 999)
+    );
+  }
+  return (PLUS_SPH_ORDER.get(a.sph) ?? 999) - (PLUS_SPH_ORDER.get(b.sph) ?? 999);
+}
+
+export function sortLensOrderRows<T extends Pick<LensOrderRow, "type" | "sph" | "cyl">>(
+  rows: T[],
+): T[] {
+  return [...rows].sort(compareLensOrderRows);
+}
+
+export function buildLensOrderDisplayItems(
+  rows: LensOrderRow[],
+): LensOrderDisplayItem[] {
+  const items: LensOrderDisplayItem[] = [];
+  let index = 0;
+  let last: LensOrderSectionId | null = null;
+  for (const row of rows) {
+    const id = lensOrderSection(row);
+    if (id !== last) {
+      items.push({ kind: "section", id });
+      last = id;
+    }
+    index += 1;
+    items.push({ kind: "row", row, index });
+  }
+  return items;
+}
+
+export const LENS_ORDER_PDF_FILENAME = "רשימת הזמנות.pdf";
+export const LENS_ORDER_WEBSITE = "www.oyonoptics.com";
+export const LENS_ORDER_BRAND_EN = "OYON OPTICS";
+export const LENS_ORDER_BRAND_HE = "עיון אופטיקה";
+export const LENS_ORDER_TITLE = "רשימת הזמנה לעדשות";
+export const LENS_ORDER_LOCATION_HE = "דייר חנא";
+export const LENS_ORDER_LOCATION_EN = "Dir Hanna, Israel";
+export const LENS_ORDER_COL_INDEX = "#";
+export const LENS_ORDER_COL_SPH = "SPH (ספירה)";
+export const LENS_ORDER_COL_CYL = "CYL (צילינדר)";
+export const LENS_ORDER_COL_QTY = "כמות להזמנה";
+export const LENS_ORDER_LOGO_SRC = "/images/oyon-order-logo.png";
+
+export function lensOrderPdfFilename(_date = new Date()): string {
+  return LENS_ORDER_PDF_FILENAME;
+}
+
+export function lensOrderSectionMark(id: LensOrderSectionId): "−" | "+" {
+  return id === "negative" ? "−" : "+";
+}
+
 export function parseLensQty(value: unknown): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
     return value;
@@ -208,7 +305,7 @@ export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
   ];
   for (const table of tables) {
     for (const sph of table.sphs) {
-      for (const cyl of [LENS_SPH_ONLY_CYL, ...LENS_CYL]) {
+      for (const cyl of LENS_ORDER_CYL_SEQUENCE) {
         const { currentStock, desiredStock } = getLensCell(
           items,
           table.type,
@@ -229,16 +326,18 @@ export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
       }
     }
   }
-  return rows;
+  return sortLensOrderRows(rows);
 }
 
 export function lensOrderTotals(rows: LensOrderRow[]): {
   combinations: number;
   quantity: number;
+  requiredQuantity: number;
 } {
   return {
     combinations: rows.length,
     quantity: rows.reduce((sum, row) => sum + row.quantityToOrder, 0),
+    requiredQuantity: rows.reduce((sum, row) => sum + row.desiredStock, 0),
   };
 }
 
@@ -250,190 +349,20 @@ export function formatLensOrderDate(value = new Date()): string {
   });
 }
 
-function escapeLensOrderText(value: string | number): string {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+export function formatLensOrderNumericDate(value = new Date()): string {
+  const day = String(value.getDate()).padStart(2, "0");
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  return `${day}.${month}.${value.getFullYear()}`;
 }
 
-export function buildLensOrderDocumentHtml(
-  rows: LensOrderRow[],
-  generatedAt = new Date(),
+export function lensOrderSectionTitle(
+  id: LensOrderSectionId,
+  _locale: "en" | "he" | "ar" = "en",
 ): string {
-  const totals = lensOrderTotals(rows);
-  const body = rows
-    .map(
-      (row, index) => `
-        <tr>
-          <td class="num">${index + 1}</td>
-          <td class="ltr">${escapeLensOrderText(row.sph)}</td>
-          <td class="ltr">${escapeLensOrderText(formatLensCylDisplay(row.cyl))}</td>
-          <td class="qty">${row.quantityToOrder}</td>
-        </tr>`,
-    )
-    .join("");
-
-  return `<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <title>OYON OPTICS — רשימת הזמנה לעדשות</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;700;800&display=swap" rel="stylesheet" />
-  <style>
-    @page { size: A4 portrait; margin: 10mm; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #1a1f26;
-      font-family: "Noto Sans Hebrew", "Arial Hebrew", "David", "Arial", sans-serif;
-    }
-    body { padding: 0; }
-    h1, p { margin: 0; }
-    .sheet { max-width: 190mm; margin: 0 auto; }
-    .header { text-align: right; }
-    .brand {
-      direction: ltr;
-      unicode-bidi: isolate;
-      text-align: right;
-      white-space: nowrap;
-      font-size: 14px;
-      font-weight: 800;
-      color: #0b1722;
-    }
-    .brand-en {
-      direction: ltr;
-      unicode-bidi: isolate;
-      letter-spacing: 0.06em;
-    }
-    .brand-sep {
-      margin: 0 0.4em;
-      font-weight: 700;
-      letter-spacing: 0;
-      color: #0b1722;
-    }
-    .brand-he {
-      direction: rtl;
-      unicode-bidi: isolate;
-      letter-spacing: 0;
-    }
-    .title {
-      margin-top: 2px;
-      font-size: 16px;
-      font-weight: 700;
-      color: #0b1722;
-    }
-    .date { margin-top: 3px; font-size: 11px; color: #4b5560; }
-    .rule {
-      height: 1px;
-      margin: 8px 0 7px;
-      background: #d4af6a;
-    }
-    .summary {
-      margin: 0 0 8px;
-      font-size: 11.5px;
-      color: #2a3138;
-    }
-    .order-table-wrap {
-      display: flex;
-      justify-content: flex-end;
-      direction: ltr;
-    }
-    table {
-      width: 78mm;
-      max-width: 78mm;
-      margin-left: auto;
-      border-collapse: collapse;
-      table-layout: fixed;
-      direction: ltr;
-      unicode-bidi: isolate;
-    }
-    col.idx { width: 14%; }
-    col.sph { width: 22%; }
-    col.cyl { width: 22%; }
-    col.order { width: 42%; }
-    thead { display: table-header-group; }
-    tr { break-inside: avoid; page-break-inside: avoid; }
-    th, td {
-      border: 1px solid #c5ccd3;
-      padding: 5px 6px;
-      text-align: center;
-      font-size: 11px;
-      line-height: 1.35;
-      vertical-align: middle;
-    }
-    th {
-      background: #0b1722;
-      color: #f4f7fa;
-      font-weight: 700;
-    }
-    tbody tr:nth-child(even) td { background: #f4f6f8; }
-    tbody tr:nth-child(odd) td { background: #fff; }
-    td.ltr {
-      direction: ltr;
-      unicode-bidi: isolate;
-      font-variant-numeric: tabular-nums;
-    }
-    td.num { font-variant-numeric: tabular-nums; }
-    td.qty {
-      color: #b8862b;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-    }
-    .total {
-      margin-top: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #0b1722;
-    }
-    .footer {
-      margin-top: 10px;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      color: #8a929c;
-      text-align: center;
-    }
-    @media print {
-      body { padding: 0; }
-      .sheet { max-width: none; }
-    }
-  </style>
-</head>
-<body>
-  <div class="sheet">
-    <header class="header">
-      <p class="brand"><span class="brand-en">OYON OPTICS</span><span class="brand-sep">|</span><span class="brand-he">עיון אופטיקה</span></p>
-      <h1 class="title">רשימת הזמנה לעדשות</h1>
-      <p class="date">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
-    </header>
-    <div class="rule"></div>
-    <p class="summary">סה״כ שורות: ${totals.combinations} | סה״כ להזמנה: ${totals.quantity}</p>
-    <div class="order-table-wrap">
-    <table>
-      <colgroup>
-        <col class="idx" />
-        <col class="sph" />
-        <col class="cyl" />
-        <col class="order" />
-      </colgroup>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>SPH</th>
-          <th>CYL</th>
-          <th dir="rtl">כמות להזמנה</th>
-        </tr>
-      </thead>
-      <tbody>${body || `<tr><td colspan="4">אין פריטים להזמנה</td></tr>`}</tbody>
-    </table>
-    </div>
-    <p class="total">סה״כ כמות להזמנה: ${totals.quantity}</p>
-    <p class="footer">OYON OPTICS</p>
-  </div>
-</body>
-</html>`;
+  return lensOrderSectionMark(id);
 }
+
+export type LensOrderDocumentOptions = {
+  generatedAt?: Date;
+  phone?: string | null;
+};

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["jspdf", "jspdf-autotable"],
   // Do not set turbopack.root / outputFileTracingRoot to path.resolve(".").
   // That bakes an absolute machine path into the build (e.g. /workspace or
   // /vercel/path0) and can confuse Vercel routing / file tracing for App Router.

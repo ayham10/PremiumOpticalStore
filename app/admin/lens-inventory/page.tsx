@@ -10,24 +10,28 @@ import {
   type KeyboardEvent,
 } from "react";
 import { ChevronDown, Contact, Download, Printer } from "lucide-react";
+import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
+import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ApiError, apiFetch } from "@/lib/admin-api";
+import { formatLocalPhone } from "@/lib/format";
 import {
   LENS_CYL,
   LENS_MINUS_SPH,
   LENS_PLUS_SPH,
   LENS_SPH_ONLY_CYL,
-  buildLensOrderDocumentHtml,
   buildLensOrderRows,
-  formatLensCylDisplay,
   lensCellKey,
   lensOrderTotals,
   lensSignLabel,
   lensStockTone,
-  type LensOrderRow,
 } from "@/lib/lens-inventory";
+import {
+  LENS_ORDER_SHEET_CSS,
+  buildLensOrderSheetHtml,
+} from "@/lib/lens-order-sheet";
 import {
   applyLensPaste,
   draftsToWriteItems,
@@ -55,68 +59,13 @@ type ActiveCell = {
   field: LensEditField;
 };
 
-function printWhenFontsReady(win: Window | null) {
-  if (!win) return;
-  let printed = false;
-  const go = () => {
-    if (printed) return;
-    printed = true;
-    win.focus();
-    win.print();
-  };
-  const fonts = win.document.fonts;
-  if (fonts?.ready) {
-    void fonts.ready.then(go, go);
-  }
-  setTimeout(go, 1200);
-}
-
-function openOrderDocument(html: string, print: boolean) {
-  const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
-  if (popup) {
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
-    if (print) printWhenFontsReady(popup);
-    return;
-  }
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("aria-hidden", "true");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-  const doc = iframe.contentDocument;
-  if (!doc) return;
-  doc.open();
-  doc.write(html);
-  doc.close();
-  if (print) printWhenFontsReady(iframe.contentWindow);
-  setTimeout(() => iframe.remove(), 4000);
-}
-
-function downloadOrderDocument(html: string) {
-  const stamp = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `oyon-lens-order-${stamp}.html`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
 function inputSelector(cell: ActiveCell): string {
   return `input[data-lens-input="${cell.type}:${cell.sph}:${cell.cyl}:${cell.field}"]`;
 }
 
 export default function AdminLensInventoryPage() {
   const { t } = useLocale();
+  const { settings } = useBranding();
   const { notifySaved } = useAdminSuccessNotice();
   const [items, setItems] = useState<LensInventoryCell[]>([]);
   const [drafts, setDrafts] = useState<LensDraftMap>({});
@@ -127,6 +76,10 @@ export default function AdminLensInventoryPage() {
   const [active, setActive] = useState<ActiveCell | null>(null);
   const [editText, setEditText] = useState("");
   const [orderOpen, setOrderOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [includePhone, setIncludePhone] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState("");
   const draftsRef = useRef(drafts);
   const itemsRef = useRef(items);
   const activeRef = useRef(active);
@@ -431,10 +384,44 @@ export default function AdminLensInventoryPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  function exportOrder(print: boolean) {
-    const html = buildLensOrderDocumentHtml(orderRows);
-    if (print) openOrderDocument(html, true);
-    else downloadOrderDocument(html);
+  function storePhonePrefill(): string {
+    return formatLocalPhone(settings?.phone) || settings?.phone?.trim() || "";
+  }
+
+  function exportPhone(): string | null {
+    if (!includePhone) return null;
+    const value = phoneDraft.trim();
+    return value || null;
+  }
+
+  function openExportModal() {
+    const stored = storePhonePrefill();
+    setPhoneDraft(stored);
+    setIncludePhone(false);
+    setExportOpen(true);
+  }
+
+  async function exportOrderPdf(mode: "download" | "print") {
+    if (downloadingPdf) return;
+    setDownloadingPdf(true);
+    setError("");
+    try {
+      const { downloadLensOrderPdf, printLensOrderPdf } = await import(
+        "@/lib/lens-order-pdf-download"
+      );
+      if (mode === "print") {
+        await printLensOrderPdf(orderRows, { phone: exportPhone() });
+      } else {
+        await downloadLensOrderPdf(orderRows, { phone: exportPhone() });
+      }
+      setExportOpen(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("admin.lensInventory.downloadError"),
+      );
+    } finally {
+      setDownloadingPdf(false);
+    }
   }
 
   return (
@@ -560,7 +547,8 @@ export default function AdminLensInventoryPage() {
                   </button>
                 </h2>
                 <p>
-                  {t("admin.lensInventory.totalItems")}: <strong>{totals.combinations}</strong>
+                  {t("admin.lensInventory.totalRequired")}:{" "}
+                  <strong>{totals.requiredQuantity}</strong>
                   <span className="admin-lens-order-sep">·</span>
                   {t("admin.lensInventory.totalQty")}: <strong>{totals.quantity}</strong>
                 </p>
@@ -569,7 +557,8 @@ export default function AdminLensInventoryPage() {
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => exportOrder(false)}
+                  onClick={openExportModal}
+                  disabled={downloadingPdf}
                 >
                   <Download size={15} />
                   {t("admin.lensInventory.download")}
@@ -577,7 +566,7 @@ export default function AdminLensInventoryPage() {
                 <button
                   type="button"
                   className="btn btn-accent"
-                  onClick={() => exportOrder(true)}
+                  onClick={openExportModal}
                 >
                   <Printer size={15} />
                   {t("admin.lensInventory.print")}
@@ -589,48 +578,80 @@ export default function AdminLensInventoryPage() {
               orderRows.length === 0 ? (
                 <p className="admin-muted">{t("admin.lensInventory.orderEmpty")}</p>
               ) : (
-                <div className="admin-lens-order-wrap" id="admin-lens-order-table" dir="ltr">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>SPH</th>
-                        <th>CYL</th>
-                        <th dir="rtl">{t("admin.lensInventory.colCurrent")}</th>
-                        <th dir="rtl">{t("admin.lensInventory.colDesired")}</th>
-                        <th dir="rtl">{t("admin.lensInventory.colOrder")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orderRows.map((row, index) => (
-                        <OrderRowView
-                          key={`${row.type}-${row.sph}-${row.cyl}`}
-                          row={row}
-                          index={index + 1}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="admin-lens-order-wrap" id="admin-lens-order-table">
+                  <style>{LENS_ORDER_SHEET_CSS}</style>
+                  <div
+                    className="admin-lens-order-preview"
+                    dangerouslySetInnerHTML={{
+                      __html: buildLensOrderSheetHtml(orderRows),
+                    }}
+                  />
                 </div>
               )
             ) : null}
           </section>
         </>
       )}
-    </div>
-  );
-}
 
-function OrderRowView({ row, index }: { row: LensOrderRow; index: number }) {
-  return (
-    <tr>
-      <td>{index}</td>
-      <td className="admin-lens-ltr">{row.sph}</td>
-      <td className="admin-lens-ltr">{formatLensCylDisplay(row.cyl)}</td>
-      <td>{row.currentStock}</td>
-      <td>{row.desiredStock}</td>
-      <td className="admin-lens-qty">{row.quantityToOrder}</td>
-    </tr>
+      <AdminModal
+        open={exportOpen}
+        title={t("admin.lensInventory.exportTitle")}
+        onClose={() => {
+          if (!downloadingPdf) setExportOpen(false);
+        }}
+        preventClose={downloadingPdf}
+        icon={<Download size={16} strokeWidth={1.8} aria-hidden />}
+      >
+        <label className="admin-lens-export-check">
+          <input
+            type="checkbox"
+            checked={includePhone}
+            onChange={(event) => {
+              const next = event.target.checked;
+              setIncludePhone(next);
+              if (next && !phoneDraft.trim()) setPhoneDraft(storePhonePrefill());
+            }}
+          />
+          <span>{t("admin.lensInventory.includePhone")}</span>
+        </label>
+        {includePhone ? (
+          <label className="admin-lens-export-phone">
+            <span>{t("admin.lensInventory.phoneLabel")}</span>
+            <input
+              type="tel"
+              dir="ltr"
+              value={phoneDraft}
+              onChange={(event) => setPhoneDraft(event.target.value)}
+              placeholder={t("admin.lensInventory.phonePlaceholder")}
+              autoComplete="off"
+            />
+            <small>{t("admin.lensInventory.phoneHint")}</small>
+          </label>
+        ) : null}
+        <div className="admin-lens-export-actions">
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => void exportOrderPdf("download")}
+            disabled={downloadingPdf}
+          >
+            <Download size={15} />
+            {downloadingPdf
+              ? t("admin.lensInventory.downloading")
+              : t("admin.lensInventory.exportDownload")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => void exportOrderPdf("print")}
+            disabled={downloadingPdf}
+          >
+            <Printer size={15} />
+            {t("admin.lensInventory.exportPrint")}
+          </button>
+        </div>
+      </AdminModal>
+    </div>
   );
 }
 
