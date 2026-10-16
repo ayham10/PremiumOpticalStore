@@ -215,7 +215,7 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
       size: 10,
       bold: true,
     });
-    const dateValue = stockExportDateLabel(generatedAt, options.locale);
+    const dateValue = stockExportDateLabel(generatedAt, "en");
     drawVisualText(doc, `${labels.reportDate}:`, PAGE_W - MARGIN, 11, {
       align: "right",
       size: 8.2,
@@ -224,7 +224,8 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
     doc.setFont(FONT_LATIN, "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(...INK);
-    doc.text(dateValue, PAGE_W - MARGIN, 15.2, { align: "right" });
+    const dateLtr = `\u202A${dateValue}\u202C`;
+    doc.text(dateLtr, PAGE_W - MARGIN, 15.2, { align: "right" });
 
     const cards = [
       { label: labels.totalQty, value: String(summary.totalQty) },
@@ -372,14 +373,42 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
         return;
       }
       if (data.section !== "body") return;
+
+      const imageCol = rtl ? orderedHeaders.length - 1 : 0;
+      if (data.column.index === imageCol) {
+        data.cell.text = [];
+        return;
+      }
+
       const statusCol = rtl ? 0 : orderedHeaders.length - 1;
-      if (data.column.index !== statusCol) return;
-      const row = options.rows[data.row.index];
-      if (!row) return;
-      const tone = stockStatusFill(row.level);
-      data.cell.styles.fillColor = tone.fill;
-      data.cell.styles.textColor = tone.text;
-      data.cell.styles.fontStyle = "bold";
+      if (data.column.index === statusCol) {
+        const row = options.rows[data.row.index];
+        if (row) {
+          const tone = stockStatusFill(row.level);
+          data.cell.styles.fillColor = tone.fill;
+          data.cell.styles.textColor = tone.text;
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+
+      const raw =
+        typeof data.cell.raw === "string" || typeof data.cell.raw === "number"
+          ? String(data.cell.raw)
+          : Array.isArray(data.cell.text)
+            ? data.cell.text.join("")
+            : String(data.cell.text ?? "");
+      if (!raw.trim()) return;
+
+      if (hasArabic(raw)) {
+        data.cell.styles.font = FONT_ARABIC;
+        data.cell.styles.fontStyle = "normal";
+        data.cell.text = [pdfRtlText(raw)];
+        return;
+      }
+      if (hasHebrew(raw)) {
+        data.cell.styles.font = FONT_HEBREW;
+        data.cell.text = [pdfRtlText(raw)];
+      }
     },
     didDrawCell: (data) => {
       if (data.section === "head") {
@@ -420,28 +449,6 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
         }
         return;
       }
-      const raw = String(data.cell.raw ?? data.cell.text?.[0] ?? "");
-      if (!raw || (!hasArabic(raw) && !hasHebrew(raw))) return;
-      const { x, y, width, height } = data.cell;
-      doc.setFillColor(
-        data.row.index % 2 === 1 ? ALT[0] : 255,
-        data.row.index % 2 === 1 ? ALT[1] : 255,
-        data.row.index % 2 === 1 ? ALT[2] : 255,
-      );
-      const statusCol = rtl ? 0 : orderedHeaders.length - 1;
-      if (data.column.index === statusCol) {
-        const row = options.rows[data.row.index];
-        if (row) {
-          const tone = stockStatusFill(row.level);
-          doc.setFillColor(...tone.fill);
-        }
-      }
-      doc.rect(x, y, width, height, "F");
-      drawVisualText(doc, raw, x + width / 2, y + height / 2 + 1, {
-        align: "center",
-        size: 7.2,
-        bold: data.column.index === statusCol,
-      });
     },
   });
 

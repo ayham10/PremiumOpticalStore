@@ -144,7 +144,8 @@ const many = Array.from({ length: 28 }, (_, index) =>
 const manyRows = buildStockExportRows(many, {
   locale: "ar",
   categoryLabel: (value) => value,
-  statusLabel: (level) => level,
+  statusLabel: (level) =>
+    level === "in" ? "متوفر" : level === "low" ? "منخفض" : "غير متوفر",
 });
 
 const pdf = buildStockReportPdf({
@@ -185,6 +186,10 @@ async function main() {
     /autoFilter/,
   );
   assert.match(readFileSync("lib/stock-report-pdf.ts", "utf8"), /drawTableHeadLabel/);
+  assert.match(
+    readFileSync("lib/stock-report-pdf.ts", "utf8"),
+    /data\.cell\.styles\.font = FONT_ARABIC/,
+  );
 
   console.log(
     JSON.stringify({
