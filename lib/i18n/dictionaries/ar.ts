@@ -1395,7 +1395,7 @@ const ar: Dictionary = {
       exporting: "جارٍ التصدير…",
       exportError: "تعذر تصدير التقرير",
       exportFilename: "oyon-stock",
-      reportTitleAr: "تقرير مخزون عيون أوبتكس",
+      reportTitleAr: "تقرير مخزون عيون أوبتيكس",
       reportTitleEn: "OYON OPTICS Stock Report",
       reportDate: "تاريخ التقرير",
       colRequired: "الكمية المطلوبة",
