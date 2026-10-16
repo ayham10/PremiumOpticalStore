@@ -94,7 +94,8 @@ function setTextFont(doc: jsPDF, text: string, bold = false) {
 
 const WHITE: [number, number, number] = [255, 255, 255];
 
-function drawVisualText(
+/** jsPDF `align` breaks Arabic presentation forms; position glyphs manually. */
+function drawPositionedText(
   doc: jsPDF,
   text: string,
   x: number,
@@ -109,12 +110,37 @@ function drawVisualText(
   const size = opts.size ?? 9;
   const bold = opts.bold ?? false;
   const color = opts.color ?? INK;
+  const align = opts.align ?? "left";
   doc.setFontSize(size);
   doc.setTextColor(...color);
+
+  if (hasArabic(text) || hasHebrew(text)) {
+    setTextFont(doc, text, bold);
+    const visual = pdfRtlText(text);
+    const width = doc.getTextWidth(visual);
+    if (align === "center") doc.text(visual, x - width / 2, y);
+    else if (align === "right") doc.text(visual, x - width, y);
+    else doc.text(visual, x, y);
+    return;
+  }
+
   setTextFont(doc, text, bold);
-  const visual =
-    hasArabic(text) || hasHebrew(text) ? pdfRtlText(text) : text;
-  doc.text(visual, x, y, { align: opts.align ?? "left" });
+  doc.text(text, x, y, { align });
+}
+
+function drawVisualText(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  opts: {
+    align?: "left" | "center" | "right";
+    size?: number;
+    bold?: boolean;
+    color?: readonly [number, number, number];
+  } = {},
+) {
+  drawPositionedText(doc, text, x, y, opts);
 }
 
 function drawTableHeadLabel(
@@ -124,12 +150,12 @@ function drawTableHeadLabel(
   y: number,
   width: number,
 ) {
-  doc.setFontSize(7.2);
-  doc.setTextColor(...WHITE);
-  setTextFont(doc, text, true);
-  const visual =
-    hasArabic(text) || hasHebrew(text) ? pdfRtlText(text) : text;
-  doc.text(visual, x + width / 2, y, { align: "center" });
+  drawPositionedText(doc, text, x + width / 2, y, {
+    align: "center",
+    size: 7.2,
+    bold: true,
+    color: WHITE,
+  });
 }
 
 function pngMime(bytes: Uint8Array): "PNG" | "JPEG" | null {
@@ -140,6 +166,19 @@ function pngMime(bytes: Uint8Array): "PNG" | "JPEG" | null {
 
 function formatPriceCell(value: number): string {
   return `₪${value.toLocaleString("en-US")}`;
+}
+
+function cellRawText(data: {
+  cell: {
+    raw?: unknown;
+    text?: string | string[];
+  };
+}): string {
+  const { raw, text } = data.cell;
+  if (typeof raw === "string" || typeof raw === "number") return String(raw);
+  if (Array.isArray(text)) return text.join("");
+  if (typeof text === "string") return text;
+  return "";
 }
 
 export function buildStockReportPdf(options: StockReportPdfOptions): {
@@ -216,7 +255,7 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
       bold: true,
     });
     const dateValue = stockExportDateLabel(generatedAt, "en");
-    drawVisualText(doc, `${labels.reportDate}:`, PAGE_W - MARGIN, 11, {
+    drawPositionedText(doc, labels.reportDate, PAGE_W - MARGIN, 11, {
       align: "right",
       size: 8.2,
       bold: true,
@@ -225,7 +264,8 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
     doc.setFontSize(8.5);
     doc.setTextColor(...INK);
     const dateLtr = `\u202A${dateValue}\u202C`;
-    doc.text(dateLtr, PAGE_W - MARGIN, 15.2, { align: "right" });
+    const dateWidth = doc.getTextWidth(dateLtr);
+    doc.text(dateLtr, PAGE_W - MARGIN - dateWidth, 15.2);
 
     const cards = [
       { label: labels.totalQty, value: String(summary.totalQty) },
@@ -391,23 +431,11 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
         }
       }
 
-      const raw =
-        typeof data.cell.raw === "string" || typeof data.cell.raw === "number"
-          ? String(data.cell.raw)
-          : Array.isArray(data.cell.text)
-            ? data.cell.text.join("")
-            : String(data.cell.text ?? "");
+      const raw = cellRawText(data);
       if (!raw.trim()) return;
 
-      if (hasArabic(raw)) {
-        data.cell.styles.font = FONT_ARABIC;
-        data.cell.styles.fontStyle = "normal";
-        data.cell.text = [pdfRtlText(raw)];
-        return;
-      }
-      if (hasHebrew(raw)) {
-        data.cell.styles.font = FONT_HEBREW;
-        data.cell.text = [pdfRtlText(raw)];
+      if (hasArabic(raw) || hasHebrew(raw)) {
+        data.cell.text = [];
       }
     },
     didDrawCell: (data) => {
@@ -449,6 +477,33 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
         }
         return;
       }
+
+      const raw = cellRawText(data);
+      if (!raw || (!hasArabic(raw) && !hasHebrew(raw))) return;
+
+      const { x, y, width, height } = data.cell;
+      const alt = data.row.index % 2 === 1;
+      if (alt) doc.setFillColor(...ALT);
+      else doc.setFillColor(255, 255, 255);
+      const statusCol = rtl ? 0 : orderedHeaders.length - 1;
+      let textColor: readonly [number, number, number] = INK;
+      let bold = false;
+      if (data.column.index === statusCol) {
+        const row = options.rows[data.row.index];
+        if (row) {
+          const tone = stockStatusFill(row.level);
+          doc.setFillColor(...tone.fill);
+          textColor = tone.text;
+          bold = true;
+        }
+      }
+      doc.rect(x, y, width, height, "F");
+      drawPositionedText(doc, raw, x + width / 2, y + height / 2 + 1, {
+        align: "center",
+        size: 7.2,
+        bold,
+        color: textColor,
+      });
     },
   });
 

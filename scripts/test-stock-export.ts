@@ -100,7 +100,7 @@ const fonts = {
 const logo = new Uint8Array(readFileSync("public/images/oyon-order-logo.png"));
 
 const labels: StockExportLabels = {
-  titleAr: "تقرير مخزون عيون أوبتكس",
+  titleAr: "تقرير مخزون عيون أوبتيكس",
   titleEn: "OYON OPTICS Stock Report",
   reportDate: "تاريخ التقرير",
   totalQty: "إجمالي الكمية",
@@ -186,10 +186,13 @@ async function main() {
     /autoFilter/,
   );
   assert.match(readFileSync("lib/stock-report-pdf.ts", "utf8"), /drawTableHeadLabel/);
+  assert.match(readFileSync("lib/stock-report-pdf.ts", "utf8"), /drawPositionedText/);
   assert.match(
     readFileSync("lib/stock-report-pdf.ts", "utf8"),
-    /data\.cell\.styles\.font = FONT_ARABIC/,
+    /data\.cell\.text = \[\]/,
   );
+  const arDict = readFileSync("lib/i18n/dictionaries/ar.ts", "utf8");
+  assert.match(arDict, /تقرير مخزون عيون أوبتيكس/);
 
   console.log(
     JSON.stringify({

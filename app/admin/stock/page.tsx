@@ -306,7 +306,7 @@ export default function AdminStockPage() {
       outOfStock: t("admin.stock.outOfStock"),
       colImage: t("admin.stock.colImage"),
       colName: t("admin.stock.colName"),
-      colNumber: t("admin.stock.colSku"),
+      colNumber: t("admin.stock.productNumber"),
       colCategory: t("admin.stock.colCategory"),
       colColor: t("admin.stock.colColor"),
       colSize: t("admin.stock.colLensSize"),
