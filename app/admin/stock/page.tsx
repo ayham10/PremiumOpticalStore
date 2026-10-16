@@ -11,7 +11,10 @@ import {
   AlertTriangle,
   ArrowUpDown,
   CheckCircle2,
-  Download,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  FileText,
   Package,
   PackageX,
   Pencil,
@@ -25,8 +28,11 @@ import { useLocale } from "@/components/i18n/LocaleProvider";
 import { apiFetch } from "@/lib/admin-api";
 import { hasPermission } from "@/lib/admin-permissions";
 import { formatPrice } from "@/lib/format";
+import { formatFrameSizePublic } from "@/lib/product-fields";
 import { productDisplayImage } from "@/lib/product-images";
+import { productSearchText, resolveProductCopy } from "@/lib/product-i18n";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
+import type { StockExportLabels } from "@/lib/stock-export";
 import {
   getStockLevel,
   productStockQuantity,
@@ -45,6 +51,8 @@ const CATEGORIES: ProductCategory[] = [
   "Cleaning Products",
 ];
 
+const PAGE_SIZE = 10;
+
 type SortKey = "stock" | "name" | "price" | "updated";
 type SortDir = "asc" | "desc";
 
@@ -59,24 +67,35 @@ function unwrapList<T>(data: unknown, keys: string[]): T[] {
   return [];
 }
 
-function formatUpdatedAt(value: string | undefined, locale: Locale): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const tag = locale === "ar" ? "ar" : locale === "he" ? "he" : "en-GB";
-  return date.toLocaleString(tag, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function productNumber(product: Product): string {
+  const sku = product.sku?.trim();
+  return sku || "—";
 }
 
-function csvCell(value: string | number): string {
-  const text = String(value ?? "");
-  if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
-  return text;
+function productColorText(product: Product, locale: Locale): string {
+  const copy = resolveProductCopy(product, locale);
+  const color = copy.color?.trim() || product.color?.trim();
+  return color || "—";
+}
+
+function lensSizeDisplay(product: Product): string {
+  const formatted = formatFrameSizePublic(product.frameSize);
+  return formatted || "—";
+}
+
+function matchesStockSearch(product: Product, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const number = product.sku?.trim().toLowerCase() ?? "";
+  if (number.includes(q)) return true;
+  if (product.name.toLowerCase().includes(q)) return true;
+  return productSearchText(product).includes(q);
+}
+
+function parseWholeNonNegative(value: string): number | null {
+  const qty = Number(value);
+  if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return null;
+  return qty;
 }
 
 export default function AdminStockPage() {
@@ -89,12 +108,15 @@ export default function AdminStockPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | StockLevel>("all");
   const [sortKey, setSortKey] = useState<SortKey>("stock");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [listPage, setListPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState<Product | null>(null);
-  const [newQty, setNewQty] = useState("");
+  const [stockQty, setStockQty] = useState("");
+  const [minStockQty, setMinStockQty] = useState("");
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -142,16 +164,12 @@ export default function AdminStockPage() {
     return { totalQty, inStock, lowStock, outOfStock };
   }, [products]);
 
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  const filteredRows = useMemo(() => {
     const filtered = products.filter((product) => {
       if (category !== "all" && product.category !== category) return false;
       const level = getStockLevel(product.stockQuantity, product.minimumStock);
       if (statusFilter !== "all" && level !== statusFilter) return false;
-      if (!q) return true;
-      return [product.name, product.sku, product.barcode]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(q));
+      return matchesStockSearch(product, query);
     });
 
     const localeTag = locale === "ar" ? "ar" : locale === "he" ? "he" : "en";
@@ -178,6 +196,26 @@ export default function AdminStockPage() {
     });
   }, [products, query, category, statusFilter, sortKey, sortDir, locale]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, listPage), totalPages);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [query, category, statusFilter, sortKey, sortDir]);
+
+  useEffect(() => {
+    setListPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  const pageRows = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredRows.slice(start, start + PAGE_SIZE);
+  }, [filteredRows, safePage]);
+
+  const pageFrom =
+    filteredRows.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const pageTo = Math.min(safePage * PAGE_SIZE, filteredRows.length);
+
   function statusLabel(level: StockLevel): string {
     if (level === "in") return t("admin.stock.statusIn");
     if (level === "low") return t("admin.stock.statusLow");
@@ -201,16 +239,22 @@ export default function AdminStockPage() {
 
   function openEdit(product: Product) {
     setEditing(product);
-    setNewQty(String(productStockQuantity(product.stockQuantity)));
+    setStockQty(String(productStockQuantity(product.stockQuantity)));
+    setMinStockQty(String(Math.max(0, Math.floor(product.minimumStock ?? 0))));
     setMessage("");
   }
 
   async function onSaveStock(event: FormEvent) {
     event.preventDefault();
     if (!editing) return;
-    const qty = Number(newQty);
-    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+    const qty = parseWholeNonNegative(stockQty);
+    const min = parseWholeNonNegative(minStockQty);
+    if (qty === null) {
       setMessage(t("admin.stock.invalidQty"));
+      return;
+    }
+    if (min === null) {
+      setMessage(t("admin.stock.invalidMinQty"));
       return;
     }
     setSaving(true);
@@ -220,7 +264,11 @@ export default function AdminStockPage() {
         "/api/products",
         {
           method: "PUT",
-          body: JSON.stringify({ id: editing.id, stockQuantity: qty }),
+          body: JSON.stringify({
+            id: editing.id,
+            stockQuantity: qty,
+            minimumStock: min,
+          }),
         },
       );
       const row =
@@ -245,43 +293,65 @@ export default function AdminStockPage() {
     }
   }
 
-  function exportCsv() {
-    const header = [
-      t("admin.stock.colName"),
-      t("admin.stock.colSku"),
-      t("admin.stock.colCategory"),
-      t("admin.stock.colPrice"),
-      t("admin.stock.colStock"),
-      t("admin.stock.colStatus"),
-    ];
-    const lines = [
-      header.map(csvCell).join(","),
-      ...rows.map((product) => {
-        const level = getStockLevel(
-          product.stockQuantity,
-          product.minimumStock,
-        );
-        return [
-          product.name,
-          product.sku,
-          categoryLabel(product.category),
-          product.sellingPrice,
-          productStockQuantity(product.stockQuantity),
-          statusLabel(level),
-        ]
-          .map(csvCell)
-          .join(",");
-      }),
-    ];
-    const blob = new Blob([`\uFEFF${lines.join("\n")}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${t("admin.stock.exportFilename")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  function exportLabels(): StockExportLabels {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const base = t("admin.stock.exportFilename");
+    return {
+      titleAr: t("admin.stock.reportTitleAr"),
+      titleEn: t("admin.stock.reportTitleEn"),
+      reportDate: t("admin.stock.reportDate"),
+      totalQty: t("admin.stock.totalQty"),
+      inStock: t("admin.stock.inStock"),
+      lowStock: t("admin.stock.lowStock"),
+      outOfStock: t("admin.stock.outOfStock"),
+      colImage: t("admin.stock.colImage"),
+      colName: t("admin.stock.colName"),
+      colNumber: t("admin.stock.colSku"),
+      colCategory: t("admin.stock.colCategory"),
+      colColor: t("admin.stock.colColor"),
+      colSize: t("admin.stock.colLensSize"),
+      colPrice: t("admin.stock.colPrice"),
+      colStock: t("admin.stock.colStock"),
+      colMin: t("admin.stock.colMinShort"),
+      colRequired: t("admin.stock.colRequired"),
+      colStatus: t("admin.stock.colStatus"),
+      statusIn: t("admin.stock.statusIn"),
+      statusLow: t("admin.stock.statusLow"),
+      statusOut: t("admin.stock.statusOut"),
+      empty: t("admin.stock.empty"),
+      website: "www.oyonoptics.com",
+      location: t("admin.stock.locationFooter"),
+      sheetName: t("admin.stock.sheetName"),
+      pdfFilename: `${base}-${stamp}.pdf`,
+      xlsxFilename: `${base}-${stamp}.xlsx`,
+    };
+  }
+
+  async function exportReport(kind: "pdf" | "xlsx") {
+    if (exporting || filteredRows.length === 0) return;
+    setExporting(kind);
+    setMessage("");
+    try {
+      const { downloadStockReportPdf, downloadStockReportXlsx } = await import(
+        "@/lib/stock-report-download"
+      );
+      const payload = {
+        products: filteredRows,
+        locale,
+        labels: exportLabels(),
+        categoryLabel,
+        statusLabel,
+        defaults,
+      };
+      if (kind === "pdf") await downloadStockReportPdf(payload);
+      else await downloadStockReportXlsx(payload);
+    } catch (err) {
+      setMessage(
+        err instanceof Error ? err.message : t("admin.stock.exportError"),
+      );
+    } finally {
+      setExporting(null);
+    }
   }
 
   const cards = [
@@ -315,23 +385,40 @@ export default function AdminStockPage() {
     },
   ] as const;
 
+  const tableColSpan = 9;
+
   return (
-    <div className="admin-stock-page space-y-5">
+    <div className="admin-stock-page">
       <AdminPageHeader
         icon={Warehouse}
         kicker={t("admin.stock.kicker")}
         title={t("admin.stock.title")}
         description={t("admin.stock.description")}
         actions={
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={exportCsv}
-            disabled={loading || rows.length === 0}
-          >
-            <Download size={16} />
-            {t("admin.stock.exportCsv")}
-          </button>
+          <div className="admin-stock-export-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void exportReport("pdf")}
+              disabled={loading || filteredRows.length === 0 || Boolean(exporting)}
+            >
+              <FileText size={16} />
+              {exporting === "pdf"
+                ? t("admin.stock.exporting")
+                : t("admin.stock.exportPdf")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void exportReport("xlsx")}
+              disabled={loading || filteredRows.length === 0 || Boolean(exporting)}
+            >
+              <FileSpreadsheet size={16} />
+              {exporting === "xlsx"
+                ? t("admin.stock.exporting")
+                : t("admin.stock.exportExcel")}
+            </button>
+          </div>
         }
       />
 
@@ -431,26 +518,26 @@ export default function AdminStockPage() {
       </div>
 
       {message ? (
-        <p className="rounded-xl bg-[var(--accent-wash)] px-3 py-2 text-sm text-[var(--accent)]">
-          {message}
-        </p>
+        <p className="admin-stock-inline-msg is-warn">{message}</p>
       ) : null}
       {error ? (
-        <p className="rounded-xl border border-[rgba(224,122,122,0.35)] bg-[rgba(224,122,122,0.12)] px-3 py-2 text-sm text-[var(--danger)]">
-          {error}
-        </p>
+        <p className="admin-stock-inline-msg is-error">{error}</p>
       ) : null}
 
       <p className="admin-stock-count">
         {t("admin.stock.showing", {
-          shown: rows.length,
-          total: products.length,
-        })}
+          from: pageFrom,
+          to: pageTo,
+          filtered: filteredRows.length,
+        })}{" "}
+        <span className="admin-muted">
+          {t("admin.stock.showingTotal", { total: products.length })}
+        </span>
       </p>
 
       <div className="admin-card admin-stock-table-wrap overflow-hidden">
         <div className="md:overflow-x-auto">
-          <table className="table">
+          <table className="table admin-stock-table">
             <thead>
               <tr>
                 <th>{t("admin.stock.colImage")}</th>
@@ -486,39 +573,30 @@ export default function AdminStockPage() {
                   </button>
                 </th>
                 <th>{t("admin.stock.colStatus")}</th>
-                <th>
-                  <button
-                    type="button"
-                    className="admin-stock-th-sort"
-                    onClick={() => toggleSort("updated")}
-                  >
-                    {t("admin.stock.colUpdated")}
-                    <ArrowUpDown size={13} />
-                  </button>
-                </th>
+                <th>{t("admin.stock.colColor")}</th>
+                <th>{t("admin.stock.colLensSize")}</th>
                 <th>{t("admin.stock.colActions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-[var(--slate)]">
+                  <td colSpan={tableColSpan} className="text-[var(--slate)]">
                     {t("admin.stock.loading")}
                   </td>
                 </tr>
-              ) : rows.length === 0 ? (
+              ) : pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-[var(--slate)]">
+                  <td colSpan={tableColSpan} className="text-[var(--slate)]">
                     {t("admin.stock.empty")}
                   </td>
                 </tr>
               ) : (
-                rows.map((product) => {
+                pageRows.map((product) => {
                   const level = getStockLevel(
                     product.stockQuantity,
                     product.minimumStock,
                   );
-                  const updated = formatUpdatedAt(product.updatedAt, locale);
                   return (
                     <tr key={product.id}>
                       <td>
@@ -531,8 +609,13 @@ export default function AdminStockPage() {
                       </td>
                       <td>
                         <div className="admin-cell-primary">{product.name}</div>
+                        <div className="admin-stock-product-number">
+                          {productNumber(product)}
+                        </div>
                       </td>
-                      <td>{categoryLabel(product.category)}</td>
+                      <td className="admin-stock-category">
+                        {categoryLabel(product.category)}
+                      </td>
                       <td>{formatPrice(product.sellingPrice)}</td>
                       <td className="admin-stock-qty">
                         {productStockQuantity(product.stockQuantity)}
@@ -542,8 +625,11 @@ export default function AdminStockPage() {
                           {statusLabel(level)}
                         </span>
                       </td>
-                      <td className="admin-muted text-sm">
-                        {updated || t("admin.stock.unknownDate")}
+                      <td className="admin-stock-color">
+                        {productColorText(product, locale)}
+                      </td>
+                      <td className="admin-stock-lens-size">
+                        {lensSizeDisplay(product)}
                       </td>
                       <td>
                         <button
@@ -567,15 +653,14 @@ export default function AdminStockPage() {
       <div className="admin-stock-mobile">
         {loading ? (
           <p className="admin-muted">{t("admin.stock.loading")}</p>
-        ) : rows.length === 0 ? (
+        ) : pageRows.length === 0 ? (
           <p className="admin-muted">{t("admin.stock.empty")}</p>
         ) : (
-          rows.map((product) => {
+          pageRows.map((product) => {
             const level = getStockLevel(
               product.stockQuantity,
               product.minimumStock,
             );
-            const updated = formatUpdatedAt(product.updatedAt, locale);
             return (
               <article key={product.id} className="admin-card admin-stock-mobile-card">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -586,7 +671,12 @@ export default function AdminStockPage() {
                 />
                 <div className="admin-stock-mobile-body">
                   <div className="admin-stock-mobile-top">
-                    <h2>{product.name}</h2>
+                    <div>
+                      <h2>{product.name}</h2>
+                      <p className="admin-stock-product-number">
+                        {productNumber(product)}
+                      </p>
+                    </div>
                     <span className={`admin-stock-badge is-${level}`}>
                       {statusLabel(level)}
                     </span>
@@ -597,8 +687,11 @@ export default function AdminStockPage() {
                     {t("admin.stock.colStock")}:{" "}
                     {productStockQuantity(product.stockQuantity)}
                   </p>
-                  <p className="admin-muted">
-                    {updated || t("admin.stock.unknownDate")}
+                  <p>
+                    {t("admin.stock.colColor")}: {productColorText(product, locale)}
+                  </p>
+                  <p>
+                    {t("admin.stock.colLensSize")}: {lensSizeDisplay(product)}
                   </p>
                   <button
                     type="button"
@@ -615,46 +708,110 @@ export default function AdminStockPage() {
         )}
       </div>
 
+      {!loading && filteredRows.length > 0 ? (
+        <div className="admin-stock-pagination">
+          <button
+            type="button"
+            className="admin-stock-page-btn"
+            aria-label={t("admin.stock.pagePrev")}
+            disabled={safePage <= 1}
+            onClick={() => setListPage((p) => Math.max(1, p - 1))}
+          >
+            <ChevronRight size={16} />
+          </button>
+          <div className="admin-stock-page-list">
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+              (page) => {
+                const active = page === safePage;
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`admin-stock-page-num${active ? " is-active" : ""}`}
+                    onClick={() => setListPage(page)}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {page}
+                  </button>
+                );
+              },
+            )}
+          </div>
+          <button
+            type="button"
+            className="admin-stock-page-btn"
+            aria-label={t("admin.stock.pageNext")}
+            disabled={safePage >= totalPages}
+            onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="admin-stock-per-page">{t("admin.stock.perPage")}</span>
+        </div>
+      ) : null}
+
       <AdminModal
         open={Boolean(editing)}
         title={t("admin.stock.editTitle")}
         onClose={() => setEditing(null)}
         icon={<Warehouse size={18} />}
+        compact
       >
         {editing ? (
           <form onSubmit={onSaveStock} className="admin-stock-edit">
-            <div className="admin-stock-edit-product">
+            <div className="admin-stock-edit-head">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={productDisplayImage(editing, defaults)}
                 alt=""
                 className="admin-stock-thumb is-lg"
               />
-              <div>
-                <h3>{editing.name}</h3>
-                <p>{editing.sku || "—"}</p>
+              <div className="admin-stock-edit-meta">
+                <div>
+                  <span className="label">{t("admin.stock.productName")}</span>
+                  <p className="admin-stock-edit-value">{editing.name}</p>
+                </div>
+                <div>
+                  <span className="label">{t("admin.stock.productNumber")}</span>
+                  <p className="admin-stock-edit-value">{productNumber(editing)}</p>
+                </div>
+                <div>
+                  <span className="label">{t("admin.stock.colorLabel")}</span>
+                  <p className="admin-stock-edit-value">
+                    {productColorText(editing, locale)}
+                  </p>
+                </div>
               </div>
             </div>
-            <p className="admin-stock-current">
-              {t("admin.stock.currentStock")}:{" "}
-              <strong>
-                {productStockQuantity(editing.stockQuantity)}
-              </strong>
-            </p>
-            <label>
-              <span className="label">{t("admin.stock.newStock")}</span>
-              <input
-                className="input"
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                value={newQty}
-                onChange={(event) => setNewQty(event.target.value)}
-                required
-              />
-            </label>
-            <div className="flex justify-end gap-2">
+            <div className="admin-stock-edit-fields">
+              <label>
+                <span className="label">{t("admin.stock.currentStock")}</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={stockQty}
+                  onChange={(event) => setStockQty(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span className="label">{t("admin.stock.minimumStock")}</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={minStockQty}
+                  onChange={(event) => setMinStockQty(event.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div className="admin-stock-edit-actions">
               <button
                 type="button"
                 className="btn btn-ghost"

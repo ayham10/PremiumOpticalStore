@@ -111,16 +111,16 @@ export function sanitizeFrameSize(value: unknown): string | undefined {
 
 /**
  * Public display only. Stored value is unchanged.
- * `018-052` → `18*52`, `052-018` → `52*18`.
+ * `018-052` → `18/52`, `051/015` → `51/15`.
  */
 export function formatFrameSizePublic(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   if (!trimmed) return undefined;
-  const match = trimmed.match(/^(\d+)\s*[-–*]\s*(\d+)$/);
+  const match = trimmed.match(/^(\d+)\s*[-–*/]\s*(\d+)$/);
   if (!match) return trimmed;
   const first = String(Number.parseInt(match[1], 10));
   const second = String(Number.parseInt(match[2], 10));
   if (!first || !second) return trimmed;
-  return `${first}*${second}`;
+  return `${first}/${second}`;
 }

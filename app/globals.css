@@ -16711,17 +16711,34 @@ select.admin-pe-input {
 
 .admin-stock-page {
   max-width: var(--admin-content-max, 1200px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-stock-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .admin-stock-page {
+    gap: 1.5rem;
+  }
 }
 
 .admin-stock-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 @media (min-width: 900px) {
   .admin-stock-summary {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.125rem;
   }
 }
 
@@ -16731,6 +16748,7 @@ select.admin-pe-input {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 1rem 1.1rem;
+  min-height: 5.5rem;
 }
 
 .admin-stock-card .admin-card-value {
@@ -16779,13 +16797,28 @@ select.admin-pe-input {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  padding: 1rem 1.125rem;
+}
+
+@media (min-width: 900px) {
+  .admin-stock-toolbar {
+    flex-wrap: nowrap;
+    gap: 0.85rem;
+  }
 }
 
 .admin-stock-search {
   position: relative;
-  flex: 1 1 16rem;
+  flex: 1 1 100%;
   min-width: min(100%, 16rem);
+}
+
+@media (min-width: 900px) {
+  .admin-stock-search {
+    flex: 0 1 45%;
+    max-width: 45%;
+  }
 }
 
 .admin-stock-search svg {
@@ -16823,17 +16856,71 @@ select.admin-pe-input {
 }
 
 .admin-stock-thumb {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-  border-radius: 10px;
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  border-radius: 12px;
   border: 1px solid rgba(42, 47, 54, 0.95);
-  background: #0b0f14;
+  background: #ffffff;
+  padding: 4px;
 }
 
 .admin-stock-thumb.is-lg {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+}
+
+.admin-stock-product-number {
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  color: var(--muted, #8a929c);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-stock-category {
+  white-space: nowrap;
+}
+
+.admin-stock-table th,
+.admin-stock-table td {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+  vertical-align: middle;
+}
+
+.admin-stock-table th:nth-child(2),
+.admin-stock-table td:nth-child(2) {
+  padding-inline-end: 0.35rem;
+}
+
+.admin-stock-table th:nth-child(3),
+.admin-stock-table td:nth-child(3) {
+  padding-inline-start: 0.35rem;
+}
+
+.admin-stock-color,
+.admin-stock-lens-size {
+  font-size: 0.86rem;
+  max-width: 8.5rem;
+}
+
+.admin-stock-inline-msg {
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.admin-stock-inline-msg.is-warn {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.admin-stock-inline-msg.is-error {
+  border: 1px solid rgba(224, 122, 122, 0.35);
+  background: rgba(224, 122, 122, 0.12);
+  color: var(--danger);
 }
 
 .admin-stock-qty {
@@ -16878,12 +16965,17 @@ select.admin-pe-input {
 
 .admin-stock-table-wrap .table th:nth-child(1),
 .admin-stock-table-wrap .table td:nth-child(1) {
-  width: 4.5rem;
+  width: 5.25rem;
 }
 
 .admin-stock-table-wrap .table th:nth-child(2),
 .admin-stock-table-wrap .table td:nth-child(2) {
-  min-width: 12rem;
+  min-width: 10.5rem;
+}
+
+.admin-stock-table-wrap .table th:nth-child(3),
+.admin-stock-table-wrap .table td:nth-child(3) {
+  width: 7.5rem;
 }
 
 .admin-stock-table-wrap .table th:last-child,
@@ -16951,29 +17043,118 @@ select.admin-pe-input {
   gap: 1rem;
 }
 
-.admin-stock-edit-product {
+.admin-stock-edit-head {
   display: flex;
-  align-items: center;
+  flex-direction: row-reverse;
+  align-items: flex-start;
   gap: 0.85rem;
 }
 
-.admin-stock-edit-product h3 {
-  margin: 0;
-  font-size: 1.05rem;
+.admin-stock-edit-meta {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.55rem;
 }
 
-.admin-stock-edit-product p {
-  margin: 0.25rem 0 0;
+.admin-stock-edit-meta .label {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.72rem;
   color: #8a929c;
 }
 
-.admin-stock-current {
+.admin-stock-edit-value {
   margin: 0;
-  color: #c8cdd4;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #f4f6f8;
+  word-break: break-word;
 }
 
-.admin-stock-current strong {
+.admin-stock-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-stock-edit-fields .label {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.admin-stock-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.admin-stock-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.65rem;
+}
+
+.admin-stock-page-btn {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 0.55rem;
+  border: 1px solid #2a2f36;
+  background: #151a21;
+  color: #fff;
+}
+
+.admin-stock-page-btn:disabled {
+  opacity: 0.35;
+}
+
+.admin-stock-page-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.admin-stock-page-num {
+  display: grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid #2a2f36;
+  background: #151a21;
+  color: #8a929c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-stock-page-num.is-active {
+  border-color: #d4af37;
+  background: #d4af37;
+  color: #0b0e14;
+}
+
+.admin-stock-per-page {
+  width: 100%;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: #d4af37;
+}
+
+@media (min-width: 768px) {
+  .admin-stock-per-page {
+    width: auto;
+    margin-inline-start: 0.35rem;
+  }
 }
 
 .admin-service-pages {
