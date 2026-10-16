@@ -13,12 +13,14 @@ async function fetchBytes(path: string): Promise<Uint8Array> {
 }
 
 export async function loadLensOrderPdfFonts(): Promise<LensOrderPdfFonts> {
-  const [latin, hebrew, arabic] = await Promise.all([
+  const [latin, latinBold, hebrew, hebrewBold, arabic] = await Promise.all([
     fetchBytes("/fonts/NotoSans-Regular.ttf"),
+    fetchBytes("/fonts/NotoSans-Bold.ttf"),
     fetchBytes("/fonts/NotoSansHebrew-Regular.ttf"),
+    fetchBytes("/fonts/NotoSansHebrew-Bold.ttf"),
     fetchBytes("/fonts/NotoNaskhArabic-Regular.ttf"),
   ]);
-  return { latin, hebrew, arabic };
+  return { latin, latinBold, hebrew, hebrewBold, arabic };
 }
 
 export async function loadLensOrderPdfLogo(): Promise<Uint8Array> {
@@ -67,11 +69,13 @@ function printPdfUrl(url: string) {
   iframe.setAttribute("title", "Print lens order list");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
+  iframe.style.left = "0";
+  iframe.style.top = "0";
+  iframe.style.width = "210mm";
+  iframe.style.height = "297mm";
   iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
   iframe.src = url;
   const cleanup = () => {
     iframe.remove();

@@ -75,41 +75,47 @@ export const LENS_ORDER_SHEET_CSS = `
 }
 .lens-order-brand .logo {
   display: block;
-  width: 148px;
+  width: 196px;
   max-width: 100%;
   height: auto;
+  object-fit: contain;
+  object-position: left center;
 }
 .lens-order-title-block {
   text-align: right;
   padding-top: 2px;
+  color: #000;
 }
 .lens-order-title-block h1 {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.15;
+  color: #000;
 }
 .lens-order-title-rule {
-  width: 96px;
-  height: 1.15px;
-  margin: 5px 0 7px auto;
-  background: #111;
+  width: 108px;
+  height: 1.5px;
+  margin: 6px 0 8px auto;
+  background: #000;
 }
 .lens-order-date, .lens-order-business {
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
+  color: #000;
 }
-.lens-order-business { margin-top: 3px; }
+.lens-order-business { margin-top: 4px; }
 .lens-order-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: 8px;
-  padding: 7px 0;
-  border-top: 1px solid #111;
-  border-bottom: 1px solid #111;
-  font-size: 10.5px;
-  font-weight: 700;
+  padding: 8px 0;
+  border-top: 1.15px solid #000;
+  border-bottom: 1.15px solid #000;
+  font-size: 13px;
+  font-weight: 800;
+  color: #000;
 }
 .lens-order-phone {
   display: inline-flex;

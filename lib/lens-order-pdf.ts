@@ -22,7 +22,9 @@ import { pdfRtlText } from "@/lib/rtl-pdf-text";
 
 export type LensOrderPdfFonts = {
   latin: Uint8Array;
+  latinBold: Uint8Array;
   hebrew: Uint8Array;
+  hebrewBold: Uint8Array;
   arabic: Uint8Array;
 };
 
@@ -40,8 +42,8 @@ const PAGE_W = 210;
 const PAGE_H = 297;
 const OUTER = 7;
 const INNER = 8.6;
-const TABLE_TOP = 54.6;
-const INK = [17, 17, 17] as const;
+const TABLE_TOP = 58.8;
+const INK = [0, 0, 0] as const;
 const WHITE = [255, 255, 255] as const;
 const GRID = [196, 196, 196] as const;
 const HEAD_BG = [0, 0, 0] as const;
@@ -84,12 +86,10 @@ function registerFont(
   filename: string,
   family: string,
   bytes: Uint8Array,
-  styles: Array<"normal" | "bold"> = ["normal"],
+  style: "normal" | "bold" = "normal",
 ) {
   doc.addFileToVFS(filename, binaryStringFromBytes(bytes));
-  for (const style of styles) {
-    doc.addFont(filename, family, style);
-  }
+  doc.addFont(filename, family, style);
 }
 
 function isHebrewToken(token: string): boolean {
@@ -173,8 +173,8 @@ function drawPhoneIcon(doc: jsPDF, x: number, y: number) {
 function drawPhoneLine(doc: jsPDF, phone: string, y: number) {
   const iconX = INNER + 3.2;
   drawPhoneIcon(doc, iconX, y - 0.2);
-  let x = iconX + 4.6;
-  doc.setFontSize(8.1);
+  let x = iconX + 4.8;
+  doc.setFontSize(10.4);
   doc.setTextColor(...INK);
   doc.setFont(FONT_HEBREW, "bold");
   const label = pdfRtlText("טלפון");
@@ -202,17 +202,32 @@ function drawGlobe(doc: jsPDF, x: number, y: number) {
   doc.line(x - 2.1, y + 1.2, x + 2.1, y + 1.2);
 }
 
+function containSize(
+  srcW: number,
+  srcH: number,
+  maxW: number,
+  maxH: number,
+): { w: number; h: number } {
+  const aspect = srcH > 0 ? srcW / srcH : 2.5;
+  let w = maxW;
+  let h = w / aspect;
+  if (h > maxH) {
+    h = maxH;
+    w = h * aspect;
+  }
+  return { w, h };
+}
+
 function drawLogo(doc: jsPDF, logo?: Uint8Array) {
-  const x = INNER + 2.4;
-  const y = INNER + 2.2;
-  const maxW = 52;
+  const x = INNER + 2.2;
+  const y = INNER + 1.8;
+  const maxW = 64;
+  const maxH = 28;
   if (logo && logo.byteLength > 24) {
     const { width, height } = pngDimensions(logo);
-    const aspect = height > 0 ? width / height : 2;
-    const w = maxW;
-    const h = w / aspect;
+    const { w, h } = containSize(width, height, maxW, maxH);
     try {
-      doc.addImage(bytesToPngDataUrl(logo), "PNG", x, y, w, h, undefined, "FAST");
+      doc.addImage(bytesToPngDataUrl(logo), "PNG", x, y, w, h, undefined, "NONE");
       return;
     } catch {
       // Fall through to a simple mark if the PNG cannot be embedded.
@@ -240,45 +255,51 @@ function drawPageChrome(
 
   drawLogo(doc, logo);
 
-  const right = PAGE_W - INNER - 3;
-  drawRtlMixed(doc, LENS_ORDER_TITLE, right, 16.6, 13.4, "bold");
+  const right = PAGE_W - INNER - 3.2;
+  const titleSize = 16.8;
+  drawRtlMixed(doc, LENS_ORDER_TITLE, right, 17.6, titleSize, "bold");
+  const titleTokens = LENS_ORDER_TITLE.match(MIXED_TOKEN) || [];
+  const titleW = titleTokens.reduce(
+    (sum, token) => sum + tokenWidth(doc, token, titleSize, "bold").width,
+    0,
+  );
   doc.setFillColor(...INK);
-  doc.rect(right - 34, 18.4, 34, 0.38, "F");
+  doc.rect(right - Math.min(titleW, 46), 19.6, Math.min(titleW, 46), 0.55, "F");
   drawRtlMixed(
     doc,
     `תאריך הזמנה: ${formatLensOrderNumericDate(generatedAt)}`,
     right,
-    24.6,
-    8.3,
+    26.6,
+    11,
     "bold",
   );
   drawRtlMixed(
     doc,
     `שם העסק: ${LENS_ORDER_BRAND_HE}`,
     right,
-    30.4,
-    8.3,
+    33.2,
+    11.2,
     "bold",
   );
 
   doc.setDrawColor(...INK);
-  doc.setLineWidth(0.32);
-  doc.line(INNER + 1.6, 36.6, PAGE_W - INNER - 1.6, 36.6);
+  doc.setLineWidth(0.38);
+  doc.line(INNER + 1.6, 38.6, PAGE_W - INNER - 1.6, 38.6);
 
   drawRtlMixed(
     doc,
     `סה״כ כמות נדרשת: ${totals.requiredQuantity} | סה״כ כמות להזמנה: ${totals.quantity}`,
     right,
-    42.4,
-    8.1,
+    45.4,
+    10.8,
     "bold",
   );
   if (phone) {
-    drawPhoneLine(doc, phone, 42.4);
+    drawPhoneLine(doc, phone, 45.4);
   }
 
   doc.setDrawColor(...INK);
-  doc.line(INNER + 1.6, 46.4, PAGE_W - INNER - 1.6, 46.4);
+  doc.line(INNER + 1.6, 50.2, PAGE_W - INNER - 1.6, 50.2);
 
   const footY = 285.2;
   doc.setDrawColor(...INK);
@@ -357,29 +378,41 @@ export function buildLensOrderPdf(
     format: "a4",
     compress: true,
   });
-  registerFont(doc, "NotoSans-Regular.ttf", FONT_LATIN, options.fonts.latin, [
-    "normal",
+  registerFont(doc, "NotoSans-Regular.ttf", FONT_LATIN, options.fonts.latin, "normal");
+  registerFont(
+    doc,
+    "NotoSans-Bold.ttf",
+    FONT_LATIN,
+    options.fonts.latinBold,
     "bold",
-  ]);
+  );
   registerFont(
     doc,
     "NotoSansHebrew-Regular.ttf",
     FONT_HEBREW,
     options.fonts.hebrew,
-    ["normal", "bold"],
+    "normal",
+  );
+  registerFont(
+    doc,
+    "NotoSansHebrew-Bold.ttf",
+    FONT_HEBREW,
+    options.fonts.hebrewBold,
+    "bold",
   );
   registerFont(
     doc,
     "NotoNaskhArabic-Regular.ttf",
     FONT_ARABIC,
     options.fonts.arabic,
+    "normal",
   );
   doc.setFont(FONT_LATIN, "normal");
 
   const tableW = PAGE_W - (INNER + 2.2) * 2;
   autoTable(doc, {
     startY: TABLE_TOP,
-    margin: { top: TABLE_TOP, left: INNER + 2.2, right: INNER + 2.2, bottom: 24 },
+    margin: { top: TABLE_TOP, left: INNER + 2.2, right: INNER + 2.2, bottom: 24.5 },
     theme: "grid",
     showHead: "everyPage",
     pageBreak: "auto",

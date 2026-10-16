@@ -160,7 +160,9 @@ assert.match(pdfRtlText("15 באוקטובר 2026"), /2026/);
 
 const fonts = {
   latin: new Uint8Array(readFileSync(join("public/fonts/NotoSans-Regular.ttf"))),
+  latinBold: new Uint8Array(readFileSync(join("public/fonts/NotoSans-Bold.ttf"))),
   hebrew: new Uint8Array(readFileSync(join("public/fonts/NotoSansHebrew-Regular.ttf"))),
+  hebrewBold: new Uint8Array(readFileSync(join("public/fonts/NotoSansHebrew-Bold.ttf"))),
   arabic: new Uint8Array(readFileSync(join("public/fonts/NotoNaskhArabic-Regular.ttf"))),
 };
 const logo = new Uint8Array(readFileSync(join("public/images/oyon-order-logo.png")));
@@ -191,6 +193,10 @@ assert.match(downloadSrc, /printLensOrderPdf/);
 assert.match(downloadSrc, /downloadLensOrderPdf/);
 assert.match(downloadSrc, /application\/pdf/);
 assert.match(downloadSrc, /oyon-order-logo\.png/);
+assert.match(downloadSrc, /NotoSans-Bold\.ttf/);
+assert.match(downloadSrc, /NotoSansHebrew-Bold\.ttf/);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /containSize/);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /NotoSansHebrew-Bold\.ttf/);
 
 const pdfWithPhone = buildLensOrderPdf(orderRows, {
   generatedAt,

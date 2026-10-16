@@ -1,3 +1,4 @@
-These fonts are Noto Sans, Noto Sans Hebrew, and Noto Naskh Arabic
-by Google, licensed under the SIL Open Font License, Version 1.1.
+These fonts are Noto Sans (Regular and Bold), Noto Sans Hebrew
+(Regular and Bold), and Noto Naskh Arabic by Google, licensed under
+the SIL Open Font License, Version 1.1.
 See https://scripts.sil.org/OFL
