@@ -45,8 +45,9 @@ const INNER = 8.6;
 const TABLE_TOP = 58.8;
 const FOOTER_GAP = 4.8;
 const FOOTER_RULE_Y_FULL = 277.4;
-const FOOTER_TEXT_OFFSET = 7.8;
-const FOOTER_TAIL = 10.2;
+const FOOTER_TEXT_OFFSET = 8.2;
+const FOOTER_TAIL = 12.8;
+const FOOTER_ICON_SCALE = 1.18;
 const INK = [0, 0, 0] as const;
 const WHITE = [255, 255, 255] as const;
 const GRID = [196, 196, 196] as const;
@@ -188,22 +189,31 @@ function drawPhoneLine(doc: jsPDF, phone: string, y: number) {
   doc.text(`: ${phone}`, x, y);
 }
 
-function drawPin(doc: jsPDF, x: number, y: number) {
+function drawPin(doc: jsPDF, x: number, y: number, scale = FOOTER_ICON_SCALE) {
   doc.setFillColor(...INK);
-  doc.circle(x, y - 1.15, 2.15, "F");
-  doc.triangle(x - 1.7, y - 0.45, x + 1.7, y - 0.45, x, y + 3.35, "F");
+  doc.circle(x, y - 1.15 * scale, 2.15 * scale, "F");
+  doc.triangle(
+    x - 1.7 * scale,
+    y - 0.45 * scale,
+    x + 1.7 * scale,
+    y - 0.45 * scale,
+    x,
+    y + 3.35 * scale,
+    "F",
+  );
   doc.setFillColor(...WHITE);
-  doc.circle(x, y - 1.25, 0.82, "F");
+  doc.circle(x, y - 1.25 * scale, 0.82 * scale, "F");
 }
 
-function drawGlobe(doc: jsPDF, x: number, y: number) {
+function drawGlobe(doc: jsPDF, x: number, y: number, scale = FOOTER_ICON_SCALE) {
+  const r = 2.5 * scale;
   doc.setDrawColor(...INK);
   doc.setLineWidth(0.38);
-  doc.circle(x, y, 2.5, "S");
-  doc.ellipse(x, y, 1.1, 2.5, "S");
-  doc.line(x - 2.5, y, x + 2.5, y);
-  doc.line(x - 2.1, y - 1.2, x + 2.1, y - 1.2);
-  doc.line(x - 2.1, y + 1.2, x + 2.1, y + 1.2);
+  doc.circle(x, y, r, "S");
+  doc.ellipse(x, y, 1.1 * scale, r, "S");
+  doc.line(x - r, y, x + r, y);
+  doc.line(x - 2.1 * scale, y - 1.2 * scale, x + 2.1 * scale, y - 1.2 * scale);
+  doc.line(x - 2.1 * scale, y + 1.2 * scale, x + 2.1 * scale, y + 1.2 * scale);
 }
 
 function containSize(
@@ -312,24 +322,34 @@ function drawPageFrame(doc: jsPDF, bottomY: number) {
 
 function drawPageFooter(doc: jsPDF, ruleY: number) {
   const footY = ruleY + FOOTER_TEXT_OFFSET;
+  const midX = PAGE_W / 2;
+  const leftEdge = INNER + 3.2;
+  const rightEdge = PAGE_W - INNER - 3.2;
   doc.setDrawColor(...INK);
   doc.setLineWidth(0.32);
   doc.line(INNER + 1.6, ruleY, PAGE_W - INNER - 1.6, ruleY);
-  doc.line(PAGE_W / 2, ruleY + 1.8, PAGE_W / 2, ruleY + 13.2);
+  doc.line(midX, ruleY + 2.1, midX, ruleY + 15.4);
 
-  drawPin(doc, INNER + 6.6, footY);
-  doc.setFont(FONT_HEBREW, "bold");
-  doc.setFontSize(8.2);
+  const globeX = leftEdge + 3.4;
+  const globeY = footY + 0.85;
+  drawGlobe(doc, globeX, globeY);
+  doc.setFont(FONT_LATIN, "normal");
+  doc.setFontSize(9.4);
   doc.setTextColor(...INK);
-  doc.text(pdfRtlText(LENS_ORDER_LOCATION_HE), INNER + 11.3, footY - 0.55);
-  doc.setFont(FONT_LATIN, "normal");
-  doc.setFontSize(7.4);
-  doc.text(LENS_ORDER_LOCATION_EN, INNER + 11.3, footY + 3.25);
+  const webX = leftEdge + 10.2;
+  doc.text(LENS_ORDER_WEBSITE, webX, footY + 1.45);
 
-  drawGlobe(doc, PAGE_W - INNER - 43.2, footY + 0.55);
+  const pinX = rightEdge - 3.1;
+  drawPin(doc, pinX, footY + 0.2);
+  const locTextRight = pinX - 3.6;
+  doc.setFont(FONT_HEBREW, "bold");
+  doc.setFontSize(9.6);
+  doc.text(pdfRtlText(LENS_ORDER_LOCATION_HE), locTextRight, footY - 0.35, {
+    align: "right",
+  });
   doc.setFont(FONT_LATIN, "normal");
-  doc.setFontSize(8);
-  doc.text(LENS_ORDER_WEBSITE, PAGE_W - INNER - 38.6, footY + 1.35);
+  doc.setFontSize(8.6);
+  doc.text(LENS_ORDER_LOCATION_EN, locTextRight, footY + 3.55, { align: "right" });
 }
 
 function footerRuleYForPage(
