@@ -171,6 +171,16 @@ const generatedAt = new Date("2026-10-15T09:00:00.000Z");
 const pdf = buildLensOrderPdf(orderRows, { generatedAt, fonts, logo });
 const header = Buffer.from(pdf.bytes.subarray(0, 8)).toString("latin1");
 assert.equal(header.startsWith("%PDF-"), true, header);
+const shortMediaBoxes = [
+  ...Buffer.from(pdf.bytes)
+    .toString("latin1")
+    .matchAll(/\/MediaBox\s*\[([^\]]+)\]/g),
+].map((match) => match[1]!.split(/\s+/).map(Number));
+assert.equal(shortMediaBoxes.length, 1);
+const shortPageHeightMm =
+  ((shortMediaBoxes[0]![3]! - shortMediaBoxes[0]![1]!) * 25.4) / 72;
+assert.ok(shortPageHeightMm < 220, `expected trimmed page, got ${shortPageHeightMm}mm`);
+assert.ok(shortPageHeightMm > 140, `expected content-sized page, got ${shortPageHeightMm}mm`);
 assert.equal(pdf.filename, "רשימת הזמנות.pdf");
 assert.equal(pdf.pageCount >= 1, true);
 assert.notEqual(Buffer.from(pdf.bytes.subarray(0, 15)).toString("utf8").includes("<!DOCTYPE"), true);
@@ -197,6 +207,8 @@ assert.match(downloadSrc, /NotoSans-Bold\.ttf/);
 assert.match(downloadSrc, /NotoSansHebrew-Bold\.ttf/);
 assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /containSize/);
 assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /NotoSansHebrew-Bold\.ttf/);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /footerRuleYForPage/);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /drawPageFrame/);
 
 const pdfWithPhone = buildLensOrderPdf(orderRows, {
   generatedAt,

@@ -43,6 +43,10 @@ const PAGE_H = 297;
 const OUTER = 7;
 const INNER = 8.6;
 const TABLE_TOP = 58.8;
+const FOOTER_GAP = 4.8;
+const FOOTER_RULE_Y_FULL = 277.4;
+const FOOTER_TEXT_OFFSET = 7.8;
+const FOOTER_TAIL = 10.2;
 const INK = [0, 0, 0] as const;
 const WHITE = [255, 255, 255] as const;
 const GRID = [196, 196, 196] as const;
@@ -240,19 +244,13 @@ function drawLogo(doc: jsPDF, logo?: Uint8Array) {
   doc.circle(x + 10, y + 7.2, 2.2, "F");
 }
 
-function drawPageChrome(
+function drawPageHeader(
   doc: jsPDF,
   generatedAt: Date,
   totals: { requiredQuantity: number; quantity: number },
   phone: string,
   logo?: Uint8Array,
 ) {
-  doc.setDrawColor(...INK);
-  doc.setLineWidth(0.38);
-  doc.rect(OUTER, OUTER, PAGE_W - OUTER * 2, PAGE_H - OUTER * 2, "S");
-  doc.setLineWidth(0.7);
-  doc.rect(INNER, INNER, PAGE_W - INNER * 2, PAGE_H - INNER * 2, "S");
-
   drawLogo(doc, logo);
 
   const right = PAGE_W - INNER - 3.2;
@@ -300,12 +298,24 @@ function drawPageChrome(
 
   doc.setDrawColor(...INK);
   doc.line(INNER + 1.6, 50.2, PAGE_W - INNER - 1.6, 50.2);
+}
 
-  const footY = 285.2;
+function drawPageFrame(doc: jsPDF, bottomY: number) {
+  const outerH = bottomY - OUTER * 2;
+  const innerH = bottomY - INNER * 2;
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(0.38);
+  doc.rect(OUTER, OUTER, PAGE_W - OUTER * 2, outerH, "S");
+  doc.setLineWidth(0.7);
+  doc.rect(INNER, INNER, PAGE_W - INNER * 2, innerH, "S");
+}
+
+function drawPageFooter(doc: jsPDF, ruleY: number) {
+  const footY = ruleY + FOOTER_TEXT_OFFSET;
   doc.setDrawColor(...INK);
   doc.setLineWidth(0.32);
-  doc.line(INNER + 1.6, 277.4, PAGE_W - INNER - 1.6, 277.4);
-  doc.line(PAGE_W / 2, 279.2, PAGE_W / 2, 290.6);
+  doc.line(INNER + 1.6, ruleY, PAGE_W - INNER - 1.6, ruleY);
+  doc.line(PAGE_W / 2, ruleY + 1.8, PAGE_W / 2, ruleY + 13.2);
 
   drawPin(doc, INNER + 6.6, footY);
   doc.setFont(FONT_HEBREW, "bold");
@@ -320,6 +330,43 @@ function drawPageChrome(
   doc.setFont(FONT_LATIN, "normal");
   doc.setFontSize(8);
   doc.text(LENS_ORDER_WEBSITE, PAGE_W - INNER - 38.6, footY + 1.35);
+}
+
+function footerRuleYForPage(
+  pageNumber: number,
+  pageCount: number,
+  tableEndY: number,
+): number {
+  if (pageNumber < pageCount) return FOOTER_RULE_Y_FULL;
+  const dynamic = tableEndY + FOOTER_GAP;
+  const maxRule = PAGE_H - INNER - FOOTER_TAIL;
+  return Math.min(Math.max(dynamic, TABLE_TOP + 12), maxRule);
+}
+
+function frameBottomY(ruleY: number): number {
+  return ruleY + FOOTER_TEXT_OFFSET + FOOTER_TAIL;
+}
+
+function setPageHeightMm(doc: jsPDF, pageNumber: number, heightMm: number) {
+  const minHeight = frameBottomY(TABLE_TOP + 12);
+  const height = Math.max(heightMm, minHeight);
+  const withApi = doc as jsPDF & {
+    setPageHeight?: (page: number, value: number) => void;
+  };
+  if (withApi.setPageHeight) {
+    withApi.setPageHeight(pageNumber, height);
+    return;
+  }
+  const internal = doc.internal as typeof doc.internal & {
+    pagesContext?: Record<
+      number,
+      { mediaBox: { bottomLeftY: number; topRightY: number } }
+    >;
+  };
+  const scale = internal.scaleFactor;
+  const page = internal.pagesContext?.[pageNumber];
+  if (!page?.mediaBox) return;
+  page.mediaBox.topRightY = page.mediaBox.bottomLeftY + height * scale;
 }
 
 function tableBody(rows: LensOrderRow[]): RowInput[] {
@@ -412,7 +459,12 @@ export function buildLensOrderPdf(
   const tableW = PAGE_W - (INNER + 2.2) * 2;
   autoTable(doc, {
     startY: TABLE_TOP,
-    margin: { top: TABLE_TOP, left: INNER + 2.2, right: INNER + 2.2, bottom: 24.5 },
+    margin: {
+      top: TABLE_TOP,
+      left: INNER + 2.2,
+      right: INNER + 2.2,
+      bottom: PAGE_H - FOOTER_RULE_Y_FULL + 6,
+    },
     theme: "grid",
     showHead: "everyPage",
     pageBreak: "auto",
@@ -451,7 +503,7 @@ export function buildLensOrderPdf(
       3: { cellWidth: tableW * 0.32, fontStyle: "bold" },
     },
     didDrawPage: () => {
-      drawPageChrome(doc, generatedAt, totals, phone, options.logo);
+      drawPageHeader(doc, generatedAt, totals, phone, options.logo);
     },
     didDrawCell: (data) => {
       if (data.section === "head") {
@@ -486,6 +538,21 @@ export function buildLensOrderPdf(
       doc.setTextColor(...INK);
     },
   });
+
+  const tableEndY =
+    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ??
+    TABLE_TOP;
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    const ruleY = footerRuleYForPage(page, pageCount, tableEndY);
+    drawPageFooter(doc, ruleY);
+    const bottomY = frameBottomY(ruleY);
+    drawPageFrame(doc, bottomY);
+    if (page === pageCount) {
+      setPageHeightMm(doc, page, bottomY + OUTER);
+    }
+  }
 
   const bytes = new Uint8Array(doc.output("arraybuffer"));
   return {
