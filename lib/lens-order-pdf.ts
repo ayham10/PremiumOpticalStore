@@ -48,6 +48,8 @@ const FOOTER_RULE_Y_FULL = 277.4;
 const FOOTER_TEXT_OFFSET = 8.2;
 const FOOTER_TAIL = 12.8;
 const FOOTER_ICON_SCALE = 1.18;
+/** ~9px at 96dpi — lifts footer icons/text without moving the rule line */
+const FOOTER_CONTENT_LIFT_MM = 2.4;
 const INK = [0, 0, 0] as const;
 const WHITE = [255, 255, 255] as const;
 const GRID = [196, 196, 196] as const;
@@ -321,14 +323,15 @@ function drawPageFrame(doc: jsPDF, bottomY: number) {
 }
 
 function drawPageFooter(doc: jsPDF, ruleY: number) {
-  const footY = ruleY + FOOTER_TEXT_OFFSET;
+  const footY = ruleY + FOOTER_TEXT_OFFSET - FOOTER_CONTENT_LIFT_MM;
   const midX = PAGE_W / 2;
   const leftEdge = INNER + 3.2;
   const rightEdge = PAGE_W - INNER - 3.2;
+  const dividerBottom = ruleY + 15.4 - FOOTER_CONTENT_LIFT_MM;
   doc.setDrawColor(...INK);
   doc.setLineWidth(0.32);
   doc.line(INNER + 1.6, ruleY, PAGE_W - INNER - 1.6, ruleY);
-  doc.line(midX, ruleY + 2.1, midX, ruleY + 15.4);
+  doc.line(midX, ruleY + 2.1, midX, dividerBottom);
 
   const globeX = leftEdge + 3.4;
   const globeY = footY + 0.85;
@@ -365,28 +368,6 @@ function footerRuleYForPage(
 
 function frameBottomY(ruleY: number): number {
   return ruleY + FOOTER_TEXT_OFFSET + FOOTER_TAIL;
-}
-
-function setPageHeightMm(doc: jsPDF, pageNumber: number, heightMm: number) {
-  const minHeight = frameBottomY(TABLE_TOP + 12);
-  const height = Math.max(heightMm, minHeight);
-  const withApi = doc as jsPDF & {
-    setPageHeight?: (page: number, value: number) => void;
-  };
-  if (withApi.setPageHeight) {
-    withApi.setPageHeight(pageNumber, height);
-    return;
-  }
-  const internal = doc.internal as typeof doc.internal & {
-    pagesContext?: Record<
-      number,
-      { mediaBox: { bottomLeftY: number; topRightY: number } }
-    >;
-  };
-  const scale = internal.scaleFactor;
-  const page = internal.pagesContext?.[pageNumber];
-  if (!page?.mediaBox) return;
-  page.mediaBox.topRightY = page.mediaBox.bottomLeftY + height * scale;
 }
 
 function tableBody(rows: LensOrderRow[]): RowInput[] {
@@ -567,11 +548,7 @@ export function buildLensOrderPdf(
     doc.setPage(page);
     const ruleY = footerRuleYForPage(page, pageCount, tableEndY);
     drawPageFooter(doc, ruleY);
-    const bottomY = frameBottomY(ruleY);
-    drawPageFrame(doc, bottomY);
-    if (page === pageCount) {
-      setPageHeightMm(doc, page, bottomY + OUTER);
-    }
+    drawPageFrame(doc, frameBottomY(ruleY));
   }
 
   const bytes = new Uint8Array(doc.output("arraybuffer"));

@@ -179,8 +179,12 @@ const shortMediaBoxes = [
 assert.equal(shortMediaBoxes.length, 1);
 const shortPageHeightMm =
   ((shortMediaBoxes[0]![3]! - shortMediaBoxes[0]![1]!) * 25.4) / 72;
-assert.ok(shortPageHeightMm < 220, `expected trimmed page, got ${shortPageHeightMm}mm`);
-assert.ok(shortPageHeightMm > 140, `expected content-sized page, got ${shortPageHeightMm}mm`);
+assert.ok(
+  shortPageHeightMm > 290 && shortPageHeightMm < 300,
+  `expected full A4 page height, got ${shortPageHeightMm}mm`,
+);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /FOOTER_CONTENT_LIFT_MM/);
+assert.doesNotMatch(readFileSync("lib/lens-order-pdf.ts", "utf8"), /setPageHeightMm/);
 assert.equal(pdf.filename, "רשימת הזמנות.pdf");
 assert.equal(pdf.pageCount >= 1, true);
 assert.notEqual(Buffer.from(pdf.bytes.subarray(0, 15)).toString("utf8").includes("<!DOCTYPE"), true);
