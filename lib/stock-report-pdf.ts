@@ -164,8 +164,6 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
   );
   doc.setFont(FONT_LATIN, "normal");
 
-  const dateText = `${labels.reportDate}: ${stockExportDateLabel(generatedAt, options.locale)}`;
-
   const drawHeader = () => {
     if (options.logo && options.logo.byteLength > 24) {
       try {
@@ -194,11 +192,16 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
       size: 10,
       bold: true,
     });
-    drawVisualText(doc, dateText, PAGE_W - MARGIN, 12, {
+    const dateValue = stockExportDateLabel(generatedAt, options.locale);
+    drawVisualText(doc, `${labels.reportDate}:`, PAGE_W - MARGIN, 11, {
       align: "right",
-      size: 8.5,
+      size: 8.2,
       bold: true,
     });
+    doc.setFont(FONT_LATIN, "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...INK);
+    doc.text(dateValue, PAGE_W - MARGIN, 15.2, { align: "right" });
 
     const cards = [
       { label: labels.totalQty, value: String(summary.totalQty) },
