@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Download,
+  FileSpreadsheet,
+  FileText,
   Package,
   PackageX,
   Pencil,
@@ -31,6 +32,7 @@ import { formatFrameSizePublic } from "@/lib/product-fields";
 import { productDisplayImage } from "@/lib/product-images";
 import { productSearchText, resolveProductCopy } from "@/lib/product-i18n";
 import { invalidatePublicCache } from "@/lib/public-data-cache";
+import type { StockExportLabels } from "@/lib/stock-export";
 import {
   getStockLevel,
   productStockQuantity,
@@ -63,12 +65,6 @@ function unwrapList<T>(data: unknown, keys: string[]): T[] {
     }
   }
   return [];
-}
-
-function csvCell(value: string | number): string {
-  const text = String(value ?? "");
-  if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
-  return text;
 }
 
 function productNumber(product: Product): string {
@@ -120,6 +116,7 @@ export default function AdminStockPage() {
   const [stockQty, setStockQty] = useState("");
   const [minStockQty, setMinStockQty] = useState("");
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -296,49 +293,65 @@ export default function AdminStockPage() {
     }
   }
 
-  function exportCsv() {
-    const header = [
-      t("admin.stock.colName"),
-      t("admin.stock.colSku"),
-      t("admin.stock.colCategory"),
-      t("admin.stock.colPrice"),
-      t("admin.stock.colStock"),
-      t("admin.stock.minimumStock"),
-      t("admin.stock.colStatus"),
-      t("admin.stock.colColor"),
-      t("admin.stock.colLensSize"),
-    ];
-    const lines = [
-      header.map(csvCell).join(","),
-      ...filteredRows.map((product) => {
-        const level = getStockLevel(
-          product.stockQuantity,
-          product.minimumStock,
-        );
-        return [
-          product.name,
-          product.sku,
-          categoryLabel(product.category),
-          product.sellingPrice,
-          productStockQuantity(product.stockQuantity),
-          product.minimumStock,
-          statusLabel(level),
-          productColorText(product, locale),
-          lensSizeDisplay(product),
-        ]
-          .map(csvCell)
-          .join(",");
-      }),
-    ];
-    const blob = new Blob([`\uFEFF${lines.join("\n")}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${t("admin.stock.exportFilename")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  function exportLabels(): StockExportLabels {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const base = t("admin.stock.exportFilename");
+    return {
+      titleAr: t("admin.stock.reportTitleAr"),
+      titleEn: t("admin.stock.reportTitleEn"),
+      reportDate: t("admin.stock.reportDate"),
+      totalQty: t("admin.stock.totalQty"),
+      inStock: t("admin.stock.inStock"),
+      lowStock: t("admin.stock.lowStock"),
+      outOfStock: t("admin.stock.outOfStock"),
+      colImage: t("admin.stock.colImage"),
+      colName: t("admin.stock.colName"),
+      colNumber: t("admin.stock.colSku"),
+      colCategory: t("admin.stock.colCategory"),
+      colColor: t("admin.stock.colColor"),
+      colSize: t("admin.stock.colLensSize"),
+      colPrice: t("admin.stock.colPrice"),
+      colStock: t("admin.stock.colStock"),
+      colMin: t("admin.stock.colMinShort"),
+      colRequired: t("admin.stock.colRequired"),
+      colStatus: t("admin.stock.colStatus"),
+      statusIn: t("admin.stock.statusIn"),
+      statusLow: t("admin.stock.statusLow"),
+      statusOut: t("admin.stock.statusOut"),
+      empty: t("admin.stock.empty"),
+      website: "www.oyonoptics.com",
+      location: t("admin.stock.locationFooter"),
+      sheetName: t("admin.stock.sheetName"),
+      pdfFilename: `${base}-${stamp}.pdf`,
+      xlsxFilename: `${base}-${stamp}.xlsx`,
+    };
+  }
+
+  async function exportReport(kind: "pdf" | "xlsx") {
+    if (exporting || filteredRows.length === 0) return;
+    setExporting(kind);
+    setMessage("");
+    try {
+      const { downloadStockReportPdf, downloadStockReportXlsx } = await import(
+        "@/lib/stock-report-download"
+      );
+      const payload = {
+        products: filteredRows,
+        locale,
+        labels: exportLabels(),
+        categoryLabel,
+        statusLabel,
+        defaults,
+      };
+      if (kind === "pdf") await downloadStockReportPdf(payload);
+      else await downloadStockReportXlsx(payload);
+    } catch (err) {
+      setMessage(
+        err instanceof Error ? err.message : t("admin.stock.exportError"),
+      );
+    } finally {
+      setExporting(null);
+    }
   }
 
   const cards = [
@@ -382,15 +395,30 @@ export default function AdminStockPage() {
         title={t("admin.stock.title")}
         description={t("admin.stock.description")}
         actions={
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={exportCsv}
-            disabled={loading || filteredRows.length === 0}
-          >
-            <Download size={16} />
-            {t("admin.stock.exportCsv")}
-          </button>
+          <div className="admin-stock-export-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void exportReport("pdf")}
+              disabled={loading || filteredRows.length === 0 || Boolean(exporting)}
+            >
+              <FileText size={16} />
+              {exporting === "pdf"
+                ? t("admin.stock.exporting")
+                : t("admin.stock.exportPdf")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void exportReport("xlsx")}
+              disabled={loading || filteredRows.length === 0 || Boolean(exporting)}
+            >
+              <FileSpreadsheet size={16} />
+              {exporting === "xlsx"
+                ? t("admin.stock.exporting")
+                : t("admin.stock.exportExcel")}
+            </button>
+          </div>
         }
       />
 

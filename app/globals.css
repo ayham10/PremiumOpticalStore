@@ -16716,6 +16716,13 @@ select.admin-pe-input {
   gap: 1.25rem;
 }
 
+.admin-stock-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 @media (min-width: 768px) {
   .admin-stock-page {
     gap: 1.5rem;
