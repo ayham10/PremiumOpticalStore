@@ -2,10 +2,9 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { pdfRtlText } from "@/lib/rtl-pdf-text";
 import {
-  STOCK_EXPORT_BRAND_AR,
-  STOCK_EXPORT_BRAND_EN,
-  STOCK_EXPORT_LOCATION_AR,
+  STOCK_EXPORT_BRAND_HE,
   STOCK_EXPORT_LOCATION_EN,
+  STOCK_EXPORT_LOCATION_HE,
   STOCK_EXPORT_WEBSITE,
   stockExportDateLabel,
   stockStatusFill,
@@ -244,16 +243,19 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
       }
     }
 
-    drawVisualText(doc, labels.titleAr || STOCK_EXPORT_BRAND_AR, PAGE_W / 2, 12, {
+    const reportTitle = labels.titleAr || STOCK_EXPORT_BRAND_HE;
+    drawVisualText(doc, reportTitle, PAGE_W / 2, 14, {
       align: "center",
       size: 14,
       bold: true,
     });
-    drawVisualText(doc, labels.titleEn || STOCK_EXPORT_BRAND_EN, PAGE_W / 2, 18, {
-      align: "center",
-      size: 10,
-      bold: true,
-    });
+    if (labels.titleEn.trim()) {
+      drawVisualText(doc, labels.titleEn, PAGE_W / 2, 20, {
+        align: "center",
+        size: 10,
+        bold: true,
+      });
+    }
     const dateValue = stockExportDateLabel(generatedAt, "en");
     drawPositionedText(doc, labels.reportDate, PAGE_W - MARGIN, 11, {
       align: "right",
@@ -301,7 +303,7 @@ export function buildStockReportPdf(options: StockReportPdfOptions): {
     doc.line(MARGIN, y - 4, PAGE_W - MARGIN, y - 4);
     drawVisualText(
       doc,
-      `${STOCK_EXPORT_WEBSITE}  ·  ${labels.location || `${STOCK_EXPORT_LOCATION_AR} / ${STOCK_EXPORT_LOCATION_EN}`}`,
+      `${STOCK_EXPORT_WEBSITE}  ·  ${labels.location || `${STOCK_EXPORT_LOCATION_HE} / ${STOCK_EXPORT_LOCATION_EN}`}`,
       PAGE_W / 2,
       y,
       { align: "center", size: 8, bold: true },

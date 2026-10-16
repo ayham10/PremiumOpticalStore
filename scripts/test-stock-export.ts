@@ -3,11 +3,18 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildStockExportRows,
+  buildStockExportRowsForPdf,
   stockRequiredQuantity,
   summarizeStockExportRows,
   type StockExportLabels,
 } from "../lib/stock-export";
 import { buildStockReportPdf } from "../lib/stock-report-pdf";
+import {
+  stockReportPdfCategoryHe,
+  stockReportPdfLabels,
+  stockReportPdfStatusHe,
+  STOCK_REPORT_PDF_TITLE_HE,
+} from "../lib/stock-report-pdf-labels";
 import { buildStockReportXlsx } from "../lib/stock-report-xlsx";
 import type { Product } from "../lib/types";
 
@@ -99,35 +106,14 @@ const fonts = {
 };
 const logo = new Uint8Array(readFileSync("public/images/oyon-order-logo.png"));
 
-const labels: StockExportLabels = {
-  titleAr: "تقرير مخزون عيون أوبتيكس",
-  titleEn: "OYON OPTICS Stock Report",
-  reportDate: "تاريخ التقرير",
-  totalQty: "إجمالي الكمية",
-  inStock: "متوفر",
-  lowStock: "مخزون منخفض",
-  outOfStock: "غير متوفر",
-  colImage: "الصورة",
-  colName: "المنتج",
-  colNumber: "رقم المنتج",
-  colCategory: "التصنيف",
-  colColor: "اللون",
-  colSize: "مقاس العدسة",
-  colPrice: "السعر",
-  colStock: "الكمية",
-  colMin: "الحد الأدنى",
-  colRequired: "الكمية المطلوبة",
-  colStatus: "الحالة",
-  statusIn: "متوفر",
-  statusLow: "مخزون منخفض",
-  statusOut: "غير متوفر",
-  empty: "لا توجد منتجات",
-  website: "www.oyonoptics.com",
-  location: "دير حنا / Dir Hanna, Israel",
-  sheetName: "المخزون",
-  pdfFilename: "oyon-stock-test.pdf",
-  xlsxFilename: "oyon-stock-test.xlsx",
-};
+const labels: StockExportLabels = stockReportPdfLabels(
+  "oyon-stock-test.pdf",
+  "oyon-stock-test.xlsx",
+);
+assert.equal(labels.titleAr, STOCK_REPORT_PDF_TITLE_HE);
+assert.equal(stockReportPdfCategoryHe("Sunglasses"), "משקפי שמש");
+assert.equal(stockReportPdfCategoryHe("Frames"), "מסגרות");
+assert.equal(stockReportPdfStatusHe("out"), "אזל מהמלאי");
 
 const many = Array.from({ length: 28 }, (_, index) =>
   product({
@@ -141,17 +127,15 @@ const many = Array.from({ length: 28 }, (_, index) =>
     frameSize: index % 2 ? "051/015" : "052-018",
   }),
 );
-const manyRows = buildStockExportRows(many, {
-  locale: "ar",
-  categoryLabel: (value) => value,
-  statusLabel: (level) =>
-    level === "in" ? "متوفر" : level === "low" ? "منخفض" : "غير متوفر",
+const manyRows = buildStockExportRowsForPdf(many, {
+  categoryLabel: stockReportPdfCategoryHe,
+  statusLabel: stockReportPdfStatusHe,
 });
 
 const pdf = buildStockReportPdf({
   rows: manyRows,
   labels,
-  locale: "ar",
+  locale: "he",
   fonts,
   logo,
   generatedAt: new Date("2026-10-16T12:00:00.000Z"),
@@ -191,8 +175,14 @@ async function main() {
     readFileSync("lib/stock-report-pdf.ts", "utf8"),
     /data\.cell\.text = \[\]/,
   );
-  const arDict = readFileSync("lib/i18n/dictionaries/ar.ts", "utf8");
-  assert.match(arDict, /تقرير مخزون عيون أوبتيكس/);
+  assert.match(
+    readFileSync("lib/stock-report-download.ts", "utf8"),
+    /stockReportPdfLabels/,
+  );
+  assert.match(
+    readFileSync("lib/stock-report-download.ts", "utf8"),
+    /locale: "he"/,
+  );
 
   console.log(
     JSON.stringify({

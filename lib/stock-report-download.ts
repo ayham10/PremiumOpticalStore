@@ -1,8 +1,10 @@
+import { buildStockExportRows, buildStockExportRowsForPdf } from "@/lib/stock-export";
 import {
-  buildStockExportRows,
-  type StockExportLabels,
-  type StockExportRow,
-} from "@/lib/stock-export";
+  stockReportPdfCategoryHe,
+  stockReportPdfLabels,
+  stockReportPdfStatusHe,
+} from "@/lib/stock-report-pdf-labels";
+import type { StockExportLabels, StockExportRow } from "@/lib/stock-export";
 import {
   buildStockReportPdf,
   type StockReportPdfFonts,
@@ -102,7 +104,15 @@ function buildRows(options: StockReportDownloadOptions): StockExportRow[] {
 export async function downloadStockReportPdf(
   options: StockReportDownloadOptions,
 ): Promise<void> {
-  const rows = buildRows(options);
+  const rows = buildStockExportRowsForPdf(options.products, {
+    categoryLabel: stockReportPdfCategoryHe,
+    statusLabel: stockReportPdfStatusHe,
+    defaults: options.defaults,
+  });
+  const pdfLabels = stockReportPdfLabels(
+    options.labels.pdfFilename,
+    options.labels.xlsxFilename,
+  );
   const [fonts, logo, imageBytesByUrl] = await Promise.all([
     loadFonts(),
     loadLogo(),
@@ -110,8 +120,8 @@ export async function downloadStockReportPdf(
   ]);
   const pdf = buildStockReportPdf({
     rows,
-    labels: options.labels,
-    locale: options.locale,
+    labels: pdfLabels,
+    locale: "he",
     fonts,
     logo,
     generatedAt: options.generatedAt,

@@ -86,6 +86,40 @@ export function dashOr(value: string | undefined | null): string {
   return trimmed ? trimmed : "—";
 }
 
+/** PDF rows keep catalog names/SKU/colors as stored; labels are Hebrew-fixed separately. */
+export function buildStockExportRowsForPdf(
+  products: Product[],
+  options: {
+    categoryLabel: (category: string) => string;
+    statusLabel: (level: StockLevel) => string;
+    defaults?: CategoryDefaultImages | null;
+  },
+): StockExportRow[] {
+  return products.map((product) => {
+    const stockQuantity = productStockQuantity(product.stockQuantity);
+    const minimumStock = productLowStockThreshold(product.minimumStock);
+    const level = getStockLevel(product.stockQuantity, product.minimumStock);
+    return {
+      id: product.id,
+      name: dashOr(product.name),
+      productNumber: dashOr(product.sku),
+      category: dashOr(options.categoryLabel(product.category)),
+      color: dashOr(product.color),
+      frameSize: dashOr(formatFrameSizePublic(product.frameSize)),
+      price: Number.isFinite(product.sellingPrice) ? product.sellingPrice : 0,
+      stockQuantity,
+      minimumStock,
+      requiredQuantity: stockRequiredQuantity(
+        product.stockQuantity,
+        product.minimumStock,
+      ),
+      level,
+      statusLabel: options.statusLabel(level),
+      imageUrl: productDisplayImage(product, options.defaults),
+    };
+  });
+}
+
 export function buildStockExportRows(
   products: Product[],
   options: {
