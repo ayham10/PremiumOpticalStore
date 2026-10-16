@@ -85,12 +85,22 @@ function reshapeArabic(text: string): string {
   return out;
 }
 
+/** Reverse RTL glyphs for LTR drawing, but keep digits and Latin in reading order. */
+function reverseRtlPreservingLtr(text: string): string {
+  return [...text]
+    .reverse()
+    .join("")
+    .replace(/[0-9]+(?:[.,][0-9]+)?|[A-Za-z]+/g, (match) =>
+      [...match].reverse().join(""),
+    );
+}
+
 export function pdfRtlText(text: string): string {
   if (/[\u0600-\u06FF]/.test(text)) {
-    return [...reshapeArabic(text)].reverse().join("");
+    return reverseRtlPreservingLtr(reshapeArabic(text));
   }
   if (/[\u0590-\u05FF]/.test(text)) {
-    return [...text].reverse().join("");
+    return reverseRtlPreservingLtr(text);
   }
   return text;
 }

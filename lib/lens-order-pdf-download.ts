@@ -23,10 +23,14 @@ export async function loadLensOrderPdfFonts(): Promise<LensOrderPdfFonts> {
 
 export async function downloadLensOrderPdf(
   rows: LensOrderRow[],
-  generatedAt = new Date(),
+  options: { generatedAt?: Date; phone?: string | null } = {},
 ): Promise<void> {
   const fonts = await loadLensOrderPdfFonts();
-  const { bytes, filename } = buildLensOrderPdf(rows, { generatedAt, fonts });
+  const { bytes, filename } = buildLensOrderPdf(rows, {
+    generatedAt: options.generatedAt,
+    phone: options.phone,
+    fonts,
+  });
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   const blob = new Blob([buffer], { type: "application/pdf" });

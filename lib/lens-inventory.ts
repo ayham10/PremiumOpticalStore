@@ -179,8 +179,16 @@ export function buildLensOrderDisplayItems(
   return items;
 }
 
-export function lensOrderPdfFilename(date = new Date()): string {
-  return `OYON-Lens-Order-${date.toISOString().slice(0, 10)}.pdf`;
+export const LENS_ORDER_PDF_FILENAME = "רשימת הזמנות.pdf";
+export const LENS_ORDER_WEBSITE = "www.oyonoptics.com";
+export const LENS_ORDER_LOCATION_HE = "דיר חנא";
+
+export function lensOrderPdfFilename(_date = new Date()): string {
+  return LENS_ORDER_PDF_FILENAME;
+}
+
+export function lensOrderSectionMark(id: LensOrderSectionId): "−" | "+" {
+  return id === "negative" ? "−" : "+";
 }
 
 export function parseLensQty(value: unknown): number | null {
@@ -342,22 +350,26 @@ function escapeLensOrderText(value: string | number): string {
 
 export function lensOrderSectionTitle(
   id: LensOrderSectionId,
-  locale: "en" | "he" | "ar" = "en",
+  _locale: "en" | "he" | "ar" = "en",
 ): string {
-  if (id === "negative") {
-    if (locale === "he") return "SPH שלילי + PLANO";
-    if (locale === "ar") return "SPH سالب + PLANO";
-    return "Negative SPH + PLANO";
-  }
-  if (locale === "he") return "SPH חיובי";
-  if (locale === "ar") return "SPH موجب";
-  return "Positive SPH";
+  return lensOrderSectionMark(id);
 }
+
+export type LensOrderDocumentOptions = {
+  generatedAt?: Date;
+  phone?: string | null;
+};
 
 export function buildLensOrderDocumentHtml(
   rows: LensOrderRow[],
-  generatedAt = new Date(),
+  generatedAtOrOptions: Date | LensOrderDocumentOptions = new Date(),
 ): string {
+  const options: LensOrderDocumentOptions =
+    generatedAtOrOptions instanceof Date
+      ? { generatedAt: generatedAtOrOptions }
+      : generatedAtOrOptions;
+  const generatedAt = options.generatedAt ?? new Date();
+  const phone = options.phone?.trim() || "";
   const totals = lensOrderTotals(rows);
   const items = buildLensOrderDisplayItems(rows);
   const body = items
@@ -366,7 +378,7 @@ export function buildLensOrderDocumentHtml(
         return `
         <tr class="section">
           <td class="section-cell" colspan="6">${escapeLensOrderText(
-            lensOrderSectionTitle(item.id, "he"),
+            lensOrderSectionMark(item.id),
           )}</td>
         </tr>`;
       }
@@ -383,75 +395,79 @@ export function buildLensOrderDocumentHtml(
     })
     .join("");
 
+  const phoneLine = phone
+    ? `<p class="footer-phone" dir="ltr">${escapeLensOrderText(phone)}</p>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>OYON OPTICS — רשימת הזמנה לעדשות</title>
+  <title>רשימת הזמנה לעדשות</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Noto+Naskh+Arabic:wght@600&family=Noto+Sans+Hebrew:wght@400;700;800&display=swap" rel="stylesheet" />
   <style>
     @page { size: A4 portrait; margin: 10mm; }
     html, body {
       margin: 0;
       padding: 0;
       background: #fff;
-      color: #1a1f26;
+      color: #111;
       font-family: "Noto Sans Hebrew", "Arial Hebrew", "David", "Arial", sans-serif;
     }
-    body { padding: 0; }
     h1, p { margin: 0; }
     .sheet { max-width: 190mm; margin: 0 auto; }
-    .header { text-align: right; }
-    .brand {
-      direction: ltr;
-      unicode-bidi: isolate;
-      text-align: right;
-      white-space: nowrap;
-      font-size: 14px;
-      font-weight: 800;
-      color: #0b1722;
+    .header { text-align: center; }
+    .logo {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: #111;
+      line-height: 1;
     }
-    .brand-en {
-      direction: ltr;
-      unicode-bidi: isolate;
-      letter-spacing: 0.06em;
+    .logo-en {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 11.2px;
+      font-weight: 500;
+      letter-spacing: 0.28em;
+      text-indent: 0.28em;
     }
-    .brand-sep {
-      margin: 0 0.4em;
-      font-weight: 700;
-      letter-spacing: 0;
-      color: #0b1722;
+    .logo-ar-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 42px;
     }
-    .brand-he {
-      direction: rtl;
-      unicode-bidi: isolate;
-      letter-spacing: 0;
+    .logo-line {
+      flex: 1;
+      height: 1px;
+      background: #222;
+    }
+    .logo-ar {
+      font-family: "Noto Naskh Arabic", serif;
+      font-size: 7.2px;
+      font-weight: 600;
     }
     .title {
-      margin-top: 2px;
-      font-size: 16px;
-      font-weight: 700;
-      color: #0b1722;
+      margin-top: 6px;
+      font-size: 15px;
+      font-weight: 800;
     }
-    .date { margin-top: 3px; font-size: 11px; color: #4b5560; }
+    .meta {
+      margin-top: 4px;
+      font-size: 10.5px;
+      color: #222;
+    }
     .rule {
       height: 1px;
       margin: 8px 0 7px;
-      background: #d4af6a;
+      background: #222;
     }
-    .summary {
-      margin: 0 0 8px;
-      font-size: 11.5px;
-      color: #2a3138;
-    }
-    .order-table-wrap {
-      direction: ltr;
-    }
+    .order-table-wrap { direction: ltr; }
     table {
       width: 100%;
-      max-width: 190mm;
       border-collapse: collapse;
       table-layout: fixed;
       direction: ltr;
@@ -466,7 +482,7 @@ export function buildLensOrderDocumentHtml(
     thead { display: table-header-group; }
     tr { break-inside: avoid; page-break-inside: avoid; }
     th, td {
-      border: 1px solid #c5ccd3;
+      border: 0.4pt solid #666;
       padding: 5px 6px;
       text-align: center;
       font-size: 11px;
@@ -474,44 +490,34 @@ export function buildLensOrderDocumentHtml(
       vertical-align: middle;
     }
     th {
-      background: #0b1722;
-      color: #f4f7fa;
+      background: #1a1a1a;
+      color: #fff;
       font-weight: 700;
     }
     tr.section td {
-      background: #eef2f6;
-      color: #0b1722;
+      background: #ececec;
+      color: #111;
       font-weight: 800;
-      text-align: right;
-      direction: rtl;
-      unicode-bidi: isolate;
+      font-size: 13px;
+      text-align: center;
     }
-    tbody tr:nth-child(even):not(.section) td { background: #f4f6f8; }
+    tbody tr:nth-child(even):not(.section) td { background: #f3f3f3; }
     tbody tr:nth-child(odd):not(.section) td { background: #fff; }
     td.ltr {
       direction: ltr;
       unicode-bidi: isolate;
       font-variant-numeric: tabular-nums;
     }
-    td.num { font-variant-numeric: tabular-nums; }
-    td.qty {
-      color: #b8862b;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-    }
-    .total {
-      margin-top: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #0b1722;
-    }
+    td.num, td.qty { font-variant-numeric: tabular-nums; }
+    td.qty { font-weight: 800; }
     .footer {
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 10px;
-      letter-spacing: 0.08em;
-      color: #8a929c;
+      color: #222;
       text-align: center;
     }
+    .footer-web { direction: ltr; unicode-bidi: isolate; }
+    .footer-phone { margin-top: 3px; font-variant-numeric: tabular-nums; }
     @media print {
       body { padding: 0; }
       .sheet { max-width: none; }
@@ -521,12 +527,19 @@ export function buildLensOrderDocumentHtml(
 <body>
   <div class="sheet">
     <header class="header">
-      <p class="brand"><span class="brand-en">OYON OPTICS</span><span class="brand-sep">|</span><span class="brand-he">עיון אופטיקה</span></p>
+      <div class="logo" aria-label="OYON">
+        <span class="logo-en">OYON</span>
+        <span class="logo-ar-row">
+          <span class="logo-line"></span>
+          <span class="logo-ar">عيون</span>
+          <span class="logo-line"></span>
+        </span>
+      </div>
       <h1 class="title">רשימת הזמנה לעדשות</h1>
-      <p class="date">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
+      <p class="meta">${escapeLensOrderText(formatLensOrderDate(generatedAt))}</p>
+      <p class="meta">סה״כ כמות נדרשת: ${totals.requiredQuantity} | סה״כ כמות להזמנה: ${totals.quantity}</p>
     </header>
     <div class="rule"></div>
-    <p class="summary">סה״כ כמות נדרשת: ${totals.requiredQuantity} | סה״כ כמות להזמנה: ${totals.quantity}</p>
     <div class="order-table-wrap">
     <table>
       <colgroup>
@@ -550,8 +563,10 @@ export function buildLensOrderDocumentHtml(
       <tbody>${body || `<tr><td colspan="6">אין פריטים להזמנה</td></tr>`}</tbody>
     </table>
     </div>
-    <p class="total">סה״כ כמות להזמנה: ${totals.quantity}</p>
-    <p class="footer">OYON OPTICS</p>
+    <div class="footer">
+      <p>${escapeLensOrderText(LENS_ORDER_LOCATION_HE)} · <span class="footer-web">${escapeLensOrderText(LENS_ORDER_WEBSITE)}</span></p>
+      ${phoneLine}
+    </div>
   </div>
 </body>
 </html>`;

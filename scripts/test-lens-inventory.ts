@@ -199,21 +199,20 @@ const html = buildLensOrderDocumentHtml(orderRows, generatedAt);
 assert.match(html, /lang="he"/);
 assert.match(html, /dir="rtl"/);
 assert.match(html, /Noto Sans Hebrew/);
-assert.match(html, /OYON OPTICS/);
-assert.match(html, /עיון אופטיקה/);
-assert.match(
-  html,
-  /class="brand-en">OYON OPTICS<\/span><span class="brand-sep">\|<\/span><span class="brand-he">עיון אופטיקה<\/span>/,
-);
+assert.match(html, />OYON</);
+assert.match(html, /عيون/);
 assert.match(html, /רשימת הזמנה לעדשות/);
 assert.match(html, /סה״כ כמות נדרשת: 17/);
 assert.match(html, /סה״כ כמות להזמנה: 10/);
+assert.match(html, /דיר חנא/);
+assert.match(html, /www\.oyonoptics\.com/);
+assert.doesNotMatch(html, /instagram/i);
 assert.doesNotMatch(html, /סוג עדשה/);
 assert.match(html, /כמות נדרשת/);
 assert.match(html, /מלאי נוכחי/);
 assert.match(html, /כמות להזמנה/);
-assert.match(html, /SPH שלילי \+ PLANO/);
-assert.match(html, /SPH חיובי/);
+assert.match(html, />−</);
+assert.match(html, />\+</);
 assert.match(html, /thead \{ display: table-header-group; \}/);
 assert.match(html, /page-break-inside: avoid/);
 assert.match(html, /A4 portrait/);
@@ -237,6 +236,7 @@ assert.doesNotMatch(html, /<td>\(-\)<\/td>/);
 assert.doesNotMatch(html, /<td>\(\+\)<\/td>/);
 assert.match(html, /<td class="qty">3<\/td>/);
 assert.doesNotMatch(html, /col\.kind/);
+assert.match(html, /font-size: 11\.2px/);
 assert.match(html, /<td class="num">1<\/td>\s*<td class="ltr">-1\.00<\/td>/);
 
 const htmlCylCells = [...html.matchAll(/<td class="ltr">([^<]*)<\/td>/g)].map(
@@ -249,6 +249,15 @@ assert.equal(htmlCylCells.includes("—"), false);
 
 const hebrewDate = formatLensOrderDate(generatedAt);
 assert.match(hebrewDate, /[\u0590-\u05FF]/);
+
+const htmlWithPhone = buildLensOrderDocumentHtml(orderRows, {
+  generatedAt,
+  phone: "052-123-4567",
+});
+assert.match(htmlWithPhone, /052-123-4567/);
+assert.doesNotMatch(html, /052-123-4567/);
+const tableOf = (source: string) => source.match(/<tbody>[\s\S]*<\/tbody>/)?.[0];
+assert.equal(tableOf(html), tableOf(htmlWithPhone));
 
 const emptyHtml = buildLensOrderDocumentHtml([]);
 assert.match(emptyHtml, /סה״כ כמות נדרשת: 0/);

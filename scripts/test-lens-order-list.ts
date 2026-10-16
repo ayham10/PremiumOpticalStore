@@ -12,8 +12,10 @@ import {
   buildLensOrderRows,
   compareLensOrderRows,
   formatLensOrderCyl,
+  LENS_ORDER_PDF_FILENAME,
   lensOrderPdfFilename,
   lensOrderSection,
+  lensOrderSectionMark,
   lensOrderTotals,
   sortLensOrderRows,
 } from "../lib/lens-inventory";
@@ -40,7 +42,10 @@ assert.deepEqual([...LENS_ORDER_CYL_SEQUENCE], [
 ]);
 assert.equal(formatLensOrderCyl("0.00"), "0.00");
 assert.equal(formatLensOrderCyl("-0.75"), "-0.75");
-assert.equal(lensOrderPdfFilename(new Date("2026-10-15T12:00:00.000Z")), "OYON-Lens-Order-2026-10-15.pdf");
+assert.equal(lensOrderPdfFilename(new Date("2026-10-15T12:00:00.000Z")), "רשימת הזמנות.pdf");
+assert.equal(LENS_ORDER_PDF_FILENAME, "רשימת הזמנות.pdf");
+assert.equal(lensOrderSectionMark("negative"), "−");
+assert.equal(lensOrderSectionMark("positive"), "+");
 
 const mixed: LensInventoryCell[] = [
   cell({ type: "plus", sph: "+4.75", cyl: "-2.00", currentStock: 1, desiredStock: 4 }),
@@ -139,6 +144,10 @@ assert.deepEqual(
 
 assert.equal(pdfRtlText("עיון אופטיקה"), [... "עיון אופטיקה"].reverse().join(""));
 assert.match(pdfRtlText("قائمة الطلبية"), /[\uFE70-\uFEFF]|[\u0600-\u06FF]/);
+assert.match(pdfRtlText("סה״כ כמות להזמנה: 24"), /24/);
+assert.doesNotMatch(pdfRtlText("סה״כ כמות להזמנה: 24"), /42/);
+assert.match(pdfRtlText("15 באוקטובר 2026"), /15/);
+assert.match(pdfRtlText("15 באוקטובר 2026"), /2026/);
 
 const fonts = {
   latin: new Uint8Array(readFileSync(join("public/fonts/NotoSans-Regular.ttf"))),
@@ -150,7 +159,7 @@ const generatedAt = new Date("2026-10-15T09:00:00.000Z");
 const pdf = buildLensOrderPdf(orderRows, { generatedAt, fonts });
 const header = Buffer.from(pdf.bytes.subarray(0, 8)).toString("latin1");
 assert.equal(header.startsWith("%PDF-"), true, header);
-assert.equal(pdf.filename, "OYON-Lens-Order-2026-10-15.pdf");
+assert.equal(pdf.filename, "רשימת הזמנות.pdf");
 assert.equal(pdf.pageCount >= 1, true);
 assert.notEqual(Buffer.from(pdf.bytes.subarray(0, 15)).toString("utf8").includes("<!DOCTYPE"), true);
 
@@ -158,6 +167,16 @@ const latin1 = Buffer.from(pdf.bytes).toString("latin1");
 assert.match(latin1, /%PDF-/);
 assert.match(latin1, /%%EOF/);
 assert.doesNotMatch(latin1, /<!DOCTYPE html>/);
+assert.doesNotMatch(latin1, /instagram/i);
+
+const pdfWithPhone = buildLensOrderPdf(orderRows, {
+  generatedAt,
+  fonts,
+  phone: "052-123-4567",
+});
+assert.equal(pdfWithPhone.filename, "רשימת הזמנות.pdf");
+assert.equal(pdfWithPhone.pageCount, pdf.pageCount);
+assert.notEqual(Buffer.from(pdfWithPhone.bytes).equals(Buffer.from(pdf.bytes)), true);
 
 const pdfTotals = lensOrderTotals(orderRows);
 assert.equal(pdfTotals.quantity, 24);
@@ -217,9 +236,35 @@ assert.equal(Buffer.from(multi.bytes.subarray(0, 5)).toString("latin1"), "%PDF-"
 assert.ok(multi.pageCount >= 2, `expected multi-page PDF, got ${multi.pageCount}`);
 assert.ok(multi.bytes.byteLength > 5000);
 
-const artifact = join("/tmp", "OYON-Lens-Order-2026-10-15.pdf");
+const printNoPhone = buildLensOrderDocumentHtml(manyRows, { generatedAt });
+const printWithPhone = buildLensOrderDocumentHtml(manyRows, {
+  generatedAt,
+  phone: "052-123-4567",
+});
+const tbodyOf = (source: string) => source.match(/<tbody>[\s\S]*<\/tbody>/)?.[0];
+assert.equal(tbodyOf(printNoPhone), tbodyOf(printWithPhone));
+assert.doesNotMatch(printNoPhone, /052-123-4567/);
+assert.match(printWithPhone, /052-123-4567/);
+assert.doesNotMatch(printNoPhone, /instagram/i);
+assert.doesNotMatch(printWithPhone, /instagram/i);
+
+const multiWithPhone = buildLensOrderPdf(manyRows, {
+  generatedAt,
+  fonts,
+  phone: "052-123-4567",
+});
+assert.equal(multiWithPhone.filename, "רשימת הזמנות.pdf");
+assert.equal(multiWithPhone.pageCount, multi.pageCount);
+assert.notEqual(
+  Buffer.from(multiWithPhone.bytes).equals(Buffer.from(multi.bytes)),
+  true,
+);
+
+const artifact = join("/tmp", "רשימת הזמנות.pdf");
 writeFileSync(artifact, multi.bytes);
 assert.equal(readFileSync(artifact).subarray(0, 5).toString("latin1"), "%PDF-");
+writeFileSync("/tmp/oyon-lens-order-with-phone.pdf", multiWithPhone.bytes);
+writeFileSync("/tmp/oyon-lens-order-without-phone.pdf", multi.bytes);
 
 console.log(
   JSON.stringify({
