@@ -153,8 +153,12 @@ assert.doesNotMatch(html, /עיניים אופטיקה/);
 
 assert.equal(pdfRtlText("עיון אופטיקה"), [... "עיון אופטיקה"].reverse().join(""));
 assert.match(pdfRtlText("قائمة الطلبية"), /[\uFE70-\uFEFF]|[\u0600-\u06FF]/);
-assert.match(pdfRtlText("סה״כ כמות להזמנה: 24"), /24/);
-assert.doesNotMatch(pdfRtlText("סה״כ כמות להזמנה: 24"), /42/);
+assert.doesNotMatch(
+  readFileSync("lib/lens-order-pdf.ts", "utf8"),
+  /סה״כ כמות נדרשת/,
+);
+assert.match(readFileSync("lib/lens-order-pdf.ts", "utf8"), /כמות הזמנה: \$\{totals\.quantity\}/);
+assert.match(pdfRtlText("כמות הזמנה: 24"), /24/);
 assert.match(pdfRtlText("15 באוקטובר 2026"), /15/);
 assert.match(pdfRtlText("15 באוקטובר 2026"), /2026/);
 

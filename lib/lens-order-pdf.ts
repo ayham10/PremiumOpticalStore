@@ -304,7 +304,7 @@ function drawPageHeader(
 
   drawRtlMixed(
     doc,
-    `סה״כ כמות נדרשת: ${totals.requiredQuantity} | סה״כ כמות להזמנה: ${totals.quantity}`,
+    `כמות הזמנה: ${totals.quantity}`,
     right,
     45.4,
     10.8,
