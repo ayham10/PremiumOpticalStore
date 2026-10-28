@@ -6,8 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ClipboardEvent,
-  type KeyboardEvent,
 } from "react";
 import { ChevronDown, Contact, Download, Printer } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
@@ -17,17 +15,19 @@ import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ApiError, apiFetch } from "@/lib/admin-api";
 import { formatLocalPhone } from "@/lib/format";
+import LensInventoryMatrix, {
+  type LensSizeModalRequest,
+} from "@/components/admin/LensInventoryMatrix";
 import {
-  LENS_CYL,
-  LENS_MINUS_SPH,
-  LENS_PLUS_SPH,
-  LENS_SPH_ONLY_CYL,
   buildLensOrderRows,
   lensCellKey,
   lensOrderTotals,
-  lensSignLabel,
-  lensStockTone,
 } from "@/lib/lens-inventory";
+import {
+  effectiveMinusSph,
+  effectivePlusSph,
+  emptyLensInventoryCustomGrid,
+} from "@/lib/lens-inventory-grid";
 import {
   LENS_ORDER_SHEET_CSS,
   buildLensOrderSheetHtml,
@@ -38,8 +38,6 @@ import {
   lensCellToCoord,
   lensCoordToCell,
   lensDraftCount,
-  moveLensCoord,
-  moveLensEditTarget,
   parseLensPasteGrid,
   parseLensQtyInput,
   setLensDraft,
@@ -50,7 +48,11 @@ import {
   type LensEditField,
   type LensGridCoord,
 } from "@/lib/lens-inventory-edit";
-import type { LensInventoryCell, LensInventorySign } from "@/lib/types";
+import type {
+  LensInventoryCell,
+  LensInventoryCustomGrid,
+  LensInventorySign,
+} from "@/lib/types";
 
 type ActiveCell = {
   type: LensInventorySign;
@@ -68,6 +70,12 @@ export default function AdminLensInventoryPage() {
   const { settings } = useBranding();
   const { notifySaved } = useAdminSuccessNotice();
   const [items, setItems] = useState<LensInventoryCell[]>([]);
+  const [customGrid, setCustomGrid] = useState<LensInventoryCustomGrid>(
+    emptyLensInventoryCustomGrid(),
+  );
+  const [sizeModal, setSizeModal] = useState<LensSizeModalRequest | null>(null);
+  const [sizeValue, setSizeValue] = useState("");
+  const [gridSaving, setGridSaving] = useState(false);
   const [drafts, setDrafts] = useState<LensDraftMap>({});
   const [undoStack, setUndoStack] = useState<LensDraftMap[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +92,8 @@ export default function AdminLensInventoryPage() {
   const itemsRef = useRef(items);
   const activeRef = useRef(active);
   const editTextRef = useRef(editText);
+  const customGridRef = useRef(customGrid);
+  customGridRef.current = customGrid;
   draftsRef.current = drafts;
   itemsRef.current = items;
   activeRef.current = active;
@@ -93,10 +103,16 @@ export default function AdminLensInventoryPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiFetch<{ items: LensInventoryCell[] }>(
-        "/api/lens-inventory",
-      );
+      const data = await apiFetch<{
+        items: LensInventoryCell[];
+        customGrid?: LensInventoryCustomGrid;
+      }>("/api/lens-inventory");
       setItems(Array.isArray(data.items) ? data.items : []);
+      setCustomGrid(
+        data.customGrid
+          ? { ...emptyLensInventoryCustomGrid(), ...data.customGrid }
+          : emptyLensInventoryCustomGrid(),
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("admin.lensInventory.loadError"),
@@ -131,7 +147,10 @@ export default function AdminLensInventoryPage() {
     () => viewedLensItems(items, drafts),
     [items, drafts],
   );
-  const orderRows = useMemo(() => buildLensOrderRows(viewedItems), [viewedItems]);
+  const orderRows = useMemo(
+    () => buildLensOrderRows(viewedItems, customGrid),
+    [viewedItems, customGrid],
+  );
   const totals = useMemo(() => lensOrderTotals(orderRows), [orderRows]);
   const dirtyCount = lensDraftCount(drafts);
 
@@ -222,7 +241,7 @@ export default function AdminLensInventoryPage() {
     (next: LensGridCoord | null, field?: LensEditField) => {
       if (!next) return;
       if (!commitActive()) return;
-      const cell = lensCoordToCell(next);
+      const cell = lensCoordToCell(next, customGridRef.current);
       if (!cell) return;
       activate(cell.type, cell.sph, cell.cyl, field ?? "current");
     },
@@ -233,7 +252,7 @@ export default function AdminLensInventoryPage() {
     (text: string) => {
       const cell = activeRef.current;
       if (!cell) return false;
-      const origin = lensCellToCoord(cell.type, cell.sph, cell.cyl);
+      const origin = lensCellToCoord(cell.type, cell.sph, cell.cyl, customGridRef.current);
       if (!origin) return false;
       const grid = parseLensPasteGrid(text);
       if (!grid.length) return false;
@@ -244,6 +263,7 @@ export default function AdminLensInventoryPage() {
         itemsRef.current,
         origin,
         grid,
+        customGridRef.current,
       );
       draftsRef.current = nextDrafts;
       setDrafts(nextDrafts);
@@ -394,6 +414,53 @@ export default function AdminLensInventoryPage() {
     return value || null;
   }
 
+  function openSizeModal(request: LensSizeModalRequest) {
+    setSizeModal(request);
+    setSizeValue(
+      request.mode === "edit" ? request.from : request.mode === "delete" ? request.value : "",
+    );
+    setError("");
+  }
+
+  async function submitSizeModal() {
+    if (!sizeModal) return;
+    setGridSaving(true);
+    setError("");
+    try {
+      let body: Record<string, string>;
+      if (sizeModal.mode === "add") {
+        body = { action: "add", axis: sizeModal.axis, value: sizeValue };
+      } else if (sizeModal.mode === "edit") {
+        body = {
+          action: "edit",
+          axis: sizeModal.axis,
+          from: sizeModal.from,
+          to: sizeValue,
+        };
+      } else {
+        body = { action: "delete", axis: sizeModal.axis, value: sizeModal.value };
+      }
+      const saved = await apiFetch<{
+        items: LensInventoryCell[];
+        customGrid: LensInventoryCustomGrid;
+      }>("/api/lens-inventory/grid", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      setItems(Array.isArray(saved.items) ? saved.items : []);
+      setCustomGrid(saved.customGrid ?? emptyLensInventoryCustomGrid());
+      setSizeModal(null);
+      setSizeValue("");
+      notifySaved();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t("admin.lensInventory.gridSaveError"),
+      );
+    } finally {
+      setGridSaving(false);
+    }
+  }
+
   function openExportModal() {
     const stored = storePhonePrefill();
     setPhoneDraft(stored);
@@ -475,10 +542,11 @@ export default function AdminLensInventoryPage() {
       ) : (
         <>
           <div className="admin-lens-matrices" dir="ltr">
-            <LensMatrix
+            <LensInventoryMatrix
               title={t("admin.lensInventory.minusTitle")}
               type="minus"
-              sphs={LENS_MINUS_SPH}
+              sphs={effectiveMinusSph(customGrid)}
+              customGrid={customGrid}
               items={items}
               drafts={drafts}
               active={active}
@@ -490,11 +558,13 @@ export default function AdminLensInventoryPage() {
               onPasteGrid={onPasteGrid}
               onCancelCell={cancelActiveCell}
               onCommitBlur={commitActive}
+              onSizeAction={openSizeModal}
             />
-            <LensMatrix
+            <LensInventoryMatrix
               title={t("admin.lensInventory.plusTitle")}
               type="plus"
-              sphs={LENS_PLUS_SPH}
+              sphs={effectivePlusSph(customGrid)}
+              customGrid={customGrid}
               items={items}
               drafts={drafts}
               active={active}
@@ -506,6 +576,7 @@ export default function AdminLensInventoryPage() {
               onPasteGrid={onPasteGrid}
               onCancelCell={cancelActiveCell}
               onCommitBlur={commitActive}
+              onSizeAction={openSizeModal}
             />
           </div>
 
@@ -594,6 +665,61 @@ export default function AdminLensInventoryPage() {
       )}
 
       <AdminModal
+        open={Boolean(sizeModal)}
+        title={
+          sizeModal?.mode === "add"
+            ? t("admin.lensInventory.addSizeTitle")
+            : sizeModal?.mode === "edit"
+              ? t("admin.lensInventory.editSizeTitle")
+              : t("admin.lensInventory.deleteSizeTitle")
+        }
+        onClose={() => {
+          if (gridSaving) return;
+          setSizeModal(null);
+        }}
+      >
+        {sizeModal?.mode === "delete" ? (
+          <p className="admin-muted">{t("admin.lensInventory.deleteSizeBody")}</p>
+        ) : (
+          <>
+            <label className="admin-field">
+              <span>{t("admin.lensInventory.sizeValueLabel")}</span>
+              <input
+                className="admin-input"
+                value={sizeValue}
+                onChange={(event) => setSizeValue(event.target.value)}
+                placeholder={t("admin.lensInventory.sizeValuePlaceholder")}
+                dir="ltr"
+              />
+            </label>
+            <p className="admin-muted">{t("admin.lensInventory.sizeValueHint")}</p>
+          </>
+        )}
+        <div className="admin-modal-actions">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={gridSaving}
+            onClick={() => setSizeModal(null)}
+          >
+            {t("admin.lensInventory.cancel")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-accent"
+            disabled={gridSaving || (sizeModal?.mode !== "delete" && !sizeValue.trim())}
+            onClick={() => void submitSizeModal()}
+          >
+            {gridSaving
+              ? t("admin.lensInventory.saving")
+              : sizeModal?.mode === "delete"
+                ? t("admin.lensInventory.deleteSizeConfirmBtn")
+                : t("admin.lensInventory.save")}
+          </button>
+        </div>
+      </AdminModal>
+
+      <AdminModal
         open={exportOpen}
         title={t("admin.lensInventory.exportTitle")}
         onClose={() => {
@@ -652,318 +778,5 @@ export default function AdminLensInventoryPage() {
         </div>
       </AdminModal>
     </div>
-  );
-}
-
-function LensStockCell({
-  type,
-  sph,
-  cyl,
-  items,
-  drafts,
-  active,
-  editText,
-  onActivate,
-  onEditText,
-  onLiveDraft,
-  onMove,
-  onPasteGrid,
-  onCancelCell,
-  onCommitBlur,
-  ariaExtra,
-}: {
-  type: LensInventorySign;
-  sph: string;
-  cyl: string;
-  items: LensInventoryCell[];
-  drafts: LensDraftMap;
-  active: ActiveCell | null;
-  editText: string;
-  onActivate: (
-    type: LensInventorySign,
-    sph: string,
-    cyl: string,
-    field: LensEditField,
-  ) => void;
-  onEditText: (value: string) => void;
-  onLiveDraft: (
-    type: LensInventorySign,
-    sph: string,
-    cyl: string,
-    field: LensEditField,
-    parsed: number,
-  ) => void;
-  onMove: (next: LensGridCoord | null, field?: LensEditField) => void;
-  onPasteGrid: (text: string) => boolean;
-  onCancelCell: () => void;
-  onCommitBlur: () => boolean;
-  ariaExtra: string;
-}) {
-  const { t } = useLocale();
-  const viewed = viewedLensCell(items, drafts, type, sph, cyl);
-  const tone = lensStockTone(viewed.currentStock, viewed.desiredStock);
-  const dirty = Boolean(drafts[lensCellKey(type, sph, cyl)]);
-  const isActive =
-    active?.type === type && active.sph === sph && active.cyl === cyl;
-  const coord = lensCellToCoord(type, sph, cyl);
-
-  function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Tab") {
-      event.preventDefault();
-      onMove(coord ? tabLensCoord(coord, event.shiftKey) : null, active?.field);
-      return;
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      onMove(
-        coord ? moveLensCoord(coord, event.shiftKey ? -1 : 1, 0) : null,
-        active?.field,
-      );
-      return;
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onCancelCell();
-      return;
-    }
-    if (event.key === "/") {
-      event.preventDefault();
-      onActivate(type, sph, cyl, active?.field === "desired" ? "current" : "desired");
-      return;
-    }
-    if (
-      event.key === "ArrowLeft" ||
-      event.key === "ArrowRight" ||
-      event.key === "ArrowUp" ||
-      event.key === "ArrowDown"
-    ) {
-      event.preventDefault();
-      if (!coord) return;
-      const next = moveLensEditTarget(
-        coord,
-        active?.field ?? "current",
-        event.key,
-        true,
-      );
-      if (!next) return;
-      if (
-        next.coord.type === coord.type &&
-        next.coord.row === coord.row &&
-        next.coord.col === coord.col
-      ) {
-        onActivate(type, sph, cyl, next.field);
-        return;
-      }
-      onMove(next.coord, next.field);
-    }
-  }
-
-  function onPaste(event: ClipboardEvent<HTMLInputElement>) {
-    const text = event.clipboardData.getData("text");
-    if (text.includes("\t") || text.includes("\n") || text.includes("/")) {
-      if (onPasteGrid(text)) event.preventDefault();
-    }
-  }
-
-  function onQtyChange(value: string, field: LensEditField) {
-    if (value !== "" && !/^\d{0,4}$/.test(value)) return;
-    onEditText(value);
-    const parsed = value === "" ? 0 : parseLensQtyInput(value);
-    if (parsed == null) return;
-    onLiveDraft(type, sph, cyl, field, parsed);
-  }
-
-  if (isActive && active) {
-    const currentValue =
-      active.field === "current" ? editText : String(viewed.currentStock);
-    const desiredValue =
-      active.field === "desired" ? editText : String(viewed.desiredStock);
-    return (
-      <td>
-        <div
-          className={`admin-lens-cell is-${tone}${dirty ? " is-dirty" : ""} is-editing`}
-          aria-label={`${t("admin.lensInventory.editTitle")} ${lensSignLabel(type)} ${sph} ${ariaExtra}`}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-              onCommitBlur();
-            }
-          }}
-        >
-          <input
-            className="admin-lens-qty-input"
-            data-lens-input={`${type}:${sph}:${cyl}:current`}
-            inputMode="numeric"
-            autoComplete="off"
-            spellCheck={false}
-            enterKeyHint="next"
-            maxLength={4}
-            value={currentValue}
-            aria-label={t("admin.lensInventory.colCurrent")}
-            onChange={(event) => {
-              if (active.field !== "current") onActivate(type, sph, cyl, "current");
-              onQtyChange(event.target.value, "current");
-            }}
-            onFocus={() => {
-              if (active.field !== "current") onActivate(type, sph, cyl, "current");
-            }}
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-            onBlur={() => {
-              /* commit when leaving the cell entirely */
-            }}
-          />
-          <span className="admin-lens-cell-slash">/</span>
-          <input
-            className="admin-lens-qty-input"
-            data-lens-input={`${type}:${sph}:${cyl}:desired`}
-            inputMode="numeric"
-            autoComplete="off"
-            spellCheck={false}
-            enterKeyHint="next"
-            maxLength={4}
-            value={desiredValue}
-            aria-label={t("admin.lensInventory.colDesired")}
-            onChange={(event) => {
-              if (active.field !== "desired") onActivate(type, sph, cyl, "desired");
-              onQtyChange(event.target.value, "desired");
-            }}
-            onFocus={() => {
-              if (active.field !== "desired") onActivate(type, sph, cyl, "desired");
-            }}
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-          />
-        </div>
-      </td>
-    );
-  }
-
-  return (
-    <td>
-      <button
-        type="button"
-        className={`admin-lens-cell is-${tone}${dirty ? " is-dirty" : ""}`}
-        onClick={() => onActivate(type, sph, cyl, "current")}
-        onDoubleClick={() => onActivate(type, sph, cyl, "desired")}
-        aria-label={`${t("admin.lensInventory.editTitle")} ${lensSignLabel(type)} ${sph} ${ariaExtra}`}
-      >
-        {viewed.currentStock}/{viewed.desiredStock}
-      </button>
-    </td>
-  );
-}
-
-function LensMatrix({
-  title,
-  type,
-  sphs,
-  items,
-  drafts,
-  active,
-  editText,
-  onActivate,
-  onEditText,
-  onLiveDraft,
-  onMove,
-  onPasteGrid,
-  onCancelCell,
-  onCommitBlur,
-}: {
-  title: string;
-  type: LensInventorySign;
-  sphs: readonly string[];
-  items: LensInventoryCell[];
-  drafts: LensDraftMap;
-  active: ActiveCell | null;
-  editText: string;
-  onActivate: (
-    type: LensInventorySign,
-    sph: string,
-    cyl: string,
-    field: LensEditField,
-  ) => void;
-  onEditText: (value: string) => void;
-  onLiveDraft: (
-    type: LensInventorySign,
-    sph: string,
-    cyl: string,
-    field: LensEditField,
-    parsed: number,
-  ) => void;
-  onMove: (next: LensGridCoord | null, field?: LensEditField) => void;
-  onPasteGrid: (text: string) => boolean;
-  onCancelCell: () => void;
-  onCommitBlur: () => boolean;
-}) {
-  return (
-    <section className="admin-card admin-lens-card" dir="rtl">
-      <h2>{title}</h2>
-      <div className="admin-lens-scroll" dir="ltr">
-        <table className="admin-lens-matrix" dir="ltr">
-          <colgroup>
-            <col className="admin-lens-col-sph" />
-            <col className="admin-lens-col-sph-only" />
-            {LENS_CYL.map((cyl) => (
-              <col key={cyl} className="admin-lens-col-cyl" />
-            ))}
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col">SPH/CYL</th>
-              <th scope="col">SPH</th>
-              {LENS_CYL.map((cyl) => (
-                <th key={cyl} scope="col">
-                  {cyl}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sphs.map((sph) => (
-              <tr key={sph}>
-                <th scope="row">{sph}</th>
-                <LensStockCell
-                  type={type}
-                  sph={sph}
-                  cyl={LENS_SPH_ONLY_CYL}
-                  items={items}
-                  drafts={drafts}
-                  active={active}
-                  editText={editText}
-                  onActivate={onActivate}
-                  onEditText={onEditText}
-                  onLiveDraft={onLiveDraft}
-                  onMove={onMove}
-                  onPasteGrid={onPasteGrid}
-                  onCancelCell={onCancelCell}
-                  onCommitBlur={onCommitBlur}
-                  ariaExtra="SPH"
-                />
-                {LENS_CYL.map((cyl) => (
-                  <LensStockCell
-                    key={cyl}
-                    type={type}
-                    sph={sph}
-                    cyl={cyl}
-                    items={items}
-                    drafts={drafts}
-                    active={active}
-                    editText={editText}
-                    onActivate={onActivate}
-                    onEditText={onEditText}
-                    onLiveDraft={onLiveDraft}
-                    onMove={onMove}
-                    onPasteGrid={onPasteGrid}
-                    onCancelCell={onCancelCell}
-                    onCommitBlur={onCommitBlur}
-                    ariaExtra={cyl}
-                  />
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
   );
 }

@@ -1,4 +1,13 @@
-import type { LensInventoryCell, LensInventorySign } from "@/lib/types";
+import type { LensInventoryCell, LensInventoryCustomGrid, LensInventorySign } from "@/lib/types";
+import {
+  buildLensOrderRankMaps,
+  effectiveCylSequence,
+  effectiveMinusSph,
+  effectivePlusSph,
+  emptyLensInventoryCustomGrid,
+  isAllowedCylWithGrid,
+  isAllowedSphWithGrid,
+} from "@/lib/lens-inventory-grid";
 
 export const LENS_MINUS_SPH = [
   "PLANO",
@@ -87,16 +96,23 @@ export function isLensInventorySign(value: unknown): value is LensInventorySign 
   return value === "minus" || value === "plus";
 }
 
-export function isAllowedSph(type: LensInventorySign, sph: string): boolean {
-  return type === "minus" ? MINUS_SPH.has(sph) : PLUS_SPH.has(sph);
+export function isAllowedSph(
+  type: LensInventorySign,
+  sph: string,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): boolean {
+  return isAllowedSphWithGrid(type, sph, grid);
 }
 
 export function isSphOnlyCyl(cyl: string): boolean {
   return cyl === LENS_SPH_ONLY_CYL;
 }
 
-export function isAllowedCyl(cyl: string): boolean {
-  return isSphOnlyCyl(cyl) || CYL.has(cyl);
+export function isAllowedCyl(
+  cyl: string,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): boolean {
+  return isAllowedCylWithGrid(cyl, grid);
 }
 
 export function formatLensCylDisplay(cyl: string): string {
@@ -140,25 +156,28 @@ export function lensOrderSection(
 export function compareLensOrderRows(
   a: Pick<LensOrderRow, "type" | "sph" | "cyl">,
   b: Pick<LensOrderRow, "type" | "sph" | "cyl">,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): number {
+  const { cylOrder, minusSphOrder, plusSphOrder } = buildLensOrderRankMaps(grid);
   const sectionA = lensOrderSection(a) === "negative" ? 0 : 1;
   const sectionB = lensOrderSection(b) === "negative" ? 0 : 1;
   if (sectionA !== sectionB) return sectionA - sectionB;
-  const cylA = CYL_ORDER.get(a.cyl) ?? 999;
-  const cylB = CYL_ORDER.get(b.cyl) ?? 999;
+  const cylA = cylOrder.get(a.cyl) ?? 999;
+  const cylB = cylOrder.get(b.cyl) ?? 999;
   if (cylA !== cylB) return cylA - cylB;
   if (sectionA === 0) {
     return (
-      (MINUS_SPH_ORDER.get(a.sph) ?? 999) - (MINUS_SPH_ORDER.get(b.sph) ?? 999)
+      (minusSphOrder.get(a.sph) ?? 999) - (minusSphOrder.get(b.sph) ?? 999)
     );
   }
-  return (PLUS_SPH_ORDER.get(a.sph) ?? 999) - (PLUS_SPH_ORDER.get(b.sph) ?? 999);
+  return (plusSphOrder.get(a.sph) ?? 999) - (plusSphOrder.get(b.sph) ?? 999);
 }
 
 export function sortLensOrderRows<T extends Pick<LensOrderRow, "type" | "sph" | "cyl">>(
   rows: T[],
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): T[] {
-  return [...rows].sort(compareLensOrderRows);
+  return [...rows].sort((a, b) => compareLensOrderRows(a, b, grid));
 }
 
 export function buildLensOrderDisplayItems(
@@ -236,12 +255,13 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 export function sanitizeLensInventoryCell(
   value: unknown,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): LensInventoryCell | null {
   const row = asRecord(value);
   if (!isLensInventorySign(row.type)) return null;
   const sph = typeof row.sph === "string" ? row.sph.trim() : "";
   const cyl = typeof row.cyl === "string" ? row.cyl.trim() : "";
-  if (!isAllowedSph(row.type, sph) || !isAllowedCyl(cyl)) return null;
+  if (!isAllowedSph(row.type, sph, grid) || !isAllowedCyl(cyl, grid)) return null;
   const currentStock = parseLensQty(row.currentStock);
   const desiredStock = parseLensQty(row.desiredStock);
   if (currentStock == null || desiredStock == null) return null;
@@ -259,11 +279,14 @@ export function sanitizeLensInventoryCell(
   };
 }
 
-export function normalizeLensInventory(raw: unknown): LensInventoryCell[] {
+export function normalizeLensInventory(
+  raw: unknown,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): LensInventoryCell[] {
   const map = new Map<string, LensInventoryCell>();
   if (!Array.isArray(raw)) return [];
   for (const row of raw) {
-    const cell = sanitizeLensInventoryCell(row);
+    const cell = sanitizeLensInventoryCell(row, grid);
     if (!cell) continue;
     map.set(lensCellKey(cell.type, cell.sph, cell.cyl), cell);
   }
@@ -297,15 +320,19 @@ export function getLensCell(
   };
 }
 
-export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
+export function buildLensOrderRows(
+  items: LensInventoryCell[],
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): LensOrderRow[] {
   const rows: LensOrderRow[] = [];
   const tables: Array<{ type: LensInventorySign; sphs: readonly string[] }> = [
-    { type: "minus", sphs: LENS_MINUS_SPH },
-    { type: "plus", sphs: LENS_PLUS_SPH },
+    { type: "minus", sphs: effectiveMinusSph(grid) },
+    { type: "plus", sphs: effectivePlusSph(grid) },
   ];
+  const cylSequence = effectiveCylSequence(grid);
   for (const table of tables) {
     for (const sph of table.sphs) {
-      for (const cyl of LENS_ORDER_CYL_SEQUENCE) {
+      for (const cyl of cylSequence) {
         const { currentStock, desiredStock } = getLensCell(
           items,
           table.type,
@@ -326,7 +353,7 @@ export function buildLensOrderRows(items: LensInventoryCell[]): LensOrderRow[] {
       }
     }
   }
-  return sortLensOrderRows(rows);
+  return sortLensOrderRows(rows, grid);
 }
 
 export function lensOrderTotals(rows: LensOrderRow[]): {

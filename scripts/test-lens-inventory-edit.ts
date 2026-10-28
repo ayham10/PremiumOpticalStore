@@ -295,6 +295,7 @@ assert.equal(
 );
 
 const page = readFileSync("app/admin/lens-inventory/page.tsx", "utf8");
+const matrix = readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8");
 assert.match(page, /commitActive/);
 assert.match(page, /applyLensPaste/);
 assert.match(page, /Save Changes|saveChanges/);
@@ -304,11 +305,13 @@ assert.match(page, /includePhone/);
 assert.match(page, /openExportModal/);
 assert.match(page, /draftsToWriteItems/);
 assert.match(page, /beforeunload/);
-assert.match(page, /onClick=\{\(\) => onActivate\(type, sph, cyl, "current"\)\}/);
-assert.match(page, /onDoubleClick=\{\(\) => onActivate\(type, sph, cyl, "desired"\)\}/);
+assert.match(matrix, /onClick=\{\(\) => onActivate\(type, sph, cyl, "current"\)\}/);
+assert.match(matrix, /onDoubleClick=\{\(\) => onActivate\(type, sph, cyl, "desired"\)\}/);
 assert.match(page, /undoChanges/);
 assert.match(page, /cancelAll/);
-assert.match(page, /moveLensEditTarget/);
+assert.match(matrix, /moveLensEditTarget/);
+assert.match(page, /customGrid/);
+assert.match(page, /\/api\/lens-inventory\/grid/);
 assert.match(page, /orderOpen/);
 assert.match(page, /ChevronDown/);
 assert.match(page, /dir="ltr"/);
@@ -326,7 +329,7 @@ const pdfDownload = readFileSync("lib/lens-order-pdf-download.ts", "utf8");
 assert.match(pdfDownload, /application\/pdf/);
 assert.match(pdfDownload, /filename/);
 assert.doesNotMatch(page, /admin\.lensInventory\.colType/);
-assert.match(page, /event\.preventDefault\(\);\s*if \(!coord\) return;/);
+assert.match(matrix, /event\.preventDefault\(\);\s*if \(!coord\) return;/);
 
 const css = readFileSync("app/globals.css", "utf8");
 assert.match(css, /max-height: 42rem/);

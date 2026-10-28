@@ -19827,6 +19827,65 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   box-sizing: border-box;
 }
 
+.admin-lens-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admin-lens-card-head h2 {
+  margin: 0;
+}
+
+.admin-lens-size-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-lens-add-size {
+  font-size: 12px;
+  padding: 6px 10px;
+  gap: 6px;
+}
+
+.admin-lens-axis-label {
+  display: inline-block;
+  margin-inline-end: 4px;
+}
+
+.admin-lens-axis-actions {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.admin-lens-axis-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(212, 175, 106, 0.12);
+  color: rgba(212, 175, 106, 0.95);
+  cursor: pointer;
+}
+
+.admin-lens-axis-btn.is-danger {
+  color: rgba(255, 140, 140, 0.95);
+  background: rgba(255, 100, 100, 0.1);
+}
+
+.admin-lens-axis-btn:hover {
+  background: rgba(212, 175, 106, 0.22);
+}
+
 .admin-lens-legend,
 .admin-lens-order {
   padding: 0.95rem 1.05rem;

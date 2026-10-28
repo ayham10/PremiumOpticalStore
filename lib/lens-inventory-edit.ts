@@ -1,8 +1,4 @@
 import {
-  LENS_CYL,
-  LENS_MINUS_SPH,
-  LENS_PLUS_SPH,
-  LENS_SPH_ONLY_CYL,
   getLensCell,
   isAllowedCyl,
   isAllowedSph,
@@ -11,7 +7,13 @@ import {
   parseLensQty,
   upsertLensInventoryCell,
 } from "@/lib/lens-inventory";
-import type { LensInventoryCell, LensInventorySign } from "@/lib/types";
+import {
+  effectiveCylSequence,
+  effectiveMinusSph,
+  effectivePlusSph,
+  emptyLensInventoryCustomGrid,
+} from "@/lib/lens-inventory-grid";
+import type { LensInventoryCell, LensInventoryCustomGrid, LensInventorySign } from "@/lib/types";
 
 export const LENS_QTY_MAX = 9999;
 
@@ -46,21 +48,29 @@ export type LensWriteItem = {
 
 const TABLES: LensInventorySign[] = ["minus", "plus"];
 
-export function lensSphsFor(type: LensInventorySign): readonly string[] {
-  return type === "minus" ? LENS_MINUS_SPH : LENS_PLUS_SPH;
+export function lensSphsFor(
+  type: LensInventorySign,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): readonly string[] {
+  return type === "minus" ? effectiveMinusSph(grid) : effectivePlusSph(grid);
 }
 
-export function lensCyls(): readonly string[] {
-  return [LENS_SPH_ONLY_CYL, ...LENS_CYL];
+export function lensCyls(
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): readonly string[] {
+  return effectiveCylSequence(grid);
 }
 
-export function lensCoordToCell(coord: LensGridCoord): {
+export function lensCoordToCell(
+  coord: LensGridCoord,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
+): {
   type: LensInventorySign;
   sph: string;
   cyl: string;
 } | null {
-  const sphs = lensSphsFor(coord.type);
-  const cyls = lensCyls();
+  const sphs = lensSphsFor(coord.type, grid);
+  const cyls = lensCyls(grid);
   const sph = sphs[coord.row];
   const cyl = cyls[coord.col];
   if (!sph || !cyl) return null;
@@ -71,9 +81,10 @@ export function lensCellToCoord(
   type: LensInventorySign,
   sph: string,
   cyl: string,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): LensGridCoord | null {
-  const row = lensSphsFor(type).indexOf(sph);
-  const col = lensCyls().indexOf(cyl);
+  const row = lensSphsFor(type, grid).indexOf(sph);
+  const col = lensCyls(grid).indexOf(cyl);
   if (row < 0 || col < 0) return null;
   return { type, row, col };
 }
@@ -82,10 +93,11 @@ export function moveLensCoord(
   coord: LensGridCoord,
   dRow: number,
   dCol: number,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): LensGridCoord | null {
   const next = { ...coord, row: coord.row + dRow, col: coord.col + dCol };
-  const sphs = lensSphsFor(next.type);
-  const cyls = lensCyls();
+  const sphs = lensSphsFor(next.type, grid);
+  const cyls = lensCyls(grid);
   if (next.row < 0 || next.row >= sphs.length) return null;
   if (next.col < 0 || next.col >= cyls.length) return null;
   return next;
@@ -108,38 +120,40 @@ export function moveLensEditTarget(
   field: LensEditField,
   key: LensArrowKey,
   visualLtr = true,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): LensEditTarget | null {
   if (key === "ArrowUp") {
-    const next = moveLensCoord(coord, -1, 0);
+    const next = moveLensCoord(coord, -1, 0, grid);
     return next ? { coord: next, field } : null;
   }
   if (key === "ArrowDown") {
-    const next = moveLensCoord(coord, 1, 0);
+    const next = moveLensCoord(coord, 1, 0, grid);
     return next ? { coord: next, field } : null;
   }
   const colStep = visualLtr ? 1 : -1;
   if (key === "ArrowRight") {
     if (field === "current") return { coord, field: "desired" };
-    const next = moveLensCoord(coord, 0, colStep);
+    const next = moveLensCoord(coord, 0, colStep, grid);
     return next ? { coord: next, field: "current" } : null;
   }
   if (field === "desired") return { coord, field: "current" };
-  const next = moveLensCoord(coord, 0, -colStep);
+  const next = moveLensCoord(coord, 0, -colStep, grid);
   return next ? { coord: next, field: "desired" } : null;
 }
 
 export function tabLensCoord(
   coord: LensGridCoord,
   reverse = false,
+  grid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): LensGridCoord | null {
-  const cylCount = lensCyls().length;
+  const cylCount = lensCyls(grid).length;
   const step = reverse ? -1 : 1;
   let typeIndex = TABLES.indexOf(coord.type);
   let row = coord.row;
   let col = coord.col + step;
 
   for (let guard = 0; guard < 800; guard += 1) {
-    const sphs = lensSphsFor(TABLES[typeIndex]);
+    const sphs = lensSphsFor(TABLES[typeIndex], grid);
     if (col >= 0 && col < cylCount && row >= 0 && row < sphs.length) {
       return { type: TABLES[typeIndex], row, col };
     }
@@ -162,7 +176,7 @@ export function tabLensCoord(
       if (row < 0) {
         typeIndex -= 1;
         if (typeIndex < 0) return null;
-        row = lensSphsFor(TABLES[typeIndex]).length - 1;
+        row = lensSphsFor(TABLES[typeIndex], grid).length - 1;
         col = cylCount - 1;
       }
     }
@@ -276,6 +290,7 @@ export function applyLensPaste(
   items: LensInventoryCell[],
   origin: LensGridCoord,
   grid: Array<Array<LensPasteValue | null>>,
+  customGrid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): LensDraftMap {
   let next = drafts;
   for (let r = 0; r < grid.length; r += 1) {
@@ -283,8 +298,8 @@ export function applyLensPaste(
     for (let c = 0; c < row.length; c += 1) {
       const value = row[c];
       if (!value) continue;
-      const coord = moveLensCoord(origin, r, c);
-      const cell = coord ? lensCoordToCell(coord) : null;
+      const coord = moveLensCoord(origin, r, c, customGrid);
+      const cell = coord ? lensCoordToCell(coord, customGrid) : null;
       if (!cell) continue;
       next = setLensDraft(next, items, cell.type, cell.sph, cell.cyl, value);
     }
@@ -380,6 +395,7 @@ export function applyLensWrites(
 
 export function parseLensInventoryWriteBody(
   body: unknown,
+  customGrid: LensInventoryCustomGrid = emptyLensInventoryCustomGrid(),
 ): { ok: true; items: LensWriteItem[] } | { ok: false; error: string } {
   if (!body || typeof body !== "object") {
     return { ok: false, error: "Invalid lens payload" };
@@ -398,7 +414,7 @@ export function parseLensInventoryWriteBody(
     }
     const sph = typeof value.sph === "string" ? value.sph.trim() : "";
     const cyl = typeof value.cyl === "string" ? value.cyl.trim() : "";
-    if (!isAllowedSph(value.type, sph) || !isAllowedCyl(cyl)) {
+    if (!isAllowedSph(value.type, sph, customGrid) || !isAllowedCyl(cyl, customGrid)) {
       return { ok: false, error: "Invalid SPH or CYL" };
     }
     const currentStock = parseLensQtyInput(value.currentStock);

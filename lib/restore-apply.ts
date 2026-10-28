@@ -25,7 +25,7 @@ export const RESTORE_CATEGORY_FIELDS = {
     "availability",
   ],
   products: ["products", "catalogCategories"],
-  lenses: ["lensInventory"],
+  lenses: ["lensInventory", "lensInventoryCustom"],
   settings: ["settings"],
   promotions: ["promotions"],
 } as const satisfies Record<RestoreCategory, readonly (keyof AppData)[]>;
@@ -155,6 +155,8 @@ export function applyRestoreCategories(
       next.catalogCategories = structuredClone(backup.catalogCategories || []);
     } else if (field === "lensInventory") {
       next.lensInventory = structuredClone(backup.lensInventory);
+    } else if (field === "lensInventoryCustom") {
+      next.lensInventoryCustom = structuredClone(backup.lensInventoryCustom);
     } else if (field === "settings") {
       next.settings = structuredClone(backup.settings);
     } else if (field === "promotions") {

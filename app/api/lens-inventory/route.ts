@@ -13,6 +13,7 @@ import {
   parseLensInventoryWriteBody,
 } from "@/lib/lens-inventory-edit";
 import { lensCellKey } from "@/lib/lens-inventory";
+import { normalizeLensInventoryCustomGrid } from "@/lib/lens-inventory-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,10 @@ export async function GET() {
   try {
     await requireSession("inventory");
     const { data } = await getStore();
-    return jsonOk({ items: data.lensInventory });
+    return jsonOk({
+      items: data.lensInventory,
+      customGrid: normalizeLensInventoryCustomGrid(data.lensInventoryCustom),
+    });
   } catch (error) {
     return handleRouteError(error);
   }
@@ -29,7 +33,10 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const session = await requireSession("inventory");
-    const parsed = parseLensInventoryWriteBody(await request.json());
+    const body = await request.json();
+    const { data: current } = await getStore();
+    const grid = normalizeLensInventoryCustomGrid(current.lensInventoryCustom);
+    const parsed = parseLensInventoryWriteBody(body, grid);
     if (!parsed.ok) {
       return jsonError(parsed.error, 400);
     }
