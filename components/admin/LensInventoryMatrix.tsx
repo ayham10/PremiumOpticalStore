@@ -29,10 +29,9 @@ import {
 import { lensCellKey } from "@/lib/lens-inventory";
 import type { LensInventoryCell, LensInventoryCustomGrid, LensInventorySign } from "@/lib/types";
 
-export type LensSizeModalRequest =
-  | { mode: "add"; axis: LensGridAxis }
-  | { mode: "edit"; axis: LensGridAxis; from: string }
-  | { mode: "delete"; axis: LensGridAxis; value: string };
+import type { LensSizeModalRequest } from "@/components/admin/LensInventorySizeModal";
+
+export type { LensSizeModalRequest };
 
 type ActiveCell = {
   type: LensInventorySign;
@@ -102,7 +101,7 @@ export default function LensInventoryMatrix({
         <div className="admin-lens-size-toolbar">
           <button
             type="button"
-            className="btn btn-ghost admin-lens-add-size"
+            className="admin-lens-add-size"
             onClick={() => onSizeAction({ mode: "add", axis: sphAxis })}
           >
             <Plus size={14} aria-hidden />
@@ -110,7 +109,7 @@ export default function LensInventoryMatrix({
           </button>
           <button
             type="button"
-            className="btn btn-ghost admin-lens-add-size"
+            className="admin-lens-add-size"
             onClick={() => onSizeAction({ mode: "add", axis: "cyl" })}
           >
             <Plus size={14} aria-hidden />

@@ -14,6 +14,8 @@ import {
   isCustomMinusSph,
   isDefaultMinusSph,
   migrateLensInventoryForAxisRename,
+  removeOrDeactivateCustomAxisValue,
+  restoreDeactivatedCustomAxisValue,
   validateCustomAxisValue,
 } from "../lib/lens-inventory-grid";
 import { lensSphsFor } from "../lib/lens-inventory-edit";
@@ -74,6 +76,16 @@ assert.equal(orderRows[0]?.sph, "-5.25");
 
 assert.equal(lensSphsFor("minus", renamed.grid).length, LENS_MINUS_SPH.length + 1);
 
+const deactivated = removeOrDeactivateCustomAxisValue(added, "minusSph", "-5.00", true);
+assert.ok(deactivated.deactivated?.minusSph?.includes("-5.00"));
+assert.ok(!effectiveMinusSph(deactivated).includes("-5.00"));
+
+const restored = restoreDeactivatedCustomAxisValue(deactivated, "minusSph", "-5.00");
+assert.ok(effectiveMinusSph(restored).includes("-5.00"));
+assert.ok(!restored.deactivated?.minusSph?.includes("-5.00"));
+
+assert.equal(validateCustomAxisValue("minusSph", "-5.05", grid).ok, false);
+
 const migrated = migrateLensInventoryForAxisRename(
   renamed.items,
   "minusSph",
@@ -84,6 +96,7 @@ const migrated = migrateLensInventoryForAxisRename(
 assert.equal(migrated[0]?.sph, "-5.50");
 
 assert.match(readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8"), /addSize/);
+assert.match(readFileSync("components/admin/LensInventorySizeModal.tsx", "utf8"), /admin-lens-size-dialog/);
 assert.match(readFileSync("app/api/lens-inventory/grid/route.ts", "utf8"), /applyLensGridMutation/);
 assert.doesNotMatch(
   readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8"),

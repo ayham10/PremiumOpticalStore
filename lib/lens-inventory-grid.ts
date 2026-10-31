@@ -206,6 +206,37 @@ export function normalizeCustomCylInput(raw: string): string | null {
   return n.toFixed(2);
 }
 
+/** Diopter values must land on 0.25 steps (PLANO exempt). */
+export function isQuarterDiopterStep(value: string): boolean {
+  if (value === "PLANO") return true;
+  const n = Number.parseFloat(value);
+  if (!Number.isFinite(n)) return false;
+  const quarters = Math.round(Math.abs(n) * 4);
+  return Math.abs(Math.abs(n) * 4 - quarters) < 1e-6;
+}
+
+export type DeactivatedCustomSize = { axis: LensGridAxis; value: string };
+
+export function listDeactivatedCustomSizes(
+  grid: LensInventoryCustomGrid = EMPTY_GRID,
+): DeactivatedCustomSize[] {
+  const d = grid.deactivated ?? { minusSph: [], plusSph: [], cyl: [] };
+  return [
+    ...(d.minusSph ?? []).map((value) => ({ axis: "minusSph" as const, value })),
+    ...(d.plusSph ?? []).map((value) => ({ axis: "plusSph" as const, value })),
+    ...(d.cyl ?? []).map((value) => ({ axis: "cyl" as const, value })),
+  ];
+}
+
+export function isDeactivatedCustomSize(
+  axis: LensGridAxis,
+  value: string,
+  grid: LensInventoryCustomGrid = EMPTY_GRID,
+): boolean {
+  const listKey = axis;
+  return (grid.deactivated?.[listKey] ?? []).includes(value);
+}
+
 export function validateCustomAxisValue(
   axis: LensGridAxis,
   value: string,
@@ -214,23 +245,35 @@ export function validateCustomAxisValue(
   if (axis === "cyl") {
     const cyl = normalizeCustomCylInput(value);
     if (!cyl) return { ok: false, error: "Invalid CYL value" };
+    if (!isQuarterDiopterStep(cyl)) return { ok: false, error: "Use 0.25 steps only" };
     if (isDefaultCyl(cyl)) return { ok: false, error: "CYL already exists" };
     if (grid.cyl.includes(cyl)) return { ok: false, error: "Duplicate CYL" };
+    if (isDeactivatedCustomSize("cyl", cyl, grid)) {
+      return { ok: false, error: "CYL is hidden; restore it instead" };
+    }
     return { ok: true, value: cyl };
   }
   if (axis === "minusSph") {
     const sph = normalizeLensPowerInput(value);
     if (!sph || sph.startsWith("+")) return { ok: false, error: "Invalid minus SPH" };
+    if (!isQuarterDiopterStep(sph)) return { ok: false, error: "Use 0.25 steps only" };
     if (isDefaultMinusSph(sph)) return { ok: false, error: "SPH already exists" };
     if (grid.minusSph.includes(sph)) return { ok: false, error: "Duplicate SPH" };
+    if (isDeactivatedCustomSize("minusSph", sph, grid)) {
+      return { ok: false, error: "SPH is hidden; restore it instead" };
+    }
     return { ok: true, value: sph };
   }
   const sph = normalizeLensPowerInput(value);
   if (!sph || sph === "PLANO" || !sph.startsWith("+")) {
     return { ok: false, error: "Invalid plus SPH" };
   }
+  if (!isQuarterDiopterStep(sph)) return { ok: false, error: "Use 0.25 steps only" };
   if (isDefaultPlusSph(sph)) return { ok: false, error: "SPH already exists" };
   if (grid.plusSph.includes(sph)) return { ok: false, error: "Duplicate SPH" };
+  if (isDeactivatedCustomSize("plusSph", sph, grid)) {
+    return { ok: false, error: "SPH is hidden; restore it instead" };
+  }
   return { ok: true, value: sph };
 }
 
@@ -329,6 +372,25 @@ export function removeOrDeactivateCustomAxisValue(
     const deactivated = new Set(next.deactivated[listKey] ?? []);
     deactivated.add(value);
     next.deactivated[listKey] = [...deactivated];
+  }
+  return next;
+}
+
+export function restoreDeactivatedCustomAxisValue(
+  grid: LensInventoryCustomGrid,
+  axis: LensGridAxis,
+  value: string,
+): LensInventoryCustomGrid {
+  const next = normalizeLensInventoryCustomGrid(grid);
+  const listKey = axis;
+  next.deactivated = next.deactivated ?? { minusSph: [], plusSph: [], cyl: [] };
+  const hidden = next.deactivated[listKey] ?? [];
+  if (!hidden.includes(value)) {
+    throw new Error("Hidden size not found");
+  }
+  next.deactivated[listKey] = hidden.filter((v) => v !== value);
+  if (!next[listKey].includes(value)) {
+    next[listKey] = sortAxisList(axis, [...next[listKey], value]);
   }
   return next;
 }

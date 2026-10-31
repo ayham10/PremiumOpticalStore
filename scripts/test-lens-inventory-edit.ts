@@ -312,6 +312,7 @@ assert.match(page, /cancelAll/);
 assert.match(matrix, /moveLensEditTarget/);
 assert.match(page, /customGrid/);
 assert.match(page, /\/api\/lens-inventory\/grid/);
+assert.match(readFileSync("components/admin/LensInventorySizeModal.tsx", "utf8"), /admin-lens-size-overlay/);
 assert.match(page, /orderOpen/);
 assert.match(page, /ChevronDown/);
 assert.match(page, /dir="ltr"/);

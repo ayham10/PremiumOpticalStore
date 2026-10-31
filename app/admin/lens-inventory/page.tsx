@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ChevronDown, Contact, Download, Printer } from "lucide-react";
+import { ChevronDown, Contact, Download, Printer, RotateCcw } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminSuccessNotice } from "@/components/admin/AdminSuccessNotice";
@@ -15,9 +15,10 @@ import { useBranding } from "@/components/branding/BrandingProvider";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import { ApiError, apiFetch } from "@/lib/admin-api";
 import { formatLocalPhone } from "@/lib/format";
-import LensInventoryMatrix, {
+import LensInventoryMatrix from "@/components/admin/LensInventoryMatrix";
+import LensInventorySizeModal, {
   type LensSizeModalRequest,
-} from "@/components/admin/LensInventoryMatrix";
+} from "@/components/admin/LensInventorySizeModal";
 import {
   buildLensOrderRows,
   lensCellKey,
@@ -27,6 +28,7 @@ import {
   effectiveMinusSph,
   effectivePlusSph,
   emptyLensInventoryCustomGrid,
+  listDeactivatedCustomSizes,
 } from "@/lib/lens-inventory-grid";
 import {
   LENS_ORDER_SHEET_CSS,
@@ -53,6 +55,7 @@ import type {
   LensInventoryCustomGrid,
   LensInventorySign,
 } from "@/lib/types";
+import type { LensGridAxis } from "@/lib/lens-inventory-grid";
 
 type ActiveCell = {
   type: LensInventorySign;
@@ -153,6 +156,10 @@ export default function AdminLensInventoryPage() {
   );
   const totals = useMemo(() => lensOrderTotals(orderRows), [orderRows]);
   const dirtyCount = lensDraftCount(drafts);
+  const hiddenSizes = useMemo(
+    () => listDeactivatedCustomSizes(customGrid),
+    [customGrid],
+  );
 
   const typedInCellRef = useRef(false);
 
@@ -417,13 +424,22 @@ export default function AdminLensInventoryPage() {
   function openSizeModal(request: LensSizeModalRequest) {
     setSizeModal(request);
     setSizeValue(
-      request.mode === "edit" ? request.from : request.mode === "delete" ? request.value : "",
+      request.mode === "edit"
+        ? request.from
+        : request.mode === "delete" || request.mode === "restore"
+          ? request.value
+          : "",
     );
     setError("");
   }
 
+  function openRestoreConfirm(entry: { axis: LensGridAxis; value: string }) {
+    setSizeModal({ mode: "restore", axis: entry.axis, value: entry.value });
+    setSizeValue(entry.value);
+  }
+
   async function submitSizeModal() {
-    if (!sizeModal) return;
+    if (!sizeModal || sizeModal.mode === "restoreList") return;
     setGridSaving(true);
     setError("");
     try {
@@ -436,6 +452,12 @@ export default function AdminLensInventoryPage() {
           axis: sizeModal.axis,
           from: sizeModal.from,
           to: sizeValue,
+        };
+      } else if (sizeModal.mode === "restore") {
+        body = {
+          action: "restore",
+          axis: sizeModal.axis,
+          value: sizeModal.value,
         };
       } else {
         body = { action: "delete", axis: sizeModal.axis, value: sizeModal.value };
@@ -536,6 +558,19 @@ export default function AdminLensInventoryPage() {
       />
 
       {error ? <p className="admin-lens-error">{error}</p> : null}
+
+      {!loading && hiddenSizes.length > 0 ? (
+        <div className="admin-lens-hidden-bar" dir="rtl">
+          <button
+            type="button"
+            className="admin-lens-add-size admin-lens-restore-hidden"
+            onClick={() => openSizeModal({ mode: "restoreList" })}
+          >
+            <RotateCcw size={14} aria-hidden />
+            {t("admin.lensInventory.restoreHiddenBtn", { n: hiddenSizes.length })}
+          </button>
+        </div>
+      ) : null}
 
       {loading ? (
         <p className="admin-muted">{t("admin.lensInventory.loading")}</p>
@@ -664,60 +699,21 @@ export default function AdminLensInventoryPage() {
         </>
       )}
 
-      <AdminModal
+      <LensInventorySizeModal
         open={Boolean(sizeModal)}
-        title={
-          sizeModal?.mode === "add"
-            ? t("admin.lensInventory.addSizeTitle")
-            : sizeModal?.mode === "edit"
-              ? t("admin.lensInventory.editSizeTitle")
-              : t("admin.lensInventory.deleteSizeTitle")
-        }
+        request={sizeModal}
+        items={items}
+        sizeValue={sizeValue}
+        hiddenSizes={hiddenSizes}
+        gridSaving={gridSaving}
         onClose={() => {
           if (gridSaving) return;
           setSizeModal(null);
         }}
-      >
-        {sizeModal?.mode === "delete" ? (
-          <p className="admin-muted">{t("admin.lensInventory.deleteSizeBody")}</p>
-        ) : (
-          <>
-            <label className="admin-field">
-              <span>{t("admin.lensInventory.sizeValueLabel")}</span>
-              <input
-                className="admin-input"
-                value={sizeValue}
-                onChange={(event) => setSizeValue(event.target.value)}
-                placeholder={t("admin.lensInventory.sizeValuePlaceholder")}
-                dir="ltr"
-              />
-            </label>
-            <p className="admin-muted">{t("admin.lensInventory.sizeValueHint")}</p>
-          </>
-        )}
-        <div className="admin-modal-actions">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            disabled={gridSaving}
-            onClick={() => setSizeModal(null)}
-          >
-            {t("admin.lensInventory.cancel")}
-          </button>
-          <button
-            type="button"
-            className="btn btn-accent"
-            disabled={gridSaving || (sizeModal?.mode !== "delete" && !sizeValue.trim())}
-            onClick={() => void submitSizeModal()}
-          >
-            {gridSaving
-              ? t("admin.lensInventory.saving")
-              : sizeModal?.mode === "delete"
-                ? t("admin.lensInventory.deleteSizeConfirmBtn")
-                : t("admin.lensInventory.save")}
-          </button>
-        </div>
-      </AdminModal>
+        onSizeValueChange={setSizeValue}
+        onConfirm={() => void submitSizeModal()}
+        onOpenRestore={(entry) => openRestoreConfirm(entry)}
+      />
 
       <AdminModal
         open={exportOpen}

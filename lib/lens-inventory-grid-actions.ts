@@ -13,13 +13,15 @@ import {
   normalizeLensInventoryCustomGrid,
   removeOrDeactivateCustomAxisValue,
   replaceCustomAxisValue,
+  restoreDeactivatedCustomAxisValue,
   validateCustomAxisValue,
 } from "@/lib/lens-inventory-grid";
 
 export type LensGridMutation =
   | { action: "add"; axis: LensGridAxis; value: string }
   | { action: "edit"; axis: LensGridAxis; from: string; to: string }
-  | { action: "delete"; axis: LensGridAxis; value: string };
+  | { action: "delete"; axis: LensGridAxis; value: string }
+  | { action: "restore"; axis: LensGridAxis; value: string };
 
 export function parseLensGridMutationBody(
   body: unknown,
@@ -30,7 +32,7 @@ export function parseLensGridMutationBody(
   const raw = body as Record<string, unknown>;
   const action = raw.action;
   const axis = raw.axis;
-  if (action !== "add" && action !== "edit" && action !== "delete") {
+  if (action !== "add" && action !== "edit" && action !== "delete" && action !== "restore") {
     return { ok: false, error: "Invalid action" };
   }
   if (axis !== "minusSph" && axis !== "plusSph" && axis !== "cyl") {
@@ -46,6 +48,11 @@ export function parseLensGridMutationBody(
     const to = typeof raw.to === "string" ? raw.to : "";
     if (!from || !to.trim()) return { ok: false, error: "From and to required" };
     return { ok: true, mutation: { action, axis, from, to } };
+  }
+  if (action === "restore") {
+    const value = typeof raw.value === "string" ? raw.value.trim() : "";
+    if (!value) return { ok: false, error: "Value required" };
+    return { ok: true, mutation: { action, axis, value } };
   }
   const value = typeof raw.value === "string" ? raw.value.trim() : "";
   if (!value) return { ok: false, error: "Value required" };
@@ -69,6 +76,20 @@ function assertCustomOnly(
   }
   if (isDefaultCyl(value)) return "Default sizes cannot be changed";
   if (!isCustomCyl(value, grid)) return "Custom size not found";
+  return null;
+}
+
+function assertDeactivatedOnly(
+  axis: LensGridAxis,
+  value: string,
+  grid: LensInventoryCustomGrid,
+): string | null {
+  const listKey = axis;
+  const hidden = grid.deactivated?.[listKey] ?? [];
+  if (!hidden.includes(value)) return "Hidden size not found";
+  if (axis === "minusSph" && isDefaultMinusSph(value)) return "Default sizes cannot be restored";
+  if (axis === "plusSph" && isDefaultPlusSph(value)) return "Default sizes cannot be restored";
+  if (axis === "cyl" && isDefaultCyl(value)) return "Default sizes cannot be restored";
   return null;
 }
 
@@ -122,6 +143,22 @@ export function applyLensGridMutation(
         mutation.axis,
         mutation.from,
         validated.value,
+      ),
+    };
+  }
+  if (mutation.action === "restore") {
+    const hiddenError = assertDeactivatedOnly(
+      mutation.axis,
+      mutation.value,
+      currentGrid,
+    );
+    if (hiddenError) throw new Error(hiddenError);
+    return {
+      items,
+      grid: restoreDeactivatedCustomAxisValue(
+        currentGrid,
+        mutation.axis,
+        mutation.value,
       ),
     };
   }
