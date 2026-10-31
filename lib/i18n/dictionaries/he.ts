@@ -1800,6 +1800,18 @@ const he: Dictionary = {
       addSize: "إضافة مقاس",
       addCylColumn: "إضافة CYL",
       addSizeTitle: "הוספת מידה",
+      addCylTitle: "הוספת CYL",
+      addSizeInfoTitle: "מידע",
+      addSizeInfoBody:
+        "מידה חדשה תתווסף לטבלת העדשות. המידות הקיימות לא יושפעו.",
+      addCylInfoBody:
+        "עמודת CYL חדשה תתווסף לטבלת העדשות. העמודות הקיימות לא יושפעו.",
+      addMinusPlaceholder: "דוגמה: -5.00 או -5.25",
+      addPlusPlaceholder: "דוגמה: +5.00 או +5.25",
+      addCylPlaceholder: "דוגמה: -2.25 או -2.50",
+      addSizeHint:
+        "הזינו את המידה בקפיצות של 0.25, או PLANO למינוס SPH אפס.",
+      addCylHint: "הזינו את ערך ה-CYL בקפיצות של 0.25.",
       editSizeTitle: "עריכת מידה",
       deleteSizeTitle: "הסרת מידה",
       editSize: "עריכה",

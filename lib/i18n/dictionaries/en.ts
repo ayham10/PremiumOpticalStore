@@ -2185,6 +2185,18 @@ const en: Dictionary = {
       addSize: "إضافة مقاس",
       addCylColumn: "إضافة CYL",
       addSizeTitle: "Add lens size",
+      addCylTitle: "Add CYL column",
+      addSizeInfoTitle: "Note",
+      addSizeInfoBody:
+        "A new size will be added to the lens table. Existing sizes are not changed.",
+      addCylInfoBody:
+        "A new CYL column will be added to the lens table. Existing columns are not changed.",
+      addMinusPlaceholder: "Example: -5.00 or -5.25",
+      addPlusPlaceholder: "Example: +5.00 or +5.25",
+      addCylPlaceholder: "Example: -2.25 or -2.50",
+      addSizeHint:
+        "Enter the size in 0.25 steps, or PLANO for zero minus SPH.",
+      addCylHint: "Enter the CYL value in 0.25 steps.",
       editSizeTitle: "Edit lens size",
       deleteSizeTitle: "Remove lens size",
       editSize: "Edit",

@@ -1801,6 +1801,18 @@ const ar: Dictionary = {
       addSize: "إضافة مقاس",
       addCylColumn: "إضافة CYL",
       addSizeTitle: "إضافة مقاس",
+      addCylTitle: "إضافة CYL",
+      addSizeInfoTitle: "معلومة",
+      addSizeInfoBody:
+        "سيتم إضافة مقاس جديد إلى جدول العدسات. لا يؤثر ذلك على المقاسات الحالية.",
+      addCylInfoBody:
+        "سيتم إضافة عمود CYL جديد إلى جدول العدسات. لا يؤثر ذلك على الأعمدة الحالية.",
+      addMinusPlaceholder: "مثال: -5.00 أو -5.25",
+      addPlusPlaceholder: "مثال: +5.00 أو +5.25",
+      addCylPlaceholder: "مثال: -2.25 أو -2.50",
+      addSizeHint:
+        "أدخل المقاس المطلوب بدقة 0.25، أو اختر PLANO للمقاس الصفري.",
+      addCylHint: "أدخل قيمة CYL المطلوبة بدقة 0.25.",
       editSizeTitle: "تعديل المقاس",
       deleteSizeTitle: "حذف المقاس",
       editSize: "تعديل",

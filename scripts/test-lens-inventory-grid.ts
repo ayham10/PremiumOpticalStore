@@ -96,7 +96,8 @@ const migrated = migrateLensInventoryForAxisRename(
 assert.equal(migrated[0]?.sph, "-5.50");
 
 assert.match(readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8"), /addSize/);
-assert.match(readFileSync("components/admin/LensInventorySizeModal.tsx", "utf8"), /admin-lens-size-dialog/);
+assert.match(readFileSync("components/admin/LensInventorySizeModal.tsx", "utf8"), /admin-lens-size-dialog--premium/);
+assert.match(readFileSync("components/admin/LensSizeModalIllustration.tsx", "utf8"), /admin-lens-size-art-svg/);
 assert.match(readFileSync("app/api/lens-inventory/grid/route.ts", "utf8"), /applyLensGridMutation/);
 assert.doesNotMatch(
   readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8"),
