@@ -837,6 +837,18 @@ export interface LensInventoryCell {
   updatedAt: string;
 }
 
+/** User-added SPH rows / CYL columns (defaults stay in code constants). */
+export interface LensInventoryCustomGrid {
+  minusSph: string[];
+  plusSph: string[];
+  cyl: string[];
+  deactivated?: {
+    minusSph?: string[];
+    plusSph?: string[];
+    cyl?: string[];
+  };
+}
+
 export interface AppData {
   version: number;
   products: Product[];
@@ -863,6 +875,7 @@ export interface AppData {
   previewManageTestAppointments?: EyeExamAppointment[];
   bookingServices: BookingService[];
   lensInventory: LensInventoryCell[];
+  lensInventoryCustom?: LensInventoryCustomGrid;
   settings: StoreSettings;
   updatedAt: string;
 }

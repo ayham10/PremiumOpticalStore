@@ -4,6 +4,7 @@ import { mergeBranding } from "@/lib/branding";
 import { mergeBookingMessages } from "@/lib/booking-messages";
 import { mergeCategoryDefaultImages } from "@/lib/product-images";
 import { normalizeLensInventory } from "@/lib/lens-inventory";
+import { normalizeLensInventoryCustomGrid } from "@/lib/lens-inventory-grid";
 import { storeServicePages } from "@/lib/service-pages";
 import { mergeSeedBookingServices } from "@/lib/booking-services";
 import {
@@ -243,7 +244,11 @@ function normalizeData(data: AppData): AppData {
       5,
     ),
     bookingServices,
-    lensInventory: normalizeLensInventory(data.lensInventory),
+    lensInventoryCustom: normalizeLensInventoryCustomGrid(data.lensInventoryCustom),
+    lensInventory: normalizeLensInventory(
+      data.lensInventory,
+      normalizeLensInventoryCustomGrid(data.lensInventoryCustom),
+    ),
     settings: {
       ...createSeedData().settings,
       ...(data.settings || {}),

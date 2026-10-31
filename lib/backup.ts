@@ -39,6 +39,7 @@ export const RESTORABLE_SECTIONS = [
   "eyeExamAppointments",
   "bookingServices",
   "lensInventory",
+  "lensInventoryCustom",
   "settings",
 ] as const;
 
