@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Info, Plus, RotateCcw, X } from "lucide-react";
+import { Info, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import LensSizeModalIllustration from "@/components/admin/LensSizeModalIllustration";
 import type { DeactivatedCustomSize, LensGridAxis } from "@/lib/lens-inventory-grid";
-import { axisHasStock } from "@/lib/lens-inventory-grid";
+import { axisHasInventoryRecords } from "@/lib/lens-inventory-grid";
 import type { LensInventoryCell } from "@/lib/types";
 
 export type LensSizeModalRequest =
   | { mode: "add"; axis: LensGridAxis }
-  | { mode: "edit"; axis: LensGridAxis; from: string }
   | { mode: "delete"; axis: LensGridAxis; value: string }
   | { mode: "restore"; axis: LensGridAxis; value: string }
   | { mode: "restoreList" };
@@ -84,9 +83,9 @@ export default function LensInventorySizeModal({
     if (!open) setRestorePick(null);
   }, [open, request?.mode]);
 
-  const deleteHasStock = useMemo(() => {
+  const deleteSoft = useMemo(() => {
     if (!request || request.mode !== "delete") return false;
-    return axisHasStock(items, request.axis, request.value);
+    return axisHasInventoryRecords(items, request.axis, request.value);
   }, [items, request]);
 
   if (!open || !request) return null;
@@ -96,13 +95,11 @@ export default function LensInventorySizeModal({
   const title =
     request.mode === "add"
       ? t(addTitleKey(request.axis))
-      : request.mode === "edit"
-        ? t("admin.lensInventory.editSizeTitle")
-        : request.mode === "delete"
-          ? t("admin.lensInventory.deleteSizeTitle")
-          : request.mode === "restore"
-            ? t("admin.lensInventory.restoreSizeTitle")
-            : t("admin.lensInventory.restoreListTitle");
+      : request.mode === "delete"
+        ? t("admin.lensInventory.deleteSizeTitle")
+        : request.mode === "restore"
+          ? t("admin.lensInventory.restoreSizeTitle")
+          : t("admin.lensInventory.restoreListTitle");
 
   const confirmLabel =
     request.mode === "delete"
@@ -115,7 +112,7 @@ export default function LensInventorySizeModal({
 
   const confirmDisabled =
     gridSaving ||
-    (request.mode === "add" || request.mode === "edit"
+    (request.mode === "add"
       ? !sizeValue.trim()
       : request.mode === "restoreList"
         ? !restorePick
@@ -233,6 +230,63 @@ export default function LensInventorySizeModal({
     );
   }
 
+  if (request.mode === "delete") {
+    return (
+      <div
+        className="admin-lens-size-overlay"
+        role="presentation"
+        onClick={gridSaving ? undefined : onClose}
+      >
+        <div
+          className="admin-lens-size-dialog admin-lens-size-dialog--premium admin-lens-size-dialog--confirm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          dir="rtl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="admin-lens-size-dialog-close admin-lens-size-dialog-close--corner"
+            onClick={onClose}
+            disabled={gridSaving}
+            aria-label={t("admin.lensInventory.closeModal")}
+          >
+            <X size={18} strokeWidth={2} aria-hidden />
+          </button>
+
+          <div className="admin-lens-size-confirm-body">
+            <span className="admin-lens-size-confirm-icon" aria-hidden>
+              <Trash2 size={22} strokeWidth={1.8} />
+            </span>
+            <h2 className="admin-lens-size-premium-title admin-lens-size-confirm-title">
+              {title}
+            </h2>
+            <p className="admin-lens-size-confirm-axis">{t(axisLabelKey(request.axis))}</p>
+            <p className="admin-lens-size-confirm-value" dir="ltr">
+              {request.value}
+            </p>
+            <p className="admin-lens-size-dialog-lead">
+              {deleteSoft
+                ? t("admin.lensInventory.deleteSizeBodyStock", {
+                    value: request.value,
+                  })
+                : t("admin.lensInventory.deleteSizeBodyPermanent", {
+                    value: request.value,
+                  })}
+            </p>
+            <p className="admin-lens-size-dialog-note">
+              {t("admin.lensInventory.deleteSizeConfirmHint")}
+            </p>
+            <footer className="admin-lens-size-dialog-actions admin-lens-size-confirm-actions">
+              {actionFooter}
+            </footer>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="admin-lens-size-overlay"
@@ -261,23 +315,6 @@ export default function LensInventorySizeModal({
         </header>
 
         <div className="admin-lens-size-dialog-body">
-          {request.mode === "delete" ? (
-            <>
-              <p className="admin-lens-size-dialog-lead">
-                {deleteHasStock
-                  ? t("admin.lensInventory.deleteSizeBodyStock", {
-                      value: request.value,
-                    })
-                  : t("admin.lensInventory.deleteSizeBodyPermanent", {
-                      value: request.value,
-                    })}
-              </p>
-              <p className="admin-lens-size-dialog-note">
-                {t("admin.lensInventory.deleteSizeConfirmHint")}
-              </p>
-            </>
-          ) : null}
-
           {request.mode === "restore" ? (
             <>
               <p className="admin-lens-size-dialog-lead">
@@ -317,25 +354,6 @@ export default function LensInventorySizeModal({
                   );
                 })}
               </ul>
-            </>
-          ) : null}
-
-          {request.mode === "edit" ? (
-            <>
-              <label className="admin-lens-size-field">
-                <span>{t("admin.lensInventory.sizeValueLabel")}</span>
-                <input
-                  className="admin-lens-size-input"
-                  value={sizeValue}
-                  onChange={(event) => onSizeValueChange(event.target.value)}
-                  placeholder={t("admin.lensInventory.sizeValuePlaceholder")}
-                  dir="ltr"
-                  autoFocus
-                />
-              </label>
-              <p className="admin-lens-size-dialog-note">
-                {t("admin.lensInventory.sizeValueHint")}
-              </p>
             </>
           ) : null}
         </div>

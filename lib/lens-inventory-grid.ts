@@ -293,6 +293,31 @@ export function axisHasStock(
   });
 }
 
+/** Any saved inventory cell on this axis (including zero qty). */
+export function axisHasInventoryRecords(
+  items: LensInventoryCell[],
+  axis: LensGridAxis,
+  value: string,
+): boolean {
+  return items.some((item) => {
+    if (axis === "minusSph") return item.type === "minus" && item.sph === value;
+    if (axis === "plusSph") return item.type === "plus" && item.sph === value;
+    return item.cyl === value;
+  });
+}
+
+export function purgeLensInventoryCellsForAxis(
+  items: LensInventoryCell[],
+  axis: LensGridAxis,
+  value: string,
+): LensInventoryCell[] {
+  return items.filter((item) => {
+    if (axis === "minusSph") return !(item.type === "minus" && item.sph === value);
+    if (axis === "plusSph") return !(item.type === "plus" && item.sph === value);
+    return item.cyl !== value;
+  });
+}
+
 export function migrateLensInventoryForAxisRename(
   items: LensInventoryCell[],
   axis: LensGridAxis,

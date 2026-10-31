@@ -4,16 +4,17 @@ import {
   buildLensOrderRows,
   LENS_MINUS_SPH,
   normalizeLensInventory,
-  upsertLensInventoryCell,
 } from "../lib/lens-inventory";
-import { applyLensGridMutation } from "../lib/lens-inventory-grid-actions";
+import {
+  applyLensGridMutation,
+  parseLensGridMutationBody,
+} from "../lib/lens-inventory-grid-actions";
 import {
   addCustomAxisValue,
   effectiveMinusSph,
   emptyLensInventoryCustomGrid,
   isCustomMinusSph,
   isDefaultMinusSph,
-  migrateLensInventoryForAxisRename,
   removeOrDeactivateCustomAxisValue,
   restoreDeactivatedCustomAxisValue,
   validateCustomAxisValue,
@@ -51,30 +52,38 @@ const items = normalizeLensInventory(
 );
 assert.equal(items.length, 1);
 
-const renamed = applyLensGridMutation(
+assert.equal(
+  parseLensGridMutationBody({
+    action: "edit",
+    axis: "minusSph",
+    from: "-5.00",
+    to: "-5.25",
+  }).ok,
+  false,
+);
+
+const softDeleted = applyLensGridMutation(
   items,
   added,
-  { action: "edit", axis: "minusSph", from: "-5.00", to: "-5.25" },
+  { action: "delete", axis: "minusSph", value: "-5.00" },
   "2026-01-02T00:00:00.000Z",
 );
-assert.ok(isCustomMinusSph("-5.25", renamed.grid));
-assert.equal(renamed.items[0]?.sph, "-5.25");
+assert.ok(softDeleted.grid.deactivated?.minusSph?.includes("-5.00"));
+assert.ok(!effectiveMinusSph(softDeleted.grid).includes("-5.00"));
+assert.equal(softDeleted.items.length, 1);
+assert.equal(buildLensOrderRows(softDeleted.items, softDeleted.grid).length, 0);
 
-const orderRows = buildLensOrderRows(
-  upsertLensInventoryCell([], {
-    type: "minus",
-    sph: "-5.25",
-    cyl: "-0.25",
-    currentStock: 0,
-    desiredStock: 3,
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  }),
-  renamed.grid,
+const emptyCustom = addCustomAxisValue(emptyLensInventoryCustomGrid(), "plusSph", "+5.00");
+const hardDeleted = applyLensGridMutation(
+  [],
+  emptyCustom,
+  { action: "delete", axis: "plusSph", value: "+5.00" },
+  "2026-01-01T00:00:00.000Z",
 );
-assert.equal(orderRows.length, 1);
-assert.equal(orderRows[0]?.sph, "-5.25");
+assert.ok(!hardDeleted.grid.plusSph.includes("+5.00"));
+assert.equal(hardDeleted.grid.deactivated?.plusSph?.length ?? 0, 0);
 
-assert.equal(lensSphsFor("minus", renamed.grid).length, LENS_MINUS_SPH.length + 1);
+assert.equal(lensSphsFor("minus", added).length, LENS_MINUS_SPH.length + 1);
 
 const deactivated = removeOrDeactivateCustomAxisValue(added, "minusSph", "-5.00", true);
 assert.ok(deactivated.deactivated?.minusSph?.includes("-5.00"));
@@ -86,22 +95,23 @@ assert.ok(!restored.deactivated?.minusSph?.includes("-5.00"));
 
 assert.equal(validateCustomAxisValue("minusSph", "-5.05", grid).ok, false);
 
-const migrated = migrateLensInventoryForAxisRename(
-  renamed.items,
-  "minusSph",
-  "-5.25",
-  "-5.50",
-  "2026-01-03T00:00:00.000Z",
+assert.throws(
+  () =>
+    applyLensGridMutation(
+      items,
+      added,
+      { action: "delete", axis: "minusSph", value: "PLANO" },
+      "2026-01-01T00:00:00.000Z",
+    ),
+  /Default|Custom/,
 );
-assert.equal(migrated[0]?.sph, "-5.50");
 
-assert.match(readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8"), /addSize/);
-assert.match(readFileSync("components/admin/LensInventorySizeModal.tsx", "utf8"), /admin-lens-size-dialog--premium/);
+const matrixSrc = readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8");
+assert.match(matrixSrc, /addSize/);
+assert.match(matrixSrc, /admin-lens-axis-btn--delete/);
+assert.doesNotMatch(matrixSrc, /Pencil/);
+assert.match(readFileSync("components/admin/LensInventorySizeModal.tsx", "utf8"), /admin-lens-size-dialog--confirm/);
 assert.match(readFileSync("components/admin/LensSizeModalIllustration.tsx", "utf8"), /lens-size-modal-lenses\.png/);
 assert.match(readFileSync("app/api/lens-inventory/grid/route.ts", "utf8"), /applyLensGridMutation/);
-assert.doesNotMatch(
-  readFileSync("components/admin/LensInventoryMatrix.tsx", "utf8"),
-  /isDefaultMinusSph.*Pencil/s,
-);
 
 console.log(JSON.stringify({ lensInventoryGrid: "pass" }));

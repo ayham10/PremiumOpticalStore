@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { ClipboardEvent, KeyboardEvent } from "react";
 import { useLocale } from "@/components/i18n/LocaleProvider";
 import {
@@ -137,23 +137,13 @@ export default function LensInventoryMatrix({
                     <span className="admin-lens-axis-actions">
                       <button
                         type="button"
-                        className="admin-lens-axis-btn"
-                        aria-label={t("admin.lensInventory.editSize")}
-                        onClick={() =>
-                          onSizeAction({ mode: "edit", axis: "cyl", from: cyl })
-                        }
-                      >
-                        <Pencil size={12} />
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-lens-axis-btn is-danger"
+                        className="admin-lens-axis-btn admin-lens-axis-btn--delete"
                         aria-label={t("admin.lensInventory.deleteSize")}
                         onClick={() =>
                           onSizeAction({ mode: "delete", axis: "cyl", value: cyl })
                         }
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={11} strokeWidth={2} aria-hidden />
                       </button>
                     </span>
                   ) : null}
@@ -170,23 +160,13 @@ export default function LensInventoryMatrix({
                     <span className="admin-lens-axis-actions">
                       <button
                         type="button"
-                        className="admin-lens-axis-btn"
-                        aria-label={t("admin.lensInventory.editSize")}
-                        onClick={() =>
-                          onSizeAction({ mode: "edit", axis: sphAxis, from: sph })
-                        }
-                      >
-                        <Pencil size={12} />
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-lens-axis-btn is-danger"
+                        className="admin-lens-axis-btn admin-lens-axis-btn--delete"
                         aria-label={t("admin.lensInventory.deleteSize")}
                         onClick={() =>
                           onSizeAction({ mode: "delete", axis: sphAxis, value: sph })
                         }
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={11} strokeWidth={2} aria-hidden />
                       </button>
                     </span>
                   ) : null}

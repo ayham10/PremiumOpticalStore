@@ -20385,6 +20385,82 @@ html.admin-dark .admin-shell .admin-card.admin-lens-card,
   }
 }
 
+.admin-lens-axis-btn--delete {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 175, 175, 0.92);
+  border-color: rgba(212, 175, 106, 0.22);
+  background: rgba(8, 14, 22, 0.9);
+}
+
+.admin-lens-axis-btn--delete:hover {
+  color: #ffc9c9;
+  border-color: rgba(255, 140, 140, 0.45);
+  background: rgba(48, 16, 16, 0.55);
+}
+
+.admin-lens-size-dialog--confirm {
+  width: min(100%, 22rem);
+  max-height: none;
+  padding: 1rem 1rem 0.85rem;
+}
+
+.admin-lens-size-confirm-body {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  padding: 0.35rem 0.5rem 0;
+}
+
+.admin-lens-size-confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 140, 140, 0.35);
+  color: #ffb4b4;
+  background: rgba(40, 14, 14, 0.45);
+  box-shadow: 0 0 20px rgba(255, 100, 100, 0.12);
+}
+
+.admin-lens-size-confirm-title {
+  margin-bottom: 0.35rem;
+  font-size: 1.15rem;
+}
+
+.admin-lens-size-confirm-axis {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8b929c;
+}
+
+.admin-lens-size-confirm-value {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #f3dc8a;
+}
+
+.admin-lens-size-confirm-body .admin-lens-size-dialog-lead {
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.admin-lens-size-confirm-body .admin-lens-size-dialog-note {
+  text-align: center;
+}
+
+.admin-lens-size-confirm-actions {
+  width: 100%;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(201, 157, 61, 0.2);
+  justify-content: center;
+}
+
 .admin-lens-axis-label {
   display: inline-block;
   margin-inline-end: 4px;

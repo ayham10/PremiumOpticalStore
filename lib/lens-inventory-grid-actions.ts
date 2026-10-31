@@ -2,7 +2,7 @@ import type { LensInventoryCell, LensInventoryCustomGrid } from "@/lib/types";
 import type { LensGridAxis } from "@/lib/lens-inventory-grid";
 import {
   addCustomAxisValue,
-  axisHasStock,
+  axisHasInventoryRecords,
   isCustomCyl,
   isCustomMinusSph,
   isCustomPlusSph,
@@ -11,6 +11,7 @@ import {
   isDefaultPlusSph,
   migrateLensInventoryForAxisRename,
   normalizeLensInventoryCustomGrid,
+  purgeLensInventoryCellsForAxis,
   removeOrDeactivateCustomAxisValue,
   replaceCustomAxisValue,
   restoreDeactivatedCustomAxisValue,
@@ -44,10 +45,7 @@ export function parseLensGridMutationBody(
     return { ok: true, mutation: { action, axis, value } };
   }
   if (action === "edit") {
-    const from = typeof raw.from === "string" ? raw.from.trim() : "";
-    const to = typeof raw.to === "string" ? raw.to : "";
-    if (!from || !to.trim()) return { ok: false, error: "From and to required" };
-    return { ok: true, mutation: { action, axis, from, to } };
+    return { ok: false, error: "Edit is not supported" };
   }
   if (action === "restore") {
     const value = typeof raw.value === "string" ? raw.value.trim() : "";
@@ -164,14 +162,21 @@ export function applyLensGridMutation(
   }
   const protectedError = assertCustomOnly(mutation.axis, mutation.value, currentGrid);
   if (protectedError) throw new Error(protectedError);
-  const hasStock = axisHasStock(items, mutation.axis, mutation.value);
-  return {
+  const preserveData = axisHasInventoryRecords(
     items,
+    mutation.axis,
+    mutation.value,
+  );
+  const nextItems = preserveData
+    ? items
+    : purgeLensInventoryCellsForAxis(items, mutation.axis, mutation.value);
+  return {
+    items: nextItems,
     grid: removeOrDeactivateCustomAxisValue(
       currentGrid,
       mutation.axis,
       mutation.value,
-      hasStock,
+      preserveData,
     ),
   };
 }

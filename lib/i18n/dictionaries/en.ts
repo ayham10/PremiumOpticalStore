@@ -2202,7 +2202,7 @@ const en: Dictionary = {
       editSize: "Edit",
       deleteSize: "Delete",
       deleteSizeBodyStock:
-        "Size {value} has stock data. It will be hidden and can be restored later.",
+        "Size {value} has saved inventory data. It will be hidden from the grid and can be restored later.",
       deleteSizeBodyPermanent:
         "Permanently delete size {value}. This cannot be undone.",
       deleteSizeConfirmHint: "Press Delete to confirm.",

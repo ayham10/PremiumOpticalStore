@@ -424,11 +424,7 @@ export default function AdminLensInventoryPage() {
   function openSizeModal(request: LensSizeModalRequest) {
     setSizeModal(request);
     setSizeValue(
-      request.mode === "edit"
-        ? request.from
-        : request.mode === "delete" || request.mode === "restore"
-          ? request.value
-          : "",
+      request.mode === "delete" || request.mode === "restore" ? request.value : "",
     );
     setError("");
   }
@@ -446,13 +442,6 @@ export default function AdminLensInventoryPage() {
       let body: Record<string, string>;
       if (sizeModal.mode === "add") {
         body = { action: "add", axis: sizeModal.axis, value: sizeValue };
-      } else if (sizeModal.mode === "edit") {
-        body = {
-          action: "edit",
-          axis: sizeModal.axis,
-          from: sizeModal.from,
-          to: sizeValue,
-        };
       } else if (sizeModal.mode === "restore") {
         body = {
           action: "restore",

@@ -1817,7 +1817,7 @@ const he: Dictionary = {
       editSize: "עריכה",
       deleteSize: "מחיקה",
       deleteSizeBodyStock:
-        "למידה {value} יש נתוני מלאי. היא תוסתר וניתן לשחזר אותה מאוחר יותר.",
+        "למידה {value} יש נתוני מלאי שמורים. היא תוסתר מהטבלה וניתן לשחזר אותה מאוחר יותר.",
       deleteSizeBodyPermanent:
         "מחיקה סופית של המידה {value}. לא ניתן לבטל.",
       deleteSizeConfirmHint: "לחצו «מחק» לאישור.",
