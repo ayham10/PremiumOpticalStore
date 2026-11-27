@@ -12,6 +12,7 @@ import {
   previewRestore,
   resetRestoreInFlightForTests,
 } from "../lib/restore";
+import { emptyLensInventoryCustomGrid } from "../lib/lens-inventory-grid";
 import type { AppData } from "../lib/types";
 
 function sampleApp(overrides: Partial<AppData> = {}): AppData {
@@ -82,6 +83,7 @@ function sampleApp(overrides: Partial<AppData> = {}): AppData {
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
     ],
+    lensInventoryCustom: emptyLensInventoryCustomGrid(),
     settings: {
       storeName: "Live",
       tagline: "",

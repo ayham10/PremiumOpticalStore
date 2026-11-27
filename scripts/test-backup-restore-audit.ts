@@ -7,6 +7,7 @@ import {
   parseRestoreCategories,
   unselectedFieldsMatch,
 } from "../lib/restore-apply";
+import { emptyLensInventoryCustomGrid } from "../lib/lens-inventory-grid";
 import { applyCustomPageRestore } from "../lib/restore-plan";
 import type { AppData, CustomServicePage, Product } from "../lib/types";
 
@@ -35,12 +36,16 @@ assert.deepEqual([...RESTORE_CATEGORY_FIELDS.products], [
   "products",
   "catalogCategories",
 ]);
-assert.deepEqual([...RESTORE_CATEGORY_FIELDS.lenses], ["lensInventory"]);
+assert.deepEqual([...RESTORE_CATEGORY_FIELDS.lenses], [
+  "lensInventory",
+  "lensInventoryCustom",
+]);
 assert.deepEqual([...RESTORE_CATEGORY_FIELDS.settings], ["settings"]);
 assert.ok(!RESTORABLE_SECTIONS.includes("catalogCategories" as never));
 assert.ok(RESTORABLE_SECTIONS.includes("settings"));
 assert.ok(RESTORABLE_SECTIONS.includes("products"));
 assert.ok(RESTORABLE_SECTIONS.includes("media"));
+assert.ok(RESTORABLE_SECTIONS.includes("lensInventoryCustom"));
 
 function sampleProduct(
   partial: Partial<Product> & Pick<Product, "id" | "category">,
@@ -257,6 +262,10 @@ function sampleApp(overrides: Partial<AppData> = {}): AppData {
         updatedAt: "2026-10-10T00:00:00.000Z",
       },
     ],
+    lensInventoryCustom: {
+      ...emptyLensInventoryCustomGrid(),
+      minusSph: ["-10.00"],
+    },
     settings: {
       storeName: "Live store",
       tagline: "",
@@ -355,6 +364,11 @@ const backup = sampleApp({
       updatedAt: "2026-10-09T00:00:00.000Z",
     },
   ],
+  lensInventoryCustom: {
+    ...emptyLensInventoryCustomGrid(),
+    plusSph: ["+6.00"],
+    cyl: ["-3.25"],
+  },
   settings: {
     ...live.settings,
     storeName: "Yesterday store",
@@ -450,6 +464,9 @@ assert.ok(
 
 const restoredLenses = applyRestoreCategories(live, backup, ["lenses"]);
 assert.equal(restoredLenses.lensInventory[0].sph, "+2.00");
+assert.deepEqual(restoredLenses.lensInventoryCustom?.plusSph, ["+6.00"]);
+assert.deepEqual(restoredLenses.lensInventoryCustom?.cyl, ["-3.25"]);
+assert.deepEqual(restoredLenses.lensInventoryCustom?.minusSph, []);
 assert.equal(restoredLenses.settings.servicePages?.customPages?.length, 2);
 assert.ok(unselectedFieldsMatch(live, restoredLenses, ["lenses"]));
 
