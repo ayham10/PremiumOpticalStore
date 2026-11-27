@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -104,7 +105,9 @@ export default function AdminServicePagesPage() {
   const [tab, setTab] = useState<Tab>("homepage");
   const [editLocale, setEditLocale] = useState<ServicePagesLocale>("ar");
   const editLocaleRef = useRef(editLocale);
-  editLocaleRef.current = editLocale;
+  useLayoutEffect(() => {
+    editLocaleRef.current = editLocale;
+  }, [editLocale]);
   const [document, setDocument] = useState<ServicePagesSettings | undefined>();
   const [drafts, setDrafts] = useState<
     Partial<Record<ServicePagesLocale, ServicePagesLocaleBundle>>

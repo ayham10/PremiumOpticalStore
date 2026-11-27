@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FolderTree, Pencil, Plus, Trash2 } from "lucide-react";
 import AdminModal from "@/components/admin/AdminModal";
 import AdminProductCreateModal from "@/components/admin/AdminProductCreateModal";
@@ -96,7 +96,9 @@ export default function CatalogCategoriesModal({
   const savingRef = useRef(false);
   const wizardRef = useRef<WizardState | null>(null);
   const { notifySaved } = useAdminSuccessNotice();
-  wizardRef.current = wizard;
+  useLayoutEffect(() => {
+    wizardRef.current = wizard;
+  }, [wizard]);
 
   useEffect(() => {
     if (!open) {
