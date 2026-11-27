@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
@@ -78,10 +85,19 @@ const RESTORE_MODES: Array<{
   { key: "categoryWithProducts", icon: Tag },
 ];
 
-function statusIcon(status: BackupHealthStatus | BackupRowStatus) {
-  if (status === "healthy" || status === "success") return CircleCheck;
-  if (status === "warning") return AlertTriangle;
-  return CircleX;
+function BackupStatusGlyph({
+  status,
+  ...props
+}: {
+  status: BackupHealthStatus | BackupRowStatus;
+} & ComponentProps<LucideIcon>) {
+  if (status === "healthy" || status === "success") {
+    return <CircleCheck {...props} />;
+  }
+  if (status === "warning") {
+    return <AlertTriangle {...props} />;
+  }
+  return <CircleX {...props} />;
 }
 
 function countLabel(value: number | null | undefined): string {
@@ -340,7 +356,7 @@ export default function AdminBackupsPage() {
     };
   }, [needsItems, selectedBackupId, t]);
 
-  function previewBody(): Record<string, unknown> | null {
+  const previewBody = useCallback((): Record<string, unknown> | null => {
     if (!selectedBackupId) return null;
     if (restoreMode === "sections") {
       if (!selectedCategories.length) return null;
@@ -373,7 +389,15 @@ export default function AdminBackupsPage() {
       categoryIds: selectedCategoryIds,
       membershipPolicy,
     };
-  }
+  }, [
+    membershipPolicy,
+    restoreMode,
+    selectedBackupId,
+    selectedCategories,
+    selectedCategoryIds,
+    selectedPageId,
+    selectedProductId,
+  ]);
 
   const openPreview = useCallback(async () => {
     const body = previewBody();
@@ -399,17 +423,7 @@ export default function AdminBackupsPage() {
     } finally {
       setPreviewing(false);
     }
-  }, [
-    previewing,
-    restoreMode,
-    selectedBackupId,
-    selectedCategories,
-    selectedCategoryIds,
-    selectedPageId,
-    selectedProductId,
-    membershipPolicy,
-    t,
-  ]);
+  }, [previewBody, previewing, t]);
 
   const liveRestoreAllowed = isLiveRestoreUiAllowed();
 
@@ -485,11 +499,10 @@ export default function AdminBackupsPage() {
     } finally {
       setPreviewing(false);
     }
-  }, [data?.rollback, previewing, t]);
+  }, [data, previewing, t]);
 
   const lastSuccessful = lastSuccessfulOf(data);
   const status = data?.status ?? "none";
-  const StatusIcon = statusIcon(status);
   const autoConfigured = Boolean(data?.automatic.enabled);
   const autoBoxStatus = !data
     ? "pending"
@@ -571,7 +584,7 @@ export default function AdminBackupsPage() {
       <section className={`admin-backups-card admin-backups-status is-${status}`}>
         <div className="admin-backups-status-main">
           <div className="admin-backups-status-label">
-            <StatusIcon size={22} strokeWidth={2} aria-hidden />
+            <BackupStatusGlyph status={status} size={22} strokeWidth={2} aria-hidden />
             <span>{t("admin.backups.statusTitle")}</span>
           </div>
           <h2>{t(`admin.backups.status_${status}`)}</h2>
@@ -1057,7 +1070,6 @@ function RowStatus({
   status: BackupRowStatus;
   t: (key: string) => string;
 }) {
-  const Icon = statusIcon(status);
   const label =
     status === "success"
       ? t("admin.backups.rowSuccess")
@@ -1066,7 +1078,7 @@ function RowStatus({
         : t("admin.backups.rowFailed");
   return (
     <span className={`admin-backups-row-status is-${status}`}>
-      <Icon size={15} strokeWidth={2} aria-hidden />
+      <BackupStatusGlyph status={status} size={15} strokeWidth={2} aria-hidden />
       {label}
     </span>
   );
