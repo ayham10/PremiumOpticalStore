@@ -53,11 +53,14 @@ export function useDebouncedPreviewPayload(
     source.activeSectionId,
   );
   const latest = useRef(source);
-  latest.current = source;
   const prevKey = useRef<string | null>(null);
   const [payload, setPayload] = useState<ContentPreviewPayload>(() =>
     buildPayload(source),
   );
+
+  useEffect(() => {
+    latest.current = source;
+  }, [source]);
 
   useEffect(() => {
     const apply = () => setPayload(buildPayload(latest.current));

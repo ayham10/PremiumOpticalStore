@@ -175,7 +175,13 @@ function ContentPreviewCanvas({
       text,
     });
     postLabel(false, id);
-  }, [payload.activeSectionId, payload.kind, payload.customPage?.id, locale]);
+  }, [
+    payload.activeSectionId,
+    payload.kind,
+    payload.customPage?.id,
+    payload.customPage?.sections,
+    locale,
+  ]);
 
   return (
     <LocaleProvider locale={locale} dict={dict}>
