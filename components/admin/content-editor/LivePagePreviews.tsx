@@ -56,7 +56,6 @@ function DeviceFrame({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const payloadRef = useRef(payload);
-  payloadRef.current = payload;
   const lastSent = useRef("");
   const scaleRef = useRef(0.28);
   const dragRef = useRef<{
@@ -72,7 +71,6 @@ function DeviceFrame({
   const viewport = CONTENT_PREVIEW_VIEWPORTS[mode];
   const chrome = CONTENT_PREVIEW_CHROME[mode];
   const href = viewHrefForEditor(payload.kind, payload.customPage?.slug);
-  scaleRef.current = scale;
 
   function post(
     target?: Window | null,
@@ -97,6 +95,14 @@ function DeviceFrame({
       window.location.origin,
     );
   }
+
+  useEffect(() => {
+    payloadRef.current = payload;
+  }, [payload]);
+
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
