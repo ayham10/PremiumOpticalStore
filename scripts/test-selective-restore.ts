@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { emptyLensInventoryCustomGrid } from "../lib/lens-inventory-grid";
 import type { AppData, CatalogCategory, CustomServicePage, Product } from "../lib/types";
 import {
   applyRestorePlan,
@@ -147,6 +148,7 @@ function sampleApp(overrides: Partial<AppData> = {}): AppData {
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
     ],
+    lensInventoryCustom: emptyLensInventoryCustomGrid(),
     settings: {
       storeName: "Live store",
       tagline: "",
