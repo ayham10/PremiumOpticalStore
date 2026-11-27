@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PublicGoogleAnalytics from "@/components/analytics/PublicGoogleAnalytics";
 import ConditionalChrome from "@/components/ConditionalChrome";
 import { BrandingProvider } from "@/components/branding/BrandingProvider";
 import { LocaleProvider } from "@/components/i18n/LocaleProvider";
@@ -38,6 +39,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir}>
       <body>
+        <PublicGoogleAnalytics />
         <LocaleProvider locale={locale} dict={dict}>
           <BrandingProvider>
             <ConditionalChrome>{children}</ConditionalChrome>
