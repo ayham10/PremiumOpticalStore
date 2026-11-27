@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -43,7 +44,6 @@ import {
   parseLensPasteGrid,
   parseLensQtyInput,
   setLensDraft,
-  tabLensCoord,
   viewedLensCell,
   viewedLensItems,
   type LensDraftMap,
@@ -96,11 +96,15 @@ export default function AdminLensInventoryPage() {
   const activeRef = useRef(active);
   const editTextRef = useRef(editText);
   const customGridRef = useRef(customGrid);
-  customGridRef.current = customGrid;
-  draftsRef.current = drafts;
-  itemsRef.current = items;
-  activeRef.current = active;
-  editTextRef.current = editText;
+
+  // tabLensCoord — keyboard tab order is handled in LensInventoryMatrix.
+  useLayoutEffect(() => {
+    customGridRef.current = customGrid;
+    draftsRef.current = drafts;
+    itemsRef.current = items;
+    activeRef.current = active;
+    editTextRef.current = editText;
+  }, [customGrid, drafts, items, active, editText]);
 
   const load = useCallback(async () => {
     setLoading(true);
