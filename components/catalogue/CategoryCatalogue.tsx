@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -196,7 +197,7 @@ export default function CategoryCatalogue({
   const [reduceMotion, setReduceMotion] = useState(false);
   const [heroVideoReady, setHeroVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const categorySet = useMemo(() => new Set(categories), [cacheKey]);
+  const categorySet = useMemo(() => new Set(categories), [categories]);
   const useTailLoop =
     typeof videoLoopTailSeconds === "number" && videoLoopTailSeconds > 0;
   const customHero = hasCustomHeroMedia(heroMedia);
@@ -300,13 +301,20 @@ export default function CategoryCatalogue({
     };
   }, [customHero, reduceMotion, videoSrc, useTailLoop, videoLoopTailSeconds]);
 
+  const categoriesRef = useRef(categories);
+  const localeRef = useRef(locale);
+  useLayoutEffect(() => {
+    categoriesRef.current = categories;
+    localeRef.current = locale;
+  }, [categories, locale]);
+
   useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams();
-    for (const category of categories) {
+    for (const category of categoriesRef.current) {
       params.append("category", category);
     }
-    params.set("locale", locale);
+    params.set("locale", localeRef.current);
     const url = `/api/products?${params.toString()}`;
 
     (async () => {
