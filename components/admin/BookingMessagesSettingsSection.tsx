@@ -493,12 +493,48 @@ export default function BookingMessagesSettingsSection({
     }
   }, [applyStatus]);
 
+  const loadQr = useCallback(async () => {
+    const data = await apiFetch<{
+      ok?: boolean;
+      status?: string;
+      ready?: boolean;
+      reachable?: boolean;
+      configured?: boolean;
+      qrDataUrl?: string | null;
+      qrReceivedAt?: string | null;
+    }>("/api/settings/whatsapp-web/qr");
+    applyStatus(data);
+    if (data.ready) {
+      setQrDataUrl(null);
+      setQrReceivedAt(null);
+      return data;
+    }
+    if (data.qrReceivedAt) {
+      setQrReceivedAt(data.qrReceivedAt);
+    }
+    if (data.qrDataUrl) {
+      setQrDataUrl(data.qrDataUrl);
+    }
+    return data;
+  }, [applyStatus]);
+
+  const startPolling = useCallback(
+    (includeQr: boolean) => {
+      stopPolling();
+      pollQrRef.current = includeQr;
+      pollRef.current = window.setInterval(() => {
+        void (pollQrRef.current ? loadQr() : loadStatus());
+      }, 4000);
+    },
+    [loadQr, loadStatus, stopPolling],
+  );
+
   useEffect(() => {
     if (!SHOW_ORACLE_ADMIN_CONTROLS) return;
     void loadStatus();
     startPolling(false);
     return () => stopPolling();
-  }, [loadStatus, stopPolling]);
+  }, [loadStatus, startPolling, stopPolling]);
 
   useEffect(() => {
     if (!SHOW_ORACLE_ADMIN_CONTROLS) return;
@@ -547,39 +583,6 @@ export default function BookingMessagesSettingsSection({
     } finally {
       setTesting(false);
     }
-  }
-
-  async function loadQr() {
-    const data = await apiFetch<{
-      ok?: boolean;
-      status?: string;
-      ready?: boolean;
-      reachable?: boolean;
-      configured?: boolean;
-      qrDataUrl?: string | null;
-      qrReceivedAt?: string | null;
-    }>("/api/settings/whatsapp-web/qr");
-    applyStatus(data);
-    if (data.ready) {
-      setQrDataUrl(null);
-      setQrReceivedAt(null);
-      return data;
-    }
-    if (data.qrReceivedAt) {
-      setQrReceivedAt(data.qrReceivedAt);
-    }
-    if (data.qrDataUrl) {
-      setQrDataUrl(data.qrDataUrl);
-    }
-    return data;
-  }
-
-  function startPolling(includeQr: boolean) {
-    stopPolling();
-    pollQrRef.current = includeQr;
-    pollRef.current = window.setInterval(() => {
-      void (pollQrRef.current ? loadQr() : loadStatus());
-    }, 4000);
   }
 
   async function runWhatsAppAdminAction() {
