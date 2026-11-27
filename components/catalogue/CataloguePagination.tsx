@@ -3,6 +3,7 @@
 import {
   Fragment,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -151,12 +152,10 @@ export function CataloguePagedList({
   const pageSize = useCataloguePageSize();
   const [page, setPage] = useState(1);
   const listRef = useRef<HTMLDivElement>(null);
-  const resetRef = useRef(resetKey);
 
-  if (resetRef.current !== resetKey) {
-    resetRef.current = resetKey;
+  useLayoutEffect(() => {
     setPage(1);
-  }
+  }, [resetKey]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(Math.max(1, page), totalPages);
