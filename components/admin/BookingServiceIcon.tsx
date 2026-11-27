@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Calendar,
@@ -75,6 +76,8 @@ export function BookingServiceIcon({
   size?: number;
   className?: string;
 }) {
-  const Icon = resolveBookingServiceIcon(icon);
-  return <Icon size={size} strokeWidth={1.6} className={className} aria-hidden />;
+  const iconProps = { size, strokeWidth: 1.6, className, "aria-hidden": true as const };
+  const iconId: BookingServiceIconId =
+    icon && icon in ICON_MAP ? (icon as BookingServiceIconId) : "calendar";
+  return createElement(ICON_MAP[iconId], iconProps);
 }
